@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcryptjs');
 
 // ============================================================
 // ПУЛ СОЕДИНЕНИЙ
@@ -152,13 +153,19 @@ async function initSchema() {
 // ============================================================
 async function seedInitialData() {
   // --- Пользователи ---
-  const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
+   const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
   if (uc[0].c === 0) {
     const sql = `INSERT INTO users (id, login, password, full_name, position, department, role, extra_permissions)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-    await pool.query(sql, ['admin1',  'admin',  'admin',  'Администратор', 'Главный метролог',    null,                     'admin',      '[]']);
-    await pool.query(sql, ['senior1', 'senior', 'senior', 'Петров Петр',   'Старший лаборант',    'Гематологический отдел', 'senior_lab', '[]']);
-    await pool.query(sql, ['user1',   'user',   'user',   'Иванов Иван',   'Лаборант',            'Биохимический отдел',    'user',       '[]']);
+    const users = [
+      ['admin1',  'admin',  'admin',  'Администратор', 'Главный метролог', null,                     'admin',      '[]'],
+      ['senior1', 'senior', 'senior', 'Петров Петр',   'Старший лаборант', 'Гематологический отдел', 'senior_lab', '[]'],
+      ['user1',   'user',   'user',   'Иванов Иван',   'Лаборант',         'Биохимический отдел',    'user',       '[]']
+    ];
+    for (const [id, login, plain, fullName, position, department, role, extra] of users) {
+      const hash = await bcrypt.hash(plain, 10);
+      await pool.query(sql, [id, login, hash, fullName, position, department, role, extra]);
+    }
   }
 
   // --- Отделы ---
