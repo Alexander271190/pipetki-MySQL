@@ -2548,8 +2548,8 @@ function printSendAct() {
   const visibleIds = getFilteredPipettes().map(p => p.id);
   const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
   const sendItems = selected.filter(id => {
-    const p = pipettes.find(x => x.id === id);
-    return p && !p.sent_for_calibration;
+  const p = pipettes.find(x => x.id === id);
+  return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
   });
 
   if (sendItems.length === 0) {
@@ -2792,7 +2792,11 @@ async function saveBulkReturn(e) {
   if (!singleCert) {
     const missingCert = items.filter(it => !it.cert);
     if (missingCert.length > 0) {
-      if (!confirm(`У ${missingCert.length} пипеток не указано свидетельство. Продолжить?`)) return;
+      const okMissing = await showConfirm(   
+        `У ${missingCert.length} пипеток не указано свидетельство. Продолжить?`,  
+        { icon: '⚠️', title: 'Нет свидетельства', okText: 'Продолжить', okClass: 'btn-warning' } 
+      ); 
+      if (!okMissing) return;
     }
   }
 
@@ -2818,6 +2822,7 @@ async function saveBulkReturn(e) {
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
+}
 // ============================================================
 // НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ (АДМИН)
 // ============================================================
