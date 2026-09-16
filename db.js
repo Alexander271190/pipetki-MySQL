@@ -59,6 +59,7 @@ async function initSchema() {
         serial VARCHAR(255),
         manufacturer VARCHAR(255),
         model VARCHAR(255) NOT NULL,
+        equipment_type VARCHAR(50) DEFAULT 'pipette',
         volume VARCHAR(50),
         department VARCHAR(255),
         \`interval\` INT DEFAULT 12,
@@ -140,6 +141,13 @@ async function initSchema() {
         fields TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            
+      CREATE TABLE IF NOT EXISTS user_preferences (
+        user_id VARCHAR(255) PRIMARY KEY,
+        preferences TEXT,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
   } finally {
     conn.release();
@@ -197,21 +205,22 @@ async function seedInitialData() {
   if (fc[0].c === 0) {
     const ins = `INSERT INTO field_config (id, label, type, required, enabled, options, default_value, field_order)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-    const fields = [
-      ['id',              'Внутренний номер',              'text',     1, 1, '[]',                    '',     1],
-      ['serial',          'Серийный номер',                'text',     0, 1, '[]',                    '',     2],
-      ['manufacturer',    'Производитель',                 'text',     0, 1, '[]',                    '',     3],
-      ['model',           'Модель',                        'text',     1, 1, '[]',                    '',     4],
-      ['volume',          'Объём (мкл)',                   'text',     0, 1, '[]',                    '',     5],
-      ['department',      'Отдел',                         'select',   0, 1, '[]',                    '',     6],
-      ['interval',        'Межповерочный интервал (мес.)', 'number',   1, 1, '[]',                    '12',   8],
-      ['lastCalibration', 'Дата последней поверки',        'date',     1, 1, '[]',                    '',     9],
-      ['cert',            'Номер свидетельства',           'text',     0, 1, '[]',                    '',     10],
-      ['result',          'Результат поверки',             'select',   0, 1, '["pass","fail","wip"]','pass', 11],
-      ['active',          'Статус эксплуатации',           'select',   0, 1, '["true","false"]',      'true', 12],
-      ['responsible',     'Ответственный сотрудник',       'text',     0, 1, '[]',                    '',     13],
-      ['location',        'Место хранения',                'text',     0, 1, '[]',                    '',     14],
-      ['notes',           'Примечание',                    'textarea', 0, 1, '[]',                    '',     15]
+        const fields = [
+      ['id',              'Внутренний номер',              'text',     1, 1, '[]',                     '',       1],
+      ['serial',          'Серийный номер',                'text',     0, 1, '[]',                     '',       2],
+      ['manufacturer',    'Производитель',                 'text',     0, 1, '[]',                     '',       3],
+      ['model',           'Модель',                        'text',     1, 1, '[]',                     '',       4],
+      ['equipmentType',   'Тип оборудования',              'select',   1, 1, '["pipette","other"]',    'pipette', 5],
+      ['volume',          'Объём (мкл)',                   'text',     0, 1, '[]',                     '',       6],
+      ['department',      'Отдел',                         'select',   0, 1, '[]',                     '',       7],
+      ['interval',        'Межповерочный интервал (мес.)', 'number',   1, 1, '[]',                     '12',     8],
+      ['lastCalibration', 'Дата последней поверки',        'date',     1, 1, '[]',                     '',       9],
+      ['cert',            'Номер свидетельства',           'text',     0, 1, '[]',                     '',       10],
+      ['result',          'Результат поверки',             'select',   0, 1, '["pass","fail","wip"]', 'pass',   11],
+      ['active',          'Статус эксплуатации',           'select',   0, 1, '["true","false"]',       'true',   12],
+      ['responsible',     'Ответственный сотрудник',       'text',     0, 1, '[]',                     '',       13],
+      ['location',        'Место хранения',                'text',     0, 1, '[]',                     '',       14],
+      ['notes',           'Примечание',                    'textarea', 0, 1, '[]',                     '',       15]
     ];
     for (const f of fields) await pool.query(ins, f);
   }
@@ -237,39 +246,36 @@ async function seedInitialData() {
       return d.toISOString().slice(0, 10);
     };
 
-    const insPip = `INSERT INTO pipettes
-      (id, serial, manufacturer, model, volume, department, \`interval\`,
+        const insPip = `INSERT INTO pipettes
+      (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
        last_calibration, cert, last_result, active, responsible, location, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    await pool.query(insPip, ['P-001', 'EP2024001', 'Eppendorf', 'Research Plus', '1000', 'Гематологический отдел',
+    await pool.query(insPip, ['P-001', 'EP2024001', 'Eppendorf', 'Research Plus', 'pipette', '1000', 'Гематологический отдел',
        12, ago(11), 'С-АБ-1234567/2025', 'pass', 1,
       'Иванова М.С.', 'Лаб. 201, шкаф 3', '']);
 
-    await pool.query(insPip, ['P-002', 'EP2024002', 'Eppendorf', 'Research Plus', '100', 'Биохимический отдел',
+    await pool.query(insPip, ['P-002', 'EP2024002', 'Eppendorf', 'Research Plus', 'pipette', '100', 'Биохимический отдел',
        12, ago(10), 'С-АБ-1234568/2025', 'pass', 1,
       'Петров А.В.', 'Лаб. 201, шкаф 3', '']);
 
-    await pool.query(insPip, ['P-003', 'GT2023005', 'Gilson', 'Pipetman L', '5000', 'Коагулогический отдел',
+    await pool.query(insPip, ['P-003', 'GT2023005', 'Gilson', 'Pipetman L', 'pipette', '5000', 'Коагулогический отдел',
       6, ago(7), 'С-АБ-1234569/2025', 'pass', 1,
       'Иванова М.С.', 'Лаб. 105', 'Требует внеочередной проверки']);
 
-    await pool.query(insPip, ['P-004', 'BT2022003', 'Biohit', 'mLINE', '200', 'Экспресс отдел',
+    await pool.query(insPip, ['A-001', 'AN2022001', 'Mindray', 'BC-5150', 'other', '', 'Гематологический отдел',
        12, ago(14), 'С-АБ-9876546/2024', 'pass', 1,
-      'Сидорова Е.К.', 'Лаб. 302', '']);
+      'Сидорова Е.К.', 'Лаб. 302', 'Гематологический анализатор']);
 
-    await pool.query(insPip, ['P-005', 'TR2024008', 'Thermo', 'Finnpipette F2', '20', 'Серологический отдел',
+    await pool.query(insPip, ['M-001', 'MI2023010', 'Olympus', 'CX23', 'other', '', 'Биохимический отдел',
       12, ago(2), 'С-АБ-1234570/2025', 'pass', 0,
-      'Петров А.В.', 'Склад', 'В резерве']);
+      'Петров А.В.', 'Склад', 'Микроскоп в резерве']);
 
-    // История поверок
     const insHist = `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
                      VALUES (?, ?, ?, ?, ?, ?)`;
     await pool.query(insHist, ['P-001', ago(23), 'С-АБ-9876543/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
     await pool.query(insHist, ['P-001', ago(11), 'С-АБ-1234567/2025', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
-    await pool.query(insHist, ['P-003', ago(13), 'С-АБ-9876545/2024', 'fail', 'ФБУ Красноярский ЦСМ', 'Брак']);
-    await pool.query(insHist, ['P-003', ago(7),  'С-АБ-1234569/2025', 'pass', 'ФБУ Красноярский ЦСМ', 'После ремонта']);
-  }
+    await pool.query(insHist, ['A-001', ago(14), 'С-АБ-9876546/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годен']);
 
   // --- Фильтры по умолчанию ---
   const [filc] = await pool.query('SELECT COUNT(*) AS c FROM filter_config');
@@ -278,13 +284,14 @@ async function seedInitialData() {
       (id, label, type, field_id, enabled, options_source, filter_order)
       VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-    await pool.query(insF, ['status',       'Статус',         'select',      'status',           1, 'status_list', 1]);
-    await pool.query(insF, ['department',   'Отдел',          'select',      'department',       1, 'departments', 3]);
-    await pool.query(insF, ['responsible',  'Ответственный',  'text',        'responsible',      1, '',            4]);
-    await pool.query(insF, ['model',        'Модель',         'text',        'model',            1, '',            5]);
-    await pool.query(insF, ['manufacturer', 'Производитель',  'text',        'manufacturer',     1, '',            6]);
-    await pool.query(insF, ['active',       'Активность',     'select',      'active',           1, 'active_list', 7]);
-    await pool.query(insF, ['calPeriod',    'Дата поверки',   'date-period', 'last_calibration', 1, '',            8]);
+        await pool.query(insF, ['status',         'Статус',           'select',      'status',           1, 'status_list',         1]);
+    await pool.query(insF, ['equipmentType',  'Тип оборудования', 'select',      'equipment_type',   1, 'equipment_type_list', 2]);
+    await pool.query(insF, ['department',     'Отдел',            'select',      'department',       1, 'departments',         3]);
+    await pool.query(insF, ['responsible',    'Ответственный',    'text',        'responsible',      1, '',                    4]);
+    await pool.query(insF, ['model',          'Модель',           'text',        'model',            1, '',                    5]);
+    await pool.query(insF, ['manufacturer',   'Производитель',    'text',        'manufacturer',     1, '',                    6]);
+    await pool.query(insF, ['active',         'Активность',       'select',      'active',           1, 'active_list',         7]);
+    await pool.query(insF, ['calPeriod',      'Дата поверки',     'date-period', 'last_calibration', 1, '',                    8]);
   }
 }
 
