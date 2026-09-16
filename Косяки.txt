@@ -1,0 +1,195 @@
+1. Логин сохронять при разовторизации.
+2. Изменить смайл тип оборудования и пипетка.
+3.Пипетка отправлена на поверку, возврат с поверки кнопкой "вернулись с поверки" меняет статус на брак, а кнопка быстрая поверка нет, как результат таблица не обновляется. 
+4. Нажатие кнопки войти как, окно должно закрываться
+5.При экспорте отключть автовывод принтера, пусть будет просто документ, а там уже отправят на печать как обычно
+6.Реестр пипеток — КГБУЗ Краевая клиническая больница КДЛ в экспорте\
+7.При открывании сайта поля все равно остаются заполненные
+7.Статус "В процессе" изменить
+Вариант B. Оставить «В процессе» — но сделать его отдельным статусом пипетки
+Что менять:
+
+1. frontend/script.js — calcStatus:
+
+Найти:
+
+js
+function calcStatus(p) {
+  if (p.sent_for_calibration) return 'sent';
+  if (!p.active) return 'inactive';
+  if (p.last_result === 'fail') return 'fail';
+
+Заменить на:
+
+js
+function calcStatus(p) {
+  if (p.sent_for_calibration) return 'sent';
+  if (!p.active) return 'inactive';
+  if (p.last_result === 'fail') return 'fail';
+  if (p.last_result === 'wip') return 'wip';
+
+
+2. frontend/script.js — в render() найти labels:
+
+Найти:
+
+js
+const labels = {
+  ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак'
+};
+
+Заменить на:
+
+js
+const labels = {
+  ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',
+  wip: '⏳ В процессе'
+};
+
+3. frontend/script.js — в render() в подсчёте статистики:
+
+Найти:
+
+js
+let ok = 0, warn = 0, danger = 0, sent = 0;
+pipettes.forEach(p => {
+  const s = calcStatus(p);
+  if (s === 'ok') ok++;
+  else if (s === 'warn') warn++;
+  else if (s === 'danger' || s === 'fail') danger++;
+  else if (s === 'sent') sent++;
+});
+
+Заменить на (добавить учёт wip):
+
+js
+let ok = 0, warn = 0, danger = 0, sent = 0, wip = 0;
+pipettes.forEach(p => {
+  const s = calcStatus(p);
+  if (s === 'ok') ok++;
+  else if (s === 'warn') warn++;
+  else if (s === 'danger' || s === 'fail') danger++;
+  else if (s === 'sent') sent++;
+  else if (s === 'wip') wip++;
+});
+
+4. frontend/script.js — в render() в блоке дней:
+
+Найти:
+
+js
+const daysText = status === 'inactive' || status === 'sent' ? '' :
+  status === 'fail' ? ' (брак)' :
+  status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
+  ` (${dl} дн.)`;
+
+Заменить на:
+
+js
+const daysText = status === 'inactive' || status === 'sent' || status === 'wip' ? '' :
+  status === 'fail' ? ' (брак)' :
+  status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
+  ` (${dl} дн.)`;
+5. frontend/script.js — в ячейке «Следующая» найти:
+
+js
+status === 'sent'
+  ? `<small style="color:#0ea5e9;font-weight:600;">📦 ${formatDate(p.sent_for_calibration)}</small>`
+  : ...
+
+Заменить на:
+
+js
+status === 'sent'
+  ? `<small style="color:#0ea5e9;font-weight:600;">📦 ${formatDate(p.sent_for_calibration)}</small>`
+  : status === 'wip'
+  ? `<small style="color:#ca8a04;font-weight:600;">⏳ В процессе поверки</small>`
+  : ...
+
+6. frontend/script.js — в EXPORT_FIELD_MAP.status:
+
+Найти:
+
+js
+const L = { ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена', inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак' };
+
+Заменить на:
+
+js
+const L = { ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена', inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак', wip: 'В процессе' };
+
+7. frontend/script.js — в EXPORT_FIELD_MAP.daysLeft найти:
+
+js
+return s === 'inactive' ? '—'
+  : (s === 'sent' ? 'на поверке'
+  : (s === 'fail' ? 'брак'
+  : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.')));
+
+Заменить на:
+
+js
+return s === 'inactive' ? '—'
+  : (s === 'sent' ? 'на поверке'
+  : (s === 'wip' ? 'в процессе'
+  : (s === 'fail' ? 'брак'
+  : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.'))));
+
+8. frontend/script.js — в renderHistoryContent найти:
+
+js
+const statusLabels = {
+  ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак'
+};
+
+Заменить на:
+
+js
+const statusLabels = {
+  ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',
+  wip: '⏳ В процессе'
+};
+
+9. frontend/script.js — в checkReminder (баг: не учитывает wip):
+
+Найти:
+
+js
+const dangerList = pipettes.filter(p => ['danger', 'fail'].includes(calcStatus(p)));
+
+Заменить на:
+
+js
+const dangerList = pipettes.filter(p => ['danger', 'fail'].includes(calcStatus(p)));
+const wipList = pipettes.filter(p => calcStatus(p) === 'wip');
+(нужно ещё обновить отображение напоминания — или просто не добавлять wip в напоминания, это ок)
+
+10. frontend/style.css — добавить в конец:
+
+css
+/* ========== СТАТУС «В ПРОЦЕССЕ» ========== */
+.status-wip {
+  background: #fef9c3;
+  color: #854d0e;
+  font-weight: 600;
+}
+.status-wip .status-dot {
+  background: #eab308;
+  animation: pulse-wip 1.8s infinite;
+}
+@keyframes pulse-wip {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(234,179,8,0); }
+}
+11. frontend/script.js — в loadFilterConfig (уже есть в вашем коде):
+
+js
+{ value: 'wip', label: '⏳ В процессе' }
+— убедиться, что этот пункт есть в списке status_list.
+
+Результат: пипетка с last_result = 'wip' показывается как ⏳ В процессе — жёлтый бейдж, и не путается с «В норме».
+
