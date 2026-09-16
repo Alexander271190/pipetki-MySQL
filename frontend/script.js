@@ -1709,7 +1709,6 @@ async function switchSettingsTab(tab) {
   else if (tab === 'users') await renderUsersSettings();
   else if (tab === 'system') await renderSystemSettings();
   else if (tab === 'log') await renderLogSettings();
-  else if (tab === 'backup') await renderBackupSettings();
 }
 
 // ============================================================
@@ -2411,73 +2410,6 @@ async function clearLogSetting() {
   renderLogSettings();
 }
 
-// ============================================================
-// ВКЛАДКА: БЭКАП
-// ============================================================
-async function renderBackupSettings() {
-  const c = document.getElementById('settings-content');
-  try {
-    const backups = await apiRequest('/backup');
-
-
-    let html = `<h3>Резервные копии</h3>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin:12px 0;">
-        <button class="btn btn-warning" onclick="createBackupSetting()">💾 Создать бэкап</button>
-        <button class="btn btn-secondary" onclick="openBackupList()">🔄 Восстановить</button>
-        <button class="btn btn-danger" onclick="resetAllDataSetting()">🗑️ Сбросить данные</button>
-      </div>`;
-
-   
-    html += `<h4 style="margin-top:25px;">Доступные бэкапы (${backups.length})</h4>
-      <div style="max-height:400px;overflow-y:auto;">`;
-
-    if (!backups.length) {
-      html += '<p style="color:#94a3b8;">Нет бэкапов</p>';
-    } else {
-      backups.forEach(b => {
-        const isAuto = b.name.includes('_auto_');
-        const badge = isAuto
-          ? '<span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:6px;font-size:.7rem;margin-left:6px;">авто</span>'
-          : '';
-        html += `<div class="dept-item">
-          <span class="dept-name">
-            📁 ${esc(b.name)}${badge} 
-            <small style="color:#94a3b8;">(${(b.size / 1024).toFixed(1)} KB · ${new Date(b.created).toLocaleString('ru-RU')})</small>
-          </span>
-          <div class="dept-actions">
-            <a class="btn btn-secondary btn-sm" href="/api/backup/download/${esc(b.name)}" download>⬇️</a>
-            <button class="btn btn-danger btn-sm" onclick="deleteBackupSetting('${esc(b.name)}')">🗑️</button>
-          </div>
-        </div>`;
-      });
-    }
-    html += `</div>`;
-    c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
-  }
-}
-
-
-async function createBackupSetting() {
-  try {
-    await apiRequest('/backup', 'POST', {});
-    showToast('Бэкап создан', 'success');
-    renderBackupSettings();
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-async function deleteBackupSetting(name) {
-  const ok = await showConfirm(     
-    'Удалить этот резервный бэкап?',    
-    { icon: '💾', title: 'Удаление бэкапа', okText: 'Удалить', okClass: 'btn-danger' }  
-  );   
-  if (!ok) return;
-  await apiRequest('/backup/' + encodeURIComponent(name), 'DELETE');
-  showToast('Удалён', 'success');
-  renderBackupSettings();
-}
-
 async function resetAllDataSetting() {
     const ok1 = await showConfirm(
     'ВНИМАНИЕ! Всё оборудование и история поверок будут удалены безвозвратно.',
@@ -2495,42 +2427,6 @@ async function resetAllDataSetting() {
   await loadPipetteData();
   closeSettingsModal();
 }
-
-async function openBackupList() {
-  const c = document.getElementById('backup-list-container');
-  try {
-    const backups = await apiRequest('/backup');
-    if (!backups.length) { showToast('Нет бэкапов', 'error'); return; }
-    c.innerHTML = '<p style="color:#64748b;">Выберите бэкап для восстановления:</p>';
-    backups.forEach(b => {
-      c.innerHTML += `<div class="dept-item">
-        <span class="dept-name">📁 ${esc(b.name)} (${(b.size / 1024).toFixed(1)} KB)</span>
-        <button class="btn btn-success btn-sm" onclick="doRestoreSetting('${esc(b.name)}')">Восстановить</button>
-      </div>`;
-    });
-    document.getElementById('backup-modal').classList.add('active');
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-async function doRestoreSetting(name) {
-  const ok = await showConfirm(     
-    'Восстановить из этого бэкапа? Текущие данные будут перезаписаны.',    
-    { icon: '🔄', title: 'Восстановление', okText: 'Восстановить', okClass: 'btn-danger' }  
-  );  
-  if (!ok) return;
-  try {
-    await apiRequest('/backup/restore/' + encodeURIComponent(name), 'POST', {});
-    showToast('Бэкап восстановлен. Перезапустите приложение.', 'success');
-    closeBackupModal();
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-function closeBackupModal() {
-  document.getElementById('backup-modal').classList.remove('active');
-}
-document.getElementById('backup-modal').addEventListener('click', e => {
-  if (e.target.id === 'backup-modal') closeBackupModal();
-});
 
 // ============================================================
 // МАССОВАЯ ОТПРАВКА НА ПОВЕРКУ
