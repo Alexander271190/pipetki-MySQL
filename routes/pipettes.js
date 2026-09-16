@@ -49,8 +49,8 @@ router.get('/:id', authenticate, async (req, res) => {
 
 // Создание
 router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
-  const {
-    id, serial, manufacturer, model, volume, department, interval,
+    const {
+    id, serial, manufacturer, model, equipmentType, volume, department, interval,
     lastCalibration, cert, result, active, responsible, location, notes
   } = req.body;
 
@@ -63,12 +63,12 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     const [exist] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [id]);
     if (exist.length) { await conn.rollback(); return res.status(409).json({ error: 'ID уже существует' }); }
 
-    await conn.query(
+       await conn.query(
       `INSERT INTO pipettes
-        (id, serial, manufacturer, model, volume, department, \`interval\`,
+        (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
          last_calibration, cert, last_result, active, responsible, location, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`,
-      [id, serial, manufacturer, model, volume, department, interval || 12,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, serial, manufacturer, model, equipmentType || 'pipette', volume, department, interval || 12,
        lastCalibration, cert, result || 'pass', active !== false ? 1 : 0,
        responsible, location, notes]
     );
@@ -100,9 +100,11 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 // Обновление
   router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
   const updates = req.body;
-  const map = {
-    serial: 'serial', manufacturer: 'manufacturer', model: 'model', volume: 'volume',
-    department: 'department', 
+    const map = {
+    serial: 'serial', manufacturer: 'manufacturer', model: 'model',
+    equipmentType: 'equipment_type',
+    volume: 'volume',
+    department: 'department',
     interval: '`interval`', lastCalibration: 'last_calibration',
     cert: 'cert', lastResult: 'last_result', active: 'active',
     responsible: 'responsible', location: 'location', notes: 'notes',
@@ -189,13 +191,18 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
     const notFound = [];
 
     for (const id of ids) {
-      const [rows] = await conn.query(
-        'SELECT id, model, sent_for_calibration FROM pipettes WHERE id = ?',
+            const [rows] = await conn.query(
+        'SELECT id, model, sent_for_calibration, equipment_type FROM pipettes WHERE id = ?',
         [id]
       );
 
       if (!rows.length) {
         notFound.push(id);
+        continue;
+      }
+
+      if (rows[0].equipment_type !== 'pipette') {
+        skipped.push(id);
         continue;
       }
 
@@ -270,11 +277,12 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
     for (const item of items) {
       if (!item.id) { skipped.push('?'); continue; }
 
-      const [rows] = await conn.query(
-        'SELECT id FROM pipettes WHERE id = ?',
+    const [rows] = await conn.query(
+        'SELECT id, equipment_type FROM pipettes WHERE id = ?',
         [item.id]
       );
       if (!rows.length) { skipped.push(item.id); continue; }
+      if (rows[0].equipment_type !== 'pipette') { skipped.push(item.id); continue; }
 
       const itemResult = item.result || 'pass';
       const itemCert = item.cert || null;
