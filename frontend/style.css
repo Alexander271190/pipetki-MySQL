@@ -742,3 +742,99 @@ tbody tr:has(.row-checkbox:checked):hover {
 .status-fail .status-dot {
   background: #dc2626;
 }
+
+/* ========== МОДАЛКА ПОДТВЕРЖДЕНИЯ ========== */
+.confirm-overlay { z-index: 400; }
+.confirm-modal { max-width: 420px; text-align: center; padding: 28px 24px 20px; }
+.confirm-icon { font-size: 3.2rem; line-height: 1; margin-bottom: 14px; }
+.confirm-modal h3 { font-size: 1.2rem; color: #1e293b; margin-bottom: 10px; font-weight: 700; }
+.confirm-message { color: #475569; font-size: .95rem; line-height: 1.55; margin-bottom: 24px; white-space: pre-line; }
+.confirm-actions { justify-content: center !important; margin-top: 0 !important; gap: 12px !important; }
+.confirm-actions .btn { min-width: 110px; padding: 10px 20px; font-size: .92rem; }
+
+/* ========== ВКЛАДКИ НАСТРОЕК ВИДА ========== */
+.prefs-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+.prefs-tab {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #64748b;
+  font-family: inherit;
+  font-size: .9rem;
+  transition: all .2s;
+}
+.prefs-tab:hover { background: #f1f5f9; color: #1e293b; }
+.prefs-tab.active { background: #4f46e5; color: #fff; }
+
+.prefs-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.prefs-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .9rem;
+}
+.prefs-item:hover { background: #f1f5f9; }
+.prefs-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4f46e5;
+  flex-shrink: 0;
+}
+.prefs-item .prefs-label { flex: 1; }
+.prefs-item .prefs-move { display: flex; flex-direction: column; gap: 2px; }
+.prefs-item .prefs-move button {
+  padding: 2px 6px;
+  font-size: .7rem;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.prefs-item .prefs-move button:hover { background: #f3f4f6; }
+.prefs-hint {
+  color: #94a3b8;
+  font-size: .82rem;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #94a3b8;
+}
+.prefs-empty { text-align: center; color: #94a3b8; padding: 30px; }
+
+@media (max-width: 600px) {
+  .prefs-list { grid-template-columns: 1fr; }
+}
+
+/* ========== БЕЙДЖ ТИПА ОБОРУДОВАНИЯ ========== */
+.badge-type {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-pipette { background: #e0f2fe; color: #0369a1; }
+.badge-other   { background: #f3e8ff; color: #6d28d9; }
