@@ -1792,8 +1792,12 @@ function addFieldSetting() {
   renderFieldsSettings(true);
 }
 
-function deleteFieldSetting(idx) {
-  if (!confirm(`Удалить поле «${_cachedFields[idx].label}»?`)) return;
+async function deleteFieldSetting(idx) {
+  const ok = await showConfirm(
+    `Удалить поле «${_cachedFields[idx].label}»?`,
+    { icon: '📋', title: 'Удаление поля', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
   _cachedFields.splice(idx, 1);
   _cachedFields.forEach((f, i) => f.order = i + 1);
   renderFieldsSettings(true);
@@ -2053,8 +2057,12 @@ function addFilter() {
   renderFiltersSettings(true);
 }
 
-function deleteFilter(idx) {
-  if (!confirm(`Удалить фильтр «${_cachedFilters[idx].label}»?`)) return;
+async function deleteFilter(idx) {
+  const ok = await showConfirm(
+    `Удалить фильтр «${_cachedFilters[idx].label}»?`,
+    { icon: '🔍', title: 'Удаление фильтра', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
   _cachedFilters.splice(idx, 1);
   _cachedFilters.forEach((f, i) => f.order = i + 1);
   renderFiltersSettings(true);
@@ -2144,7 +2152,7 @@ async function renderUsersSettings() {
         <td>${roleLabels[u.role] || u.role}</td>
           <td class="actions">
           <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">✏️</button>
-          <button class="btn btn-primary btn-sm" onclick="openUserViewModal('${u.id}', '${esc(u.fullName || u.full_name)}')" title="Настроить вид">⚙️ Вид</button>
+          <button class="btn btn-primary btn-sm" onclick="openUserViewModal(this.dataset.userId, this.dataset.userName)" data-user-id="${esc(u.id)}" data-user-name="${esc(u.fullName || u.full_name)}" title="Настроить вид">⚙️ Вид</button>
           ${u.id !== curId ? `<button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти под ним">🔍 Войти как</button>` : ''}
           ${u.id !== curId ? `<button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')" title="Удалить">🗑️</button>` : ''}
         </td>
@@ -2416,7 +2424,11 @@ async function renderLogSettings() {
 }
 
 async function clearLogSetting() {
-  if (!confirm('Очистить журнал?')) return;
+  const ok = await showConfirm(
+    'Очистить журнал действий? Все записи будут удалены.',
+    { icon: '🗒️', title: 'Очистка журнала', okText: 'Очистить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
   await apiRequest('/log', 'DELETE');
   showToast('Журнал очищен', 'success');
   renderLogSettings();
