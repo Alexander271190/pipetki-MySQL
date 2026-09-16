@@ -276,7 +276,7 @@ async function seedInitialData() {
     await pool.query(insHist, ['P-001', ago(23), 'С-АБ-9876543/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
     await pool.query(insHist, ['P-001', ago(11), 'С-АБ-1234567/2025', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
     await pool.query(insHist, ['A-001', ago(14), 'С-АБ-9876546/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годен']);
-}
+  }
   
   // --- Фильтры по умолчанию ---
   const [filc] = await pool.query('SELECT COUNT(*) AS c FROM filter_config');
