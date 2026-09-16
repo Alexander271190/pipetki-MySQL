@@ -10,6 +10,8 @@ let _activeFilters = [];
 let _cachedFields = [];
 let exportFields = null;
 let selectedPipettes = new Set();
+let myPrefs = { visibleFields: null, tableColumns: null };
+
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -34,6 +36,46 @@ function showToast(msg, type) {
   clearTimeout(t._timeout);
   t._timeout = setTimeout(() => t.className = 'toast', 4000);
 }
+let _confirmResolver = null;
+
+function showConfirm(message, options = {}) {
+  return new Promise(resolve => {
+    _confirmResolver = resolve;
+    const modal = document.getElementById('confirm-modal');
+    const icon  = document.getElementById('confirm-icon');
+    const title = document.getElementById('confirm-title');
+    const text  = document.getElementById('confirm-message');
+    const okBtn = document.getElementById('confirm-ok-btn');
+
+    icon.textContent  = options.icon  || '⚠️';
+    title.textContent = options.title || 'Подтверждение';
+    text.textContent  = message;
+    okBtn.textContent = options.okText || 'ОК';
+    okBtn.className   = 'btn ' + (options.okClass || 'btn-danger');
+
+    modal.classList.add('active');
+  });
+}
+
+function resolveConfirm(result) {
+  const modal = document.getElementById('confirm-modal');
+  if (modal) modal.classList.remove('active');
+  if (_confirmResolver) {
+    _confirmResolver(result);
+    _confirmResolver = null;
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const m = document.getElementById('confirm-modal');
+    if (m && m.classList.contains('active')) resolveConfirm(false);
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'confirm-modal') resolveConfirm(false);
+});
 
 // ============================================================
 // API КЛИЕНТ
@@ -47,7 +89,7 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 
   const response = await fetch(`${API_URL}${endpoint}`, options);
 
-  if (response.status === 401) {
+    if (response.status === 401 && !endpoint.startsWith('/auth/login')) {
     clearSession();
     renderAuthUI();
     showToast('Сессия истекла, войдите заново', 'error');
@@ -167,6 +209,11 @@ async function loginUser(e) {
 
 function logoutUser() {
   clearSession();
+  myPrefs = { visibleFields: null, tableColumns: null };
+  const u = document.getElementById('login-username');
+  const p = document.getElementById('login-password');
+  if (u) u.value = '';
+  if (p) p.value = '';
   renderAuthUI();
   showToast('Вы вышли из системы', 'success');
 }
@@ -219,6 +266,15 @@ let departmentsList = [];
 async function loadPipetteData() {
   if (!isAuthenticated()) return;
   try {
+    if (!myPrefs._loaded) {
+      try {
+        myPrefs = await apiRequest('/settings/my-preferences') || {};
+        myPrefs._loaded = true;
+      } catch (e) {
+        myPrefs = { _loaded: true };
+      }
+    }
+
     const data = await apiRequest('/pipettes');
     pipettes = data;
     const settingsData = await apiRequest('/settings/system');
@@ -268,6 +324,11 @@ async function loadFilterConfig() {
             { value: 'sent', label: '📦 На поверке' },
             { value: 'fail', label: '❌ Брак' }
           ];
+                } else if (f.optionsSource === 'equipment_type_list') {
+          f.options = [
+            { value: 'pipette', label: '🔬 Пипетки' },
+            { value: 'other', label: '⚙️ Прочее' }
+          ];
         } else if (f.optionsSource === 'active_list') {
           f.options = [
             { value: 'true', label: 'В работе' },
@@ -289,8 +350,8 @@ async function loadFilterConfig() {
 // СТАТУСЫ
 // ============================================================
 function calcStatus(p) {
-  if (!p.active) return 'inactive';
   if (p.sent_for_calibration) return 'sent';
+  if (!p.active) return 'inactive';
   if (p.last_result === 'fail') return 'fail';
   if (!p.last_calibration || !p.interval) return 'danger';
   const last = new Date(p.last_calibration);
@@ -318,6 +379,45 @@ function daysLeft(p) {
 }
 
 // ============================================================
+// ОПРЕДЕЛЕНИЯ КОЛОНОК ТАБЛИЦЫ
+// ============================================================
+const TABLE_COLUMNS = [
+  { id: 'id',              label: 'ID',            sortable: true,  field: 'id' },
+  { id: 'type',            label: 'Тип',           sortable: true,  field: 'equipmentType' },
+  { id: 'model',           label: 'Модель',        sortable: true,  field: 'model' },
+  { id: 'volume',          label: 'Объём',         sortable: true,  field: 'volume' },
+  { id: 'department',      label: 'Отдел',         sortable: true,  field: 'department' },
+  { id: 'lastCalibration', label: 'Поверка',       sortable: true,  field: 'lastCalibration' },
+  { id: 'nextCalibration', label: 'Следующая',     sortable: true,  field: 'nextCalibration' },
+  { id: 'responsible',     label: 'Ответственный', sortable: true,  field: 'responsible' },
+  { id: 'location',        label: 'Место',         sortable: false, field: 'location' },
+  { id: 'manufacturer',    label: 'Производитель', sortable: false, field: 'manufacturer' },
+  { id: 'serial',          label: 'Серийный',      sortable: false, field: 'serial' },
+  { id: 'cert',            label: 'Свидетельство', sortable: false, field: 'cert' },
+  { id: 'status',          label: 'Статус',        sortable: false, field: 'status' }
+];
+
+const DEFAULT_TABLE_COLUMNS = [
+  'id', 'type', 'model', 'volume', 'department',
+  'lastCalibration', 'nextCalibration', 'responsible', 'status'
+];
+
+function getActiveTableColumns() {
+  if (myPrefs.tableColumns && Array.isArray(myPrefs.tableColumns) && myPrefs.tableColumns.length > 0) {
+    return myPrefs.tableColumns.filter(id => TABLE_COLUMNS.some(c => c.id === id));
+  }
+  return DEFAULT_TABLE_COLUMNS;
+}
+
+function getActiveFormFields(allFields) {
+  if (myPrefs.visibleFields && Array.isArray(myPrefs.visibleFields) && myPrefs.visibleFields.length > 0) {
+    const visible = new Set(myPrefs.visibleFields);
+    return allFields.filter(f => f.enabled && visible.has(f.id));
+  }
+  return allFields.filter(f => f.enabled);
+}
+
+// ============================================================
 // РЕНДЕР ТАБЛИЦЫ
 // ============================================================
 function render() {
@@ -331,6 +431,9 @@ function render() {
     } else if (sortField === 'volume') {
       va = parseFloat(a.volume) || 0;
       vb = parseFloat(b.volume) || 0;
+    } else if (sortField === 'equipmentType') {
+      va = (a.equipment_type || 'pipette');
+      vb = (b.equipment_type || 'pipette');
     } else {
       va = (a[sortField] || '').toString().toLowerCase();
       vb = (b[sortField] || '').toString().toLowerCase();
@@ -355,10 +458,10 @@ function render() {
 
   const banner = document.getElementById('alert-banner');
   if (danger > 0) {
-    document.getElementById('alert-text').textContent = `У ${danger} ${danger === 1 ? 'пипетки просрочена' : 'пипеток просрочена'} поверка! Требуется срочное действие.`;
+    document.getElementById('alert-text').textContent = `У ${danger} ${danger === 1 ? 'единицы' : 'единиц'} проблема с поверкой!`;
     banner.classList.add('show');
   } else if (warn > 0) {
-    document.getElementById('alert-text').textContent = `У ${warn} ${warn === 1 ? 'пипетки подходит' : 'пипеток подходят'} к сроку поверки в течение ${settings.warnDays} дн.`;
+    document.getElementById('alert-text').textContent = `У ${warn} ${warn === 1 ? 'единицы' : 'единиц'} подходит срок поверки в течение ${settings.warnDays} дн.`;
     banner.classList.add('show');
   } else {
     banner.classList.remove('show');
@@ -367,6 +470,27 @@ function render() {
   const tbody = document.getElementById('pipettes-body');
   const empty = document.getElementById('empty-state');
   const table = document.getElementById('pipettes-table');
+  const thead = table.querySelector('thead tr');
+  if (!thead) return;
+
+  const columns = getActiveTableColumns();
+  const canManage = canManagePipettes();
+
+  // Динамическая шапка
+  thead.innerHTML = `
+    <th class="col-checkbox">
+      <input type="checkbox" id="select-all-checkbox" onclick="toggleSelectAll(this.checked)" title="Выбрать все">
+    </th>
+    ${columns.map(col => {
+      const def = TABLE_COLUMNS.find(c => c.id === col);
+      if (!def) return '';
+      if (def.sortable) {
+        return `<th onclick="sortBy('${def.field}')">${def.label} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
+      }
+      return `<th>${def.label}</th>`;
+    }).join('')}
+    <th id="actions-header" ${!canManage ? 'style="display:none"' : ''}>Действия</th>
+  `;
 
   if (filtered.length === 0) {
     tbody.innerHTML = '';
@@ -380,20 +504,19 @@ function render() {
   table.style.display = '';
   empty.style.display = 'none';
 
-  const canManage = canManagePipettes();
   const labels = {
-  ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак'
-};
+    ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+    inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак'
+  };
 
   tbody.innerHTML = filtered.map(p => {
     const status = calcStatus(p);
     const next = getNextDate(p);
     const dl = daysLeft(p);
     const daysText = status === 'inactive' || status === 'sent' ? '' :
-  status === 'fail' ? ' (брак)' :
-  status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
-  ` (${dl} дн.)`;
+      status === 'fail' ? ' (брак)' :
+      status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
+      ` (${dl} дн.)`;
     const histCount = (p.history || []).length;
     const isChecked = selectedPipettes.has(p.id) ? 'checked' : '';
 
@@ -402,44 +525,67 @@ function render() {
       if (status === 'sent') {
         actionsHtml = `<div class="action-btns">
           <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать">✏️</button>
-          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История поверок (${histCount})">📋</button>
-          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Вернулась с поверки">📥</button>
-          <button class="btn btn-warning btn-sm" onclick="cancelSend('${p.id}')" title="Отменить отправку">↩️</button>
+          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})">📋</button>
+          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Вернулась">📥</button>
+          <button class="btn btn-warning btn-sm" onclick="cancelSend('${p.id}')" title="Отменить">↩️</button>
           <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить">🗑️</button>
         </div>`;
       } else {
         actionsHtml = `<div class="action-btns">
           <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать">✏️</button>
-          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История поверок (${histCount})">📋</button>
+          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})">📋</button>
           <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Быстрая поверка">✔️</button>
           <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить">🗑️</button>
         </div>`;
       }
     } else {
-      actionsHtml = `<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История поверок (${histCount})">📋</button>`;
+      actionsHtml = `<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История">📋</button>`;
     }
+
+    const cellsHtml = columns.map(colId => {
+      switch (colId) {
+        case 'id':
+          return `<td><strong>${esc(p.id)}</strong>${p.serial ? `<br><small style="color:#94a3b8">S/N: ${esc(p.serial)}</small>` : ''}</td>`;
+        case 'type':
+          return `<td>${p.equipment_type === 'other'
+            ? '<span class="badge-type badge-other">⚙️ Прочее</span>'
+            : '<span class="badge-type badge-pipette">🔬 Пипетка</span>'}</td>`;
+        case 'model':
+          return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
+        case 'volume':
+          return `<td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>`;
+        case 'department':
+          return `<td>${esc(p.department || '—')}</td>`;
+        case 'lastCalibration':
+          return `<td>${formatDate(p.last_calibration)}</td>`;
+        case 'nextCalibration':
+          return `<td>${status === 'sent'
+            ? `<small style="color:#0ea5e9;font-weight:600;">📦 ${formatDate(p.sent_for_calibration)}</small>`
+            : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? '#dc2626' : status === 'warn' ? '#eab308' : '#16a34a'}">${daysText}</small>` : ''}`}</td>`;
+        case 'responsible':
+          return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
+        case 'location':
+          return `<td>${esc(p.location || '—')}</td>`;
+        case 'manufacturer':
+          return `<td>${esc(p.manufacturer || '—')}</td>`;
+        case 'serial':
+          return `<td>${esc(p.serial || '—')}</td>`;
+        case 'cert':
+          return `<td>${esc(p.cert || '—')}</td>`;
+        case 'status':
+          return `<td><span class="status-badge status-${status}"><span class="status-dot"></span>${labels[status]}</span></td>`;
+        default:
+          return '<td>—</td>';
+      }
+    }).join('');
 
     return `<tr>
       <td class="col-checkbox">
-        <input type="checkbox" class="row-checkbox" 
-               data-id="${esc(p.id)}" 
-               ${isChecked}
+        <input type="checkbox" class="row-checkbox" data-id="${esc(p.id)}" ${isChecked}
                onchange="togglePipetteSelection('${esc(p.id)}', this.checked)">
       </td>
-      <td><strong>${esc(p.id)}</strong>${p.serial ? `<br><small style="color:#94a3b8">S/N: ${esc(p.serial)}</small>` : ''}</td>
-      <td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>
-      <td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>
-      <td>${esc(p.department || '—')}</td>
-      <td>${formatDate(p.last_calibration)}</td>
-      <td>${
-        status === 'sent'
-          ? `<small style="color:#0ea5e9;font-weight:600;">📦 Отправлена ${formatDate(p.sent_for_calibration)}</small>
-             ${p.sent_note ? `<br><small style="color:#64748b;font-style:italic;">${esc(p.sent_note)}</small>` : ''}`
-          : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? '#dc2626' : status === 'warn' ? '#eab308' : '#16a34a'}">${daysText}</small>` : ''}`
-      }</td>
-      <td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>
-      <td><span class="status-badge status-${status}"><span class="status-dot"></span>${labels[status]}</span></td>
-      <td>${actionsHtml}</td>
+      ${cellsHtml}
+      <td ${!canManage ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
   }).join('');
 
@@ -449,9 +595,9 @@ function render() {
 }
 
 function updateSortArrows() {
-  const fields = ['id', 'model', 'volume', 'department', 'lastCalibration', 'nextCalibration', 'responsible'];
-  document.querySelectorAll('th .sort-arrow').forEach((el, i) => {
-    if (fields[i] === sortField) el.textContent = sortDir > 0 ? '▲' : '▼';
+  document.querySelectorAll('th .sort-arrow').forEach(el => {
+    const f = el.dataset.field;
+    if (f === sortField) el.textContent = sortDir > 0 ? '▲' : '▼';
     else el.textContent = '';
   });
 }
@@ -523,14 +669,14 @@ function updateBulkCalButton() {
   const visibleIds = getFilteredPipettes().map(p => p.id);
   const visibleSelected = [...selectedPipettes].filter(id => visibleIds.includes(id));
 
-  const toSend = visibleSelected.filter(id => {
+    const toSend = visibleSelected.filter(id => {
     const p = pipettes.find(x => x.id === id);
-    return p && !p.sent_for_calibration;
+    return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
   });
 
   const toReturn = visibleSelected.filter(id => {
     const p = pipettes.find(x => x.id === id);
-    return p && p.sent_for_calibration;
+    return p && p.sent_for_calibration && p.equipment_type === 'pipette';
   });
 
   if (btnSend) {
@@ -771,9 +917,8 @@ async function generateFormFields(data = null) {
   container.innerHTML = '<p style="color:#94a3b8;padding:10px;">Загрузка полей…</p>';
 
   try {
-    const allFields = await apiRequest('/settings/fields');
-    const fields = allFields
-      .filter(f => f.enabled)
+       const allFields = await apiRequest('/settings/fields');
+    const fields = getActiveFormFields(allFields)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     container.innerHTML = '';
@@ -813,6 +958,11 @@ async function generateFormFields(data = null) {
         if (f.id === 'department') {
           opts = departmentsList.length ? departmentsList : (f.options || []);
 
+                } else if (f.id === 'equipmentType') {
+          opts = [
+            { value: 'pipette', label: '🔬 Пипетка (дозатор)' },
+            { value: 'other', label: '⚙️ Прочее оборудование' }
+          ];
         } else if (f.id === 'result') {
           opts = [
             { value: 'pass', label: '✅ Годен' },
@@ -878,15 +1028,18 @@ async function openModal(id) {
   const title = document.getElementById('modal-title');
   document.getElementById('edit-id').value = '';
 
-  if (id) {
+    if (id) {
     const p = pipettes.find(x => x.id === id);
-    if (!p) { showToast('Пипетка не найдена', 'error'); return; }
+    if (!p) { showToast('Оборудование не найдено', 'error'); return; }
 
     title.textContent = '✏️ Редактировать оборудование';
     document.getElementById('edit-id').value = p.id;
     modal.classList.add('active');
-    await generateFormFields(p);
+
+    const editData = { ...p, result: p.last_result || 'pass' };
+    await generateFormFields(editData);
   } else {
+      
     title.textContent = '➕ Добавить оборудование';
     const defaultData = {
       lastCalibration: todayStr(),
@@ -957,7 +1110,11 @@ async function savePipette(e) {
 
 async function deletePipette(id) {
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
-  if (!confirm(`Удалить ${id} со всей историей?`)) return;
+  const ok = await showConfirm(     
+    `Удалить оборудование «${id}» вместе со всей историей поверок? Действие необратимо.`,    
+    { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }   
+  );   
+  if (!ok) return;
   try {
     await apiRequest(`/pipettes/${id}`, 'DELETE');
     showToast('Оборудование удалено', 'success');
@@ -1018,7 +1175,11 @@ async function cancelSend(id) {
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
-  if (!confirm(`Отменить отправку пипетки ${id} на поверку?`)) return;
+  const ok = await showConfirm(    
+    `Отменить отправку «${id}» на поверку?`,    
+    { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' }  
+  );   
+  if (!ok) return;
 
   try {
     await apiRequest(`/pipettes/${id}`, 'PUT', {
@@ -1151,7 +1312,11 @@ const EXPORT_FIELD_MAP = {
   id: { label: 'ID', get: p => p.id },
   serial: { label: 'Серийный', get: p => p.serial || '' },
   manufacturer: { label: 'Производитель', get: p => p.manufacturer || '' },
-  model: { label: 'Модель', get: p => p.model },
+   model: { label: 'Модель', get: p => p.model },
+  equipmentType: {
+    label: 'Тип',
+    get: p => p.equipment_type === 'other' ? 'Прочее' : 'Пипетка'
+  },
   volume: { label: 'Объём', get: p => p.volume || '' },
   department: { label: 'Отдел', get: p => p.department || '' },
   lastCalibration: { label: 'Дата поверки', get: p => formatDate(p.last_calibration) },
@@ -1743,13 +1908,17 @@ function addDepartmentItem() {
   showToast(`Отдел «${name}» добавлен — не забудьте нажать «Сохранить»`, 'success');
 }
 
-function deleteDepartmentItem(idx) {
+async function deleteDepartmentItem(idx) {
   if (idx < 0 || idx >= _cachedDepartmentsFull.length) return;
   const name = _cachedDepartmentsFull[idx].name;
-  if (!confirm(`Удалить «${name}»?`)) return;
+  const ok = await showConfirm(
+    `Удалить отдел «${name}»?`,
+    { icon: '🏢', title: 'Удаление отдела', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
   _cachedDepartmentsFull.splice(idx, 1);
   renderDepartmentsSettings(true);
-  showToast(`Отдел «${name}» удалён — не забудьте нажать «Сохранить»`, 'success');
+  showToast(`Отдел «${name}» удалён — не забудьте «Сохранить»`, 'success');
 }
 
 async function saveDepartmentsFull() {
@@ -1974,10 +2143,11 @@ async function renderUsersSettings() {
         <td>${esc(u.position)}</td>
         <td>${esc(u.department || '—')}</td>
         <td>${roleLabels[u.role] || u.role}</td>
-        <td class="actions">
-          <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')">✏️</button>
-          ${u.id !== curId ? `<button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти под этим пользователем">🔍 Войти как</button>` : ''}
-          ${u.id !== curId ? `<button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')">🗑️</button>` : ''}
+          <td class="actions">
+          <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">✏️</button>
+          <button class="btn btn-primary btn-sm" onclick="openUserViewModal('${u.id}', '${esc(u.fullName || u.full_name)}')" title="Настроить вид">⚙️ Вид</button>
+          ${u.id !== curId ? `<button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти под ним">🔍 Войти как</button>` : ''}
+          ${u.id !== curId ? `<button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')" title="Удалить">🗑️</button>` : ''}
         </td>
       </tr>`;
     });
@@ -2157,7 +2327,11 @@ async function saveUserSetting() {
 }
 
 async function deleteUserSetting(id) {
-  if (!confirm('Удалить пользователя?')) return;
+    const ok = await showConfirm(
+    'Удалить пользователя? Действие необратимо.',
+    { icon: '👤', title: 'Удаление пользователя', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
   try {
     await apiRequest('/users/' + id, 'DELETE');
     showToast('Удалён', 'success');
@@ -2294,15 +2468,28 @@ async function createBackupSetting() {
 }
 
 async function deleteBackupSetting(name) {
-  if (!confirm('Удалить бэкап?')) return;
+  const ok = await showConfirm(     
+    'Удалить этот резервный бэкап?',    
+    { icon: '💾', title: 'Удаление бэкапа', okText: 'Удалить', okClass: 'btn-danger' }  
+  );   
+  if (!ok) return;
   await apiRequest('/backup/' + encodeURIComponent(name), 'DELETE');
   showToast('Удалён', 'success');
   renderBackupSettings();
 }
 
 async function resetAllDataSetting() {
-  if (!confirm('Удалить ВСЕ пипетки и историю? Это необратимо!')) return;
-  if (!confirm('Точно?')) return;
+    const ok1 = await showConfirm(
+    'ВНИМАНИЕ! Всё оборудование и история поверок будут удалены безвозвратно.',
+    { icon: '⚠️', title: 'Сброс всех данных', okText: 'Продолжить', okClass: 'btn-danger' }
+  );
+  if (!ok1) return;
+
+  const ok2 = await showConfirm(
+    'Вы точно уверены? Отменить это будет невозможно.',
+    { icon: '🚨', title: 'Последнее предупреждение', okText: 'Удалить всё', okClass: 'btn-danger' }
+  );
+  if (!ok2) return;
   await apiRequest('/backup/reset', 'POST', {});
   showToast('Данные удалены', 'success');
   await loadPipetteData();
@@ -2326,7 +2513,11 @@ async function openBackupList() {
 }
 
 async function doRestoreSetting(name) {
-  if (!confirm('Восстановить из этого бэкапа? Текущие данные будут потеряны.')) return;
+  const ok = await showConfirm(     
+    'Восстановить из этого бэкапа? Текущие данные будут перезаписаны.',    
+    { icon: '🔄', title: 'Восстановление', okText: 'Восстановить', okClass: 'btn-danger' }  
+  );  
+  if (!ok) return;
   try {
     await apiRequest('/backup/restore/' + encodeURIComponent(name), 'POST', {});
     showToast('Бэкап восстановлен. Перезапустите приложение.', 'success');
@@ -2349,13 +2540,13 @@ function openBulkSendModal() {
 
   const visibleIds = getFilteredPipettes().map(p => p.id);
   const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
-  const toSend = selected.filter(id => {
+    const toSend = selected.filter(id => {
     const p = pipettes.find(x => x.id === id);
-    return p && !p.sent_for_calibration;
+    return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
   });
 
   if (toSend.length === 0) {
-    showToast('Не выбрано ни одной единицы для отправки', 'error');
+    showToast('Не выбрано ни одной пипетки. На внешнюю поверку отправляются только пипетки (дозаторы).', 'error');
     return;
   }
 
@@ -2387,9 +2578,9 @@ async function saveBulkSend(e) {
 
   const visibleIds = getFilteredPipettes().map(p => p.id);
   const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
-  const toSend = selected.filter(id => {
-    const p = pipettes.find(x => x.id === id);
-    return p && !p.sent_for_calibration;
+ const toSend = selected.filter(id => {
+  const p = pipettes.find(x => x.id === id);
+  return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
   });
 
   if (toSend.length === 0) {
@@ -2406,8 +2597,12 @@ async function saveBulkSend(e) {
     return;
   }
 
-  if (toSend.length > 5) {
-    if (!confirm(`Отправить на поверку ${toSend.length} единиц?`)) return;
+   if (toSend.length > 1) {
+    const ok = await showConfirm(
+      `Отправить на поверку ${toSend.length} единиц оборудования?`,
+      { icon: '📦', title: 'Отправка на поверку', okText: 'Отправить', okClass: 'btn-warning' }
+    );
+    if (!ok) return;
   }
 
   try {
@@ -2421,6 +2616,8 @@ async function saveBulkSend(e) {
 
     clearSelection();
     closeBulkSendModal();
+    filterState = {};
+    _filterRendered = false;
     await loadPipetteData();
   } catch (error) {
     showToast(error.message || 'Ошибка отправки', 'error');
@@ -2558,9 +2755,9 @@ function openBulkReturnModal() {
   const visibleIds = getFilteredPipettes().map(p => p.id);
   const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
 
-  const sentItems = selected
+    const sentItems = selected
     .map(id => pipettes.find(x => x.id === id))
-    .filter(p => p && p.sent_for_calibration);
+    .filter(p => p && p.sent_for_calibration && p.equipment_type === 'pipette');
 
   if (sentItems.length === 0) {
     showToast('Не выбрано ни одной единицы со статусом «На поверке»', 'error');
@@ -2663,8 +2860,8 @@ async function saveBulkReturn(e) {
   const visibleIds = getFilteredPipettes().map(p => p.id);
   const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
   const sentIds = selected.filter(id => {
-    const p = pipettes.find(x => x.id === id);
-    return p && p.sent_for_calibration;
+  const p = pipettes.find(x => x.id === id);
+  return p && p.sent_for_calibration && p.equipment_type === 'pipette';
   });
 
   const items = sentIds.map(id => {
@@ -2684,8 +2881,12 @@ async function saveBulkReturn(e) {
     }
   }
 
-  if (items.length > 5) {
-    if (!confirm(`Применить возврат для ${items.length} пипеток?`)) return;
+   if (items.length > 1) {
+    const ok = await showConfirm(
+      `Применить возврат для ${items.length} единиц оборудования?`,
+      { icon: '📥', title: 'Возврат с поверки', okText: 'Применить', okClass: 'btn-success' }
+    );
+    if (!ok) return;
   }
 
   try {
@@ -2693,14 +2894,215 @@ async function saveBulkReturn(e) {
       items, date, org, note
     });
 
-    showToast(res.message || `Возврат оформлен для ${items.length} пипеток`, 'success');
+    showToast(res.message || `Возврат оформлен для ${items.length} единиц`, 'success');
     clearSelection();
     closeBulkReturnModal();
+    filterState = {};
+    _filterRendered = false;
     await loadPipetteData();
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
+// ============================================================
+// НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ (АДМИН)
+// ============================================================
+let _userViewUserId = null;
+let _userViewEditing = { visibleFields: [], tableColumns: [] };
+let _userViewActiveTab = 'form';
+
+async function openUserViewModal(userId, userName) {
+  if (!isAdmin()) return;
+
+  _userViewUserId = userId;
+  _userViewEditing = { visibleFields: [], tableColumns: [] };
+
+  document.getElementById('user-view-target').innerHTML =
+    `Настройка для: <strong>${esc(userName || userId)}</strong>`;
+
+  try {
+    const prefs = await apiRequest(`/settings/user-preferences/${userId}`);
+    if (prefs.visibleFields && Array.isArray(prefs.visibleFields)) {
+      _userViewEditing.visibleFields = [...prefs.visibleFields];
+    }
+    if (prefs.tableColumns && Array.isArray(prefs.tableColumns)) {
+      _userViewEditing.tableColumns = [...prefs.tableColumns];
+    }
+  } catch (e) { /* новых настроек нет */ }
+
+  if (_cachedFields.length === 0) {
+    try {
+      _cachedFields = await apiRequest('/settings/fields');
+    } catch (e) { _cachedFields = []; }
+  }
+
+  const allFields = _cachedFields.filter(f => f.enabled);
+  if (_userViewEditing.visibleFields.length === 0) {
+    _userViewEditing.visibleFields = allFields.map(f => f.id);
+  }
+  if (_userViewEditing.tableColumns.length === 0) {
+    _userViewEditing.tableColumns = [...DEFAULT_TABLE_COLUMNS];
+  }
+
+  _userViewActiveTab = 'form';
+  document.querySelectorAll('#user-view-modal .prefs-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.prefsTab === 'form');
+  });
+
+  document.getElementById('user-view-modal').classList.add('active');
+  renderUserViewContent();
 }
+
+function closeUserViewModal() {
+  document.getElementById('user-view-modal').classList.remove('active');
+  _userViewUserId = null;
+}
+
+function switchUserViewTab(tab) {
+  _userViewActiveTab = tab;
+  document.querySelectorAll('#user-view-modal .prefs-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.prefsTab === tab);
+  });
+  renderUserViewContent();
+}
+
+function renderUserViewContent() {
+  const c = document.getElementById('user-view-content');
+
+  if (_userViewActiveTab === 'form') {
+    const allFields = _cachedFields
+      .filter(f => f.enabled)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    if (allFields.length === 0) {
+      c.innerHTML = '<div class="prefs-empty">Нет активных полей формы</div>';
+      return;
+    }
+
+    c.innerHTML = `
+      <div class="prefs-list">
+        ${allFields.map(f => `
+          <label class="prefs-item">
+            <input type="checkbox"
+                   ${_userViewEditing.visibleFields.includes(f.id) ? 'checked' : ''}
+                   onchange="toggleUserViewField('${f.id}', this.checked)">
+            <span class="prefs-label">${esc(f.label)}</span>
+          </label>
+        `).join('')}
+      </div>
+      <div class="prefs-hint">
+        ℹ️ Отключённые поля не будут видны пользователю в форме добавления и редактирования.
+      </div>
+    `;
+  } else if (_userViewActiveTab === 'table') {
+    const orderedColumns = _userViewEditing.tableColumns
+      .map(id => TABLE_COLUMNS.find(c => c.id === id))
+      .filter(Boolean);
+
+    c.innerHTML = `
+      <div class="prefs-list">
+        ${orderedColumns.map((col, idx) => `
+          <div class="prefs-item">
+            <input type="checkbox" checked
+                   onchange="toggleUserViewColumn('${col.id}', this.checked)">
+            <span class="prefs-label">${col.label}</span>
+            <div class="prefs-move">
+              <button type="button" onclick="moveUserViewColumn(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
+              <button type="button" onclick="moveUserViewColumn(${idx}, 1)" ${idx === orderedColumns.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <details style="margin-top:16px;">
+        <summary style="cursor:pointer;color:#475569;font-weight:600;padding:8px 0;">
+          ➕ Добавить скрытые колонки
+        </summary>
+        <div class="prefs-list" style="margin-top:10px;">
+          ${TABLE_COLUMNS.filter(c => !_userViewEditing.tableColumns.includes(c.id)).map(col => `
+            <label class="prefs-item">
+              <input type="checkbox" onchange="toggleUserViewColumn('${col.id}', this.checked)">
+              <span class="prefs-label">${col.label}</span>
+            </label>
+          `).join('') || '<p style="color:#94a3b8;grid-column:1/-1;">Все колонки уже добавлены</p>'}
+        </div>
+      </details>
+      <div class="prefs-hint">
+        ℹ️ Колонки отображаются в таблице в указанном порядке.
+      </div>
+    `;
+  }
+}
+
+function toggleUserViewField(id, checked) {
+  if (checked) {
+    if (!_userViewEditing.visibleFields.includes(id)) _userViewEditing.visibleFields.push(id);
+  } else {
+    _userViewEditing.visibleFields = _userViewEditing.visibleFields.filter(x => x !== id);
+  }
+}
+
+function toggleUserViewColumn(id, checked) {
+  if (checked) {
+    if (!_userViewEditing.tableColumns.includes(id)) _userViewEditing.tableColumns.push(id);
+  } else {
+    _userViewEditing.tableColumns = _userViewEditing.tableColumns.filter(x => x !== id);
+  }
+  renderUserViewContent();
+}
+
+function moveUserViewColumn(idx, dir) {
+  const to = idx + dir;
+  if (to < 0 || to >= _userViewEditing.tableColumns.length) return;
+  const arr = _userViewEditing.tableColumns;
+  [arr[idx], arr[to]] = [arr[to], arr[idx]];
+  renderUserViewContent();
+}
+
+async function saveUserView() {
+  if (!_userViewUserId) return;
+
+  if (_userViewEditing.visibleFields.length === 0) {
+    showToast('Нужно выбрать хотя бы одно поле формы', 'error');
+    return;
+  }
+  if (_userViewEditing.tableColumns.length === 0) {
+    showToast('Нужно выбрать хотя бы одну колонку таблицы', 'error');
+    return;
+  }
+
+  try {
+    await apiRequest(`/settings/user-preferences/${_userViewUserId}`, 'PUT', {
+      visibleFields: _userViewEditing.visibleFields,
+      tableColumns: _userViewEditing.tableColumns
+    });
+    showToast('Настройки пользователя сохранены', 'success');
+    closeUserViewModal();
+  } catch (e) {
+    showToast(e.message || 'Ошибка сохранения', 'error');
+  }
+}
+
+async function resetUserView() {
+  if (!_userViewUserId) return;
+
+  const ok = await showConfirm(
+    'Сбросить все настройки вида пользователя к стандартным?',
+    { icon: '↩️', title: 'Сброс настроек', okText: 'Сбросить', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+
+  try {
+    await apiRequest(`/settings/user-preferences/${_userViewUserId}`, 'DELETE');
+    showToast('Настройки сброшены', 'success');
+    closeUserViewModal();
+  } catch (e) {
+    showToast(e.message || 'Ошибка сброса', 'error');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'user-view-modal') closeUserViewModal();
+});
+
 
 console.log('🔬 Система учёта пипеток запущена');
 console.log('👤 admin/admin, senior/senior, user/user');
