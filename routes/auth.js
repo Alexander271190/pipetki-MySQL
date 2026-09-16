@@ -14,10 +14,7 @@ router.post('/login', async (req, res) => {
   const { login, password } = req.body;
   if (!login || !password) return res.status(400).json({ error: 'Заполните все поля' });
   try {
-    const [rows] = await db.query('SELECT * FROM users WHERE login = ?', [login]);
-    if (!rows.length || rows[0].password !== password)
-      return res.status(401).json({ error: 'Неверный логин или пароль' });
-    
+      
     const passwordOk = await bcrypt.compare(password, rows[0].password);
     if (!passwordOk)
       return res.status(401).json({ error: 'Неверный логин или пароль' });
