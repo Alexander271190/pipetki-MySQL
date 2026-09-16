@@ -2572,7 +2572,7 @@ function openBulkReturnModal() {
   const container = document.getElementById('bulk-return-items-container');
   container.innerHTML = `
     <div style="font-weight:600;color:#475569;margin-bottom:8px;font-size:.85rem;">
-      Свидетельства по пипеткам:
+      Свидетельства по оборудованию:
     </div>
     <table class="field-settings-table">
       <thead>
