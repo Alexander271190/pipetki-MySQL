@@ -41,8 +41,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      # Бэкапы хранятся в проекте: ./data/backups
-      - ./data:/app/data
-      # Фронтенд можно править без пересборки
+    volumes: 
+     # Фронтенд можно править без пересборки
       - ./frontend:/app/frontend
