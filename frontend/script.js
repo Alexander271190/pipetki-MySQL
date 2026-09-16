@@ -2352,6 +2352,18 @@ async function renderSystemSettings() {
           <input type="number" id="sys-warn-days" value="${esc(s.warn_days || '30')}" min="1" max="365">
         </div>
         <button class="btn btn-success" onclick="saveSystemSetting()">💾 Сохранить</button>
+      </div>
+
+      <div class="settings-form" style="margin-top:24px;border-left:3px solid #dc2626;">
+        <h4 style="color:#991b1b;">⚠️ Опасная зона</h4>
+        <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
+          Удаление <strong>всех данных</strong> об оборудовании и истории поверок.
+          Пользователи, отделы, поля и настройки останутся.
+          <strong>Действие необратимо.</strong>
+        </p>
+        <button class="btn btn-danger" onclick="resetAllDataSetting()">
+          🗑️ Сбросить все данные
+        </button>
       </div>`;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
@@ -2411,21 +2423,28 @@ async function clearLogSetting() {
 }
 
 async function resetAllDataSetting() {
-    const ok1 = await showConfirm(
-    'ВНИМАНИЕ! Всё оборудование и история поверок будут удалены безвозвратно.',
+  if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
+
+  const ok1 = await showConfirm(
+    'ВНИМАНИЕ! Всё оборудование, история поверок и журнал действий будут удалены безвозвратно.\n\nПользователи, отделы и настройки — останутся.',
     { icon: '⚠️', title: 'Сброс всех данных', okText: 'Продолжить', okClass: 'btn-danger' }
   );
   if (!ok1) return;
 
   const ok2 = await showConfirm(
-    'Вы точно уверены? Отменить это будет невозможно.',
+    'Вы точно уверены? Отменить это действие будет невозможно.\n\nРекомендуем сначала сделать экспорт важных данных в Excel.',
     { icon: '🚨', title: 'Последнее предупреждение', okText: 'Удалить всё', okClass: 'btn-danger' }
   );
   if (!ok2) return;
-  await apiRequest('/backup/reset', 'POST', {});
-  showToast('Данные удалены', 'success');
-  await loadPipetteData();
-  closeSettingsModal();
+
+  try {
+    await apiRequest('/settings/reset-data', 'POST', {});
+    showToast('Данные удалены', 'success');
+    await loadPipetteData();
+    closeSettingsModal();
+  } catch (e) {
+    showToast(e.message || 'Ошибка сброса данных', 'error');
+  }
 }
 
 // ============================================================
