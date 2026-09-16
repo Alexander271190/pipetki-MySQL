@@ -211,4 +211,72 @@ router.put('/filters', authenticate, requireRole(['admin']), async (req, res) =>
   }
 });
 
+// ============================================================
+// НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ (только для админа)
+// ============================================================
+
+// Получить настройки вида конкретного пользователя (админ)
+router.get('/user-preferences/:userId', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT preferences FROM user_preferences WHERE user_id = ?',
+      [req.params.userId]
+    );
+    if (!rows.length) return res.json({});
+    res.json(JSON.parse(rows[0].preferences || '{}'));
+  } catch (e) {
+    console.error('user-preferences GET error:', e);
+    res.json({});
+  }
+});
+
+// Сохранить настройки вида конкретного пользователя (админ)
+router.put('/user-preferences/:userId', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const prefs = req.body;
+    if (typeof prefs !== 'object' || prefs === null) {
+      return res.status(400).json({ error: 'Ожидается объект' });
+    }
+
+    const [user] = await db.query('SELECT id FROM users WHERE id = ?', [req.params.userId]);
+    if (!user.length) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    await db.query(
+      `INSERT INTO user_preferences (user_id, preferences) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE preferences = VALUES(preferences), updated_at = CURRENT_TIMESTAMP`,
+      [req.params.userId, JSON.stringify(prefs)]
+    );
+
+    res.json({ message: 'Настройки сохранены' });
+  } catch (e) {
+    console.error('user-preferences PUT error:', e);
+    res.status(500).json({ error: 'Ошибка сохранения настроек' });
+  }
+});
+
+// Сбросить настройки вида пользователя (админ)
+router.delete('/user-preferences/:userId', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    await db.query('DELETE FROM user_preferences WHERE user_id = ?', [req.params.userId]);
+    res.json({ message: 'Настройки сброшены' });
+  } catch (e) {
+    res.status(500).json({ error: 'Ошибка сброса' });
+  }
+});
+
+// Получить СВОИ настройки вида (для применения при входе)
+router.get('/my-preferences', authenticate, async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT preferences FROM user_preferences WHERE user_id = ?',
+      [req.user.id]
+    );
+    if (!rows.length) return res.json({});
+    res.json(JSON.parse(rows[0].preferences || '{}'));
+  } catch (e) {
+    console.error('my-preferences GET error:', e);
+    res.json({});
+  }
+});
+
 module.exports = router;
