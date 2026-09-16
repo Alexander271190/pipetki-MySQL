@@ -279,4 +279,25 @@ router.get('/my-preferences', authenticate, async (req, res) => {
   }
 });
 
+// ============================================================
+// СБРОС ВСЕХ ДАННЫХ (только для админа)
+// ============================================================
+router.post('/reset-data', authenticate, requireRole(['admin']), async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query('DELETE FROM calibration_history');
+    await conn.query('DELETE FROM pipettes');
+    await conn.query('DELETE FROM audit_log');
+    await conn.commit();
+    res.json({ message: 'Все данные удалены' });
+  } catch (e) {
+    await conn.rollback();
+    console.error('Reset data error:', e);
+    res.status(500).json({ error: 'Ошибка сброса данных' });
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;
