@@ -19,7 +19,11 @@ const HEADER_MAP = {
   'марка': 'manufacturer', 'бренд': 'manufacturer',
 
   'model': 'model', 'модель': 'model', 'наименование': 'model',
-  'название': 'model', 'тип': 'model', 'оборудование': 'model',
+  'название': 'model', 'оборудование': 'model',
+
+  'equipmenttype': 'equipmentType', 'equipment_type': 'equipmentType',
+  'тип оборудования': 'equipmentType', 'тип': 'equipmentType',
+  'категория': 'equipmentType',
 
   'volume': 'volume', 'объём': 'volume', 'объем': 'volume', 'объём (мкл)': 'volume',
   'объем (мкл)': 'volume', 'номинал': 'volume', 'диапазон': 'volume',
@@ -107,6 +111,14 @@ function normalizeResult(val) {
   if (/брак|fail|не\s*год|негод|❌|дефект/.test(s)) return 'fail';
   if (/процесс|wip|ожидан|⏳/.test(s)) return 'wip';
   return 'pass';
+}
+
+function normalizeEquipmentType(val) {
+  if (!val) return 'pipette';
+  const s = String(val).trim().toLowerCase();
+  if (/пипет|дозатор|pipette|pipet/.test(s)) return 'pipette';
+  if (/проч|друг|other|анализатор|микроскоп|центрифуг|термостат/.test(s)) return 'other';
+  return 'pipette';
 }
 
 function normalizeActive(val) {
@@ -249,16 +261,17 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
         const lastCal = parseDate(obj.lastCalibration);
         const result = normalizeResult(obj.result);
 
-        await db.query(
+                await db.query(
           `INSERT INTO pipettes
-            (id, serial, manufacturer, model, volume, department, \`interval\`,
+            (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
              last_calibration, cert, last_result, active, responsible, location, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             String(obj.serial || '').trim(),
             String(obj.manufacturer || '').trim(),
             model,
+            normalizeEquipmentType(obj.equipmentType),
             String(obj.volume || '').trim(),
             String(obj.department || '').trim(),
             parseInterval(obj.interval),
@@ -271,7 +284,6 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
             String(obj.notes || '').trim()
           ]
         );
-
         if (lastCal) {
           await db.query(
             `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
