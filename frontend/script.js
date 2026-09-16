@@ -2127,34 +2127,6 @@ async function saveExportSettings() {
     showToast(e.message, 'error');
   }
 }
-async function renderExportSettings() {
-  const c = document.getElementById('settings-content');
-  try {
-    const selected = await apiRequest('/settings/export');
-    let html = `<h3>Настройки экспорта</h3>
-      <p style="color:#64748b;margin-bottom:12px;">Выберите поля для PDF/Excel</p>
-      <div class="export-fields-grid">`;
-    EXPORT_FIELDS.forEach(f => {
-      html += `<label><input type="checkbox" value="${f.id}" ${selected.includes(f.id) ? 'checked' : ''} class="exp-field-cb"> ${f.label}</label>`;
-    });
-    html += `</div><button class="btn btn-success" onclick="saveExportSettings()">💾 Сохранить</button>`;
-    c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
-  }
-}
-
-async function saveExportSettings() {
-  const selected = Array.from(document.querySelectorAll('.exp-field-cb:checked')).map(cb => cb.value);
-  try {
-    await apiRequest('/settings/export', 'PUT', selected);
-    exportFields = selected;
-    showToast('Настройки экспорта сохранены', 'success');
-    closeSettingsModal();
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
-}
 
 // ============================================================
 // ВКЛАДКА: ПОЛЬЗОВАТЕЛИ
