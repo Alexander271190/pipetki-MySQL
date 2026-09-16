@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 
@@ -26,12 +27,15 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
 
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
+  const passwordHash = await bcrypt.hash(password, 10);
+
   await db.query(
     `INSERT INTO users (id, login, password, full_name, position, department, role, only_own_department, extra_permissions)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, login, password, fullName, position, department || '', role || 'user',
+    [id, login, passwordHash, fullName, position, department || '', role || 'user',
      onlyOwnDepartment ? 1 : 0, JSON.stringify(extraPermissions || [])]
   );
+  
   res.status(201).json({ message: 'Пользователь создан', id });
 });
 
@@ -45,13 +49,14 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 
   const onlyOwn = onlyOwnDepartment ? 1 : 0;
 
-  if (password) {
+    if (password) {
+    const passwordHash = await bcrypt.hash(password, 10);
     await db.query(
       `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
          only_own_department=?, extra_permissions=?, password=?, updated_at=CURRENT_TIMESTAMP
        WHERE id=?`,
       [login, fullName, position, department || '', role || 'user',
-       onlyOwn, JSON.stringify(extraPermissions || []), password, id]
+       onlyOwn, JSON.stringify(extraPermissions || []), passwordHash, id]
     );
   } else {
     await db.query(
