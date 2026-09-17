@@ -117,7 +117,10 @@ function normalizeEquipmentType(val) {
   if (!val) return 'pipette';
   const s = String(val).trim().toLowerCase();
   if (/пипет|дозатор|pipette|pipet/.test(s)) return 'pipette';
-  if (/проч|друг|other|анализатор|микроскоп|центрифуг|термостат/.test(s)) return 'other';
+  if (/анализатор|analyzer/.test(s)) return 'analyzer';
+  if (/термометр|thermometer/.test(s)) return 'thermometer';
+  if (/весы|scales|balance/.test(s)) return 'scales';
+  if (/фотометр|photometer/.test(s)) return 'photometer';
   return 'pipette';
 }
 
