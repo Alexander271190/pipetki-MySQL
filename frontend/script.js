@@ -1042,10 +1042,7 @@ async function generateFormFields(data = null) {
       input.id = `p-${f.id}`;
       input.dataset.fieldId = f.id;
       if (f.required) input.required = true;
-            input.id = `p-${f.id}`;
-      input.dataset.fieldId = f.id;
-      if (f.required) input.required = true;
-
+           
       // ID нельзя менять при редактировании
       if (f.id === 'id' && data && data.id) {
         input.readOnly = true;
@@ -1055,9 +1052,7 @@ async function generateFormFields(data = null) {
 
       div.appendChild(input);
       container.appendChild(div);
-
-      div.appendChild(input);
-      container.appendChild(div);
+      
     }
 
     if (document.getElementById('p-department')) {
@@ -1218,8 +1213,7 @@ async function saveQuickCalibration() {
     showToast('Поверка зарегистрирована', 'success');
     closeQuickCalModal();
     await loadPipetteData();
-    render();
-  } catch (error) {
+    } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
