@@ -3294,6 +3294,15 @@ async function saveEquipmentTypes() {
     return;
   }
 
+  // Проверка prefix — если пустой, предупреждаем админа
+  if (_cachedEquipmentTypes.some(t => !t.prefix || !t.prefix.trim())) {
+    const ok = await showConfirm(
+      'У некоторых типов не указан prefix. ID будет генерироваться с префиксом EQ. Продолжить?',
+      { icon: '⚠️', title: 'Пустой prefix', okText: 'Продолжить', okClass: 'btn-warning' }
+    );
+    if (!ok) return;
+  }
+
   try {
     await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
     showToast('Типы оборудования сохранены', 'success');
