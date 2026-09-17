@@ -579,10 +579,22 @@ tbody tr:hover { background: #f8fafc; }
   font-weight: 600;
 }
 .auth-error { 
-  color: #dc2626; 
-  font-size: .85rem; 
+  color: #b91c1c;                    
+  font-size: .95rem;                  
+  font-weight: 700;                  
   text-align: center; 
-  margin-top: 8px; 
+  margin-top: 12px;
+  padding: 10px 14px;                 
+  background: rgba(255, 255, 255, 0.95); 
+  border: 2px solid #dc2626;          
+  border-radius: 10px;               
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+  line-height: 1.4;
+  min-height: 0;                      
+}
+
+.auth-error:empty {
+  display: none;
 }
 
 /* Поля — усиленный контраст для читаемости на фоне */
