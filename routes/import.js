@@ -1,5 +1,5 @@
 const express = require('express');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const db = require('../db');
 const { authenticate, requirePermission } = require('../middleware/auth');
 
@@ -76,17 +76,13 @@ function mapHeader(h) {
 // ============================================================
 // ПАРСЕРЫ ЗНАЧЕНИЙ
 // ============================================================
+
+// exceljs возвращает Date для дат; строку для текста; число для чисел
 function parseDate(val) {
   if (val === undefined || val === null || val === '') return '';
   if (val instanceof Date) {
     const d = val;
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-  if (typeof val === 'number') {
-    try {
-      const d = XLSX.SSF.parse_date_code(val);
-      if (d && d.y) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
-    } catch (e) {}
   }
   const s = String(val).trim();
 
@@ -142,6 +138,123 @@ function parseInterval(val) {
 }
 
 // ============================================================
+// ВСПОМОГАТЕЛЬНОЕ: получить «чистое» значение ячейки exceljs
+// ============================================================
+function cellValue(cell) {
+  if (!cell || cell.value === undefined || cell.value === null) return '';
+  const v = cell.value;
+
+  // Формула / rich text / гиперссылка — объект
+  if (typeof v === 'object' && v !== null) {
+    if (v.result !== undefined) return v.result;                     // формула → её результат
+    if (v.richText) return v.richText.map(r => r.text).join('');      // rich text
+    if (v.text !== undefined) return v.text;                          // гиперссылка
+    if (v.hyperlink) return v.text || v.hyperlink;
+    return '';
+  }
+  return v;
+}
+
+// ============================================================
+// ПАРСЕРЫ ПО ФОРМАТАМ
+// ============================================================
+
+// --- XLSX / XLS через exceljs ---
+async function parseXlsx(buffer) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+
+  const sheet = workbook.worksheets[0];
+  if (!sheet) throw new Error('Файл не содержит листов');
+
+  const headers = [];
+  const objects = [];
+
+  // Первая строка — заголовки
+  const firstRow = sheet.getRow(1);
+  if (!firstRow) throw new Error('Пустой файл');
+  const colCount = firstRow.cellCount;
+  for (let i = 1; i <= colCount; i++) {
+    headers.push(String(cellValue(firstRow.getCell(i)) || '').trim());
+  }
+  if (headers.length === 0) throw new Error('Пустой файл');
+
+  // Остальные строки — данные
+  for (let r = 2; r <= sheet.rowCount; r++) {
+    const row = sheet.getRow(r);
+    if (!row || row.cellCount === 0) continue;
+
+    const obj = {};
+    let isEmpty = true;
+
+    for (let c = 1; c <= headers.length; c++) {
+      const h = headers[c - 1];
+      if (!h) continue;
+      const val = cellValue(row.getCell(c));
+      if (val !== '' && val !== undefined && val !== null) isEmpty = false;
+      obj[h] = val;
+    }
+
+    if (isEmpty) continue;
+    objects.push(obj);
+  }
+
+  return { headers, objects };
+}
+
+// --- CSV / TXT (без внешних библиотек) ---
+function parseCsv(buffer) {
+  const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error('Пустой файл');
+
+  const firstLine = lines[0];
+  const counts = { ';': 0, ',': 0, '\t': 0 };
+  for (const ch of firstLine) if (counts[ch] !== undefined) counts[ch]++;
+  const sep = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+
+  const splitCsvLine = (line) => {
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQ = !inQ;
+      } else if (c === sep && !inQ) {
+        result.push(cur); cur = '';
+      } else {
+        cur += c;
+      }
+    }
+    result.push(cur);
+    return result.map(s => s.trim().replace(/^"|"$/g, ''));
+  };
+
+  const headers = splitCsvLine(lines[0]);
+  const objects = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = splitCsvLine(lines[i]);
+    if (vals.every(v => !v)) continue;
+    const obj = {};
+    headers.forEach((h, j) => obj[h] = vals[j] || '');
+    objects.push(obj);
+  }
+
+  return { headers, objects };
+}
+
+// --- JSON ---
+function parseJson(buffer) {
+  const parsed = JSON.parse(buffer.toString('utf8'));
+  if (!Array.isArray(parsed)) {
+    throw new Error('JSON должен содержать массив объектов');
+  }
+  const headers = parsed.length ? Object.keys(parsed[0]) : [];
+  return { headers, objects: parsed };
+}
+
+// ============================================================
 // ИМПОРТ
 // ============================================================
 router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
@@ -156,73 +269,17 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     let objects = [];
 
     if (ext === 'json') {
-      const parsed = JSON.parse(buffer.toString('utf8'));
-      if (!Array.isArray(parsed)) {
-        return res.status(400).json({ error: 'JSON должен содержать массив объектов' });
-      }
-      objects = parsed;
-      headers = parsed.length ? Object.keys(parsed[0]) : [];
+      ({ headers, objects } = parseJson(buffer));
     } else if (ext === 'csv' || ext === 'txt') {
-      const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
-      if (lines.length < 2) return res.status(400).json({ error: 'Пустой файл' });
-
-      const firstLine = lines[0];
-      const counts = { ';': 0, ',': 0, '\t': 0 };
-      for (const ch of firstLine) if (counts[ch] !== undefined) counts[ch]++;
-      const sep = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-
-      const splitCsvLine = (line) => {
-        const result = [];
-        let cur = '', inQ = false;
-        for (let i = 0; i < line.length; i++) {
-          const c = line[i];
-          if (c === '"') {
-            if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
-            else inQ = !inQ;
-          } else if (c === sep && !inQ) {
-            result.push(cur); cur = '';
-          } else {
-            cur += c;
-          }
-        }
-        result.push(cur);
-        return result.map(s => s.trim().replace(/^"|"$/g, ''));
-      };
-
-      headers = splitCsvLine(lines[0]);
-      for (let i = 1; i < lines.length; i++) {
-        const vals = splitCsvLine(lines[i]);
-        if (vals.every(v => !v)) continue;
-        const obj = {};
-        headers.forEach((h, j) => obj[h] = vals[j] || '');
-        objects.push(obj);
-      }
+      ({ headers, objects } = parseCsv(buffer));
     } else {
-      const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, dateNF: 'yyyy-mm-dd' });
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) return res.status(400).json({ error: 'Файл не содержит листов' });
-      const sheet = workbook.Sheets[sheetName];
-
-      const rows = XLSX.utils.sheet_to_json(sheet, {
-        header: 1,
-        raw: true,
-        defval: '',
-        blankrows: false
-      });
-      if (rows.length < 2) return res.status(400).json({ error: 'Пустой файл' });
-
-      headers = rows[0].map(h => String(h || ''));
-      for (let i = 1; i < rows.length; i++) {
-        const vals = rows[i];
-        if (!vals || vals.every(v => v === '' || v === null || v === undefined)) continue;
-        const obj = {};
-        headers.forEach((h, j) => obj[h] = vals[j] !== undefined ? vals[j] : '');
-        objects.push(obj);
-      }
+      // xlsx / xls — через exceljs
+      ({ headers, objects } = await parseXlsx(buffer));
     }
 
-    if (!objects.length) return res.status(400).json({ error: 'Не найдено ни одной строки данных' });
+    if (!objects.length) {
+      return res.status(400).json({ error: 'Не найдено ни одной строки данных' });
+    }
 
     const colMap = headers.map(h => mapHeader(h));
     const mappedCount = colMap.filter(Boolean).length;
@@ -264,7 +321,7 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
         const lastCal = parseDate(obj.lastCalibration);
         const result = normalizeResult(obj.result);
 
-                await db.query(
+        await db.query(
           `INSERT INTO pipettes
             (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
              last_calibration, cert, last_result, active, responsible, location, notes)
@@ -287,6 +344,7 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
             String(obj.notes || '').trim()
           ]
         );
+
         if (lastCal) {
           await db.query(
             `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
