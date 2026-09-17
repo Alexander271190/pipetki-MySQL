@@ -48,43 +48,89 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // Создание
+// Создание
 router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
-      const {
+  const {
     id: rawId, serial, manufacturer, model, equipmentType, volume, department, interval,
     lastCalibration, cert, result, active, responsible, location, notes
   } = req.body;
 
-    if (!model) return res.status(400).json({ error: 'Модель обязательна' });
+  if (!model) return res.status(400).json({ error: 'Модель обязательна' });
 
-  // Генерация ID, если не передан
+  // ──────────────────────────────────────────────────────────
+  // ГЕНЕРАЦИЯ ID
+  // ──────────────────────────────────────────────────────────
   let id = rawId;
+
   if (!id) {
-    const prefixMap = {
-      pipette:     'P',
-      analyzer:    'A',
-      thermometer: 'T',
-      scales:      'S',
-      photometer:  'F'
-    };
-    const prefix = prefixMap[equipmentType] || 'EQ';
+    // 1. Пытаемся получить prefix из настроек оборудования
+    let prefix = null;
+    try {
+      const [rows] = await db.query(
+        "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+      );
+      if (rows.length && rows[0].setting_value) {
+        const types = JSON.parse(rows[0].setting_value);
+        const found = types.find(t => t.value === equipmentType);
+        if (found && found.prefix && found.prefix.trim()) {
+          prefix = found.prefix.trim().toUpperCase();
+        }
+      }
+    } catch (e) {
+      console.error('Не удалось прочитать equipment_types:', e.message);
+    }
+
+    // 2. Если не нашли — используем fallback для базовых типов
+    if (!prefix) {
+      const fallback = {
+        pipette:     'P',
+        analyzer:    'A',
+        thermometer: 'T',
+        scales:      'S',
+        photometer:  'F'
+      };
+      prefix = fallback[equipmentType] || 'EQ';
+    }
+
+    // 3. Генерируем ID
     id = await db.generatePipetteId(prefix);
   }
 
+  // ──────────────────────────────────────────────────────────
+  // СОХРАНЕНИЕ В БД
+  // ──────────────────────────────────────────────────────────
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
 
     const [exist] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [id]);
-    if (exist.length) { await conn.rollback(); return res.status(409).json({ error: 'ID уже существует' }); }
+    if (exist.length) {
+      await conn.rollback();
+      return res.status(409).json({ error: 'ID уже существует' });
+    }
 
-       await conn.query(
+    await conn.query(
       `INSERT INTO pipettes
         (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
          last_calibration, cert, last_result, active, responsible, location, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, serial, manufacturer, model, equipmentType || 'pipette', volume, department, interval || 12,
-       lastCalibration, cert, result || 'pass', active !== false ? 1 : 0,
-       responsible, location, notes]
+      [
+        id,
+        serial,
+        manufacturer,
+        model,
+        equipmentType || 'pipette',
+        volume,
+        department,
+        interval || 12,
+        lastCalibration,
+        cert,
+        result || 'pass',
+        active !== false ? 1 : 0,
+        responsible,
+        location,
+        notes
+      ]
     );
 
     if (lastCalibration) {
@@ -110,7 +156,6 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     conn.release();
   }
 });
-
 // Обновление
   router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
   const updates = req.body;
