@@ -296,10 +296,10 @@ async function seedInitialData() {
   }
 }
 async function generatePipetteId(prefix = 'P') {
-  // Ищем максимальный номер с данным префиксом
+  const safePrefix = String(prefix).replace(/[%_\\]/g, '\\$&');
   const [rows] = await pool.query(
     "SELECT id FROM pipettes WHERE id LIKE ? ORDER BY id DESC LIMIT 1",
-    [`${prefix}-%`]
+    [`${safePrefix}-%`]
   );
   let nextNum = 1;
   if (rows.length) {
