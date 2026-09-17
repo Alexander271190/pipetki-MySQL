@@ -236,7 +236,9 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
   const types = req.body;
   if (!Array.isArray(types)) return res.status(400).json({ error: 'Ожидается массив' });
 
-  // Валидация
+  // ──────────────────────────────────────────────────────────
+  // ВАЛИДАЦИЯ + НОРМАЛИЗАЦИЯ PREFIX
+  // ──────────────────────────────────────────────────────────
   for (const t of types) {
     if (!t.value || !/^[a-z][a-z0-9_]*$/.test(t.value)) {
       return res.status(400).json({ error: `Некорректный value: ${t.value}` });
@@ -244,9 +246,21 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
     if (!t.label || !t.label.trim()) {
       return res.status(400).json({ error: `Пустой label у ${t.value}` });
     }
+
+    // Нормализация prefix: пустой → EQ, иначе в верхний регистр
+    if (!t.prefix || !t.prefix.trim()) {
+      t.prefix = 'EQ';
+    } else {
+      t.prefix = t.prefix.trim().toUpperCase();
+    }
+    if (t.prefix.length > 10) {
+      return res.status(400).json({ error: `Слишком длинный prefix у ${t.value}` });
+    }
   }
 
-  // Проверка дублей value
+  // ──────────────────────────────────────────────────────────
+  // ПРОВЕРКА ДУБЛЕЙ VALUE
+  // ──────────────────────────────────────────────────────────
   const seen = new Set();
   for (const t of types) {
     if (seen.has(t.value)) {
@@ -255,7 +269,9 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
     seen.add(t.value);
   }
 
-  // Проверка: не удалены ли используемые типы
+  // ──────────────────────────────────────────────────────────
+  // ПРОВЕРКА: НЕ УДАЛЕНЫ ЛИ ИСПОЛЬЗУЕМЫЕ ТИПЫ
+  // ──────────────────────────────────────────────────────────
   const [used] = await db.query('SELECT DISTINCT equipment_type FROM pipettes');
   const usedValues = used.map(r => r.equipment_type).filter(Boolean);
   const newValues = types.map(t => t.value);
@@ -267,6 +283,9 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
     });
   }
 
+  // ──────────────────────────────────────────────────────────
+  // СОХРАНЕНИЕ В БД
+  // ──────────────────────────────────────────────────────────
   await db.query(
     `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)
      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
