@@ -31,6 +31,16 @@ function formatDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+function pluralizeType(label) {
+  if (!label) return '';
+  const s = label.trim();
+  if (s.endsWith('ы') || s.endsWith('и')) return s;
+  if (s.endsWith('ка')) return s.slice(0, -2) + 'ки';
+  if (s.endsWith('а')) return s.slice(0, -1) + 'ы';
+  if (/[бвгджзйклмнпрстфхцчшщ]$/.test(s)) return s + 'ы';
+  if (s.endsWith('ь')) return s.slice(0, -1) + 'и';
+  return s;
+}
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -236,6 +246,7 @@ async function impersonateUser(userId) {
   try {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
+    myPrefs = { visibleFields: null, tableColumns: null };
     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.reminder-overlay.active').forEach(m => m.classList.remove('active'));
     showToast('Вы вошли как ' + result.user.fullName, 'success');
@@ -258,6 +269,7 @@ function stopImpersonate() {
     user: originalUser,
     token: originalToken
   }));
+  myPrefs = { visibleFields: null, tableColumns: null };
   showToast('Вернулись к своей учётной записи', 'success');
   renderAuthUI();
   loadPipetteData();
@@ -272,7 +284,6 @@ let sortField = 'nextCalibration';
 let sortDir = 1;
 let currentHistoryId = null;
 let departmentsList = [];
-let _cachedEquipmentTypes = [];
 
 async function loadPipetteData() {
   if (!isAuthenticated()) return;
@@ -290,6 +301,17 @@ async function loadPipetteData() {
     pipettes = data;
     const settingsData = await apiRequest('/settings/system');
     settings = { warnDays: parseInt(settingsData.warn_days) || 30 };
+    try {
+      _equipmentTypes = await apiRequest('/settings/equipment-types');
+    } catch (e) {
+      _equipmentTypes = [
+        { value: 'pipette',     label: 'Пипетка',     icon: '💧',  prefix: 'P' },
+        { value: 'analyzer',    label: 'Анализатор',  icon: '🖥️', prefix: 'A' },
+        { value: 'thermometer', label: 'Термометр',   icon: '🌡️', prefix: 'T' },
+        { value: 'scales',      label: 'Весы',        icon: '⚖️', prefix: 'S' },
+        { value: 'photometer',  label: 'Фотометр',    icon: '🔆', prefix: 'F' }
+      ];
+    }
 
     try {
       exportFields = await apiRequest('/settings/export');
@@ -334,14 +356,12 @@ async function loadFilterConfig() {
             { value: 'sent', label: '📦 На поверке' },
             { value: 'fail', label: '❌ Брак' }
           ];
-                } else if (f.optionsSource === 'equipment_type_list') {
-          f.options = [
-            { value: 'pipette',     label: '💧 Пипетки' },
-            { value: 'analyzer',    label: '🖥️ Анализаторы' },
-            { value: 'thermometer', label: '🌡️ Термометры' },
-            { value: 'scales',      label: '⚖️ Весы' },
-            { value: 'photometer',  label: '🔆 Фотометры' }
-          ];
+        } else if (f.optionsSource === 'equipment_type_list') {
+           f.options = _equipmentTypes.map(t => ({
+          value: t.value,
+          label: `${t.icon || ''} ${pluralizeType(t.label)}`.trim()
+        }));
+
         } else if (f.optionsSource === 'active_list') {
           f.options = [
             { value: 'true', label: 'В работе' },
@@ -559,17 +579,14 @@ function render() {
       switch (colId) {
         case 'id':
           return `<td><strong>${esc(p.id)}</strong>${p.serial ? `<br><small style="color:#94a3b8">S/N: ${esc(p.serial)}</small>` : ''}</td>`;
-        case 'type': {
-        const typeMap = {
-        pipette:     { icon: '💧',  label: 'Пипетка',     cls: 'badge-pipette' },
-        analyzer:    { icon: '🖥️', label: 'Анализатор',  cls: 'badge-other' },
-        thermometer: { icon: '🌡️', label: 'Термометр',   cls: 'badge-other' },
-        scales:      { icon: '⚖️', label: 'Весы',        cls: 'badge-other' },
-        photometer:  { icon: '🔆', label: 'Фотометр',    cls: 'badge-other' }
-        };
-        const t = typeMap[p.equipment_type] || { icon: '🔧', label: 'Прочее', cls: 'badge-other' };
-        return `<td><span class="badge-type ${t.cls}">${t.icon} ${t.label}</span></td>`;
-     }
+      
+  case 'type': {
+  const t = _equipmentTypes.find(x => x.value === p.equipment_type);
+  const icon  = t ? (t.icon || '🔧') : '🔧';
+  const label = t ? t.label : 'Прочее';
+  const cls   = p.equipment_type === 'pipette' ? 'badge-pipette' : 'badge-other';
+  return `<td><span class="badge-type ${cls}">${icon} ${esc(label)}</span></td>`;
+    }
         case 'model':
           return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
         case 'volume':
@@ -955,9 +972,7 @@ async function generateFormFields(data = null) {
 
       const div = document.createElement('div');
       div.className = 'form-group';
-      const div = document.createElement('div');
-      div.className = 'form-group';
-
+      
       const label = document.createElement('label');
       label.textContent = f.label + (f.required ? ' *' : '');
       div.appendChild(label);
@@ -985,14 +1000,11 @@ async function generateFormFields(data = null) {
           opts = departmentsList.length ? departmentsList : (f.options || []);
 
         } else if (f.id === 'equipmentType') {
-          opts = [
-            { value: 'pipette',     label: '💧 Пипетка (дозатор)' },
-            { value: 'analyzer',    label: '🖥️ Анализатор' },
-            { value: 'thermometer', label: '🌡️ Термометр' },
-            { value: 'scales',      label: '⚖️ Весы' },
-            { value: 'photometer',  label: '🔆 Фотометр' }
-          ];
-        } else if (f.id === 'result') {
+  opts = _equipmentTypes.length > 0
+    ? _equipmentTypes.map(t => ({ value: t.value, label: `${t.icon || ''} ${t.label}`.trim() }))
+    : [{ value: 'pipette', label: '💧 Пипетка' }];
+    
+    } else if (f.id === 'result') {
           opts = [
             { value: 'pass', label: '✅ Годен' },
             { value: 'fail', label: '❌ Брак' },
@@ -1206,8 +1218,6 @@ async function saveQuickCalibration() {
     showToast('Поверка зарегистрирована', 'success');
     closeQuickCalModal();
     await loadPipetteData();
-    sortField = 'nextCalibration';
-    sortDir = 1;
     render();
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
@@ -2937,7 +2947,6 @@ async function saveBulkReturn(e) {
     filterState = {};
     _filterRendered = false;
     await loadPipetteData();
-    render();
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
