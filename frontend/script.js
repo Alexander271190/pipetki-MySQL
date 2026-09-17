@@ -270,6 +270,7 @@ let sortField = 'nextCalibration';
 let sortDir = 1;
 let currentHistoryId = null;
 let departmentsList = [];
+let _cachedEquipmentTypes = [];
 
 async function loadPipetteData() {
   if (!isAuthenticated()) return;
@@ -2391,13 +2392,57 @@ async function renderSystemSettings() {
   const c = document.getElementById('settings-content');
   try {
     const s = await apiRequest('/settings/system');
-    c.innerHTML = `<h3>Системные настройки</h3>
+    const types = await apiRequest('/settings/equipment-types');
+
+    // Кэшируем в глобальную переменную для редактирования
+    _cachedEquipmentTypes = JSON.parse(JSON.stringify(types));
+
+    c.innerHTML = `
+      <h3>Системные настройки</h3>
+
       <div class="settings-form">
         <div class="form-group">
           <label>Порог предупреждения о поверке (дней)</label>
           <input type="number" id="sys-warn-days" value="${esc(s.warn_days || '30')}" min="1" max="365">
         </div>
         <button class="btn btn-success" onclick="saveSystemSetting()">💾 Сохранить</button>
+      </div>
+
+      <div class="settings-form" style="margin-top:24px;">
+        <h4>🔧 Типы оборудования</h4>
+        <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
+          Управление списком типов. <strong>value</strong> — служебный ключ (латиница),
+          <strong>label</strong> — отображаемое название, <strong>icon</strong> — эмодзи,
+          <strong>prefix</strong> — префикс для авто-ID.
+        </p>
+
+        <table class="field-settings-table" id="equip-types-table">
+          <thead>
+            <tr>
+              <th style="width:60px;">Порядок</th>
+              <th style="width:140px;">value</th>
+              <th>label</th>
+              <th style="width:80px;">icon</th>
+              <th style="width:80px;">prefix</th>
+              <th style="width:60px;"></th>
+            </tr>
+          </thead>
+          <tbody id="equip-types-body"></tbody>
+        </table>
+
+        <div style="margin-top:12px;display:flex;gap:10px;">
+          <button class="btn btn-primary" onclick="addEquipmentType()">
+            ➕ Добавить тип
+          </button>
+          <button class="btn btn-success" onclick="saveEquipmentTypes()">
+            💾 Сохранить типы
+          </button>
+        </div>
+
+        <div id="equip-types-warning"
+             style="display:none;margin-top:12px;padding:10px 12px;background:#fee2e2;
+                    border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
+        </div>
       </div>
 
       <div class="settings-form" style="margin-top:24px;border-left:3px solid #dc2626;">
@@ -2410,7 +2455,10 @@ async function renderSystemSettings() {
         <button class="btn btn-danger" onclick="resetAllDataSetting()">
           🗑️ Сбросить все данные
         </button>
-      </div>`;
+      </div>
+    `;
+
+    renderEquipmentTypesTable();
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
@@ -3072,7 +3120,169 @@ async function resetUserView() {
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'user-view-modal') closeUserViewModal();
 });
+// ============================================================
+// УПРАВЛЕНИЕ ТИПАМИ ОБОРУДОВАНИЯ
+// ============================================================
 
+function renderEquipmentTypesTable() {
+  const tbody = document.getElementById('equip-types-body');
+  if (!tbody) return;
+
+  if (_cachedEquipmentTypes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
+    <tr>
+      <td>
+        <div class="order-btns">
+          <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, 1)" ${i === _cachedEquipmentTypes.length - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+      </td>
+      <td>
+        <input type="text" value="${esc(t.value)}" readonly
+               style="background:#f1f5f9;cursor:not-allowed;"
+               title="value менять нельзя — это служебный ключ">
+      </td>
+      <td>
+        <input type="text" value="${esc(t.label)}"
+               onchange="updateEquipmentType(${i}, 'label', this.value)">
+      </td>
+      <td>
+        <input type="text" value="${esc(t.icon || '')}" maxlength="4"
+               style="text-align:center;"
+               onchange="updateEquipmentType(${i}, 'icon', this.value)">
+      </td>
+      <td>
+        <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
+               style="text-align:center;text-transform:uppercase;"
+               onchange="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
+      </td>
+      <td>
+        <button class="btn btn-danger btn-sm btn-icon-only"
+                onclick="deleteEquipmentType(${i})" title="Удалить">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  updateEquipmentTypesWarning();
+}
+
+function updateEquipmentType(idx, field, value) {
+  if (idx < 0 || idx >= _cachedEquipmentTypes.length) return;
+  _cachedEquipmentTypes[idx][field] = value.trim();
+  updateEquipmentTypesWarning();
+}
+
+function moveEquipmentType(idx, dir) {
+  const to = idx + dir;
+  if (to < 0 || to >= _cachedEquipmentTypes.length) return;
+  [_cachedEquipmentTypes[idx], _cachedEquipmentTypes[to]] =
+  [_cachedEquipmentTypes[to], _cachedEquipmentTypes[idx]];
+  renderEquipmentTypesTable();
+}
+
+function addEquipmentType() {
+  const value = prompt('Ключ типа (латиница, без пробелов, например ph_meter):');
+  if (!value) return;
+
+  const trimmed = value.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9_]*$/.test(trimmed)) {
+    showToast('Ключ должен начинаться с буквы и содержать только латиницу, цифры и _', 'error');
+    return;
+  }
+  if (_cachedEquipmentTypes.some(t => t.value === trimmed)) {
+    showToast('Тип с таким ключом уже существует', 'error');
+    return;
+  }
+
+  _cachedEquipmentTypes.push({
+    value: trimmed,
+    label: trimmed,
+    icon: '🔧',
+    prefix: 'EQ'
+  });
+  renderEquipmentTypesTable();
+  showToast('Тип добавлен. Не забудьте нажать «Сохранить типы».', 'success');
+}
+
+async function deleteEquipmentType(idx) {
+  if (idx < 0 || idx >= _cachedEquipmentTypes.length) return;
+  const t = _cachedEquipmentTypes[idx];
+
+  const ok = await showConfirm(
+    `Удалить тип «${t.label}» (${t.value})?\n\nЕсли тип используется у существующего оборудования — удаление будет отклонено.`,
+    { icon: '🔧', title: 'Удаление типа', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
+
+  _cachedEquipmentTypes.splice(idx, 1);
+  renderEquipmentTypesTable();
+  showToast('Тип удалён. Не забудьте нажать «Сохранить типы».', 'success');
+}
+
+function updateEquipmentTypesWarning() {
+  const warn = document.getElementById('equip-types-warning');
+  if (!warn) return;
+
+  const problems = [];
+
+  // Дубли value
+  const values = _cachedEquipmentTypes.map(t => t.value);
+  const dupValues = values.filter((v, i) => values.indexOf(v) !== i);
+  if (dupValues.length > 0) problems.push(`Дубли value: ${[...new Set(dupValues)].join(', ')}`);
+
+  // Пустые label
+  const emptyLabels = _cachedEquipmentTypes.filter(t => !t.label || !t.label.trim());
+  if (emptyLabels.length > 0) problems.push(`Пустой label у: ${emptyLabels.map(t => t.value).join(', ')}`);
+
+  // Пустые prefix
+  const emptyPrefixes = _cachedEquipmentTypes.filter(t => !t.prefix || !t.prefix.trim());
+  if (emptyPrefixes.length > 0) problems.push(`Пустой prefix у: ${emptyPrefixes.map(t => t.value).join(', ')}`);
+
+  // Дубли prefix
+  const prefixes = _cachedEquipmentTypes.map(t => t.prefix).filter(Boolean);
+  const dupPrefixes = prefixes.filter((v, i) => prefixes.indexOf(v) !== i);
+  if (dupPrefixes.length > 0) problems.push(`Дубли prefix: ${[...new Set(dupPrefixes)].join(', ')}`);
+
+  if (problems.length > 0) {
+    warn.style.display = 'block';
+    warn.innerHTML = '⚠️ ' + problems.join('<br>⚠️ ');
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+async function saveEquipmentTypes() {
+  // Финальная валидация
+  const values = _cachedEquipmentTypes.map(t => t.value);
+  const dupValues = values.filter((v, i) => values.indexOf(v) !== i);
+  if (dupValues.length > 0) {
+    showToast('Есть дубли value: ' + [...new Set(dupValues)].join(', '), 'error');
+    return;
+  }
+  if (_cachedEquipmentTypes.some(t => !t.label || !t.label.trim())) {
+    showToast('У всех типов должен быть label', 'error');
+    return;
+  }
+
+  try {
+    await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
+    showToast('Типы оборудования сохранены', 'success');
+
+    // Обновляем глобальный кэш
+    _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
+
+    // Перерисовываем таблицу оборудования — новые иконки/label
+    render();
+  } catch (e) {
+    showToast(e.message || 'Ошибка сохранения', 'error');
+  }
+}
 
 console.log('🔬 Система учёта оборудования запущена');
 console.log('👤 admin/admin, senior/senior, user/user');
