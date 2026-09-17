@@ -49,12 +49,26 @@ router.get('/:id', authenticate, async (req, res) => {
 
 // Создание
 router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
-    const {
-    id, serial, manufacturer, model, equipmentType, volume, department, interval,
+      const {
+    id: rawId, serial, manufacturer, model, equipmentType, volume, department, interval,
     lastCalibration, cert, result, active, responsible, location, notes
   } = req.body;
 
-  if (!id || !model) return res.status(400).json({ error: 'ID и модель обязательны' });
+    if (!model) return res.status(400).json({ error: 'Модель обязательна' });
+
+  // Генерация ID, если не передан
+  let id = rawId;
+  if (!id) {
+    const prefixMap = {
+      pipette:     'P',
+      analyzer:    'A',
+      thermometer: 'T',
+      scales:      'S',
+      photometer:  'F'
+    };
+    const prefix = prefixMap[equipmentType] || 'EQ';
+    id = await db.generatePipetteId(prefix);
+  }
 
   const conn = await db.getConnection();
   try {
