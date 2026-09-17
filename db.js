@@ -295,5 +295,18 @@ async function seedInitialData() {
     await pool.query(insF, ['calPeriod',      'Дата поверки',     'date-period', 'last_calibration', 1, '',                    8]);
   }
 }
+async function generatePipetteId(prefix = 'P') {
+  // Ищем максимальный номер с данным префиксом
+  const [rows] = await pool.query(
+    "SELECT id FROM pipettes WHERE id LIKE ? ORDER BY id DESC LIMIT 1",
+    [`${prefix}-%`]
+  );
+  let nextNum = 1;
+  if (rows.length) {
+    const m = String(rows[0].id).match(/(\d+)$/);
+    if (m) nextNum = parseInt(m[1], 10) + 1;
+  }
+  return `${prefix}-${String(nextNum).padStart(3, '0')}`;
+}
 
-module.exports = { query, getConnection, pool, initSchema };
+module.exports = { query, getConnection, pool, initSchema, generatePipetteId };
