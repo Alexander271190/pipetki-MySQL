@@ -1408,7 +1408,7 @@ const EXPORT_FIELD_MAP = {
   location: { label: 'Место', get: p => p.location || '' },
  status: {
   label: 'Статус', get: p => {
-    const L = { ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена', inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак'  wip: 'В процессе'};
+    const L = { ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена', inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак',  wip: 'В процессе'};
     return L[calcStatus(p)] || calcStatus(p);
   }
 },
