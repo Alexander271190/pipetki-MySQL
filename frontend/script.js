@@ -234,6 +234,8 @@ async function impersonateUser(userId) {
   try {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.reminder-overlay.active').forEach(m => m.classList.remove('active'));
     showToast('Вы вошли как ' + result.user.fullName, 'success');
     renderAuthUI();
   } catch (e) {
@@ -1452,7 +1454,7 @@ function exportToPDF() {
       .status-sent     { color: #0ea5e9; font-weight: 600; }
       .footer { margin-top: 15px; font-size: 8pt; color: #000; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 8px; }
     </style></head><body>
-      <h1>🔬 Реестр пипеток — КГБУЗ Краевая клиническая больница КДЛ</h1>
+      <h1>🔬 Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
       <div class="meta">Дата: <b>${today}</b> · Записей: <b>${data.length}</b> · Сформировал: <b>${esc(user)}</b></div>
       <table>
         <thead><tr>${headerCells}</tr></thead>
@@ -1464,7 +1466,6 @@ function exportToPDF() {
       </div>
     </body></html>`);
   win.document.close();
-  setTimeout(() => { win.focus(); win.print(); }, 300);
   showToast(`PDF: ${fields.length} полей, ${data.length} записей`, 'success');
 }
 
@@ -2684,7 +2685,6 @@ function printSendAct() {
     </html>
   `);
   win.document.close();
-  setTimeout(() => { win.focus(); win.print(); }, 300);
   showToast('Окно печати открыто', 'success');
 }
 
