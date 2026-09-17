@@ -368,6 +368,7 @@ async function loadFilterConfig() {
             { value: 'inactive', label: 'Неактивны' },
             { value: 'sent', label: '📦 На поверке' },
             { value: 'fail', label: '❌ Брак' }
+            { value: 'wip', label: '⏳ В процессе' }
           ];
         } else if (f.optionsSource === 'equipment_type_list') {
            f.options = _equipmentTypes.map(t => ({
