@@ -229,10 +229,10 @@ async function seedInitialData() {
   const [ec] = await pool.query('SELECT COUNT(*) AS c FROM export_settings');
   if (ec[0].c === 0) {
     const defaultExport = [
-      'id', 'serial', 'manufacturer', 'model', 'volume', 'department',
-      'lastCalibration', 'nextCalibration', 'interval', 'daysLeft',
-      'responsible', 'location', 'status', 'cert', 'notes'
-    ];
+  'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume', 'department',
+  'lastCalibration', 'nextCalibration', 'interval', 'daysLeft',
+  'responsible', 'location', 'status', 'cert', 'notes'
+];
     await pool.query('INSERT INTO export_settings (id, fields) VALUES (1, ?)', [JSON.stringify(defaultExport)]);
   }
 
