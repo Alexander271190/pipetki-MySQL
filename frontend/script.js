@@ -491,15 +491,15 @@ function render() {
     return 0;
   });
 
-  let ok = 0, warn = 0, danger = 0, sent = 0;
-  pipettes.forEach(p => {
-    const s = calcStatus(p);
-    if (s === 'ok') ok++;
-    else if (s === 'warn') warn++;
-    else if (s === 'danger' || s === 'fail') danger++;
-    else if (s === 'sent') sent++;
-    else if (s === 'wip') wip++;
-  });
+ let ok = 0, warn = 0, danger = 0, sent = 0, wip = 0;
+pipettes.forEach(p => {
+  const s = calcStatus(p);
+  if (s === 'ok') ok++;
+  else if (s === 'warn') warn++;
+  else if (s === 'danger' || s === 'fail') danger++;
+  else if (s === 'sent') sent++;
+  else if (s === 'wip') wip++;
+});
   document.getElementById('stat-ok').textContent = ok;
   document.getElementById('stat-warn').textContent = warn;
   document.getElementById('stat-danger').textContent = danger;
