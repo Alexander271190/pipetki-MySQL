@@ -949,6 +949,12 @@ async function generateFormFields(data = null) {
     }
 
     for (const f of fields) {
+      if (f.id === 'id' && (!data || !data.id)) {
+        continue;
+      }
+
+      const div = document.createElement('div');
+      div.className = 'form-group';
       const div = document.createElement('div');
       div.className = 'form-group';
 
@@ -1024,6 +1030,19 @@ async function generateFormFields(data = null) {
       input.id = `p-${f.id}`;
       input.dataset.fieldId = f.id;
       if (f.required) input.required = true;
+            input.id = `p-${f.id}`;
+      input.dataset.fieldId = f.id;
+      if (f.required) input.required = true;
+
+      // ID нельзя менять при редактировании
+      if (f.id === 'id' && data && data.id) {
+        input.readOnly = true;
+        input.style.background = '#f1f5f9';
+        input.style.cursor = 'not-allowed';
+      }
+
+      div.appendChild(input);
+      container.appendChild(div);
 
       div.appendChild(input);
       container.appendChild(div);
@@ -1115,9 +1134,10 @@ async function savePipette(e) {
   }
 
   if (data.result) data.lastResult = data.result;
+  if (!editId) delete data.id;
 
   try {
-    if (editId) {
+  if (editId) {
       await apiRequest(`/pipettes/${editId}`, 'PUT', data);
       showToast('Оборудование обновлено', 'success');
     } else {
