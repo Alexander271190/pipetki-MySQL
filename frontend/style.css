@@ -838,3 +838,18 @@ tbody tr:has(.row-checkbox:checked):hover {
 }
 .badge-pipette { background: #e0f2fe; color: #0369a1; }
 .badge-other   { background: #f3e8ff; color: #6d28d9; }
+
+/* ========== СТАТУС «В ПРОЦЕССЕ» ========== */
+.status-wip {
+  background: #fef9c3;
+  color: #854d0e;
+  font-weight: 600;
+}
+.status-wip .status-dot {
+  background: #eab308;
+  animation: pulse-wip 1.8s infinite;
+}
+@keyframes pulse-wip {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(234,179,8,0); }
+}
