@@ -1401,7 +1401,7 @@ const EXPORT_FIELD_MAP = {
       : (s === 'sent' ? 'на поверке'
       : (s === 'wip' ? 'в процессе'
       : (s === 'fail' ? 'брак'
-      : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.')));
+      : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.'))));
   }
 },
   responsible: { label: 'Ответственный', get: p => p.responsible || '' },
