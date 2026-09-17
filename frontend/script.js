@@ -31,16 +31,28 @@ function formatDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+
 function pluralizeType(label) {
   if (!label) return '';
   const s = label.trim();
+  if (!s) return '';
+
+  // Уже во множественном числе
   if (s.endsWith('ы') || s.endsWith('и')) return s;
-  if (s.endsWith('ка')) return s.slice(0, -2) + 'ки';
-  if (s.endsWith('а')) return s.slice(0, -1) + 'ы';
-  if (/[бвгджзйклмнпрстфхцчшщ]$/.test(s)) return s + 'ы';
-  if (s.endsWith('ь')) return s.slice(0, -1) + 'и';
+
+  // Исключения
+  if (s.endsWith('ь')) return s.slice(0, -1) + 'и';       // Мышь → Мыши
+  if (s.endsWith('ка')) return s.slice(0, -2) + 'ки';      // Пипетка → Пипетки
+  if (s.endsWith('га')) return s.slice(0, -1) + 'и';       // Влага → Влаги
+  if (s.endsWith('а'))  return s.slice(0, -1) + 'ы';       // Лампа → Лампы
+
+  // Согласные в конце (стандартное правило: +ы)
+  if (/[бвгджзклмнпрстфхцчшщ]$/i.test(s)) return s + 'ы';  // Анализатор → Анализаторы
+
+  // Всё остальное — без изменений
   return s;
 }
+
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -48,10 +60,11 @@ function showToast(msg, type) {
   clearTimeout(t._timeout);
   t._timeout = setTimeout(() => t.className = 'toast', 4000);
 }
+
 let _confirmResolver = null;
 
 function showConfirm(message, options = {}) {
-  return new Promise(resolve => {
+    return new Promise(resolve => {
     _confirmResolver = resolve;
     const modal = document.getElementById('confirm-modal');
     const icon  = document.getElementById('confirm-icon');
