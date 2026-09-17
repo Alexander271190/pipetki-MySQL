@@ -1379,14 +1379,8 @@ const EXPORT_FIELD_MAP = {
   equipmentType: {
   label: 'Тип',
   get: p => {
-    const m = {
-      pipette:     'Пипетка',
-      analyzer:    'Анализатор',
-      thermometer: 'Термометр',
-      scales:      'Весы',
-      photometer:  'Фотометр'
-    };
-    return m[p.equipment_type] || 'Прочее';
+    const t = _equipmentTypes.find(x => x.value === p.equipment_type);
+    return t ? t.label : 'Прочее';
   }
 },
   volume: { label: 'Объём', get: p => p.volume || '' },
@@ -2163,6 +2157,7 @@ const EXPORT_FIELDS = [
   { id: 'serial', label: 'Серийный номер' },
   { id: 'manufacturer', label: 'Производитель' },
   { id: 'model', label: 'Модель' },
+  { id: 'equipmentType', label: 'Тип оборудования' },
   { id: 'volume', label: 'Объём (мкл)' },
   { id: 'department', label: 'Отдел' },
   { id: 'lastCalibration', label: 'Дата поверки' },
