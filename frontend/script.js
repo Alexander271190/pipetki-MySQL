@@ -334,8 +334,11 @@ async function loadFilterConfig() {
           ];
                 } else if (f.optionsSource === 'equipment_type_list') {
           f.options = [
-            { value: 'pipette', label: '🔬 Пипетки' },
-            { value: 'other', label: '⚙️ Прочее' }
+            { value: 'pipette',     label: '💧 Пипетки' },
+            { value: 'analyzer',    label: '🖥️ Анализаторы' },
+            { value: 'thermometer', label: '🌡️ Термометры' },
+            { value: 'scales',      label: '⚖️ Весы' },
+            { value: 'photometer',  label: '🔆 Фотометры' }
           ];
         } else if (f.optionsSource === 'active_list') {
           f.options = [
@@ -554,10 +557,17 @@ function render() {
       switch (colId) {
         case 'id':
           return `<td><strong>${esc(p.id)}</strong>${p.serial ? `<br><small style="color:#94a3b8">S/N: ${esc(p.serial)}</small>` : ''}</td>`;
-        case 'type':
-          return `<td>${p.equipment_type === 'other'
-            ? '<span class="badge-type badge-other">⚙️ Прочее</span>'
-            : '<span class="badge-type badge-pipette">🔬 Пипетка</span>'}</td>`;
+        case 'type': {
+        const typeMap = {
+        pipette:     { icon: '💧',  label: 'Пипетка',     cls: 'badge-pipette' },
+        analyzer:    { icon: '🖥️', label: 'Анализатор',  cls: 'badge-other' },
+        thermometer: { icon: '🌡️', label: 'Термометр',   cls: 'badge-other' },
+        scales:      { icon: '⚖️', label: 'Весы',        cls: 'badge-other' },
+        photometer:  { icon: '🔆', label: 'Фотометр',    cls: 'badge-other' }
+        };
+        const t = typeMap[p.equipment_type] || { icon: '🔧', label: 'Прочее', cls: 'badge-other' };
+        return `<td><span class="badge-type ${t.cls}">${t.icon} ${t.label}</span></td>`;
+     }
         case 'model':
           return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
         case 'volume':
@@ -966,10 +976,13 @@ async function generateFormFields(data = null) {
         if (f.id === 'department') {
           opts = departmentsList.length ? departmentsList : (f.options || []);
 
-                } else if (f.id === 'equipmentType') {
+        } else if (f.id === 'equipmentType') {
           opts = [
-            { value: 'pipette', label: '🔬 Пипетка (дозатор)' },
-            { value: 'other', label: '⚙️ Прочее оборудование' }
+            { value: 'pipette',     label: '💧 Пипетка (дозатор)' },
+            { value: 'analyzer',    label: '🖥️ Анализатор' },
+            { value: 'thermometer', label: '🌡️ Термометр' },
+            { value: 'scales',      label: '⚖️ Весы' },
+            { value: 'photometer',  label: '🔆 Фотометр' }
           ];
         } else if (f.id === 'result') {
           opts = [
@@ -1325,9 +1338,18 @@ const EXPORT_FIELD_MAP = {
   manufacturer: { label: 'Производитель', get: p => p.manufacturer || '' },
    model: { label: 'Модель', get: p => p.model },
   equipmentType: {
-    label: 'Тип',
-    get: p => p.equipment_type === 'other' ? 'Прочее' : 'Пипетка'
-  },
+  label: 'Тип',
+  get: p => {
+    const m = {
+      pipette:     'Пипетка',
+      analyzer:    'Анализатор',
+      thermometer: 'Термометр',
+      scales:      'Весы',
+      photometer:  'Фотометр'
+    };
+    return m[p.equipment_type] || 'Прочее';
+  }
+},
   volume: { label: 'Объём', get: p => p.volume || '' },
   department: { label: 'Отдел', get: p => p.department || '' },
   lastCalibration: { label: 'Дата поверки', get: p => formatDate(p.last_calibration) },
