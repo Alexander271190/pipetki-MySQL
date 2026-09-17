@@ -1169,6 +1169,9 @@ async function saveQuickCalibration() {
     showToast('Поверка зарегистрирована', 'success');
     closeQuickCalModal();
     await loadPipetteData();
+    sortField = 'nextCalibration';
+    sortDir = 1;
+    render();
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
@@ -2843,6 +2846,7 @@ async function saveBulkReturn(e) {
     filterState = {};
     _filterRendered = false;
     await loadPipetteData();
+    render();
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
