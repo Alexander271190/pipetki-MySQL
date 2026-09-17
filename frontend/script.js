@@ -399,6 +399,7 @@ function calcStatus(p) {
   if (p.sent_for_calibration) return 'sent';
   if (!p.active) return 'inactive';
   if (p.last_result === 'fail') return 'fail';
+  if (p.last_result === 'wip') return 'wip';
   if (!p.last_calibration || !p.interval) return 'danger';
   const last = new Date(p.last_calibration);
   const next = new Date(last);
@@ -496,6 +497,7 @@ function render() {
     else if (s === 'warn') warn++;
     else if (s === 'danger' || s === 'fail') danger++;
     else if (s === 'sent') sent++;
+    else if (s === 'wip') wip++;
   });
   document.getElementById('stat-ok').textContent = ok;
   document.getElementById('stat-warn').textContent = warn;
@@ -551,18 +553,19 @@ function render() {
   empty.style.display = 'none';
 
   const labels = {
-    ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-    inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак'
-  };
+  ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',
+  wip: '⏳ В процессе'
+};
 
   tbody.innerHTML = filtered.map(p => {
     const status = calcStatus(p);
     const next = getNextDate(p);
     const dl = daysLeft(p);
-    const daysText = status === 'inactive' || status === 'sent' ? '' :
-      status === 'fail' ? ' (брак)' :
-      status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
-      ` (${dl} дн.)`;
+    const daysText = status === 'inactive' || status === 'sent' || status === 'wip' ? '' :
+  status === 'fail' ? ' (брак)' :
+  status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
+  ` (${dl} дн.)`;
     const histCount = (p.history || []).length;
     const isChecked = selectedPipettes.has(p.id) ? 'checked' : '';
 
@@ -611,6 +614,8 @@ function render() {
         case 'nextCalibration':
           return `<td>${status === 'sent'
             ? `<small style="color:#0ea5e9;font-weight:600;">📦 ${formatDate(p.sent_for_calibration)}</small>`
+            : status === 'wip'
+            ? `<small style="color:#ca8a04;font-weight:600;">⏳ В процессе поверки</small>`
             : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? '#dc2626' : status === 'warn' ? '#eab308' : '#16a34a'}">${daysText}</small>` : ''}`}</td>`;
         case 'responsible':
           return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
@@ -1281,7 +1286,7 @@ async function renderHistoryContent(p) {
   const status = calcStatus(p);
   const statusLabels = {
   ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак'
+  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',  wip: '⏳ В процессе'
 };
 
   let history = [];
@@ -1393,6 +1398,7 @@ const EXPORT_FIELD_MAP = {
     const s = calcStatus(p); const dl = daysLeft(p);
     return s === 'inactive' ? '—'
       : (s === 'sent' ? 'на поверке'
+      : (s === 'wip' ? 'в процессе'
       : (s === 'fail' ? 'брак'
       : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.')));
   }
@@ -1401,7 +1407,7 @@ const EXPORT_FIELD_MAP = {
   location: { label: 'Место', get: p => p.location || '' },
  status: {
   label: 'Статус', get: p => {
-    const L = { ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена', inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак' };
+    const L = { ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена', inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак'  wip: 'В процессе'};
     return L[calcStatus(p)] || calcStatus(p);
   }
 },
@@ -1554,6 +1560,7 @@ function checkReminder() {
   if (lastShown === today) return;
 
   const dangerList = pipettes.filter(p => ['danger', 'fail'].includes(calcStatus(p)));
+  const wipList = pipettes.filter(p => calcStatus(p) === 'wip');
   const warnList = pipettes.filter(p => calcStatus(p) === 'warn');
   if (dangerList.length === 0 && warnList.length === 0) return;
 
