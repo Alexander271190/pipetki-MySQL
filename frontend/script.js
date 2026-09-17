@@ -11,6 +11,8 @@ let _cachedFields = [];
 let exportFields = null;
 let selectedPipettes = new Set();
 let myPrefs = { visibleFields: null, tableColumns: null };
+let _equipmentTypes = [];            
+let _cachedEquipmentTypes = [];   
 
 function todayStr() {
   const d = new Date();
@@ -297,7 +299,6 @@ async function loadPipetteData() {
 
     await loadDepartments();
     await loadFilterConfig();
-
     render();
     checkReminder();
   } catch (error) {
