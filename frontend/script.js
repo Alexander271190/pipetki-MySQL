@@ -210,10 +210,16 @@ async function loginUser(e) {
 function logoutUser() {
   clearSession();
   myPrefs = { visibleFields: null, tableColumns: null };
+
   const u = document.getElementById('login-username');
   const p = document.getElementById('login-password');
-  if (u) u.value = '';
-  if (p) p.value = '';
+
+  // Логин сохраняем в localStorage, чтобы подставить при следующем входе
+  if (u && u.value.trim()) {
+    localStorage.setItem('pipette_last_login', u.value.trim());
+  }
+  if (p) p.value = '';   // пароль всегда очищаем
+
   renderAuthUI();
   showToast('Вы вышли из системы', 'success');
 }
@@ -1624,6 +1630,12 @@ if (session) {
   authToken = session.token;
   currentUser = session.user;
   renderAuthUI();
+}
+// Подстановка последнего логина
+const lastLogin = localStorage.getItem('pipette_last_login');
+if (lastLogin) {
+  const u = document.getElementById('login-username');
+  if (u) u.value = lastLogin;
 }
 
 // ============================================================
