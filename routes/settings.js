@@ -210,6 +210,70 @@ router.put('/filters', authenticate, requireRole(['admin']), async (req, res) =>
     conn.release();
   }
 });
+// ============================================================
+// ТИПЫ ОБОРУДОВАНИЯ
+// ============================================================
+
+// GET /api/settings/equipment-types
+router.get('/equipment-types', authenticate, async (req, res) => {
+  const [rows] = await db.query(
+    "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+  );
+  if (!rows.length) {
+    return res.json([
+      { value: 'pipette',     label: 'Пипетка',     icon: '💧',  prefix: 'P' },
+      { value: 'analyzer',    label: 'Анализатор',  icon: '🖥️', prefix: 'A' },
+      { value: 'thermometer', label: 'Термометр',   icon: '🌡️', prefix: 'T' },
+      { value: 'scales',      label: 'Весы',        icon: '⚖️', prefix: 'S' },
+      { value: 'photometer',  label: 'Фотометр',    icon: '🔆', prefix: 'F' }
+    ]);
+  }
+  res.json(JSON.parse(rows[0].setting_value));
+});
+
+// PUT /api/settings/equipment-types (только админ)
+router.put('/equipment-types', authenticate, requireRole(['admin']), async (req, res) => {
+  const types = req.body;
+  if (!Array.isArray(types)) return res.status(400).json({ error: 'Ожидается массив' });
+
+  // Валидация
+  for (const t of types) {
+    if (!t.value || !/^[a-z][a-z0-9_]*$/.test(t.value)) {
+      return res.status(400).json({ error: `Некорректный value: ${t.value}` });
+    }
+    if (!t.label || !t.label.trim()) {
+      return res.status(400).json({ error: `Пустой label у ${t.value}` });
+    }
+  }
+
+  // Проверка дублей value
+  const seen = new Set();
+  for (const t of types) {
+    if (seen.has(t.value)) {
+      return res.status(400).json({ error: `Дубль value: ${t.value}` });
+    }
+    seen.add(t.value);
+  }
+
+  // Проверка: не удалены ли используемые типы
+  const [used] = await db.query('SELECT DISTINCT equipment_type FROM pipettes');
+  const usedValues = used.map(r => r.equipment_type).filter(Boolean);
+  const newValues = types.map(t => t.value);
+  const removed = usedValues.filter(v => !newValues.includes(v));
+
+  if (removed.length > 0) {
+    return res.status(400).json({
+      error: `Нельзя удалить типы, которые используются: ${removed.join(', ')}`
+    });
+  }
+
+  await db.query(
+    `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)
+     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+    [JSON.stringify(types)]
+  );
+  res.json({ message: 'Типы оборудования обновлены' });
+});
 
 // ============================================================
 // НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ (только для админа)
