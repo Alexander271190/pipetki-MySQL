@@ -284,7 +284,8 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
       if (!rows.length) { skipped.push(item.id); continue; }
       if (rows[0].equipment_type !== 'pipette') { skipped.push(item.id); continue; }
 
-      const itemResult = item.result || 'pass';
+      const ALLOWED = ['pass', 'fail', 'wip'];
+      const itemResult = ALLOWED.includes(item.result) ? item.result : 'pass';
       const itemCert = item.cert || null;
 
       await conn.query(
@@ -354,9 +355,16 @@ router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes
     );
 
     await conn.query(
-      `UPDATE pipettes SET last_calibration = ?, cert = ?, last_result = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [date, cert, result || 'pass', req.params.id]
-    );
+  `UPDATE pipettes
+   SET last_calibration = ?,
+       cert = ?,
+       last_result = ?,
+       sent_for_calibration = NULL,
+       sent_note = NULL,
+       updated_at = CURRENT_TIMESTAMP
+   WHERE id = ?`,
+  [date, cert, result || 'pass', req.params.id]
+);
 
     await conn.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
