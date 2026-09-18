@@ -19,7 +19,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
   const { login, password, fullName, position, department, role,
           onlyOwnDepartment, extraPermissions } = req.body;
 const missing = [];
-if (!login || !password || !fullName || !position) 
+
 if (!login)    missing.push('Логин');
 if (!password) missing.push('Пароль');
 if (!fullName) missing.push('ФИО');
