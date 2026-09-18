@@ -217,8 +217,14 @@ async function loginUser(e) {
   const errorEl = document.getElementById('login-error');
   errorEl.textContent = '';
 
-  if (!username || !password) {
-    errorEl.textContent = 'Заполните все поля';
+   if (!username || !password) {
+    const missing = [];
+    if (!username) missing.push('Логин');
+    if (!password) missing.push('Пароль');
+
+    errorEl.textContent = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
     return;
   }
 
@@ -1208,7 +1214,7 @@ async function saveQuickCalibration() {
   const org = document.getElementById('quick-cal-org').value.trim();
   const note = document.getElementById('quick-cal-note').value.trim();
 
-  if (!date) { showToast('Укажите дату поверки', 'error'); return; }
+  if (!date) { showToast('Заполните поле «Дата поверки»', 'error'); return; }
   if (date > todayStr()) { showToast('Дата не может быть в будущем', 'error'); return; }
 
   try {
@@ -1344,7 +1350,7 @@ async function addCalibrationRecord() {
   const org = document.getElementById('cal-org').value.trim();
   const note = document.getElementById('cal-note').value.trim();
 
-  if (!date) { showToast('Укажите дату поверки', 'error'); return; }
+  if (!date) { showToast('Заполните поле «Дата поверки»', 'error'); return; }
   if (date > todayStr()) { showToast('Дата не может быть в будущем', 'error'); return; }
 
   try {
@@ -1956,7 +1962,7 @@ function addDepartmentItem() {
   const input = document.getElementById('new-dept-name');
   const name = (input ? input.value : '').trim();
 
-  if (!name) { showToast('Введите название', 'error'); return; }
+  if (!name) { showToast('Заполните поле «Название отдела»', 'error'); return; }
 
   if (_cachedDepartmentsFull.some(d => d.name.toLowerCase() === name.toLowerCase())) {
     showToast('Такой отдел уже есть', 'error');
@@ -2347,8 +2353,23 @@ async function saveUserSetting() {
   const department = document.getElementById('usr-department').value.trim();
   const role = document.getElementById('usr-role').value;
 
-  if (!login || !fullName || !position) { showToast('Заполните поля', 'error'); return; }
-  if (!id && !password) { showToast('Укажите пароль для нового пользователя', 'error'); return; }
+  const missing = [];
+  if (!login) missing.push('Логин');
+  if (!fullName) missing.push('ФИО');
+  if (!position) missing.push('Должность');
+
+  if (missing.length > 0) {
+    const msg = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    showToast(msg, 'error');
+    return;
+  }
+
+  if (!id && !password) {
+    showToast('Заполните поле «Пароль»', 'error');
+    return;
+  }
 
   const onlyOwnCb = document.getElementById('usr-only-own-dept');
   const onlyOwnDepartment = onlyOwnCb ? onlyOwnCb.checked : false;
@@ -2629,7 +2650,7 @@ async function saveBulkSend(e) {
   const sentDate = document.getElementById('bulk-send-date').value;
   const note = document.getElementById('bulk-send-note').value.trim();
 
-  if (!sentDate) { showToast('Укажите дату отправки', 'error'); return; }
+  if (!sentDate) { showToast('Заполните поле «Дата отправки»', 'error'); return; }
   if (sentDate > todayStr()) {
     showToast('Дата не может быть в будущем', 'error');
     return;
@@ -2884,7 +2905,7 @@ async function saveBulkReturn(e) {
   const singleCert = document.getElementById('bulk-return-single-cert').checked;
   const commonCert = document.getElementById('bulk-return-cert').value.trim();
 
-  if (!date) { showToast('Укажите дату поверки', 'error'); return; }
+  if (!date) { showToast('Заполните поле «Дата поверки»', 'error'); return; }
   if (date > todayStr()) {
     showToast('Дата не может быть в будущем', 'error');
     return;
