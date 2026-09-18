@@ -309,10 +309,7 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 
       if (!id && !model) continue;
 
-      let id = String(obj.id || '').trim();
-const model = String(obj.model || '').trim();
-
-if (!model) {
+     if (!model) {
   skipped.push(`Строка ${i + 2}: не указана модель`);
   continue;
 }
