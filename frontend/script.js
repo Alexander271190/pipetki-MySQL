@@ -2039,7 +2039,7 @@ async function saveDepartmentsFull() {
     _cachedDepartmentsFull = cleaned;
     showToast(`Отделы сохранены (${cleaned.length})`, 'success');
     await loadDepartments();
-    _filterRendered = false;
+    await loadFilterConfig();
     render();
     closeSettingsModal();
   } catch (e) { showToast(e.message, 'error'); }
@@ -3343,12 +3343,8 @@ async function saveEquipmentTypes() {
   try {
     await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
     showToast('Типы оборудования сохранены', 'success');
-
-    // Обновляем глобальный кэш
     _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
-    _filterRendered = false;
-
-    // Перерисовываем таблицу оборудования — новые иконки/label
+    await loadFilterConfig();
     render();
   } catch (e) {
     showToast(e.message || 'Ошибка сохранения', 'error');
