@@ -1890,6 +1890,7 @@ async function deleteFieldSetting(idx) {
 async function saveFieldsSettings() {
   try {
     await apiRequest('/settings/fields', 'PUT', _cachedFields);
+    _cachedFields = [];                           
     showToast('Поля сохранены', 'success');
     closeSettingsModal();
   } catch (e) {
