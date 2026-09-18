@@ -25,11 +25,9 @@ const requireRole = (roles) => (req, res, next) => {
 
 const requirePermission = (perm) => (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Требуется авторизация' });
-  if (req.user.role === 'admin') return next();
-  const extra = JSON.parse(req.user.extra_permissions || '[]');
-  const base = { senior_lab: ['manage_pipettes', 'import_data', 'export_data'] };
-  const all = [...(base[req.user.role] || []), ...extra];
-  if (!all.includes(perm)) return res.status(403).json({ error: 'Недостаточно прав' });
+  if (req.user.role === 'admin') return next();   // админ всегда может всё
+  const perms = JSON.parse(req.user.extra_permissions || '[]');
+  if (!perms.includes(perm)) return res.status(403).json({ error: 'Недостаточно прав' });
   next();
 };
 
