@@ -166,10 +166,10 @@ async function seedInitialData() {
     const sql = `INSERT INTO users (id, login, password, full_name, position, department, role, extra_permissions)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
     const users = [
-      ['admin1',  'admin',  'admin',  'Администратор', 'Главный метролог', null,                     'admin',      '[]'],
-      ['senior1', 'senior', 'senior', 'Петров Петр',   'Старший лаборант', 'Гематологический отдел', 'senior_lab', '[]'],
-      ['user1',   'user',   'user',   'Иванов Иван',   'Лаборант',         'Биохимический отдел',    'user',       '[]']
-    ];
+  ['admin1',  'admin',  'admin',  'Администратор', 'Главный метролог', null,                     'admin',      '[]'],
+  ['senior1', 'senior', 'senior', 'Петров Петр',   'Старший лаборант', 'Гематологический отдел', 'senior_lab', '["manage_pipettes","import_data","export_data"]'],
+  ['user1',   'user',   'user',   'Иванов Иван',   'Лаборант',         'Биохимический отдел',    'user',       '[]']
+];
     for (const [id, login, plain, fullName, position, department, role, extra] of users) {
       const hash = await bcrypt.hash(plain, 10);
       await pool.query(sql, [id, login, hash, fullName, position, department, role, extra]);
