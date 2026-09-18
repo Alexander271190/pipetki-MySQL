@@ -1135,9 +1135,36 @@ async function savePipette(e) {
   const editId = document.getElementById('edit-id').value;
   const container = document.getElementById('form-fields-container');
   const data = {};
-  let valid = true;
+  const missing = [];
 
-  if (!valid) 
+  // Собираем все поля формы
+  const inputs = container.querySelectorAll('[data-field-id]');
+  for (const input of inputs) {
+    const fieldId = input.dataset.fieldId;
+    const value = (input.value || '').trim();
+    const labelEl = input.previousElementSibling;
+    const labelText = labelEl
+      ? labelEl.textContent.replace(/\s*\*\s*$/, '').trim()
+      : fieldId;
+
+    // ID генерируется автоматически при создании — не шлём
+    if (fieldId === 'id' && !editId) continue;
+
+    if (input.required && !value) {
+      missing.push(labelText);
+    }
+
+    if (value !== '') data[fieldId] = value;
+  }
+
+  // Единый формат сообщения о незаполненных полях
+  if (missing.length > 0) {
+    const msg = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    showToast(msg, 'error');
+    return;
+  }
 
   if (data.interval) data.interval = parseInt(data.interval) || 12;
   if (data.active !== undefined) {
@@ -1153,7 +1180,7 @@ async function savePipette(e) {
   if (!editId) delete data.id;
 
   try {
-  if (editId) {
+    if (editId) {
       await apiRequest(`/pipettes/${editId}`, 'PUT', data);
       showToast('Оборудование обновлено', 'success');
     } else {
