@@ -2096,6 +2096,7 @@ async function renderFiltersSettings(skipFetch = false) {
             <option value="departments" ${f.optionsSource === 'departments' ? 'selected' : ''}>Отделы</option>
             <option value="status_list" ${f.optionsSource === 'status_list' ? 'selected' : ''}>Статусы</option>
             <option value="active_list" ${f.optionsSource === 'active_list' ? 'selected' : ''}>Активность</option>
+            <option value="equipment_type_list" ${f.optionsSource === 'equipment_type_list' ? 'selected' : ''}>Типы оборудования</option>
           </select>
         </td>
         <td><button class="btn btn-danger btn-sm btn-icon-only" 
