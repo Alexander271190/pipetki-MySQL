@@ -298,15 +298,18 @@ async function seedInitialData() {
 async function generatePipetteId(prefix = 'P') {
   const safePrefix = String(prefix).replace(/[%_\\]/g, '\\$&');
   const [rows] = await pool.query(
-    "SELECT id FROM pipettes WHERE id LIKE ? ORDER BY id DESC LIMIT 1",
+    "SELECT id FROM pipettes WHERE id LIKE ?",
     [`${safePrefix}-%`]
   );
-  let nextNum = 1;
-  if (rows.length) {
-    const m = String(rows[0].id).match(/(\d+)$/);
-    if (m) nextNum = parseInt(m[1], 10) + 1;
-  }
-  return `${prefix}-${String(nextNum).padStart(3, '0')}`;
-}
 
+  let maxNum = 0;
+  for (const row of rows) {
+    const m = String(row.id).match(/(\d+)$/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > maxNum) maxNum = n;
+    }
+  }
+  return `${prefix}-${String(maxNum + 1).padStart(3, '0')}`;
+}
 module.exports = { query, getConnection, pool, initSchema, generatePipetteId };
