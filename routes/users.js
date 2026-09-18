@@ -53,12 +53,21 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
           onlyOwnDepartment, extraPermissions } = req.body;
   const id = req.params.id;
 
+  // 1. Проверяем, что такой пользователь существует
   const [ex] = await db.query('SELECT id FROM users WHERE id = ?', [id]);
   if (!ex.length) return res.status(404).json({ error: 'Не найден' });
 
+  // 2. Проверяем, что новый логин не занят ДРУГИМ пользователем
+  const [dup] = await db.query(
+    'SELECT id FROM users WHERE login = ? AND id <> ?',
+    [login, id]
+  );
+  if (dup.length) return res.status(409).json({ error: 'Логин уже занят' });
+
   const onlyOwn = onlyOwnDepartment ? 1 : 0;
 
-    if (password) {
+  // 3. Обновляем
+  if (password) {
     const passwordHash = await bcrypt.hash(password, 10);
     await db.query(
       `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
