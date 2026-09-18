@@ -184,10 +184,8 @@ function hasPermission(permission) {
   const user = currentUser;
   if (!user) return false;
   if (user.role === 'admin') return true;
-  const base = getBasePermissions(user.role) || [];
-  const extra = user.extraPermissions || [];
-  const allPerms = [...new Set([...base, ...extra])];
-  return allPerms.includes(permission);
+  const perms = user.extraPermissions || [];
+  return perms.includes(permission);
 }
 
 function canManagePipettes() { return hasPermission('manage_pipettes'); }
