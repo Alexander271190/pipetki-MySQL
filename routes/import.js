@@ -309,10 +309,46 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 
       if (!id && !model) continue;
 
-      if (!id || !model) {
-        skipped.push(`Строка ${i + 2}: нет ${!id ? 'ID' : 'модели'}`);
-        continue;
+      let id = String(obj.id || '').trim();
+const model = String(obj.model || '').trim();
+
+if (!model) {
+  skipped.push(`Строка ${i + 2}: не указана модель`);
+  continue;
+}
+
+// Если ID указан — проверяем на дубль
+if (id) {
+  const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
+  if (ex.length) { skipped.push(`${id}: ID уже существует`); continue; }
+} else {
+  // ─── Автогенерация ID ───
+  const eqType = normalizeEquipmentType(obj.equipmentType);
+  let prefix = null;
+
+  try {
+    const [rows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    if (rows.length && rows[0].setting_value) {
+      const types = JSON.parse(rows[0].setting_value);
+      const found = types.find(t => t.value === eqType);
+      if (found && found.prefix && found.prefix.trim()) {
+        prefix = found.prefix.trim().toUpperCase();
       }
+    }
+  } catch (e) { /* игнорируем, будет fallback */ }
+
+  if (!prefix) {
+    const fallback = {
+      pipette: 'P', analyzer: 'A', thermometer: 'T',
+      scales: 'S', photometer: 'F'
+    };
+    prefix = fallback[eqType] || 'EQ';
+  }
+
+  id = await db.generatePipetteId(prefix);
+}
 
       try {
         const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
