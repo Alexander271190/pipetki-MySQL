@@ -55,7 +55,7 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     lastCalibration, cert, result, active, responsible, location, notes
   } = req.body;
 
-  if (!model) return res.status(400).json({ error: 'Модель обязательна' });
+  if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
 
   // ──────────────────────────────────────────────────────────
   // ГЕНЕРАЦИЯ ID
@@ -235,7 +235,7 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
     return res.status(400).json({ error: 'Не выбрано ни одной единицы оборудования' });
   }
   if (!sentDate) {
-    return res.status(400).json({ error: 'Дата отправки обязательна' });
+    if (!sentDate) return res.status(400).json({ error: 'Заполните поле «Дата отправки»' });
   }
   if (ids.length > 100) {
     return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 100)' });
@@ -320,7 +320,7 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
     return res.status(400).json({ error: 'Не выбрано ни одной единицы оборудования' });
   }
   if (!date) {
-    return res.status(400).json({ error: 'Дата поверки обязательна' });
+   if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
   }
   if (items.length > 100) {
    return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 100)' });
@@ -399,8 +399,7 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
 // Добавление поверки
 router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
   const { date, cert, result, org, note } = req.body;
-  if (!date) return res.status(400).json({ error: 'Дата обязательна' });
-
+  if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
