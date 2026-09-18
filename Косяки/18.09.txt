@@ -1,0 +1,211 @@
+Проверка проекта: критичные баги и план работ
+Прошёлся по всем файлам. Косметику не трогаю — только функционал и то, из-за чего приложение не запустится или будет вести себя неверно.
+
+🔴 КРИТИЧНО — приложение не запустится
+Баг 1. Dockerfile не найдётся
+Файл называется .dockerfile.txt (с точкой в начале и расширением .txt). В docker-compose.yaml:
+
+yaml
+app:
+  build: .
+build: . ищет файл Dockerfile (без расширения) в текущей папке. Docker его не найдёт → docker compose up упадёт на этапе сборки образа.
+
+Варианты фикса (любой из двух):
+
+Переименовать .dockerfile.txt → Dockerfile
+
+Либо в compose:
+
+yaml
+app:
+  build:
+    context: .
+    dockerfile: .dockerfile.txt
+Баг 2. Синтаксическая ошибка в routes/users.js
+В POST /api/users:
+
+js
+if (!login || !password || !fullName || !position)
+    const missing = [];
+if (!login)    missing.push('Логин');
+...
+const нельзя объявлять в контексте одиночного if без фигурных скобок. Node.js не сможет даже загрузить этот файл:
+
+text
+SyntaxError: Lexical declaration cannot appear in a single-statement context
+Сервер падает при старте, поскольку routes/users.js подключается в server.js.
+
+Фикс — заменить блок на:
+
+js
+const missing = [];
+if (!login)    missing.push('Логин');
+if (!password) missing.push('Пароль');
+if (!fullName) missing.push('ФИО');
+if (!position) missing.push('Должность');
+if (missing.length > 0) {
+  const msg = missing.length === 1
+    ? `Заполните поле «${missing[0]}»`
+    : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+  return res.status(400).json({ error: msg });
+}
+🟠 ФУНКЦИОНАЛЬНЫЕ — приложение работает, но пользователь увидит баги
+Баг 3. SPA-fallback в server.js перехватывает /api/*
+js
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+Любой запрос на несуществующий API-роут (GET /api/unknown) возвращает 200 OK + HTML вместо 404 JSON. Клиент делает response.json() → падает с «unexpected token <». Ошибки от сервера неотличимы от валидных ответов.
+
+Фикс — добавить перед SPA-fallback:
+
+js
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found' });
+});
+Это надо разместить после всех app.use('/api/...', ...), но до app.get('*', ...).
+
+Баг 4. Импорт ломает кастомные типы оборудования
+В routes/import.js:
+
+js
+function normalizeEquipmentType(val) {
+  if (!val) return 'pipette';
+  const s = String(val).trim().toLowerCase();
+  if (/пипет|дозатор|pipette|pipet/.test(s)) return 'pipette';
+  if (/анализатор|analyzer/.test(s)) return 'analyzer';
+  ...
+  return 'pipette';   // ← любой незнакомый тип превращается в «Пипетку»
+}
+Если админ добавит тип ph_meter в настройках (например, «pH-метр») и импортирует Excel с колонкой «Тип» = «pH-метр», в БД запишется equipment_type = 'pipette'. То же самое при импорте — equipment_type из системы игнорируется.
+
+Фикс — сначала искать в system_settings.equipment_types:
+
+js
+async function normalizeEquipmentType(val) {
+  if (!val) return 'pipette';
+  const s = String(val).trim().toLowerCase();
+
+  // 1. Пытаемся найти в кастомных типах (по value или label)
+  try {
+    const [rows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    if (rows.length) {
+      const types = JSON.parse(rows[0].setting_value);
+      const found = types.find(t =>
+        t.value.toLowerCase() === s || t.label.toLowerCase() === s
+      );
+      if (found) return found.value;
+    }
+  } catch (e) { /* fallback */ }
+
+  // 2. Стандартные эвристики
+  if (/пипет|дозатор|pipette|pipet/.test(s)) return 'pipette';
+  ...
+}
+Потребуется сделать функцию асинхронной и await её вызов. Сейчас вызывается в 3 местах.
+
+Дополнительно: этот же паттерн дублируется в routes/pipettes.js при генерации ID — там уже читается equipment_types, так что логику можно вынести в общий модуль (например, utils/equipmentTypes.js).
+
+Баг 5. Нельзя очистить значения полей при редактировании
+В script.js::savePipette:
+
+js
+if (value !== '') data[fieldId] = value;
+Если пользователь очищает поле (например, удаляет «Примечание» или «Ответственного»), значение в data не попадает. Backend PUT /pipettes/:id обновляет только те поля, что пришли в updates — остальные остаются в БД.
+
+Сценарий:
+
+P-001: notes = 'Требует поверки'
+
+Пользователь редактирует → стирает примечание → Сохранить
+
+Тост «Оборудование обновлено», но notes в БД по-прежнему 'Требует поверки'.
+
+Фикс — отправлять все поля формы, включая пустые:
+
+js
+for (const input of inputs) {
+  const fieldId = input.dataset.fieldId;
+  const value = (input.value || '').trim();
+  const labelEl = input.previousElementSibling;
+  const labelText = labelEl
+    ? labelEl.textContent.replace(/\s*\*\s*$/, '').trim()
+    : fieldId;
+
+  if (fieldId === 'id' && !editId) continue;
+
+  if (input.required && !value) {
+    missing.push(labelText);
+  }
+
+  data[fieldId] = value;   // ← всегда
+}
+Важно: после этого фикса backend должен корректно обрабатывать пустые строки для числовых полей. В routes/pipettes.js есть один риск:
+
+js
+const map = { ..., interval: '`interval`', ... };
+...
+values.push(updates[k]);
+UPDATE pipettes SET \interval` = '' WHERE id = ?→ MySQL преобразует''в0`. Поле «МПИ» станет «0 мес.».
+
+Решение: в PUT для числовых колонок преобразовывать '' → null:
+
+js
+const NUMERIC_FIELDS = new Set(['interval']);
+...
+const rawValue = updates[k];
+const finalValue = NUMERIC_FIELDS.has(k) && rawValue === ''
+  ? null
+  : (k === 'active' ? (rawValue ? 1 : 0) : rawValue);
+values.push(finalValue);
+Либо на фронте не отправлять пустой interval (но тогда фикс #5 частично теряется для этого конкретного поля). Лучше всё же через null на бэке.
+
+🟡 МИНОРНЫЕ (не блокируют, но стоит убрать)
+6. Двойной if в routes/pipettes.js
+В POST /bulk-send:
+
+js
+if (!sentDate) {
+    if (!sentDate) return res.status(400).json({ error: 'Заполните поле «Дата отправки»' });
+}
+В POST /bulk-return аналогично с date. Работает, но лишний уровень вложенности. Заменить на один if.
+
+7. Неиспользуемая переменная в script.js::checkReminder
+js
+const wipList = pipettes.filter(p => calcStatus(p) === 'wip');
+Нигде не используется — удалить.
+
+8. CORS origin: '*' + credentials: true
+В server.js:
+
+js
+app.use(cors({ origin: '*', credentials: true }));
+По спецификации CORS эта комбинация невалидна — браузер отклонит её для кросс-доменных запросов. Для same-origin (а у вас так) не влияет. Но если когда-то откроете API на другой домен, всё сломается тихо. Правильно:
+
+js
+app.use(cors({ origin: true, credentials: true }));
+(или задать конкретный список origin).
+
+9. mysqldata на Linux-хосте
+При первом docker compose up Docker создаст папку ./mysqldata с правами root, а MySQL-контейнер работает под uid 999. Возможен отказ с Permission denied. Решается одним из:
+
+Создать папку вручную до первого запуска: mkdir -p mysqldata
+
+Или использовать named volume вместо bind mount.
+
+Не баг, но подготовить почву стоит.
+
+📋 План работ (порядок)
+#	Файл	Что сделать	Приоритет
+1	.dockerfile.txt / docker-compose.yaml	Переименовать в Dockerfile или добавить dockerfile: .dockerfile.txt в build	🔴 блокер
+2	routes/users.js	Починить if (...) const missing = [] → const missing = []; if (...) {…}	🔴 блокер
+3	server.js	Добавить app.use('/api', (req, res) => res.status(404).json(...)) перед SPA-fallback	🟠 функционал
+4	routes/import.js	Сделать normalizeEquipmentType асинхронной, искать в system_settings.equipment_types перед fallback’ом	🟠 функционал
+5a	script.js	savePipette: всегда класть поле в data (включая пустые)	🟠 функционал
+5b	routes/pipettes.js	PUT: '' → null для числовых полей (interval)	🟠 функционал
+6	routes/pipettes.js	Убрать вложенные if (!sentDate) { if (!sentDate) … } в bulk-send и bulk-return	🟡 косметика
+7	script.js	Удалить неиспользуемую wipList в checkReminder	🟡 косметика
+8	server.js	cors({ origin: '*', credentials: true }) → cors({ origin: true, credentials: true })	🟡 на будущее
+9	README / команды запуска	Задокументировать mkdir -p mysqldata перед первым запуском	🟡 на будущее
