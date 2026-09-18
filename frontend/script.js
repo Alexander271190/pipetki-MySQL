@@ -180,7 +180,8 @@ function isImpersonating() {
 // ПРАВА
 // ============================================================
 function getBasePermissions(role) {
-  if (role === 'admin') return ['manage_pipettes', 'import_data', 'export_data'];
+  if (role === 'admin')      return ['manage_pipettes', 'import_data', 'export_data'];
+  if (role === 'senior_lab') return ['manage_pipettes', 'import_data', 'export_data'];
   return [];
 }
 
