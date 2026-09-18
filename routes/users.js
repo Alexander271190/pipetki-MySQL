@@ -20,7 +20,17 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
           onlyOwnDepartment, extraPermissions } = req.body;
 
   if (!login || !password || !fullName || !position)
-    return res.status(400).json({ error: 'Заполните обязательные поля' });
+    const missing = [];
+if (!login)    missing.push('Логин');
+if (!password) missing.push('Пароль');
+if (!fullName) missing.push('ФИО');
+if (!position) missing.push('Должность');
+if (missing.length > 0) {
+  const msg = missing.length === 1
+    ? `Заполните поле «${missing[0]}»`
+    : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+  return res.status(400).json({ error: msg });
+}
 
   const [ex] = await db.query('SELECT id FROM users WHERE login = ?', [login]);
   if (ex.length) return res.status(409).json({ error: 'Логин уже занят' });
