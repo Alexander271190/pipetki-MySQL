@@ -157,7 +157,7 @@
   <div class="modal">
     <h2>📋 Быстрая поверка</h2>
     <div id="quick-cal-pipette-info" style="margin-bottom:15px;padding:10px;background:#f8fafc;border-radius:8px;"></div>
-    <form id="quick-cal-form">
+    <form id="quick-cal-form" novalidate>
       <input type="hidden" id="quick-cal-id">
       <div class="form-row">
         <div class="form-group">
@@ -218,11 +218,11 @@
       ℹ️ На внешнюю поверку отправляются только <strong>пипетки (дозаторы)</strong>. Для прочего оборудования используйте <strong>✔️ Быстрая поверка</strong>.
     </div>
 
-    <form id="bulk-send-form" onsubmit="saveBulkSend(event)">
+    <form id="bulk-send-form" onsubmit="saveBulkSend(event)" novalidate>
       <div class="form-row">
         <div class="form-group">
           <label>Дата отправки *</label>
-          <input type="date" id="bulk-send-date" required>
+          <input type="date" id="bulk-send-date" novalidate>
         </div>
       </div>
       <div class="form-group">
@@ -254,7 +254,7 @@
       <strong>Возвращается единиц:</strong> <span id="bulk-return-count">0</span>
     </div>
 
-    <form id="bulk-return-form" onsubmit="saveBulkReturn(event)">
+    <form id="bulk-return-form" onsubmit="saveBulkReturn(event)" novalidate>
       <div class="form-row">
         <div class="form-group">
           <label>Дата поверки *</label>
