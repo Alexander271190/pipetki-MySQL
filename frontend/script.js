@@ -1131,23 +1131,7 @@ async function savePipette(e) {
   const data = {};
   let valid = true;
 
-  const inputs = container.querySelectorAll('input, select, textarea');
-  inputs.forEach(el => {
-    const fieldId = el.dataset.fieldId;
-    if (!fieldId) return;
-
-    let value = el.value;
-    data[fieldId] = value;
-
-    if (el.required && !value) {
-      valid = false;
-      el.style.borderColor = '#dc2626';
-    } else {
-      el.style.borderColor = '';
-    }
-  });
-
-  if (!valid) { showToast('Заполните обязательные поля', 'error'); return; }
+  if (!valid) 
 
   if (data.interval) data.interval = parseInt(data.interval) || 12;
   if (data.active !== undefined) {
