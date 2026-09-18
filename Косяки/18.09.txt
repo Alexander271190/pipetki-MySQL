@@ -162,3 +162,72 @@ app.use(cors({ origin: true, credentials: true }));
 7	script.js	Удалить неиспользуемую wipList в checkReminder	🟡 косметика
 8	server.js	cors({ origin: '*', credentials: true }) → cors({ origin: true, credentials: true })	🟡 на будущее
 9	README / команды запуска	Задокументировать mkdir -p mysqldata перед первым запуском	🟡 на будущее
+
+
+
+
+
+
+
+
+Искра
+Провёл статический аудит (синтаксис через node --check, разбор логики, сверка структуры с путями require). Имена файлов вида server (3).js — это следствие вложения в чат; в проекте ожидается раскладка server.js, db.js, routes/*.js, middleware/auth.js, frontend/{index.html,script.js,style.css}. Ниже разбор по этой логической структуре.*
+Итог: приложение не запускается вообще
+Два фатальных бага: один роняет сервер на старте, второй ломает импорт. Остальные — рангом ниже, но часть влияет на корректность данных и безопасность.
+
+🔴 Критично
+1. routes/users.js — SyntaxError, сервер падает при старте
+users.js:22-23:
+js     Скопировано if (!login || !password || !fullName || !position)
+    const missing = [];   // ← лексическое объявление как тело if без блока Это невалидный JS. node --check routes/users.js подтверждает:
+     Скопировано SyntaxError: Unexpected token 'const' server.js:21 подключает require('./routes/users') на старте → процесс умирает до listen(). Ни один эндпоинт не поднимается.
+Фикс — убрать «висячий» if и оставить сбор пропущенных полей:
+js     Скопировано const { login, password, fullName, position, department, role,
+        onlyOwnDepartment, extraPermissions } = req.body;
+
+const missing = [];
+if (!login)    missing.push('Логин');
+if (!password) missing.push('Пароль');
+if (!fullName) missing.push('ФИО');
+if (!position) missing.push('Должность');
+if (missing.length > 0) {
+  const msg = missing.length === 1
+    ? `Заполните поле «${missing[0]}»`
+    : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+  return res.status(400).json({ error: msg });
+} 2. routes/import.js — запись в const, импорт без колонки id падает (500)
+import.js:307 объявляет const id, а import.js:347 в ветке автогенерации делает id = await db.generatePipetteId(prefix). При импорте строки без ID — TypeError: Assignment to constant variable (в node --check не виден, это рантайм-ошибка).
+Фикс: const id = → let id = (import.js:307).
+
+🟠 Высокий приоритет (безопасность)
+3. Подстановка дефолтных паролей и открытая выдача
+
+auth (2).js:8 и middleware/auth.js:4: JWT_SECRET || 'change_this_secret_key'. В docker-compose стоит ровно это же значение. Любой, кто знает дефолт, подделывает токен (в т.ч. role: admin).
+server.js:68 логирует admin/admin, senior/senior, user/user; db.js:169-171 сеет这些 же weak-пароли. Для продакшена это дыра.
+app.use(cors({ origin: '*', credentials: true })) (server.js:11) — * вместе с credentials бессмысленно для cookie и одновременно максимально открыто. Лучше: явно перечислить origin и отключить credentials (в приложении Bearer-токен в заголовке, cookie не нужны).
+
+4. Нет rate-limit / блокировки на /login
+auth (2).js:13 — бесконечные попытки подбора пароля, bcrypt не тормозит перебор со стороны сервера. Нужен лимитер на логин и временная блокировка IP/аккаунта.
+
+🟡 Средний приоритет (корректность данных)
+5. Несоответствие имени поля result / lastResult
+Создание читает result (pipettes.js:55,128), а обновление (pipettes.js:168) маппит только lastResult. Если фронт на edit шлёт result, смена результата поверки молча игнорируется. Сверьте контракт фронтенда: либо в map добавить result: 'last_result', либо унифицировать.
+6. active в PUT — строка "false" превращается в 1
+pipettes.js:179: updates[k] ? 1 : 0. Нестрогая правда: active: "false" (нетипизированная строка) → 1. В POST та же проблема (pipettes.js:129, active !== false). Если фронт шлёт строки из формы — статус «неактивно» не применится.
+7. Импорт вне транзакции
+import.js на каждую строку делает db.query без общей транзакции и без getConnection: при ошибке на середине файла часть строк уже закоммичена, часть — нет (частичный импорт). Оберните цикл в одну транзакцию.
+8. generatePipetteId — гонка при конкурентном создании
+db.js:298-314: SELECT id ... → max+1 → INSERT. Два параллельных запроса дадут одинаковый ID и упадут на PK. Низкая частота — фоновый риск, но в импорте (много вставок в цикле) особенно заметен: лучше INSERT ... ON DUPLICATE KEY + ретрай или счётчик в таблице.
+9. Проверка дубля ID при импорте идёт дважды и по-разному
+import.js:319 (ветка «если id задан») и import.js:351 (внутри try) делают один и тот же SELECT. В ветке автогенерации предварительной проверки нет, но это не беда — она покрывается второй. Уберите дублирующий SELECT в ветке if (id) ради экономии запросов (не баг, а лишний I/O).
+
+🟢 Низкий приоритет / чистота
+
+db.js:17 multipleStatements: true — включено ради батча CREATE TABLE в initSchema. При параметризованных запросах безопасно, но оставленное на всё время жизни пула — лишний surface на SQL-injection, если где-то соберётся конкатенация. Лучше выполнять схему отдельными запросами и выключить флаг.
+pipettes.js:238,323 — двойная проверка if (!sentDate) { if (!sentDate) ... } (вложенный if дублирует внешний; логика верна, но мусор).
+server.js:29 app.get('*') — в Express 5 '*' невалиден. В package.json стоит express ^4.18.2, так что пока работает; при мейдже на 5.x упадёт.
+users.js:38 — ID как Date.now()+random: коллизия теоретически возможна; PK её поймает, но лучше UUID.
+pipettes.js:50-51 и pipettes.js:100-102 — продублированные комментарии «// Создание».
+script.js (3355 строк) — один монолитный файл фронтенда, токен хранится в localStorage (уязвим к XSS). Не блокирует работу, но стоит держать в плане.
+
+
