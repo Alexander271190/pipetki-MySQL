@@ -179,17 +179,6 @@ function isImpersonating() {
 // ============================================================
 // ПРАВА
 // ============================================================
-function getBasePermissions(role) {
-  if (role === 'admin')      return ['manage_pipettes', 'import_data', 'export_data'];
-  if (role === 'senior_lab') return ['manage_pipettes', 'import_data', 'export_data'];
-  return [];
-}
-
-const PERMISSION_LABELS = {
-  'manage_pipettes': 'Управление пипетками',
-  'import_data': 'Импорт данных',
-  'export_data': 'Экспорт данных'
-};
 
 function hasPermission(permission) {
   const user = currentUser;
@@ -2318,7 +2307,6 @@ function onUserRoleChange(role) {
       cb.disabled = true;
     } else {
       cb.disabled = false;
-      cb.checked = false;
     }
   });
 }
