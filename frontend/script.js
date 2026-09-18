@@ -3346,6 +3346,7 @@ async function saveEquipmentTypes() {
 
     // Обновляем глобальный кэш
     _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
+    _filterRendered = false;
 
     // Перерисовываем таблицу оборудования — новые иконки/label
     render();
