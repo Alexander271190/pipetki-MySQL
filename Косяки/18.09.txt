@@ -1,54 +1,7 @@
 Проверка проекта: критичные баги и план работ
 Прошёлся по всем файлам. Косметику не трогаю — только функционал и то, из-за чего приложение не запустится или будет вести себя неверно.
 
-🔴 КРИТИЧНО — приложение не запустится
-Баг 1. Dockerfile не найдётся
-Файл называется .dockerfile.txt (с точкой в начале и расширением .txt). В docker-compose.yaml:
 
-yaml
-app:
-  build: .
-build: . ищет файл Dockerfile (без расширения) в текущей папке. Docker его не найдёт → docker compose up упадёт на этапе сборки образа.
-
-Варианты фикса (любой из двух):
-
-Переименовать .dockerfile.txt → Dockerfile
-
-Либо в compose:
-
-yaml
-app:
-  build:
-    context: .
-    dockerfile: .dockerfile.txt
-Баг 2. Синтаксическая ошибка в routes/users.js
-В POST /api/users:
-
-js
-if (!login || !password || !fullName || !position)
-    const missing = [];
-if (!login)    missing.push('Логин');
-...
-const нельзя объявлять в контексте одиночного if без фигурных скобок. Node.js не сможет даже загрузить этот файл:
-
-text
-SyntaxError: Lexical declaration cannot appear in a single-statement context
-Сервер падает при старте, поскольку routes/users.js подключается в server.js.
-
-Фикс — заменить блок на:
-
-js
-const missing = [];
-if (!login)    missing.push('Логин');
-if (!password) missing.push('Пароль');
-if (!fullName) missing.push('ФИО');
-if (!position) missing.push('Должность');
-if (missing.length > 0) {
-  const msg = missing.length === 1
-    ? `Заполните поле «${missing[0]}»`
-    : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
-  return res.status(400).json({ error: msg });
-}
 🟠 ФУНКЦИОНАЛЬНЫЕ — приложение работает, но пользователь увидит баги
 Баг 3. SPA-fallback в server.js перехватывает /api/*
 js
