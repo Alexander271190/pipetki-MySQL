@@ -120,6 +120,10 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     showToast('Сессия истекла, войдите заново', 'error');
     throw new Error('Неавторизован');
   }
+  
+  if (response.status === 403 && !endpoint.startsWith('/auth/')) {
+  await refreshCurrentUser();
+}
 
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Ошибка запроса');
@@ -174,6 +178,30 @@ function getOriginalToken() {
 
 function isImpersonating() {
   return !!getOriginalUser();
+}
+
+async function refreshCurrentUser() {
+  try {
+    const res = await fetch(`${API_URL}/auth/verify`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    if (!res.ok) return;
+    const { user } = await res.json();
+
+    const oldPerms = (currentUser.extraPermissions || []).join(',');
+    const newPerms = (user.extraPermissions || []).join(',');
+
+    currentUser = user;
+
+    const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
+    s.user = user;
+    sessionStorage.setItem('pipette_session', JSON.stringify(s));
+
+    if (oldPerms !== newPerms) {
+      renderAuthUI();
+      showToast('Ваши права были обновлены администратором', 'success');
+    }
+  } catch (e) {}
 }
 
 // ============================================================
@@ -1142,7 +1170,7 @@ async function savePipette(e) {
       missing.push(labelText);
     }
 
-    if (value !== '') data[fieldId] = value;
+     data[fieldId] = value;
   }
 
   // Единый формат сообщения о незаполненных полях
