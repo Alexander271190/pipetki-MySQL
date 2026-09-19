@@ -171,14 +171,22 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     sentNote: 'sent_note'
   };
 
-  const fields = [];
-  const values = [];
-  for (const [k, col] of Object.entries(map)) {
-    if (updates[k] !== undefined) {
-      fields.push(`${col} = ?`);
-      values.push(k === 'active' ? (updates[k] ? 1 : 0) : updates[k]);
+ const NUMERIC_FIELDS = new Set(['interval']);
+
+ const fields = [];
+ const values = [];
+ for (const [k, col] of Object.entries(map)) {
+   if (updates[k] !== undefined) {
+     fields.push(`${col} = ?`);
+     if (k === 'active') {
+      values.push(updates[k] ? 1 : 0);
+    } else if (NUMERIC_FIELDS.has(k) && updates[k] === '') {
+      values.push(null);
+    } else {
+      values.push(updates[k]);
     }
   }
+}
 
   if (!fields.length) return res.status(400).json({ error: 'Нет полей для обновления' });
   fields.push('updated_at = CURRENT_TIMESTAMP');
