@@ -1594,7 +1594,6 @@ function checkReminder() {
   if (lastShown === today) return;
 
   const dangerList = pipettes.filter(p => ['danger', 'fail'].includes(calcStatus(p)));
-  const wipList = pipettes.filter(p => calcStatus(p) === 'wip');
   const warnList = pipettes.filter(p => calcStatus(p) === 'warn');
   if (dangerList.length === 0 && warnList.length === 0) return;
 
