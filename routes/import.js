@@ -273,7 +273,7 @@ function parseJson(buffer) {
 // ============================================================
 // ИМПОРТ
 // ============================================================
-router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+router.post('/', authenticate, requirePermission('import_data'), async (req, res) => {
   try {
     const { file, filename } = req.body;
     if (!file) return res.status(400).json({ error: 'Файл не передан' });
