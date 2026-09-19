@@ -242,9 +242,9 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: 'Не выбрано ни одной единицы оборудования' });
   }
-  if (!sentDate) {
-    if (!sentDate) return res.status(400).json({ error: 'Заполните поле «Дата отправки»' });
-  }
+  
+  if (!sentDate) return res.status(400).json({ error: 'Заполните поле «Дата отправки»' });
+  
   if (ids.length > 100) {
     return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 100)' });
   }
@@ -327,9 +327,9 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Не выбрано ни одной единицы оборудования' });
   }
-  if (!date) {
-   if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
-  }
+  
+  if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
+  
   if (items.length > 100) {
    return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 100)' });
   }
