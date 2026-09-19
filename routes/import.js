@@ -304,7 +304,7 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
         }
       }
 
-      const id = String(obj.id || '').trim();
+      let id = String(obj.id || '').trim();
       const model = String(obj.model || '').trim();
 
       if (!id && !model) continue;
