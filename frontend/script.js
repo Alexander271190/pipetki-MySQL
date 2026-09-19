@@ -186,28 +186,41 @@ function isImpersonating() {
   return !!getOriginalUser();
 }
 
+let _refreshPromise = null;
+
 async function refreshCurrentUser() {
-  try {
-    const res = await fetch(`${API_URL}/auth/verify`, {
-      headers: { Authorization: `Bearer ${authToken}` }
-    });
-    if (!res.ok) return;
-    const { user } = await res.json();
+  if (_refreshPromise) return _refreshPromise;
 
-    const oldPerms = (currentUser.extraPermissions || []).join(',');
-    const newPerms = (user.extraPermissions || []).join(',');
+  _refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/verify`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (!res.ok) return;
 
-    currentUser = user;
+      const { user } = await res.json();
 
-    const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
-    s.user = user;
-    sessionStorage.setItem('pipette_session', JSON.stringify(s));
+      const oldPerms = (currentUser.extraPermissions || []).join(',');
+      const newPerms = (user.extraPermissions || []).join(',');
 
-    if (oldPerms !== newPerms) {
-      renderAuthUI();
-      showToast('Ваши права были обновлены администратором', 'success');
+      currentUser = user;
+
+      const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
+      s.user = user;
+      sessionStorage.setItem('pipette_session', JSON.stringify(s));
+
+      if (oldPerms !== newPerms) {
+        renderAuthUI();
+        showToast('Ваши права были обновлены администратором', 'success');
+      }
+    } catch (e) {
+      /* тихо */
+    } finally {
+      _refreshPromise = null;
     }
-  } catch (e) {}
+  })();
+
+  return _refreshPromise;
 }
 
 // ============================================================
@@ -1118,6 +1131,7 @@ async function generateFormFields(data = null) {
 // МОДАЛКА ПИПЕТКИ
 // ============================================================
 async function openModal(id) {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const modal = document.getElementById('modal');
@@ -1152,6 +1166,7 @@ function closeModal() { document.getElementById('modal').classList.remove('activ
 
 async function savePipette(e) {
   e.preventDefault();
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const editId = document.getElementById('edit-id').value;
@@ -1217,6 +1232,7 @@ async function savePipette(e) {
 }
 
 async function deletePipette(id) {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const ok = await showConfirm(     
     `Удалить оборудование «${id}» вместе со всей историей поверок? Действие необратимо.`,    
@@ -1236,7 +1252,8 @@ async function deletePipette(id) {
 // ============================================================
 // БЫСТРАЯ ПОВЕРКА (одна пипетка)
 // ============================================================
-function openQuickCalModal(id) {
+async function openQuickCalModal(id) {
+   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const p = pipettes.find(x => x.id === id);
   if (!p) { showToast('Оборудование не найдено', 'error'); return; }
@@ -1255,6 +1272,7 @@ function closeQuickCalModal() {
 }
 
 async function saveQuickCalibration() {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const id = document.getElementById('quick-cal-id').value;
   const date = document.getElementById('quick-cal-date').value;
@@ -1280,6 +1298,7 @@ async function saveQuickCalibration() {
 // ОТМЕНА ОТПРАВКИ
 // ============================================================
 async function cancelSend(id) {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
@@ -1377,7 +1396,8 @@ async function renderHistoryContent(p) {
   content.innerHTML = infoHtml + histHtml;
 }
 
-function openCalibrationForm() {
+  async function openCalibrationForm() {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   document.getElementById('calibration-form-wrap').style.display = 'block';
   document.getElementById('cal-date').value = todayStr();
@@ -1392,6 +1412,7 @@ function closeCalibrationForm() {
 }
 
 async function addCalibrationRecord() {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const date = document.getElementById('cal-date').value;
   const cert = document.getElementById('cal-cert').value.trim();
@@ -1463,6 +1484,7 @@ function getActiveExportFields() {
 }
 
 async function exportToExcel() {
+  await refreshCurrentUser();
   if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
   const data = getFilteredPipettes();
   if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
@@ -1491,7 +1513,8 @@ async function exportToExcel() {
   showToast(`Экспорт: ${fields.length} полей, ${data.length} записей`, 'success');
 }
 
-function exportToPDF() {
+async function exportToPDF() {
+  await refreshCurrentUser();
   if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
   const data = getFilteredPipettes();
   if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
@@ -1746,7 +1769,8 @@ if (lastLogin) {
 // ============================================================
 // ИМПОРТ ДАННЫХ
 // ============================================================
-function openImportModal() {
+async function openImportModal() {
+  await refreshCurrentUser();
   if (!canImport()) { showToast('Нет прав на импорт', 'error'); return; }
   document.getElementById('import-modal').classList.add('active');
 }
@@ -1757,6 +1781,7 @@ function closeImportModal() {
 }
 
 async function handleImport() {
+  await refreshCurrentUser();
   if (!canImport()) { showToast('Нет прав на импорт', 'error'); return; }
 
   const fileInput = document.getElementById('import-file');
@@ -1800,7 +1825,8 @@ async function handleImport() {
 // ============================================================
 // НАСТРОЙКИ
 // ============================================================
-function openSettingsModal() {
+async function openSettingsModal() {
+  await refreshCurrentUser();
   if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
   document.getElementById('settings-modal').classList.add('active');
   switchSettingsTab('fields');
@@ -2643,7 +2669,8 @@ async function resetAllDataSetting() {
 // ============================================================
 // МАССОВАЯ ОТПРАВКА НА ПОВЕРКУ
 // ============================================================
-function openBulkSendModal() {
+async function openBulkSendModal() {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const visibleIds = getFilteredPipettes().map(p => p.id);
@@ -2682,6 +2709,7 @@ function closeBulkSendModal() {
 
 async function saveBulkSend(e) {
   e.preventDefault();
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const visibleIds = getFilteredPipettes().map(p => p.id);
@@ -2856,7 +2884,8 @@ function printSendAct() {
 // ============================================================
 // МАССОВЫЙ ВОЗВРАТ С ПОВЕРКИ
 // ============================================================
-function openBulkReturnModal() {
+async function openBulkReturnModal() {
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const visibleIds = getFilteredPipettes().map(p => p.id);
@@ -2945,6 +2974,7 @@ function applyBulkReturnResult(result) {
 
 async function saveBulkReturn(e) {
   e.preventDefault();
+  await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const date = document.getElementById('bulk-return-date').value;
