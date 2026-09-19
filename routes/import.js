@@ -109,9 +109,25 @@ function normalizeResult(val) {
   return 'pass';
 }
 
-function normalizeEquipmentType(val) {
+async function normalizeEquipmentType(val) {
   if (!val) return 'pipette';
   const s = String(val).trim().toLowerCase();
+
+  // 1. Проверяем кастомные типы из настроек
+  try {
+    const [rows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    if (rows.length && rows[0].setting_value) {
+      const types = JSON.parse(rows[0].setting_value);
+      const found = types.find(t =>
+        t.value.toLowerCase() === s || (t.label || '').toLowerCase() === s
+      );
+      if (found) return found.value;
+    }
+  } catch (e) { /* fallback ниже */ }
+
+  // 2. Стандартные эвристики
   if (/пипет|дозатор|pipette|pipet/.test(s)) return 'pipette';
   if (/анализатор|analyzer/.test(s)) return 'analyzer';
   if (/термометр|thermometer/.test(s)) return 'thermometer';
@@ -320,7 +336,7 @@ if (id) {
   if (ex.length) { skipped.push(`${id}: ID уже существует`); continue; }
 } else {
   // ─── Автогенерация ID ───
-  const eqType = normalizeEquipmentType(obj.equipmentType);
+  const eqType = await normalizeEquipmentType(obj.equipmentType);
   let prefix = null;
 
   try {
@@ -364,7 +380,7 @@ if (id) {
             String(obj.serial || '').trim(),
             String(obj.manufacturer || '').trim(),
             model,
-            normalizeEquipmentType(obj.equipmentType),
+            await normalizeEquipmentType(obj.equipmentType),
             String(obj.volume || '').trim(),
             String(obj.department || '').trim(),
             parseInterval(obj.interval),
