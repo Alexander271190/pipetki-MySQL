@@ -4,6 +4,7 @@
 const API_URL = '/api';
 let authToken = null;
 let currentUser = null;
+let _lastPermsCheck = 0;
 let _cachedDepartmentsFull = [];
 let _cachedFilters = [];
 let _activeFilters = [];
@@ -124,7 +125,12 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
   if (response.status === 403 && !endpoint.startsWith('/auth/')) {
   await refreshCurrentUser();
 }
-
+  // Проверка прав с throttle (не чаще раза в 60 секунд)
+  const now = Date.now();
+  if (!endpoint.startsWith('/auth/') && now - _lastPermsCheck > 60_000) {
+    _lastPermsCheck = now;
+    refreshCurrentUser();   // fire-and-forget, не ждём
+  }
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Ошибка запроса');
   return result;
@@ -3377,6 +3383,16 @@ async function saveEquipmentTypes() {
     showToast(e.message || 'Ошибка сохранения', 'error');
   }
 }
+// Проверка прав при возврате в окно/вкладку
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isAuthenticated()) {
+    refreshCurrentUser();
+  }
+});
+
+window.addEventListener('focus', () => {
+  if (isAuthenticated()) refreshCurrentUser();
+});
 
 console.log('🔬 Система учёта оборудования запущена');
 console.log('👤 admin/admin, senior/senior, user/user');
