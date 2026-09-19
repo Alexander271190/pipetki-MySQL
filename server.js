@@ -24,6 +24,9 @@ app.use('/api/log', require('./routes/log'));
 app.use('/api/import', require('./routes/import'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found' });
+});
 
 // SPA-fallback — всё остальное отдаём как index.html
 app.get('*', (req, res) => {
