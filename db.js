@@ -197,9 +197,23 @@ async function seedInitialData() {
 
   // --- Системные настройки ---
   const [ssc] = await pool.query('SELECT COUNT(*) AS c FROM system_settings');
-  if (ssc[0].c === 0) {
-    await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`);
-  }
+if (ssc[0].c === 0) {
+  await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`);
+
+  // Дефолтные типы оборудования
+  const defaultTypes = [
+    { value: 'pipette',     label: 'Пипетка',     prefix: 'P'  },
+    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A'  },
+    { value: 'thermometer', label: 'Термометр',   prefix: 'T'  },
+    { value: 'scales',      label: 'Весы',        prefix: 'S'  },
+    { value: 'photometer',  label: 'Фотометр',    prefix: 'F'  },
+    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M'  },
+  ];
+  await pool.query(
+    `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)`,
+    [JSON.stringify(defaultTypes)]
+  );
+}
 
   // --- Поля формы ---
   const [fc] = await pool.query('SELECT COUNT(*) AS c FROM field_config');
