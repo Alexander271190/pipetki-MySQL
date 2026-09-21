@@ -50,6 +50,7 @@ async function initSchema() {
         role VARCHAR(50) DEFAULT 'user',
         extra_permissions TEXT,
         only_own_department TINYINT DEFAULT 0,
+        must_change_password TINYINT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
