@@ -1729,12 +1729,13 @@ function renderAuthUI() {
     document.body.classList.toggle('is-admin', admin);
 
     loadPipetteData();
+
     if (currentUser.mustChangePassword) {
       openChangePasswordModal(true);
     } else {
       closeChangePasswordModal();
     }
-    } else {
+  } else {
     closeChangePasswordModal();
     authContainer.classList.remove('hidden');
     mainContent.classList.remove('visible');
