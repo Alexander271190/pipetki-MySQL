@@ -50,6 +50,7 @@
         <span class="name" id="user-fullname">Имя</span>
         <span class="position" id="user-position">Должность</span>
         <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()">⬅️ Вернуться</button>
+        <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль">🔒 Пароль</button>
         <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
       </div>
     </div>
@@ -463,8 +464,45 @@
     </div>
   </div>
 </div>
-  
-<div class="toast" id="toast"></div>
 
+  <!-- МОДАЛКА СМЕНЫ ПАРОЛЯ -->
+<div class="modal-overlay" id="change-password-modal">
+  <div class="modal">
+    <h2>🔒 Смена пароля</h2>
+
+    <div id="change-password-notice" style="margin-bottom:16px;padding:12px;background:#fef9c3;border-left:3px solid #eab308;border-radius:8px;font-size:.9rem;color:#854d0e;">
+      Администратор выдал вам разовый пароль. Для продолжения работы задайте новый пароль.
+    </div>
+
+    <form id="change-password-form" onsubmit="submitChangePassword(event)" novalidate>
+      <div class="form-group">
+        <label>Новый пароль *</label>
+        <input type="password" id="cp-new" autocomplete="new-password" placeholder="Введите новый пароль">
+      </div>
+      <div class="form-group">
+        <label>Подтверждение пароля *</label>
+        <input type="password" id="cp-confirm" autocomplete="new-password" placeholder="Повторите пароль">
+      </div>
+
+      <div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#475569;line-height:1.6;">
+        <strong>Требования к паролю:</strong>
+        <ul style="margin:6px 0 0 20px;padding:0;">
+          <li>Минимум 8 символов</li>
+          <li>Хотя бы одна строчная и одна заглавная буква</li>
+          <li>Хотя бы одна цифра</li>
+          <li>Хотя бы один спецсимвол (! @ # $ % ^ &amp; * и т.п.)</li>
+        </ul>
+      </div>
+
+      <div id="cp-error" class="auth-error" style="margin-top:12px;"></div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" id="cp-cancel-btn" onclick="closeChangePasswordModal()">Отмена</button>
+        <button type="submit" class="btn btn-success">💾 Сохранить пароль</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
 </body>
 </html>
