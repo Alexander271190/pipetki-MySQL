@@ -2545,7 +2545,7 @@ async function renderSystemSettings() {
         <h4>🔧 Типы оборудования</h4>
         <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
           Управление списком типов. <strong>value</strong> — служебный ключ (латиница),
-          <strong>label</strong> — отображаемое название, <strong>icon</strong> — эмодзи,
+          <strong>label</strong> — отображаемое название,
           <strong>prefix</strong> — префикс для авто-ID.
         </p>
 
@@ -2555,10 +2555,9 @@ async function renderSystemSettings() {
               <th style="width:60px;">Порядок</th>
               <th style="width:140px;">value</th>
               <th>label</th>
-              <th style="width:80px;">icon</th>
               <th style="width:80px;">prefix</th>
               <th style="width:60px;"></th>
-            </tr>
+           </tr>
           </thead>
           <tbody id="equip-types-body"></tbody>
         </table>
@@ -3269,7 +3268,7 @@ function renderEquipmentTypesTable() {
     return;
   }
 
-  tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
+    tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
     <tr>
       <td>
         <div class="order-btns">
@@ -3285,11 +3284,6 @@ function renderEquipmentTypesTable() {
       <td>
         <input type="text" value="${esc(t.label)}"
                onchange="updateEquipmentType(${i}, 'label', this.value)">
-      </td>
-      <td>
-        <input type="text" value="${esc(t.icon || '')}" maxlength="4"
-               style="text-align:center;"
-               onchange="updateEquipmentType(${i}, 'icon', this.value)">
       </td>
       <td>
         <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
@@ -3339,7 +3333,6 @@ function addEquipmentType() {
   _cachedEquipmentTypes.push({
     value: trimmed,
     label: trimmed,
-    icon: '🔧',
     prefix: 'EQ'
   });
   renderEquipmentTypesTable();
