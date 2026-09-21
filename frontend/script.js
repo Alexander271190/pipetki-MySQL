@@ -2323,10 +2323,12 @@ async function renderUsersSettings() {
       <div class="settings-form">
         <h4 id="user-form-title">➕ Добавить пользователя</h4>
         <input type="hidden" id="usr-edit-id">
-        <div class="form-row">
+      <div class="form-row">
           <div class="form-group"><label>Логин *</label><input id="usr-login"></div>
-          <div class="form-group"><label>Пароль</label><input id="usr-password" placeholder="оставьте пустым при редактировании"></div>
-        </div>
+      </div>
+      <small style="color:#64748b;display:block;margin-bottom:12px;">
+          Пароль будет сгенерирован автоматически. Пользователь обязан сменить его при первом входе.
+      </small>
         <div class="form-row">
           <div class="form-group"><label>ФИО *</label><input id="usr-fullname"></div>
           <div class="form-group"><label>Должность *</label><input id="usr-position"></div>
@@ -2437,7 +2439,6 @@ async function editUserSetting(id) {
 async function saveUserSetting() {
   const id = document.getElementById('usr-edit-id').value;
   const login = document.getElementById('usr-login').value.trim();
-  const password = document.getElementById('usr-password').value.trim();
   const fullName = document.getElementById('usr-fullname').value.trim();
   const position = document.getElementById('usr-position').value.trim();
   const department = document.getElementById('usr-department').value.trim();
@@ -2455,15 +2456,9 @@ async function saveUserSetting() {
     showToast(msg, 'error');
     return;
   }
-
-  if (!id && !password) {
-    showToast('Заполните поле «Пароль»', 'error');
-    return;
-  }
-
+  
   const onlyOwnCb = document.getElementById('usr-only-own-dept');
   const onlyOwnDepartment = onlyOwnCb ? onlyOwnCb.checked : false;
-
   const extraPermissions = [];
   if (role !== 'admin') {
     document.querySelectorAll('#usr-permissions input[type="checkbox"]:checked').forEach(cb => {
@@ -2472,14 +2467,18 @@ async function saveUserSetting() {
   }
 
   try {
-    const payload = { login, password, fullName, position, department, role, onlyOwnDepartment, extraPermissions };
+  const payload = { login, fullName, position, department, role, onlyOwnDepartment, extraPermissions };
 
     if (id) {
       await apiRequest('/users/' + id, 'PUT', payload);
       showToast('Пользователь обновлён', 'success');
     } else {
-      await apiRequest('/users', 'POST', payload);
+      const res = await apiRequest('/users', 'POST', payload);
       showToast('Пользователь создан', 'success');
+      // Показать разовый пароль (alert + копия в буфер)
+      setTimeout(() => {
+        showTempPasswordModal(res.login, fullName, res.tempPassword);
+      }, 300);
     }
 
     if (id === currentUser.id) {
