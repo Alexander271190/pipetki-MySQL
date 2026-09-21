@@ -1141,7 +1141,7 @@ async function openModal(id) {
   const title = document.getElementById('modal-title');
   document.getElementById('edit-id').value = '';
 
-    if (id) {
+        if (id) {
     const p = pipettes.find(x => x.id === id);
     if (!p) { showToast('Оборудование не найдено', 'error'); return; }
 
@@ -1149,7 +1149,15 @@ async function openModal(id) {
     document.getElementById('edit-id').value = p.id;
     modal.classList.add('active');
 
-    const editData = { ...p, result: p.last_result || 'pass' };
+    // Приводим snake_case → camelCase, чтобы generateFormFields
+    // нашёл значения для полей формы
+    const editData = {
+      ...p,
+      equipmentType:   p.equipment_type || 'pipette',
+      lastCalibration: p.last_calibration || '',
+      result:          p.last_result || 'pass',
+      active:          p.active ? 'true' : 'false'
+    };
     await generateFormFields(editData);
   } else {
       
