@@ -121,16 +121,23 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
   router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
-  const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
-  if (!users.length) return res.status(404).json({ error: 'Не найден' });
+  try {
+    const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
+    if (!users.length) return res.status(404).json({ error: 'Не найден' });
 
-  if (users[0].role === 'admin') {
-    const [admins] = await db.query(`SELECT id FROM users WHERE role = 'admin'`);
-    if (admins.length <= 1) return res.status(400).json({ error: 'Нельзя удалить последнего админа' });
+    if (users[0].role === 'admin') {
+      const [admins] = await db.query(`SELECT id FROM users WHERE role = 'admin'`);
+      if (admins.length <= 1) {
+        return res.status(400).json({ error: 'Нельзя удалить последнего админа' });
+      }
+    }
+
+    await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Пользователь удалён' });
+  } catch (e) {
+    console.error('DELETE /users error:', e);
+    res.status(500).json({ error: 'Ошибка удаления пользователя' });
   }
-
-  await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
-  res.json({ message: 'Пользователь удалён' });
 });
 
 router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (req, res) => {
