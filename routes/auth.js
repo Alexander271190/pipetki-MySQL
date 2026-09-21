@@ -26,7 +26,17 @@ function userPublic(u) {
 
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
-  if (!login || !password) return res.status(400).json({ error: 'Заполните все поля' });
+
+  if (!login || !password) {
+    const missing = [];
+    if (!login)    missing.push('Логин');
+    if (!password) missing.push('Пароль');
+    const msg = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    return res.status(400).json({ error: msg });
+  }
+  
   try {
     const [rows] = await db.query('SELECT * FROM users WHERE login = ?', [login]);
     if (!rows.length)
