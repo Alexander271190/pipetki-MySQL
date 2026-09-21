@@ -2388,7 +2388,7 @@ function onUserRoleChange(role) {
 }
 
 function resetUserSettingForm() {
-  ['usr-edit-id', 'usr-login', 'usr-password', 'usr-fullname', 'usr-position', 'usr-department'].forEach(id => {
+  ['usr-edit-id', 'usr-login', 'usr-fullname', 'usr-position', 'usr-department'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
