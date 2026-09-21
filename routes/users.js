@@ -2,8 +2,31 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
-
+const { validatePassword } = require('../middleware/passwordPolicy');
 const router = express.Router();
+
+// ============================================================
+// Генератор разового пароля (12 символов, соответствует политике)
+// ============================================================
+function generateTempPassword() {
+  const lower  = 'abcdefghijkmnpqrstuvwxyz';
+  const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const digits = '23456789';
+  const spec   = '!@#$%^&*';
+  const pick = (s) => s[Math.floor(Math.random() * s.length)];
+
+  const chars = [
+    pick(lower), pick(upper), pick(digits), pick(spec),
+    pick(lower), pick(upper), pick(digits), pick(spec),
+    pick(lower), pick(upper), pick(digits), pick(spec),
+  ];
+
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
 
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   const [users] = await db.query(
@@ -16,41 +39,55 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
-  const { login, password, fullName, position, department, role,
+  const { login, fullName, position, department, role,
           onlyOwnDepartment, extraPermissions } = req.body;
-const missing = [];
 
-if (!login)    missing.push('Логин');
-if (!password) missing.push('Пароль');
-if (!fullName) missing.push('ФИО');
-if (!position) missing.push('Должность');
-if (missing.length > 0) {
-  const msg = missing.length === 1
-    ? `Заполните поле «${missing[0]}»`
-    : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
-  return res.status(400).json({ error: msg });
-}
+  const missing = [];
+  if (!login)    missing.push('Логин');
+  if (!fullName) missing.push('ФИО');
+  if (!position) missing.push('Должность');
+  if (missing.length > 0) {
+    const msg = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    return res.status(400).json({ error: msg });
+  }
 
   const [ex] = await db.query('SELECT id FROM users WHERE login = ?', [login]);
   if (ex.length) return res.status(409).json({ error: 'Логин уже занят' });
 
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  // Разовый пароль генерируется автоматически
+  const tempPassword = generateTempPassword();
+  const passwordHash = await bcrypt.hash(tempPassword, 10);
 
   await db.query(
-    `INSERT INTO users (id, login, password, full_name, position, department, role, only_own_department, extra_permissions)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users
+     (id, login, password, full_name, position, department, role,
+      only_own_department, extra_permissions, must_change_password)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
     [id, login, passwordHash, fullName, position, department || '', role || 'user',
      onlyOwnDepartment ? 1 : 0, JSON.stringify(extraPermissions || [])]
   );
-  
-  res.status(201).json({ message: 'Пользователь создан', id });
+
+  await db.query(
+    'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+    [req.user.id, req.user.full_name, 'Создание пользователя',
+     `Создан ${login} (${fullName}), выдан разовый пароль`]
+  );
+
+  res.status(201).json({
+    message: 'Пользователь создан',
+    id,
+    login,
+    tempPassword
+  });
 });
 
 router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
-  const { login, password, fullName, position, department, role,
-          onlyOwnDepartment, extraPermissions } = req.body;
+  const { login, fullName, position, department, role,
+  onlyOwnDepartment, extraPermissions } = req.body;
   const id = req.params.id;
 
   // 1. Проверяем, что такой пользователь существует
@@ -67,28 +104,17 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
   const onlyOwn = onlyOwnDepartment ? 1 : 0;
 
   // 3. Обновляем
-  if (password) {
-    const passwordHash = await bcrypt.hash(password, 10);
     await db.query(
-      `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
-         only_own_department=?, extra_permissions=?, password=?, updated_at=CURRENT_TIMESTAMP
-       WHERE id=?`,
-      [login, fullName, position, department || '', role || 'user',
-       onlyOwn, JSON.stringify(extraPermissions || []), passwordHash, id]
-    );
-  } else {
-    await db.query(
-      `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
-         only_own_department=?, extra_permissions=?, updated_at=CURRENT_TIMESTAMP
-       WHERE id=?`,
-      [login, fullName, position, department || '', role || 'user',
-       onlyOwn, JSON.stringify(extraPermissions || []), id]
-    );
-  }
+    `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
+       only_own_department=?, extra_permissions=?, updated_at=CURRENT_TIMESTAMP
+     WHERE id=?`,
+    [login, fullName, position, department || '', role || 'user',
+     onlyOwn, JSON.stringify(extraPermissions || []), id]
+  );
   res.json({ message: 'Пользователь обновлён' });
-});
+  });
 
-router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+  router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
   const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
   if (!users.length) return res.status(404).json({ error: 'Не найден' });
 
