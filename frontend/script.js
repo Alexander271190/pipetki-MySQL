@@ -202,6 +202,8 @@ async function refreshCurrentUser() {
 
       const oldPerms = (currentUser.extraPermissions || []).join(',');
       const newPerms = (user.extraPermissions || []).join(',');
+      const permsChanged = oldPerms !== newPerms;
+      const mustChangeChanged = !!currentUser.mustChangePassword !== !!user.mustChangePassword;
 
       currentUser = user;
 
@@ -209,9 +211,11 @@ async function refreshCurrentUser() {
       s.user = user;
       sessionStorage.setItem('pipette_session', JSON.stringify(s));
 
-      if (oldPerms !== newPerms) {
+      if (permsChanged || mustChangeChanged) {
         renderAuthUI();
-        showToast('Ваши права были обновлены администратором', 'success');
+        if (permsChanged) {
+          showToast('Ваши права были обновлены администратором', 'success');
+        }
       }
     } catch (e) {
       /* тихо */
@@ -1757,10 +1761,10 @@ document.getElementById('quick-cal-modal').addEventListener('click', e => { if (
 document.getElementById('history-modal').addEventListener('click', e => { if (e.target.id === 'history-modal') closeHistoryModal(); });
 document.getElementById('bulk-send-modal').addEventListener('click', e => { if (e.target.id === 'bulk-send-modal') closeBulkSendModal(); });
 document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
-document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
 document.getElementById('change-password-modal').addEventListener('click', e => {
   if (e.target.id === 'change-password-modal') {
-  if (!currentUser || !currentUser.mustChangePassword) {
+    const canClose = !currentUser || !currentUser.mustChangePassword || isImpersonating();
+    if (canClose) {
       closeChangePasswordModal();
     }
   }
@@ -3445,8 +3449,11 @@ function openChangePasswordModal(force) {
   if (confirmInput) confirmInput.value = '';
   if (notice) notice.style.display = force ? 'block' : 'none';
 
-  // При принудительной смене — кнопку «Отмена» скрыть
-  if (cancelBtn) cancelBtn.style.display = force ? 'none' : 'inline-flex';
+  // При impersonate — не блокируем, даём шанс вернуться
+  const isImpersonatingNow = isImpersonating();
+  const reallyForce = force && !isImpersonatingNow;
+
+  if (cancelBtn) cancelBtn.style.display = reallyForce ? 'none' : 'inline-flex';
 
   if (modal) modal.classList.add('active');
   if (newInput) setTimeout(() => newInput.focus(), 100);
