@@ -2314,6 +2314,7 @@ async function renderUsersSettings() {
           <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">✏️</button>
          <button class="btn btn-primary btn-sm" onclick="openUserViewModal(this.dataset.userId, this.dataset.userName)"  data-user-id="${esc(u.id)}" data-user-name="${esc(u.fullName || u.full_name)}" title="Настроить вид">⚙️ Вид</button>
           ${u.id !== curId ? `<button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти под ним">🔍 Войти как</button>` : ''}
+          ${u.id !== curId ? `<button class="btn btn-warning btn-sm" onclick="resetUserPassword('${u.id}', '${esc(u.login)}')" title="Сбросить пароль">🔑</button>` : ''}
           ${u.id !== curId ? `<button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')" title="Удалить">🗑️</button>` : ''}
         </td>
       </tr>`;
