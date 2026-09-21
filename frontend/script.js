@@ -32,7 +32,17 @@ function formatDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-
+function normalizeSearch(s) {
+  if (!s) return '';
+  const map = {
+    'а': 'a', 'в': 'b', 'е': 'e', 'к': 'k', 'м': 'm',
+    'н': 'h', 'о': 'o', 'р': 'p', 'с': 'c', 'т': 't',
+    'у': 'y', 'х': 'x'
+  };
+  return String(s)
+    .toLowerCase()
+    .replace(/[авекмнорстух]/g, ch => map[ch] || ch);
+}
 function pluralizeType(label) {
   if (!label) return '';
   const s = label.trim();
@@ -939,11 +949,11 @@ function resetFilters() {
 }
 
 function getFilteredPipettes() {
-  const search = document.getElementById('search').value.toLowerCase();
+  const search = normalizeSearch(document.getElementById('search').value);
   const userDept = currentUser && currentUser.onlyOwnDepartment ? currentUser.department : null;
 
   return pipettes.filter(p => {
-    const s = `${p.id} ${p.serial || ''} ${p.model} ${p.manufacturer || ''} ${p.department || ''} ${p.responsible || ''}`.toLowerCase();
+    const s = normalizeSearch(`${p.id} ${p.serial || ''} ${p.model} ${p.manufacturer || ''} ${p.department || ''} ${p.responsible || ''}`);
     if (search && !s.includes(search)) return false;
     if (userDept && p.department !== userDept) return false;
 
@@ -960,9 +970,11 @@ function getFilteredPipettes() {
             if (String(p[f.fieldId] || '') !== v) return false;
           }
         }
-      } else if (f.type === 'text') {
+          } else if (f.type === 'text') {
         if (v && f.fieldId) {
-          if (!(p[f.fieldId] || '').toLowerCase().includes(v.toLowerCase())) return false;
+          const haystack = normalizeSearch(p[f.fieldId] || '');
+          const needle   = normalizeSearch(v);
+          if (!haystack.includes(needle)) return false;
         }
       } else if (f.type === 'date-period') {
         if (v && v.period && !matchCalPeriodDynamic(p, v)) return false;
