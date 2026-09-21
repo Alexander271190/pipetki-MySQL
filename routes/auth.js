@@ -3,13 +3,27 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticate } = require('../middleware/auth');
-
+const { validatePassword } = require('../middleware/passwordPolicy');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
 
 // ============================================================
 // ВХОД
 // ============================================================
+function userPublic(u) {
+  return {
+    id: u.id,
+    login: u.login,
+    fullName: u.full_name,
+    position: u.position,
+    department: u.department,
+    role: u.role,
+    onlyOwnDepartment: !!u.only_own_department,
+    extraPermissions: JSON.parse(u.extra_permissions || '[]'),
+    mustChangePassword: !!u.must_change_password
+  };
+}
+
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
   if (!login || !password) return res.status(400).json({ error: 'Заполните все поля' });
