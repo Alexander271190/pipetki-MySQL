@@ -1726,7 +1726,13 @@ function renderAuthUI() {
     document.body.classList.toggle('is-admin', admin);
 
     loadPipetteData();
-  } else {
+    if (currentUser.mustChangePassword) {
+      openChangePasswordModal(true);
+    } else {
+      closeChangePasswordModal();
+    }
+    } else {
+    closeChangePasswordModal();
     authContainer.classList.remove('hidden');
     mainContent.classList.remove('visible');
     document.body.classList.remove('can-manage', 'can-import', 'can-export', 'is-admin');
@@ -1752,6 +1758,14 @@ document.getElementById('quick-cal-modal').addEventListener('click', e => { if (
 document.getElementById('history-modal').addEventListener('click', e => { if (e.target.id === 'history-modal') closeHistoryModal(); });
 document.getElementById('bulk-send-modal').addEventListener('click', e => { if (e.target.id === 'bulk-send-modal') closeBulkSendModal(); });
 document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
+document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
+document.getElementById('change-password-modal').addEventListener('click', e => {
+  if (e.target.id === 'change-password-modal') {
+  if (!currentUser || !currentUser.mustChangePassword) {
+      closeChangePasswordModal();
+    }
+  }
+});
 
 const session = getSession();
 if (session) {
@@ -3423,6 +3437,129 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('focus', () => {
   if (isAuthenticated()) refreshCurrentUser();
 });
+
+// ============================================================
+// СМЕНА ПАРОЛЯ
+// ============================================================
+function openChangePasswordModal(force) {
+  const modal = document.getElementById('change-password-modal');
+  const notice = document.getElementById('change-password-notice');
+  const errEl = document.getElementById('cp-error');
+  const newInput = document.getElementById('cp-new');
+  const confirmInput = document.getElementById('cp-confirm');
+  const cancelBtn = document.getElementById('cp-cancel-btn');
+
+  if (errEl) errEl.textContent = '';
+  if (newInput) newInput.value = '';
+  if (confirmInput) confirmInput.value = '';
+  if (notice) notice.style.display = force ? 'block' : 'none';
+
+  // При принудительной смене — кнопку «Отмена» скрыть
+  if (cancelBtn) cancelBtn.style.display = force ? 'none' : 'inline-flex';
+
+  if (modal) modal.classList.add('active');
+  if (newInput) setTimeout(() => newInput.focus(), 100);
+}
+
+function closeChangePasswordModal() {
+  const modal = document.getElementById('change-password-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function validatePasswordClient(pwd) {
+  const errors = [];
+  if (!pwd || pwd.length < 8)     errors.push('Минимум 8 символов');
+  if (!/[a-z]/.test(pwd))         errors.push('Хотя бы одна строчная буква');
+  if (!/[A-Z]/.test(pwd))         errors.push('Хотя бы одна заглавная буква');
+  if (!/[0-9]/.test(pwd))         errors.push('Хотя бы одна цифра');
+  if (!/[^A-Za-z0-9]/.test(pwd))  errors.push('Хотя бы один спецсимвол');
+  return { ok: errors.length === 0, errors };
+}
+
+async function submitChangePassword(e) {
+  e.preventDefault();
+
+  const errEl = document.getElementById('cp-error');
+  const newPwd = document.getElementById('cp-new').value;
+  const confirmPwd = document.getElementById('cp-confirm').value;
+
+  errEl.textContent = '';
+
+  const missing = [];
+  if (!newPwd)     missing.push('Новый пароль');
+  if (!confirmPwd) missing.push('Подтверждение пароля');
+  if (missing.length > 0) {
+    errEl.textContent = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    return;
+  }
+
+  if (newPwd !== confirmPwd) {
+    errEl.textContent = 'Пароли не совпадают';
+    return;
+  }
+
+  const v = validatePasswordClient(newPwd);
+  if (!v.ok) {
+    errEl.textContent = 'Пароль не соответствует требованиям:\n• ' + v.errors.join('\n• ');
+    return;
+  }
+
+  try {
+    await apiRequest('/auth/change-password', 'POST', {
+      newPassword: newPwd,
+      confirmPassword: confirmPwd
+    });
+
+    currentUser.mustChangePassword = false;
+
+    const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
+    if (s.user) {
+      s.user.mustChangePassword = false;
+      sessionStorage.setItem('pipette_session', JSON.stringify(s));
+    }
+
+    showToast('Пароль успешно изменён', 'success');
+    closeChangePasswordModal();
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка смены пароля';
+  }
+}
+
+async function resetUserPassword(userId, login) {
+  if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
+
+  const ok = await showConfirm(
+    `Сбросить пароль пользователя «${login}»?\n\n` +
+    `Будет сгенерирован разовый пароль. Пользователь обязан сменить его при следующем входе.`,
+    { icon: '🔑', title: 'Сброс пароля', okText: 'Сбросить', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+
+  try {
+    const res = await apiRequest(`/users/${userId}/reset-password`, 'POST', {});
+    showTempPasswordModal(res.login, res.fullName, res.tempPassword);
+    renderUsersSettings();
+  } catch (e) {
+    showToast(e.message || 'Ошибка сброса пароля', 'error');
+  }
+}
+
+function showTempPasswordModal(login, fullName, tempPassword) {
+  const text =
+    `Логин: ${login}\n` +
+    `ФИО: ${fullName}\n\n` +
+    `Разовый пароль: ${tempPassword}\n\n` +
+    `Сообщите его пользователю. После первого входа система попросит сменить пароль.`;
+
+  alert(text);
+
+  try {
+    navigator.clipboard.writeText(tempPassword);
+    showToast('Разовый пароль скопирован в буфер обмена', 'success');
+  } catch (e) { /* clipboard может быть недоступен */ }
+}
 
 console.log('🔬 Система учёта оборудования запущена');
 console.log('👤 admin/admin, senior/senior, user/user');
