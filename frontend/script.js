@@ -410,12 +410,12 @@ async function loadFilterConfig() {
             { value: 'sent', label: '📦 На поверке' },
             { value: 'fail', label: '❌ Брак' },
             { value: 'wip', label: '⏳ В процессе' }
-          ];
-        } else if (f.optionsSource === 'equipment_type_list') {
+             ];
+           } else if (f.optionsSource === 'equipment_type_list') {
            f.options = _equipmentTypes.map(t => ({
-          value: t.value,
-          label: `${t.icon || ''} ${pluralizeType(t.label)}`.trim()
-        }));
+           value: t.value,
+           label: pluralizeType(t.label)
+           }));
 
         } else if (f.optionsSource === 'active_list') {
           f.options = [
@@ -640,10 +640,9 @@ pipettes.forEach(p => {
       
   case 'type': {
   const t = _equipmentTypes.find(x => x.value === p.equipment_type);
-  const icon  = t ? (t.icon || '🔧') : '🔧';
   const label = t ? t.label : 'Прочее';
   const cls   = p.equipment_type === 'pipette' ? 'badge-pipette' : 'badge-other';
-  return `<td><span class="badge-type ${cls}">${icon} ${esc(label)}</span></td>`;
+  return `<td><span class="badge-type ${cls}">${esc(label)}</span></td>`;
     }
         case 'model':
           return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
@@ -1059,12 +1058,12 @@ async function generateFormFields(data = null) {
         if (f.id === 'department') {
           opts = departmentsList.length ? departmentsList : (f.options || []);
 
-        } else if (f.id === 'equipmentType') {
-  opts = _equipmentTypes.length > 0
-    ? _equipmentTypes.map(t => ({ value: t.value, label: `${t.icon || ''} ${t.label}`.trim() }))
-    : [{ value: 'pipette', label: '💧 Пипетка' }];
+      } else if (f.id === 'equipmentType') {
+      opts = _equipmentTypes.length > 0
+      ? _equipmentTypes.map(t => ({ value: t.value, label: t.label }))
+      : [{ value: 'pipette', label: 'Пипетка' }];
     
-    } else if (f.id === 'result') {
+      } else if (f.id === 'result') {
           opts = [
             { value: 'pass', label: '✅ Годен' },
             { value: 'fail', label: '❌ Брак' },
@@ -2410,7 +2409,6 @@ async function editUserSetting(id) {
 
     document.getElementById('usr-edit-id').value = u.id;
     document.getElementById('usr-login').value = u.login;
-    document.getElementById('usr-password').value = '';
     document.getElementById('usr-fullname').value = u.fullName || u.full_name;
     document.getElementById('usr-position').value = u.position;
     document.getElementById('usr-department').value = u.department || '';
