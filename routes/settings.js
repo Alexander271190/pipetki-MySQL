@@ -221,16 +221,16 @@ router.get('/equipment-types', authenticate, async (req, res) => {
   );
   if (!rows.length) {
     return res.json([
-      { value: 'pipette',     label: 'Пипетка',     icon: '💧',  prefix: 'P' },
-      { value: 'analyzer',    label: 'Анализатор',  icon: '🖥️', prefix: 'A' },
-      { value: 'thermometer', label: 'Термометр',   icon: '🌡️', prefix: 'T' },
-      { value: 'scales',      label: 'Весы',        icon: '⚖️', prefix: 'S' },
-      { value: 'photometer',  label: 'Фотометр',    icon: '🔆', prefix: 'F' }
+      { value: 'pipette',     label: 'Пипетка',     prefix: 'P' },
+      { value: 'analyzer',    label: 'Анализатор',  prefix: 'A' },
+      { value: 'thermometer', label: 'Термометр',   prefix: 'T' },
+      { value: 'scales',      label: 'Весы',        prefix: 'S' },
+      { value: 'photometer',  label: 'Фотометр',    prefix: 'F' },
+      { value: 'microscope',  label: 'Микроскоп',   prefix: 'M' },
     ]);
   }
   res.json(JSON.parse(rows[0].setting_value));
 });
-
 // PUT /api/settings/equipment-types (только админ)
 router.put('/equipment-types', authenticate, requireRole(['admin']), async (req, res) => {
   const types = req.body;
