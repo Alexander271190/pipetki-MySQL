@@ -44,19 +44,7 @@ router.post('/login', async (req, res) => {
       [u.id, u.full_name, 'Вход в систему']
     );
 
-    res.json({
-      token,
-      user: {
-        id: u.id,
-        login: u.login,
-        fullName: u.full_name,
-        position: u.position,
-        department: u.department,
-        role: u.role,
-        onlyOwnDepartment: !!u.only_own_department,
-        extraPermissions: JSON.parse(u.extra_permissions || '[]')
-      }
-    });
+        res.json({ token, user: userPublic(u) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -67,21 +55,8 @@ router.post('/login', async (req, res) => {
 // ПРОВЕРКА СЕССИИ
 // ============================================================
 router.get('/verify', authenticate, (req, res) => {
-  const u = req.user;
-  res.json({
-    user: {
-      id: u.id,
-      login: u.login,
-      fullName: u.full_name,
-      position: u.position,
-      department: u.department,
-      role: u.role,
-      onlyOwnDepartment: !!u.only_own_department,
-      extraPermissions: JSON.parse(u.extra_permissions || '[]')
-    }
-  });
+  res.json({ user: userPublic(req.user) });
 });
-
 // ============================================================
 // ВХОД ПОД ДРУГИМ ПОЛЬЗОВАТЕЛЕМ (impersonate)
 // ============================================================
@@ -110,23 +85,63 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
       [req.user.id, req.user.full_name, 'Вход под пользователем', target.full_name]
     );
 
-    res.json({
-      token,
-      user: {
-        id: target.id,
-        login: target.login,
-        fullName: target.full_name,
-        position: target.position,
-        department: target.department,
-        role: target.role,
-        onlyOwnDepartment: !!target.only_own_department,
-        extraPermissions: JSON.parse(target.extra_permissions || '[]')
-      }
-    });
+    res.json({ token, user: userPublic(target) });
+    
   } catch (e) {
     console.error('Impersonate error:', e);
     res.status(500).json({ error: 'Ошибка входа под пользователем' });
   }
 });
+
+// ============================================================
+// СМЕНА ПАРОЛЯ (свой аккаунт)
+// ============================================================
+router.post('/change-password', authenticate, async (req, res) => {
+  const { newPassword, confirmPassword } = req.body;
+
+  if (!newPassword || !confirmPassword) {
+    const missing = [];
+    if (!newPassword)     missing.push('Новый пароль');
+    if (!confirmPassword) missing.push('Подтверждение пароля');
+    return res.status(400).json({
+      error: missing.length === 1
+        ? `Заполните поле «${missing[0]}»`
+        : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`
+    });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ error: 'Пароли не совпадают' });
+  }
+
+  const v = validatePassword(newPassword);
+  if (!v.ok) {
+    return res.status(400).json({
+      error: 'Пароль не соответствует требованиям:\n• ' + v.errors.join('\n• ')
+    });
+  }
+
+  const bcrypt = require('bcryptjs');
+  const same = await bcrypt.compare(newPassword, req.user.password);
+  if (same) {
+    return res.status(400).json({ error: 'Новый пароль должен отличаться от текущего' });
+  }
+
+  const hash = await bcrypt.hash(newPassword, 10);
+  await db.query(
+    `UPDATE users
+     SET password = ?, must_change_password = 0, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [hash, req.user.id]
+  );
+
+  await db.query(
+    'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+    [req.user.id, req.user.full_name, 'Смена пароля', 'Пользователь сменил свой пароль']
+  );
+
+  res.json({ message: 'Пароль изменён' });
+});
+
 
 module.exports = router;
