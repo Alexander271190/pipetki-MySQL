@@ -135,41 +135,46 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (req, res) => {
-  const userId = req.params.id;
+  try {
+    const userId = req.params.id;
 
-  const [ex] = await db.query('SELECT id, login, full_name FROM users WHERE id = ?', [userId]);
-  if (!ex.length) return res.status(404).json({ error: 'Пользователь не найден' });
+    const [ex] = await db.query('SELECT id, login, full_name FROM users WHERE id = ?', [userId]);
+    if (!ex.length) return res.status(404).json({ error: 'Пользователь не найден' });
 
-  const user = ex[0];
+    const user = ex[0];
 
-  if (userId === req.user.id) {
-    return res.status(400).json({
-      error: 'Для смены своего пароля используйте «Сменить пароль» в шапке'
+    if (userId === req.user.id) {
+      return res.status(400).json({
+        error: 'Для смены своего пароля используйте «Сменить пароль» в шапке'
+      });
+    }
+
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, 10);
+
+    await db.query(
+      `UPDATE users
+       SET password = ?, must_change_password = 1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [hash, userId]
+    );
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [req.user.id, req.user.full_name, 'Сброс пароля',
+       `Выдан разовый пароль для ${user.login} (${user.full_name})`]
+    );
+
+    res.json({
+      message: 'Разовый пароль выдан',
+      tempPassword,
+      login: user.login,
+      fullName: user.full_name
     });
+  } catch (e) {
+    console.error('POST /users/:id/reset-password error:', e);
+    res.status(500).json({ error: 'Ошибка сброса пароля' });
   }
-
-  const tempPassword = generateTempPassword();
-  const hash = await bcrypt.hash(tempPassword, 10);
-
-  await db.query(
-    `UPDATE users
-     SET password = ?, must_change_password = 1, updated_at = CURRENT_TIMESTAMP
-     WHERE id = ?`,
-    [hash, userId]
-  );
-
-  await db.query(
-    'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-    [req.user.id, req.user.full_name, 'Сброс пароля',
-     `Выдан разовый пароль для ${user.login} (${user.full_name})`]
-  );
-
-  res.json({
-    message: 'Разовый пароль выдан',
-    tempPassword,
-    login: user.login,
-    fullName: user.full_name
-  });
 });
 
 module.exports = router;
