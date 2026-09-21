@@ -39,80 +39,87 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
-  const { login, fullName, position, department, role,
-          onlyOwnDepartment, extraPermissions } = req.body;
+  try {
+    const { login, fullName, position, department, role,
+            onlyOwnDepartment, extraPermissions } = req.body;
 
-  const missing = [];
-  if (!login)    missing.push('Логин');
-  if (!fullName) missing.push('ФИО');
-  if (!position) missing.push('Должность');
-  if (missing.length > 0) {
-    const msg = missing.length === 1
-      ? `Заполните поле «${missing[0]}»`
-      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
-    return res.status(400).json({ error: msg });
+    const missing = [];
+    if (!login)    missing.push('Логин');
+    if (!fullName) missing.push('ФИО');
+    if (!position) missing.push('Должность');
+    if (missing.length > 0) {
+      const msg = missing.length === 1
+        ? `Заполните поле «${missing[0]}»`
+        : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+      return res.status(400).json({ error: msg });
+    }
+
+    const [ex] = await db.query('SELECT id FROM users WHERE login = ?', [login]);
+    if (ex.length) return res.status(409).json({ error: 'Логин уже занят' });
+
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+    const tempPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    await db.query(
+      `INSERT INTO users
+       (id, login, password, full_name, position, department, role,
+        only_own_department, extra_permissions, must_change_password)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [id, login, passwordHash, fullName, position, department || '', role || 'user',
+       onlyOwnDepartment ? 1 : 0, JSON.stringify(extraPermissions || [])]
+    );
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [req.user.id, req.user.full_name, 'Создание пользователя',
+       `Создан ${login} (${fullName}), выдан разовый пароль`]
+    );
+
+    res.status(201).json({
+      message: 'Пользователь создан',
+      id,
+      login,
+      tempPassword
+    });
+  } catch (e) {
+    console.error('POST /users error:', e);
+    res.status(500).json({ error: 'Ошибка создания пользователя' });
   }
-
-  const [ex] = await db.query('SELECT id FROM users WHERE login = ?', [login]);
-  if (ex.length) return res.status(409).json({ error: 'Логин уже занят' });
-
-  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-
-  // Разовый пароль генерируется автоматически
-  const tempPassword = generateTempPassword();
-  const passwordHash = await bcrypt.hash(tempPassword, 10);
-
-  await db.query(
-    `INSERT INTO users
-     (id, login, password, full_name, position, department, role,
-      only_own_department, extra_permissions, must_change_password)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-    [id, login, passwordHash, fullName, position, department || '', role || 'user',
-     onlyOwnDepartment ? 1 : 0, JSON.stringify(extraPermissions || [])]
-  );
-
-  await db.query(
-    'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-    [req.user.id, req.user.full_name, 'Создание пользователя',
-     `Создан ${login} (${fullName}), выдан разовый пароль`]
-  );
-
-  res.status(201).json({
-    message: 'Пользователь создан',
-    id,
-    login,
-    tempPassword
-  });
 });
 
 router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
-  const { login, fullName, position, department, role,
-  onlyOwnDepartment, extraPermissions } = req.body;
-  const id = req.params.id;
+  try {
+    const { login, fullName, position, department, role,
+            onlyOwnDepartment, extraPermissions } = req.body;
+    const id = req.params.id;
 
-  // 1. Проверяем, что такой пользователь существует
-  const [ex] = await db.query('SELECT id FROM users WHERE id = ?', [id]);
-  if (!ex.length) return res.status(404).json({ error: 'Не найден' });
+    const [ex] = await db.query('SELECT id FROM users WHERE id = ?', [id]);
+    if (!ex.length) return res.status(404).json({ error: 'Не найден' });
 
-  // 2. Проверяем, что новый логин не занят ДРУГИМ пользователем
-  const [dup] = await db.query(
-    'SELECT id FROM users WHERE login = ? AND id <> ?',
-    [login, id]
-  );
-  if (dup.length) return res.status(409).json({ error: 'Логин уже занят' });
+    const [dup] = await db.query(
+      'SELECT id FROM users WHERE login = ? AND id <> ?',
+      [login, id]
+    );
+    if (dup.length) return res.status(409).json({ error: 'Логин уже занят' });
 
-  const onlyOwn = onlyOwnDepartment ? 1 : 0;
+    const onlyOwn = onlyOwnDepartment ? 1 : 0;
 
-  // 3. Обновляем
     await db.query(
-    `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
-       only_own_department=?, extra_permissions=?, updated_at=CURRENT_TIMESTAMP
-     WHERE id=?`,
-    [login, fullName, position, department || '', role || 'user',
-     onlyOwn, JSON.stringify(extraPermissions || []), id]
-  );
-  res.json({ message: 'Пользователь обновлён' });
-  });
+      `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
+         only_own_department=?, extra_permissions=?, updated_at=CURRENT_TIMESTAMP
+       WHERE id=?`,
+      [login, fullName, position, department || '', role || 'user',
+       onlyOwn, JSON.stringify(extraPermissions || []), id]
+    );
+
+    res.json({ message: 'Пользователь обновлён' });
+  } catch (e) {
+    console.error('PUT /users error:', e);
+    res.status(500).json({ error: 'Ошибка обновления пользователя' });
+  }
+});
 
   router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
   const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
