@@ -120,8 +120,7 @@ router.post('/change-password', authenticate, async (req, res) => {
       error: 'Пароль не соответствует требованиям:\n• ' + v.errors.join('\n• ')
     });
   }
-
-  const bcrypt = require('bcryptjs');
+  
   const same = await bcrypt.compare(newPassword, req.user.password);
   if (same) {
     return res.status(400).json({ error: 'Новый пароль должен отличаться от текущего' });
