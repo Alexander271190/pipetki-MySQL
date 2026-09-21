@@ -1093,13 +1093,23 @@ async function generateFormFields(data = null) {
           if (String(val) === String(optValue)) option.selected = true;
           input.appendChild(option);
         });
-      } else {
+            } else {
         input = document.createElement('input');
         input.type = f.type === 'date' ? 'date'
           : f.type === 'number' ? 'number'
           : 'text';
         input.placeholder = f.label;
-        input.value = val;
+
+        // Для type="date" — отрезаем всё, что после первых 10 символов
+        // (время, часовой пояс). Иначе браузер молча покажет пустое поле.
+        if (f.type === 'date' && val) {
+          const s = String(val).trim();
+          // Проверяем базовый формат YYYY-MM-DD
+          const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          input.value = m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+        } else {
+          input.value = val;
+        }
       }
 
       input.id = `p-${f.id}`;
@@ -1149,12 +1159,17 @@ async function openModal(id) {
     document.getElementById('edit-id').value = p.id;
     modal.classList.add('active');
 
-    // Приводим snake_case → camelCase, чтобы generateFormFields
-    // нашёл значения для полей формы
+        // Нормализация даты — отрезаем время, если оно есть
+    let lastCal = '';
+    if (p.last_calibration) {
+      const m = String(p.last_calibration).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) lastCal = `${m[1]}-${m[2]}-${m[3]}`;
+    }
+
     const editData = {
       ...p,
       equipmentType:   p.equipment_type || 'pipette',
-      lastCalibration: p.last_calibration || '',
+      lastCalibration: lastCal,
       result:          p.last_result || 'pass',
       active:          p.active ? 'true' : 'false'
     };
@@ -1201,6 +1216,13 @@ async function savePipette(e) {
     if (input.required && !value) {
       missing.push(labelText);
     }
+    if (editId && fieldId === 'lastCalibration' && !value) {
+       const original = pipettes.find(x => x.id === editId);
+    if (original && original.last_calibration) {
+         // Оставляем как есть, не шлём на сервер
+         continue;
+       }
+     }
 
      data[fieldId] = value;
   }
