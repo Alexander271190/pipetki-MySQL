@@ -1784,8 +1784,8 @@ if (session) {
   authToken = session.token;
   currentUser = session.user;
   renderAuthUI();
+  refreshCurrentUser();
 }
-// Подстановка последнего логина
 const lastLogin = localStorage.getItem('pipette_last_login');
 if (lastLogin) {
   const u = document.getElementById('login-username');
