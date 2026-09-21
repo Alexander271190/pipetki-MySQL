@@ -48,7 +48,6 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // Создание
-// Создание
 router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
   const {
     id: rawId, serial, manufacturer, model, equipmentType, volume, department, interval,
