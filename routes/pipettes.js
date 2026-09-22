@@ -4,6 +4,17 @@ const { authenticate, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
 
+// ============================================================
+// ПРОВЕРКА ДОСТУПА ПО ОТДЕЛУ
+// ============================================================
+function canAccessDepartment(user, department) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (!user.only_own_department) return true;
+  if (!user.department) return true;        // нет отдела — нет ограничения
+  return department === user.department;
+}
+
 // Список пипеток
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -35,10 +46,16 @@ router.get('/:id', authenticate, async (req, res) => {
     const [rows] = await db.query('SELECT * FROM pipettes WHERE id = ?', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Оборудование не найдено' });
 
+    const p = rows[0];
+
+    // ← проверка доступа по отделу
+    if (!canAccessDepartment(req.user, p.department)) {
+      return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+    }
+
     const [h] = await db.query(
       'SELECT * FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC', [req.params.id]);
 
-    const p = rows[0];
     p.active = !!p.active;
     p.history = h;
     res.json(p);
@@ -158,7 +175,19 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 });
 // Обновление
   router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
-  const updates = req.body;
+    const updates = req.body;
+
+    // ← проверка доступа по отделу
+  const [pipRows] = await db.query(
+    'SELECT department FROM pipettes WHERE id = ?', [req.params.id]
+  );
+  if (!pipRows.length) {
+    return res.status(404).json({ error: 'Оборудование не найдено' });
+  }
+  if (!canAccessDepartment(req.user, pipRows[0].department)) {
+    return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+  }
+    
     const map = {
     serial: 'serial', manufacturer: 'manufacturer', model: 'model',
     equipmentType: 'equipment_type',
@@ -216,8 +245,19 @@ router.delete('/:id', authenticate, requirePermission('manage_pipettes'), async 
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-    const [exist] = await conn.query('SELECT model FROM pipettes WHERE id = ?', [req.params.id]);
-    if (!exist.length) { await conn.rollback(); return res.status(404).json({ error: 'Не найдена' }); }
+    const [exist] = await conn.query(
+      'SELECT model, department FROM pipettes WHERE id = ?', [req.params.id]
+    );
+    if (!exist.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Не найдена' });
+    }
+
+    // ← проверка доступа по отделу
+    if (!canAccessDepartment(req.user, exist[0].department)) {
+      await conn.rollback();
+      return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+    }
 
     await conn.query('DELETE FROM pipettes WHERE id = ?', [req.params.id]);
     await conn.query(
@@ -411,8 +451,13 @@ router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-    const [exist] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [req.params.id]);
+    const [exist] = await conn.query('SELECT id, department FROM pipettes WHERE id = ?', [req.params.id]);
     if (!exist.length) { await conn.rollback(); return res.status(404).json({ error: 'Не найдена' }); }
+
+    if (!canAccessDepartment(req.user, exist[0].department)) {
+  await conn.rollback();
+  return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+}
 
     await conn.query(
       `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
@@ -451,6 +496,19 @@ router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes
 // История
 router.get('/:id/calibration', authenticate, async (req, res) => {
   try {
+    // Сначала узнаём отдел пипетки
+    const [pipRows] = await db.query(
+      'SELECT department FROM pipettes WHERE id = ?', [req.params.id]
+    );
+    if (!pipRows.length) {
+      return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
+
+    // ← проверка доступа по отделу
+    if (!canAccessDepartment(req.user, pipRows[0].department)) {
+      return res.status(403).json({ error: 'Нет доступа' });
+    }
+
     const [rows] = await db.query(
       'SELECT * FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC',
       [req.params.id]
