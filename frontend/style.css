@@ -865,3 +865,11 @@ tbody tr:has(.row-checkbox:checked):hover {
   0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,.5); }
   50%      { box-shadow: 0 0 0 6px rgba(234,179,8,0); }
 }
+/* ── Ролевая видимость элементов ───────────────────────── */
+.admin-only,
+.senior-only { display: none; }
+
+body.is-admin .admin-only,
+body.is-admin .senior-only,
+body.can-manage .admin-only,
+body.can-manage .senior-only { display: inline-flex; }
