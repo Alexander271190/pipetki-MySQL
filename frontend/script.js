@@ -2943,9 +2943,7 @@ async function printSendAct() {
           <div class="sig-label">Принял (ФИО, подпись)</div>
         </div>
       </div>
-
-      <div class="footer">Документ сформирован автоматически системой учёта пипеток</div>
-    </body>
+      </body>
     </html>
   `);
   win.document.close();
