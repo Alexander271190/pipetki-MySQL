@@ -80,24 +80,33 @@ function mapHeader(h) {
 // exceljs возвращает Date для дат; строку для текста; число для чисел
 function parseDate(val) {
   if (val === undefined || val === null || val === '') return '';
+  
   if (val instanceof Date) {
     const d = val;
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
+  
   const s = String(val).trim();
-
-   let m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
+  
+  let m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
   if (m) {
     let y = m[3];
-    if (y.length === 2) y = (parseInt(y) > 50 ? '19' : '20') + y;
-    // Если первая группа > 12, значит формат ММ.ДД.ГГГГ (US)
-    if (parseInt(m[1], 10) > 12 && parseInt(m[2], 10) <= 12) {
+    if (y.length === 2) y = (parseInt(y, 10) > 50 ? '19' : '20') + y;
+    
+  const g1 = parseInt(m[1], 10);
+  const g2 = parseInt(m[2], 10);
+
+  // Вторая группа > 12 → она не может быть месяцем → US-формат ММ.ДД.ГГГГ
+  if (g2 > 12 && g1 <= 12) {
     return `${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
-    }
-    return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   }
+  // Иначе (в т.ч. обе <= 12) — российский ДД.ММ.ГГГГ
+  return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+  
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  
   m = s.match(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/);
   if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
 
