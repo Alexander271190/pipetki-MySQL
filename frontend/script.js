@@ -3145,10 +3145,13 @@ async function openUserViewModal(userId, userName) {
     }
   } catch (e) { /* новых настроек нет */ }
 
-  if (_cachedFields.length === 0) {
+    if (_cachedFields.length === 0) {
     try {
       _cachedFields = await apiRequest('/settings/fields');
-    } catch (e) { _cachedFields = []; }
+    } catch (e) {
+      _cachedFields = [];
+      showToast('Ошибка загрузки полей: ' + e.message, 'error');
+    }
   }
 
   const allFields = _cachedFields.filter(f => f.enabled);
@@ -3327,7 +3330,7 @@ function renderEquipmentTypesTable() {
   if (!tbody) return;
 
   if (_cachedEquipmentTypes.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
 
