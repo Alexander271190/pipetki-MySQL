@@ -372,7 +372,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         if (!prefix) {
           const fallback = {
             pipette: 'P', analyzer: 'A', thermometer: 'T',
-            scales: 'S', photometer: 'F'
+            scales: 'S', photometer: 'F', microscope: 'M'
           };
           prefix = fallback[eqType] || 'EQ';
         }
