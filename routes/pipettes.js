@@ -97,52 +97,38 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 
   if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
 
-  // ──────────────────────────────────────────────────────────
-  // ГЕНЕРАЦИЯ ID
-  // ──────────────────────────────────────────────────────────
-  let id = rawId;
-
-  if (!id) {
-    // 1. Пытаемся получить prefix из настроек оборудования
-    let prefix = null;
-    try {
-      const [rows] = await db.query(
-        "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-      );
-      if (rows.length && rows[0].setting_value) {
-        const types = JSON.parse(rows[0].setting_value);
-        const found = types.find(t => t.value === equipmentType);
-        if (found && found.prefix && found.prefix.trim()) {
-          prefix = found.prefix.trim().toUpperCase();
-        }
-      }
-    } catch (e) {
-      console.error('Не удалось прочитать equipment_types:', e.message);
-    }
-
-    // 2. Если не нашли — используем fallback для базовых типов
-    if (!prefix) {
-      const fallback = {
-        pipette:     'P',
-        analyzer:    'A',
-        thermometer: 'T',
-        scales:      'S',
-        photometer:  'F',
-        microscope:  'M'
-      };
-      prefix = fallback[equipmentType] || 'EQ';
-    }
-
-    // 3. Генерируем ID
-    id = await db.generatePipetteId(prefix);
-  }
-
-  // ──────────────────────────────────────────────────────────
-  // СОХРАНЕНИЕ В БД
-  // ──────────────────────────────────────────────────────────
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+
+    let id = rawId;
+
+    if (!id) {
+      // Получить prefix
+      let prefix = null;
+      const [rows] = await conn.query(
+        "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+      );
+      if (rows.length && rows[0].setting_value) {
+        try {
+          const types = JSON.parse(rows[0].setting_value);
+          const found = types.find(t => t.value === equipmentType);
+          if (found && found.prefix && found.prefix.trim()) {
+            prefix = found.prefix.trim().toUpperCase();
+          }
+        } catch (e) { /* fallback ниже */ }
+      }
+
+      if (!prefix) {
+        const fallback = {
+          pipette: 'P', analyzer: 'A', thermometer: 'T',
+          scales: 'S', photometer: 'F', microscope: 'M',
+        };
+        prefix = fallback[equipmentType] || 'EQ';
+      }
+
+      id = await db.generatePipetteId(prefix, conn);
+    }
 
     const [exist] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [id]);
     if (exist.length) {
@@ -156,21 +142,11 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
          last_calibration, cert, last_result, active, responsible, location, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        id,
-        serial,
-        manufacturer,
-        model,
-        equipmentType || 'pipette',
-        volume,
-        department,
-        interval || 12,
-        lastCalibration,
-        cert,
-        result || 'pass',
-        active !== false ? 1 : 0,
-        responsible,
-        location,
-        notes
+        id, serial, manufacturer, model,
+        equipmentType || 'pipette', volume, department,
+        interval || 12, lastCalibration, cert,
+        result || 'pass', active !== false ? 1 : 0,
+        responsible, location, notes
       ]
     );
 
@@ -191,17 +167,20 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     res.status(201).json({ message: 'Оборудование создано', id });
   } catch (e) {
     await conn.rollback();
+    if (e.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'ID уже занят, попробуйте сохранить ещё раз' });
+    }
     console.error(e);
     res.status(500).json({ error: 'Ошибка создания оборудования' });
   } finally {
     conn.release();
   }
 });
+
 // Обновление
   router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
-    const updates = req.body;
+  const updates = req.body;
 
-    // ← проверка доступа по отделу
   const [pipRows] = await db.query(
     'SELECT department FROM pipettes WHERE id = ?', [req.params.id]
   );
@@ -210,6 +189,13 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
   }
   if (!canAccessDepartment(req.user, pipRows[0].department)) {
     return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+  }
+
+  // Только админ может менять отдел
+  if (updates.department !== undefined
+      && req.user.role !== 'admin'
+      && updates.department !== pipRows[0].department) {
+    return res.status(403).json({ error: 'Смена отдела доступна только администратору' });
   }
     
     const map = {
@@ -321,14 +307,19 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
     const skipped = [];
     const notFound = [];
 
-    for (const id of ids) {
-            const [rows] = await conn.query(
-        'SELECT id, model, sent_for_calibration, equipment_type FROM pipettes WHERE id = ?',
+        for (const id of ids) {
+      const [rows] = await conn.query(
+        'SELECT id, model, sent_for_calibration, equipment_type, department FROM pipettes WHERE id = ?',
         [id]
       );
 
       if (!rows.length) {
         notFound.push(id);
+        continue;
+      }
+
+      if (!canAccessDepartment(req.user, rows[0].department)) {
+        skipped.push(id);
         continue;
       }
 
@@ -341,7 +332,7 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
         skipped.push(id);
         continue;
       }
-
+          
       await conn.query(
         `UPDATE pipettes
          SET sent_for_calibration = ?, sent_note = ?, updated_at = CURRENT_TIMESTAMP
@@ -408,11 +399,12 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
     for (const item of items) {
       if (!item.id) { skipped.push('?'); continue; }
 
-    const [rows] = await conn.query(
-        'SELECT id, equipment_type FROM pipettes WHERE id = ?',
-        [item.id]
+     const [rows] = await conn.query(
+      'SELECT id, equipment_type, department FROM pipettes WHERE id = ?',
+      [item.id]
       );
       if (!rows.length) { skipped.push(item.id); continue; }
+      if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
       if (rows[0].equipment_type !== 'pipette') { skipped.push(item.id); continue; }
 
       const ALLOWED = ['pass', 'fail', 'wip'];
