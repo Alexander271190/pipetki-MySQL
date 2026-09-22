@@ -2560,11 +2560,9 @@ async function saveUserSetting() {
     renderAuthUI();
   }
 }
-
-   closeSettingsModal();
-    if (document.getElementById('settings-modal').classList.contains('active')) {
-      renderUsersSettings();
-    }
+ 
+    resetUserSettingForm();
+    renderUsersSettings();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
