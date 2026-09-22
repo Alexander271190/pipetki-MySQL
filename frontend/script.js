@@ -2561,7 +2561,10 @@ async function saveUserSetting() {
   }
 }
 
-    closeSettingsModal();
+   closeSettingsModal();
+    if (document.getElementById('settings-modal').classList.contains('active')) {
+      renderUsersSettings();
+    }
   } catch (e) { showToast(e.message, 'error'); }
 }
 
