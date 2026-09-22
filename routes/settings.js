@@ -254,67 +254,72 @@ router.get('/equipment-types', authenticate, async (req, res) => {
 
 // PUT /api/settings/equipment-types (только админ)
 router.put('/equipment-types', authenticate, requireRole(['admin']), async (req, res) => {
-  const types = req.body;
-  if (!Array.isArray(types)) return res.status(400).json({ error: 'Ожидается массив' });
-
-  // ──────────────────────────────────────────────────────────
-  // ВАЛИДАЦИЯ + НОРМАЛИЗАЦИЯ PREFIX
-  // ──────────────────────────────────────────────────────────
-  for (const t of types) {
-    if (!t.value || !/^[a-z][a-z0-9_]*$/.test(t.value)) {
-      return res.status(400).json({ error: `Некорректный value: ${t.value}` });
-    }
-    if (!t.label || !t.label.trim()) {
-      return res.status(400).json({ error: `Пустой label у ${t.value}` });
+  try {
+    const types = req.body;
+    if (!Array.isArray(types)) {
+      return res.status(400).json({ error: 'Ожидается массив' });
     }
 
-    // Нормализация prefix: пустой → EQ, иначе в верхний регистр
-    if (!t.prefix || !t.prefix.trim()) {
-      t.prefix = 'EQ';
-    } else {
-      t.prefix = t.prefix.trim().toUpperCase();
+    // ──────────────────────────────────────────────────────────
+    // ВАЛИДАЦИЯ + НОРМАЛИЗАЦИЯ PREFIX
+    // ──────────────────────────────────────────────────────────
+    for (const t of types) {
+      if (!t.value || !/^[a-z][a-z0-9_]*$/.test(t.value)) {
+        return res.status(400).json({ error: `Некорректный value: ${t.value}` });
+      }
+      if (!t.label || !t.label.trim()) {
+        return res.status(400).json({ error: `Пустой label у ${t.value}` });
+      }
+
+      if (!t.prefix || !t.prefix.trim()) {
+        t.prefix = 'EQ';
+      } else {
+        t.prefix = t.prefix.trim().toUpperCase();
+      }
+      if (t.prefix.length > 10) {
+        return res.status(400).json({ error: `Слишком длинный prefix у ${t.value}` });
+      }
     }
-    if (t.prefix.length > 10) {
-      return res.status(400).json({ error: `Слишком длинный prefix у ${t.value}` });
+
+    // ──────────────────────────────────────────────────────────
+    // ПРОВЕРКА ДУБЛЕЙ VALUE
+    // ──────────────────────────────────────────────────────────
+    const seen = new Set();
+    for (const t of types) {
+      if (seen.has(t.value)) {
+        return res.status(400).json({ error: `Дубль value: ${t.value}` });
+      }
+      seen.add(t.value);
     }
+
+    // ──────────────────────────────────────────────────────────
+    // ПРОВЕРКА: НЕ УДАЛЕНЫ ЛИ ИСПОЛЬЗУЕМЫЕ ТИПЫ
+    // ──────────────────────────────────────────────────────────
+    const [used] = await db.query('SELECT DISTINCT equipment_type FROM pipettes');
+    const usedValues = used.map(r => r.equipment_type).filter(Boolean);
+    const newValues = types.map(t => t.value);
+    const removed = usedValues.filter(v => !newValues.includes(v));
+
+    if (removed.length > 0) {
+      return res.status(400).json({
+        error: `Нельзя удалить типы, которые используются: ${removed.join(', ')}`
+      });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // СОХРАНЕНИЕ В БД
+    // ──────────────────────────────────────────────────────────
+    await db.query(
+      `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+      [JSON.stringify(types)]
+    );
+    res.json({ message: 'Типы оборудования обновлены' });
+  } catch (e) {
+    console.error('PUT /equipment-types:', e);
+    res.status(500).json({ error: 'Ошибка сохранения типов' });
   }
-
-  // ──────────────────────────────────────────────────────────
-  // ПРОВЕРКА ДУБЛЕЙ VALUE
-  // ──────────────────────────────────────────────────────────
-  const seen = new Set();
-  for (const t of types) {
-    if (seen.has(t.value)) {
-      return res.status(400).json({ error: `Дубль value: ${t.value}` });
-    }
-    seen.add(t.value);
-  }
-
-  // ──────────────────────────────────────────────────────────
-  // ПРОВЕРКА: НЕ УДАЛЕНЫ ЛИ ИСПОЛЬЗУЕМЫЕ ТИПЫ
-  // ──────────────────────────────────────────────────────────
-  const [used] = await db.query('SELECT DISTINCT equipment_type FROM pipettes');
-  const usedValues = used.map(r => r.equipment_type).filter(Boolean);
-  const newValues = types.map(t => t.value);
-  const removed = usedValues.filter(v => !newValues.includes(v));
-
-  if (removed.length > 0) {
-    return res.status(400).json({
-      error: `Нельзя удалить типы, которые используются: ${removed.join(', ')}`
-    });
-  }
-
-  // ──────────────────────────────────────────────────────────
-  // СОХРАНЕНИЕ В БД
-  // ──────────────────────────────────────────────────────────
-  await db.query(
-    `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)
-     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
-    [JSON.stringify(types)]
-  );
-  res.json({ message: 'Типы оборудования обновлены' });
 });
-
 // ============================================================
 // НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ (только для админа)
 // ============================================================
