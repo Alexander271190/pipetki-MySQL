@@ -9,8 +9,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({ origin: true, credentials: false }));
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Раздача статики
 app.use(express.static(path.join(__dirname, 'frontend')));
@@ -58,9 +58,12 @@ const db = require('./db');
     process.exit(1);
   }
 
-  try {
-    await db.initSchema();
+    try {
+    const seeded = await db.initSchema();
     console.log('✅ Схема БД готова');
+    if (seeded) {
+      console.log('👤 Начальные пользователи и данные созданы');
+    }
   } catch (e) {
     console.error('❌ Ошибка инициализации схемы:', e);
     process.exit(1);
@@ -68,6 +71,5 @@ const db = require('./db');
 
   app.listen(PORT, () => {
     console.log(`🚀 Server on http://0.0.0.0:${PORT}`);
-    console.log(`👤 Пользователи по умолчанию созданы`);
   });
 })();
