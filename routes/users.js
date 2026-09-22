@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const router = express.Router();
@@ -12,7 +13,9 @@ function generateTempPassword() {
   const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const digits = '23456789';
   const spec   = '!@#$%^&*';
-  const pick = (s) => s[Math.floor(Math.random() * s.length)];
+  const all    = lower + upper + digits + spec;
+
+  const pick = (s) => s[crypto.randomInt(0, s.length)];
 
   const chars = [
     pick(lower), pick(upper), pick(digits), pick(spec),
@@ -21,7 +24,7 @@ function generateTempPassword() {
   ];
 
   for (let i = chars.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = crypto.randomInt(0, i + 1);
     [chars[i], chars[j]] = [chars[j], chars[i]];
   }
   return chars.join('');
@@ -30,10 +33,10 @@ function generateTempPassword() {
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   const [users] = await db.query(
     'SELECT id, login, full_name, position, department, role, only_own_department, extra_permissions FROM users');
-  res.json(users.map(u => ({
+    res.json(users.map(u => ({
     ...u,
     onlyOwnDepartment: !!u.only_own_department,
-    extraPermissions: JSON.parse(u.extra_permissions || '[]')
+    extraPermissions: db.safeParse(u.extra_permissions, [])
   })));
 });
 
@@ -94,8 +97,18 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
             onlyOwnDepartment, extraPermissions } = req.body;
     const id = req.params.id;
 
-    const [ex] = await db.query('SELECT id FROM users WHERE id = ?', [id]);
+    const [ex] = await db.query('SELECT id, role FROM users WHERE id = ?', [id]);
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
+
+    // Защита последнего админа: не даём понизить/лишить роль admin
+    if (ex[0].role === 'admin' && role !== 'admin') {
+      const [admins] = await db.query(
+        `SELECT COUNT(*) AS c FROM users WHERE role = 'admin'`
+      );
+      if (admins[0].c <= 1) {
+        return res.status(400).json({ error: 'Нельзя понизить последнего администратора' });
+      }
+    }
 
     const [dup] = await db.query(
       'SELECT id FROM users WHERE login = ? AND id <> ?',
@@ -160,7 +173,10 @@ router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (
 
     await db.query(
       `UPDATE users
-       SET password = ?, must_change_password = 1, updated_at = CURRENT_TIMESTAMP
+       SET password = ?,
+           must_change_password = 1,
+           password_changed_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       [hash, userId]
     );
