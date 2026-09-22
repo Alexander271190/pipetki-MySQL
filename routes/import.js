@@ -120,9 +120,9 @@ function parseDate(val) {
 function normalizeResult(val) {
   if (!val) return 'pass';
   const s = String(val).trim().toLowerCase();
-  if (/годен|годна|pass|ок|ok|год|✅/.test(s)) return 'pass';
   if (/брак|fail|не\s*год|негод|❌|дефект/.test(s)) return 'fail';
   if (/процесс|wip|ожидан|⏳/.test(s)) return 'wip';
+  if (/годен|годна|pass|ок|ok|год|✅/.test(s)) return 'pass';
   return 'pass';
 }
 
