@@ -317,9 +317,12 @@
   <div class="modal modal-lg">
     <h2 id="history-title">История поверок</h2>
     <div id="history-content"></div>
-    <div class="form-actions">
-      <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Закрыть</button>
-      <button class="btn btn-info admin-only senior-only" onclick="openCalibrationForm()">➕ Добавить поверку</button>
+        <div class="form-actions" style="justify-content:space-between;">
+      <button type="button" class="btn btn-warning" onclick="openHistoryExportModal()">📤 Экспорт истории</button>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Закрыть</button>
+        <button class="btn btn-info admin-only senior-only" onclick="openCalibrationForm()">➕ Добавить поверку</button>
+      </div>
     </div>
     <div id="calibration-form-wrap" style="display:none;margin-top:20px;padding-top:20px;border-top:2px solid #e2e8f0">
       <h3 style="margin-bottom:15px;font-size:1rem;color:#1e293b">Новая запись о поверке</h3>
@@ -499,6 +502,38 @@
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" id="cp-cancel-btn" onclick="closeChangePasswordModal()">Отмена</button>
         <button type="submit" class="btn btn-success">💾 Сохранить пароль</button>
+      </div>
+    </form>
+  </div>
+</div>
+  <!-- МОДАЛКА ЭКСПОРТА ИСТОРИИ ПОВЕРОК -->
+<div class="modal-overlay" id="history-export-modal">
+  <div class="modal">
+    <h2>📤 Экспорт истории поверок</h2>
+    <p id="history-export-target" style="color:#64748b;margin-bottom:16px;font-size:.9rem;"></p>
+
+    <form id="history-export-form" onsubmit="event.preventDefault();" novalidate>
+      <div class="form-row">
+        <div class="form-group">
+          <label>С даты</label>
+          <input type="date" id="he-from">
+        </div>
+        <div class="form-group">
+          <label>По дату</label>
+          <input type="date" id="he-to">
+        </div>
+      </div>
+
+      <div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#475569;">
+        Оставьте поля пустыми — выгрузится вся история поверок.
+      </div>
+
+      <div id="he-error" class="auth-error" style="margin-top:12px;"></div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeHistoryExportModal()">Отмена</button>
+        <button type="button" class="btn btn-success" onclick="exportHistoryToExcel()">📊 Excel (CSV)</button>
+        <button type="button" class="btn btn-info" onclick="exportHistoryToPDF()">🖨️ PDF</button>
       </div>
     </form>
   </div>
