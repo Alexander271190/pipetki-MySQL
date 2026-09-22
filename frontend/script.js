@@ -3612,19 +3612,31 @@ async function resetUserPassword(userId, login) {
   }
 }
 
+let _tempPasswordValue = '';
+
 function showTempPasswordModal(login, fullName, tempPassword) {
-  const text =
-    `Логин: ${login}\n` +
-    `ФИО: ${fullName}\n\n` +
-    `Разовый пароль: ${tempPassword}\n\n` +
-    `Сообщите его пользователю. После первого входа система попросит сменить пароль.`;
+  _tempPasswordValue = tempPassword;
 
-  alert(text);
+  document.getElementById('tp-login').value    = login || '';
+  document.getElementById('tp-fullname').value = fullName || '';
+  document.getElementById('tp-password').value = tempPassword || '';
 
+  document.getElementById('temp-password-modal').classList.add('active');
+}
+
+function closeTempPasswordModal() {
+  document.getElementById('temp-password-modal').classList.remove('active');
+  _tempPasswordValue = '';
+}
+
+async function copyTempPassword() {
+  if (!_tempPasswordValue) return;
   try {
-    navigator.clipboard.writeText(tempPassword);
-    showToast('Разовый пароль скопирован в буфер обмена', 'success');
-  } catch (e) { /* clipboard может быть недоступен */ }
+    await navigator.clipboard.writeText(_tempPasswordValue);
+    showToast('Пароль скопирован в буфер обмена', 'success');
+  } catch (e) {
+    showToast('Не удалось скопировать. Скопируйте вручную.', 'error');
+  }
 }
 // ============================================================
 // ЭКСПОРТ ИСТОРИИ ПОВЕРОК КОНКРЕТНОГО ОБОРУДОВАНИЯ
