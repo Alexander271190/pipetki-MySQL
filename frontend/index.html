@@ -506,6 +506,43 @@
     </form>
   </div>
 </div>
+    <!-- МОДАЛКА РАЗОВОГО ПАРОЛЯ -->
+<div class="modal-overlay" id="temp-password-modal">
+  <div class="modal">
+    <h2>🔑 Разовый пароль</h2>
+
+    <div style="background:#fef9c3;padding:12px;border-left:3px solid #eab308;border-radius:8px;font-size:.9rem;color:#854d0e;margin-bottom:16px;">
+      Сообщите пароль пользователю. После первого входа система попросит его сменить.
+    </div>
+
+    <div class="form-group">
+      <label>Логин</label>
+      <input type="text" id="tp-login" readonly
+             style="background:#f1f5f9;cursor:not-allowed;">
+    </div>
+
+    <div class="form-group">
+      <label>ФИО</label>
+      <input type="text" id="tp-fullname" readonly
+             style="background:#f1f5f9;cursor:not-allowed;">
+    </div>
+
+    <div class="form-group">
+      <label>Пароль</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="tp-password" readonly
+               style="background:#f1f5f9;font-family:monospace;font-size:1rem;letter-spacing:1px;cursor:not-allowed;">
+        <button type="button" class="btn btn-primary" onclick="copyTempPassword()" style="flex-shrink:0;">
+          📋 Скопировать
+        </button>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeTempPasswordModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
   <!-- МОДАЛКА ЭКСПОРТА ИСТОРИИ ПОВЕРОК -->
 <div class="modal-overlay" id="history-export-modal">
   <div class="modal">
