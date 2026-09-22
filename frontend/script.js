@@ -1818,12 +1818,16 @@ document.getElementById('history-modal').addEventListener('click', e => { if (e.
 document.getElementById('bulk-send-modal').addEventListener('click', e => { if (e.target.id === 'bulk-send-modal') closeBulkSendModal(); });
 document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
 document.getElementById('change-password-modal').addEventListener('click', e => {
+
   if (e.target.id === 'change-password-modal') {
     const canClose = !currentUser || !currentUser.mustChangePassword || isImpersonating();
     if (canClose) {
       closeChangePasswordModal();
     }
   }
+});
+document.getElementById('history-export-modal').addEventListener('click', e => {
+  if (e.target.id === 'history-export-modal') closeHistoryExportModal();
 });
 
 const session = getSession();
@@ -3618,6 +3622,199 @@ function showTempPasswordModal(login, fullName, tempPassword) {
     navigator.clipboard.writeText(tempPassword);
     showToast('Разовый пароль скопирован в буфер обмена', 'success');
   } catch (e) { /* clipboard может быть недоступен */ }
+}
+// ============================================================
+// ЭКСПОРТ ИСТОРИИ ПОВЕРОК КОНКРЕТНОГО ОБОРУДОВАНИЯ
+// ============================================================
+
+// Открыть модалку выбора периода
+function openHistoryExportModal() {
+  if (!currentHistoryId) {
+    showToast('Сначала откройте историю оборудования', 'error');
+    return;
+  }
+  const p = pipettes.find(x => x.id === currentHistoryId);
+  if (!p) return;
+
+  document.getElementById('history-export-target').innerHTML =
+    `Оборудование: <strong>${esc(p.id)}</strong> — ${esc(p.model)}`;
+
+  document.getElementById('he-from').value = '';
+  document.getElementById('he-to').value = '';
+  document.getElementById('he-error').textContent = '';
+
+  document.getElementById('history-export-modal').classList.add('active');
+}
+
+// Закрыть модалку
+function closeHistoryExportModal() {
+  document.getElementById('history-export-modal').classList.remove('active');
+}
+
+// Получить историю с фильтром по периоду
+async function getFilteredHistoryForExport() {
+  const p = pipettes.find(x => x.id === currentHistoryId);
+  if (!p) return [];
+
+  let history = await apiRequest(`/pipettes/${p.id}/calibration`);
+
+  const from = document.getElementById('he-from').value;
+  const to   = document.getElementById('he-to').value;
+
+  // Фильтруем по дате (строки YYYY-MM-DD сравниваются лексикографически корректно)
+  if (from) {
+    history = history.filter(h => String(h.date).slice(0, 10) >= from);
+  }
+  if (to) {
+    history = history.filter(h => String(h.date).slice(0, 10) <= to);
+  }
+
+  // Сортируем от новых к старым (свежая сверху)
+  history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+  return history;
+}
+
+// Экспорт в Excel (CSV)
+async function exportHistoryToExcel() {
+  const errEl = document.getElementById('he-error');
+  errEl.textContent = '';
+
+  const p = pipettes.find(x => x.id === currentHistoryId);
+  if (!p) return;
+
+  const history = await getFilteredHistoryForExport();
+  if (history.length === 0) {
+    errEl.textContent = 'Нет записей за выбранный период';
+    return;
+  }
+
+  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
+  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+
+  const csvLines = [headers.join(';')];
+  history.forEach(h => {
+    const row = [
+      h.date || '',
+      h.cert || '',
+      resultLabels[h.result] || h.result || '',
+      h.org || '',
+      h.note || ''
+    ];
+    const line = row.map(v => {
+      const s = String(v).replace(/"/g, '""');
+      return /[";]/.test(s) ? '"' + s + '"' : s;
+    }).join(';');
+    csvLines.push(line);
+  });
+
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `history_${p.id}_${todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  closeHistoryExportModal();
+  showToast(`Экспортировано: ${history.length} записей`, 'success');
+}
+
+// Экспорт в PDF (открывает вкладку с реестром)
+async function exportHistoryToPDF() {
+  const errEl = document.getElementById('he-error');
+  errEl.textContent = '';
+
+  const p = pipettes.find(x => x.id === currentHistoryId);
+  if (!p) return;
+
+  const history = await getFilteredHistoryForExport();
+  if (history.length === 0) {
+    errEl.textContent = 'Нет записей за выбранный период';
+    return;
+  }
+
+  const from = document.getElementById('he-from').value;
+  const to   = document.getElementById('he-to').value;
+  const periodText =
+    (from || to) ? `Период: ${from || '…'} — ${to || '…'}` : 'Период: вся история';
+
+  const user = currentUser ? currentUser.fullName : '';
+  const today = new Date().toLocaleDateString('ru-RU');
+  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+
+  const rows = history.map((h, i) => `
+    <tr>
+      <td style="text-align:center;">${i + 1}</td>
+      <td>${esc(formatDate(h.date))}</td>
+      <td>${esc(h.cert || '—')}</td>
+      <td>${esc(resultLabels[h.result] || h.result || '—')}</td>
+      <td>${esc(h.org || '—')}</td>
+      <td>${esc(h.note || '')}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
+    <title>История поверок — ${esc(p.id)}</title>
+    <style>
+      @page { size: A4 portrait; margin: 15mm 12mm; }
+      * { box-sizing: border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; }
+      h1 { font-size: 14pt; margin: 0 0 4px; }
+      .meta { font-size: 9pt; color: #64748b; margin-bottom: 14px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+      .meta b { color: #1e293b; }
+      .info { padding: 10px 12px; background: #f8fafc; border-radius: 6px; font-size: 9pt; margin-bottom: 12px; }
+      .info div { margin-bottom: 3px; }
+      table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+      th { background: #1e293b; color: #fff; padding: 7px 6px; text-align: left; font-size: 8pt;
+           text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      td { padding: 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+      tr:nth-child(even) td { background: #f8fafc; }
+      .footer { margin-top: 20px; font-size: 8pt; display: flex; justify-content: flex-end; }
+    </style></head><body>
+      <h1>История поверок оборудования</h1>
+      <div class="meta">Дата формирования: <b>${today}</b> · Сформировал: <b>${esc(user)}</b></div>
+
+      <div class="info">
+        <div><b>ID:</b> ${esc(p.id)}</div>
+        <div><b>Модель:</b> ${esc(p.model)}${p.manufacturer ? ' (' + esc(p.manufacturer) + ')' : ''}</div>
+        <div><b>Серийный номер:</b> ${esc(p.serial || '—')}</div>
+        <div><b>Отдел:</b> ${esc(p.department || '—')}</div>
+        <div><b>${periodText}</b></div>
+        <div><b>Записей:</b> ${history.length}</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:5%;text-align:center;">№</th>
+            <th style="width:15%;">Дата</th>
+            <th style="width:20%;">Свидетельство</th>
+            <th style="width:12%;">Результат</th>
+            <th style="width:20%;">Организация</th>
+            <th>Примечание</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div class="footer">
+        <div>Подпись: _______________</div>
+      </div>
+    </body></html>
+  `;
+
+  // Открываем через Blob URL (без document.write)
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  // Освобождаем URL через 10 сек
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+  closeHistoryExportModal();
+  showToast(`PDF: ${history.length} записей`, 'success');
 }
 
 console.log('🔬 Система учёта оборудования запущена');
