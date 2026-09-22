@@ -14,7 +14,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  multipleStatements: true,
+  multipleStatements: false,
 });
 
 // Универсальный query → [rowsOrResult, fields]
@@ -51,10 +51,13 @@ async function initSchema() {
         extra_permissions TEXT,
         only_own_department TINYINT DEFAULT 0,
         must_change_password TINYINT DEFAULT 0,
+        password_changed_at TIMESTAMP NULL DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS pipettes (
         id VARCHAR(255) PRIMARY KEY,
         serial VARCHAR(255),
@@ -70,13 +73,15 @@ async function initSchema() {
         active TINYINT DEFAULT 1,
         responsible VARCHAR(255),
         location VARCHAR(255),
-       notes TEXT,
-      sent_for_calibration VARCHAR(20),
-      sent_note TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT,
+        sent_for_calibration VARCHAR(20),
+        sent_note TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS calibration_history (
         id INT AUTO_INCREMENT PRIMARY KEY,
         pipette_id VARCHAR(255) NOT NULL,
@@ -87,8 +92,10 @@ async function initSchema() {
         note TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (pipette_id) REFERENCES pipettes(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL,
@@ -96,16 +103,19 @@ async function initSchema() {
         action VARCHAR(255) NOT NULL,
         details TEXT,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS departments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) UNIQUE NOT NULL,
         enabled TINYINT DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
-      
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS filter_config (
         id VARCHAR(100) PRIMARY KEY,
         label VARCHAR(255) NOT NULL,
@@ -116,14 +126,18 @@ async function initSchema() {
         filter_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS system_settings (
         setting_key VARCHAR(100) PRIMARY KEY,
         setting_value TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS field_config (
         id VARCHAR(100) PRIMARY KEY,
         label VARCHAR(255) NOT NULL,
@@ -135,45 +149,77 @@ async function initSchema() {
         field_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS export_settings (
         id INT PRIMARY KEY,
         fields TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS user_preferences (
         user_id VARCHAR(255) PRIMARY KEY,
         preferences TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+
+    // Совместимость: добавить password_changed_at, если база уже была создана
+    await conn.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP NULL DEFAULT NULL
+    `).catch(() => { /* MySQL < 8.0.29 или колонка уже есть — игнорируем */ });
+
   } finally {
     conn.release();
   }
 
-  await seedInitialData();
+  return await seedInitialData();
 }
-
 // ============================================================
 // НАЧАЛЬНЫЕ ДАННЫЕ
 // ============================================================
 async function seedInitialData() {
   // --- Пользователи ---
-   const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
+     let seededAny = false;
+
+  const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
   if (uc[0].c === 0) {
-    const sql = `INSERT INTO users (id, login, password, full_name, position, department, role, extra_permissions)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    seededAny = true;
+
+    const crypto = require('crypto');
+    const envPwd = (name) => process.env[name] || crypto.randomBytes(12).toString('base64url');
+
+    const adminPwd  = envPwd('SEED_ADMIN_PASSWORD');
+    const seniorPwd = envPwd('SEED_SENIOR_PASSWORD');
+    const userPwd   = envPwd('SEED_USER_PASSWORD');
+
+    const sql = `INSERT INTO users
+      (id, login, password, full_name, position, department, role, extra_permissions, must_change_password)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`;
+
     const users = [
-  ['admin1',  'admin',  'admin',  'Администратор', 'Главный метролог', null,                     'admin',      '[]'],
-  ['senior1', 'senior', 'senior', 'Петров Петр',   'Старший лаборант', 'Гематологический отдел', 'senior_lab', '["manage_pipettes","import_data","export_data"]'],
-  ['user1',   'user',   'user',   'Иванов Иван',   'Лаборант',         'Биохимический отдел',    'user',       '[]']
-];
+      ['admin1',  'admin',  adminPwd,  'Администратор', 'Главный метролог',   null,                     'admin',      '[]'],
+      ['senior1', 'senior', seniorPwd, 'Петров Петр',   'Старший лаборант',   'Гематологический отдел', 'senior_lab', '["manage_pipettes","import_data","export_data"]'],
+      ['user1',   'user',   userPwd,   'Иванов Иван',   'Лаборант',           'Биохимический отдел',    'user',       '[]']
+    ];
+
     for (const [id, login, plain, fullName, position, department, role, extra] of users) {
       const hash = await bcrypt.hash(plain, 10);
       await pool.query(sql, [id, login, hash, fullName, position, department, role, extra]);
+    }
+
+    if (!process.env.SEED_ADMIN_PASSWORD) {
+      console.log('🔑 Разовые пароли пользователей (сохраните и сообщите пользователям):');
+      console.log(`   admin  / ${adminPwd}`);
+      console.log(`   senior / ${seniorPwd}`);
+      console.log(`   user   / ${userPwd}`);
+      console.log('   После входа каждый пользователь обязан сменить пароль.');
     }
   }
 
@@ -307,15 +353,23 @@ if (ssc[0].c === 0) {
     await pool.query(insF, ['model',          'Модель',           'text',        'model',            1, '',                    5]);
     await pool.query(insF, ['manufacturer',   'Производитель',    'text',        'manufacturer',     1, '',                    6]);
     await pool.query(insF, ['active',         'Активность',       'select',      'active',           1, 'active_list',         7]);
-    await pool.query(insF, ['calPeriod',      'Дата поверки',     'date-period', 'last_calibration', 1, '',                    8]);
+    await pool.query(insF, ['calPeriod',      'Дата поверки',     'date-period', 'last_calibration', 1, '',                    8]);  
   }
+  
+  return seededAny; 
 }
-async function generatePipetteId(prefix = 'P') {
+
+async function generatePipetteId(prefix = 'P', conn = null) {
+  const executor = conn || pool;
   const safePrefix = String(prefix).replace(/[%_\\]/g, '\\$&');
-  const [rows] = await pool.query(
-    "SELECT id FROM pipettes WHERE id LIKE ?",
-    [`${safePrefix}-%`]
-  );
+
+  // FOR UPDATE внутри транзакции сериализует генерацию между параллельными запросами
+  const sql = `SELECT id FROM pipettes
+               WHERE id LIKE ?
+               ORDER BY id
+               FOR UPDATE`;
+
+  const [rows] = await executor.query(sql, [`${safePrefix}-%`]);
 
   let maxNum = 0;
   for (const row of rows) {
@@ -327,4 +381,9 @@ async function generatePipetteId(prefix = 'P') {
   }
   return `${prefix}-${String(maxNum + 1).padStart(3, '0')}`;
 }
-module.exports = { query, getConnection, pool, initSchema, generatePipetteId };
+
+function safeParse(json, fallback = []) {
+  try { return JSON.parse(json); } catch { return fallback; }
+}
+
+module.exports = { query, getConnection, pool, initSchema, generatePipetteId, safeParse };
