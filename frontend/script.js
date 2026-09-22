@@ -382,6 +382,7 @@ async function loadPipetteData() {
         { value: 'thermometer', label: 'Термометр',   icon: '🌡️', prefix: 'T' },
         { value: 'scales',      label: 'Весы',        icon: '⚖️', prefix: 'S' },
         { value: 'photometer',  label: 'Фотометр',    icon: '🔆', prefix: 'F' }
+        { value: 'microscope',  label: 'Микроскоп',   icon: '🔬', prefix: 'M' }
       ];
     }
 
@@ -605,6 +606,7 @@ pipettes.forEach(p => {
     table.style.display = 'none';
     empty.style.display = 'block';
     if (pipettes.length > 0) empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+    updateSortArrows();
     updateSelectAllCheckbox();
     updateBulkCalButton();
     return;
