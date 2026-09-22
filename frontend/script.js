@@ -1402,9 +1402,12 @@ async function renderHistoryContent(p) {
   inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',  wip: '⏳ В процессе'
 };
 
-  let history = [];
+    let history = [];
   try {
     history = await apiRequest(`/pipettes/${p.id}/calibration`);
+    // Сортировка: от новых к старым — самая свежая поверка сверху
+    // (на случай, если сервер вернул в другом порядке)
+    history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
   } catch (error) {
     console.error('Error loading history:', error);
   }
