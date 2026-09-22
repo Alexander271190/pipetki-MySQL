@@ -80,33 +80,37 @@ function mapHeader(h) {
 // exceljs возвращает Date для дат; строку для текста; число для чисел
 function parseDate(val) {
   if (val === undefined || val === null || val === '') return '';
-  
+
   if (val instanceof Date) {
     const d = val;
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
-  
+
   const s = String(val).trim();
-  
+
+  // DD.MM.YYYY / MM.DD.YYYY / DD-MM-YYYY / DD/MM/YYYY
   let m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
   if (m) {
     let y = m[3];
     if (y.length === 2) y = (parseInt(y, 10) > 50 ? '19' : '20') + y;
-    
-  const g1 = parseInt(m[1], 10);
-  const g2 = parseInt(m[2], 10);
 
-  // Вторая группа > 12 → она не может быть месяцем → US-формат ММ.ДД.ГГГГ
-  if (g2 > 12 && g1 <= 12) {
-    return `${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+    const g1 = parseInt(m[1], 10);
+    const g2 = parseInt(m[2], 10);
+
+    // Вторая группа > 12 → она не может быть месяцем → US-формат ММ.ДД.ГГГГ
+    if (g2 > 12 && g1 <= 12) {
+      return `${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+    }
+
+    // Иначе (в т.ч. обе <= 12) — российский ДД.ММ.ГГГГ
+    return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   }
-  // Иначе (в т.ч. обе <= 12) — российский ДД.ММ.ГГГГ
-  return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-}
-  
+
+  // YYYY-MM-DD (ISO)
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  
+
+  // YYYY.MM.DD / YYYY/MM/DD
   m = s.match(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/);
   if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
 
@@ -338,43 +342,43 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
 
       if (!id && !model) continue;
 
-     if (!model) {
-  skipped.push(`Строка ${i + 2}: не указана модель`);
-  continue;
-}
-
-// Если ID указан — проверяем на дубль
-if (id) {
-  const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
-  if (ex.length) { skipped.push(`${id}: ID уже существует`); continue; }
-} else {
-  // ─── Автогенерация ID ───
-  const eqType = await normalizeEquipmentType(obj.equipmentType);
-  let prefix = null;
-
-  try {
-    const [rows] = await db.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    if (rows.length && rows[0].setting_value) {
-      const types = JSON.parse(rows[0].setting_value);
-      const found = types.find(t => t.value === eqType);
-      if (found && found.prefix && found.prefix.trim()) {
-        prefix = found.prefix.trim().toUpperCase();
+      if (!model) {
+        skipped.push(`Строка ${i + 2}: не указана модель`);
+        continue;
       }
-    }
-  } catch (e) { /* игнорируем, будет fallback */ }
 
-  if (!prefix) {
-    const fallback = {
-      pipette: 'P', analyzer: 'A', thermometer: 'T',
-      scales: 'S', photometer: 'F'
-    };
-    prefix = fallback[eqType] || 'EQ';
-  }
+      // Если ID указан — проверяем на дубль
+      if (id) {
+        const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
+        if (ex.length) { skipped.push(`${id}: ID уже существует`); continue; }
+      } else {
+        // ─── Автогенерация ID ───
+        const eqType = await normalizeEquipmentType(obj.equipmentType);
+        let prefix = null;
 
-  id = await db.generatePipetteId(prefix);
-}
+        try {
+          const [rows] = await db.query(
+            "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+          );
+          if (rows.length && rows[0].setting_value) {
+            const types = JSON.parse(rows[0].setting_value);
+            const found = types.find(t => t.value === eqType);
+            if (found && found.prefix && found.prefix.trim()) {
+              prefix = found.prefix.trim().toUpperCase();
+            }
+          }
+        } catch (e) { /* игнорируем, будет fallback */ }
+
+        if (!prefix) {
+          const fallback = {
+            pipette: 'P', analyzer: 'A', thermometer: 'T',
+            scales: 'S', photometer: 'F'
+          };
+          prefix = fallback[eqType] || 'EQ';
+        }
+
+        id = await db.generatePipetteId(prefix);
+      }
 
       try {
         const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
