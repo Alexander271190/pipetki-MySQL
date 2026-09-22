@@ -86,7 +86,7 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
         analyzer:    'A',
         thermometer: 'T',
         scales:      'S',
-        photometer:  'F'
+        photometer:  'F',
         microscope:  'M'
       };
       prefix = fallback[equipmentType] || 'EQ';
