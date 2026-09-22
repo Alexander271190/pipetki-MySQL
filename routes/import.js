@@ -86,10 +86,14 @@ function parseDate(val) {
   }
   const s = String(val).trim();
 
-  let m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
+   let m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
   if (m) {
     let y = m[3];
     if (y.length === 2) y = (parseInt(y) > 50 ? '19' : '20') + y;
+    // Если первая группа > 12, значит формат ММ.ДД.ГГГГ (US)
+    if (parseInt(m[1], 10) > 12 && parseInt(m[2], 10) <= 12) {
+    return `${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+    }
     return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   }
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
