@@ -381,7 +381,7 @@ async function loadPipetteData() {
         { value: 'analyzer',    label: 'Анализатор',  icon: '🖥️', prefix: 'A' },
         { value: 'thermometer', label: 'Термометр',   icon: '🌡️', prefix: 'T' },
         { value: 'scales',      label: 'Весы',        icon: '⚖️', prefix: 'S' },
-        { value: 'photometer',  label: 'Фотометр',    icon: '🔆', prefix: 'F' }
+        { value: 'photometer',  label: 'Фотометр',    icon: '🔆', prefix: 'F' },
         { value: 'microscope',  label: 'Микроскоп',   icon: '🔬', prefix: 'M' }
       ];
     }
