@@ -19,8 +19,9 @@ function userPublic(u) {
     department: u.department,
     role: u.role,
     onlyOwnDepartment: !!u.only_own_department,
-    extraPermissions: JSON.parse(u.extra_permissions || '[]'),
-    mustChangePassword: !!u.must_change_password
+    extraPermissions: db.safeParse(u.extra_permissions, []),
+    mustChangePassword: !!u.must_change_password,
+    passwordChangedAt: u.password_changed_at || null
   };
 }
 
@@ -107,12 +108,14 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
 // СМЕНА ПАРОЛЯ (свой аккаунт)
 // ============================================================
 router.post('/change-password', authenticate, async (req, res) => {
-  const { newPassword, confirmPassword } = req.body;
+  const { currentPassword, newPassword, confirmPassword } = req.body;
 
-  if (!newPassword || !confirmPassword) {
-    const missing = [];
-    if (!newPassword)     missing.push('Новый пароль');
-    if (!confirmPassword) missing.push('Подтверждение пароля');
+  const missing = [];
+  if (!currentPassword) missing.push('Текущий пароль');
+  if (!newPassword)     missing.push('Новый пароль');
+  if (!confirmPassword) missing.push('Подтверждение пароля');
+
+  if (missing.length > 0) {
     return res.status(400).json({
       error: missing.length === 1
         ? `Заполните поле «${missing[0]}»`
@@ -124,13 +127,18 @@ router.post('/change-password', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'Пароли не совпадают' });
   }
 
+  const oldOk = await bcrypt.compare(currentPassword, req.user.password);
+  if (!oldOk) {
+    return res.status(400).json({ error: 'Текущий пароль неверен' });
+  }
+
   const v = validatePassword(newPassword);
   if (!v.ok) {
     return res.status(400).json({
       error: 'Пароль не соответствует требованиям:\n• ' + v.errors.join('\n• ')
     });
   }
-  
+
   const same = await bcrypt.compare(newPassword, req.user.password);
   if (same) {
     return res.status(400).json({ error: 'Новый пароль должен отличаться от текущего' });
@@ -139,7 +147,10 @@ router.post('/change-password', authenticate, async (req, res) => {
   const hash = await bcrypt.hash(newPassword, 10);
   await db.query(
     `UPDATE users
-     SET password = ?, must_change_password = 0, updated_at = CURRENT_TIMESTAMP
+     SET password = ?,
+         must_change_password = 0,
+         password_changed_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
     [hash, req.user.id]
   );
