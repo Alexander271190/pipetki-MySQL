@@ -1,71 +1,72 @@
-2. updateSortArrows() не вызывается при пустом фильтре
+Проверка работоспособности
+В целом приложение готово к запуску и работе. Докер-сборка корректна, схема БД валидна, API-роуты сходятся, фронтенд подключён правильно.
+
+✅ Что работает
+Docker: docker-compose.yaml + Dockerfile — БД ждётся через healthcheck, схема инициализируется, том ./mysqldata сохраняет данные.
+
+Статика: express.static('frontend') + SPA-fallback на index.html — работает.
+
+Все API-роуты зарегистрированы: /api/auth, /api/pipettes, /api/users, /api/settings, /api/log, /api/import.
+
+Seed: пользователи, отделы, поля, фильтры, экспорт, демо-пипетки — создаются при первом старте.
+
+Роли: requireRole, requirePermission работают; admin имеет все права автоматически.
+
+Кнопка «Добавить поверку» скрывается для пользователей без прав — CSS добавлен в конец style.css, работает через is-admin / can-manage на <body>.
+
+Модалка разового пароля — вместо alert() нормальная модалка с кнопкой «Скопировать».
+
+Баг 8 (colspan) — colspan="5" в пустой таблице типов.
+
+Баг 9 (тост) — есть.
+
+Баг 10 (US-даты) — обрабатываются корректно в import.js.
+
+Слушатель temp-password-modal — вынесен на верхний уровень, не вложен.
+
+Сортировка истории в renderHistoryContent — от новых к старым.
+
+🟡 Что осталось недоделанным
+1. updateSortArrows() при пустом фильтре — всё ещё НЕ добавлен
 В render():
 
 js
 if (filtered.length === 0) {
-  tbody.innerHTML = '';
-  table.style.display = 'none';
-  empty.style.display = 'block';
-  if (pipettes.length > 0) empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+  ...
   updateSelectAllCheckbox();
   updateBulkCalButton();
-  return;                          // ← стрелки сортировки не обновляются
+  return;              // ← стрелки сортировки не обновляются
 }
-Если пользователь отфильтровал всё до нуля, потом поменял сортировку — стрелки в шапке останутся старыми. Добавь updateSortArrows(); перед return;.
+Если пользователь отфильтрует до нуля, потом переключит сортировку — стрелки в шапке останутся от предыдущего рендера. Вставь updateSortArrows(); перед return; (я уже объяснял куда).
 
-3. Бэкенд: only_own_department не проверяется на GET /:id и GET /:id/calibration
-В routes/pipettes.js:
-
-js
-router.get('/:id', authenticate, async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM pipettes WHERE id = ?', [req.params.id]);
-  ...
-});
-и
-
-js
-router.get('/:id/calibration', authenticate, async (req, res) => {
-  const [rows] = await db.query(
-    'SELECT * FROM calibration_history WHERE pipette_id = ? ...'
-  );
-  ...
-});
-Пользователь с only_own_department = 1 в списке видит только свой отдел, но по прямому ID (или через историю) может открыть чужое оборудование. Список фильтруется, деталь — нет.
-
-Если это не критично для лаборатории — можно оставить. Если критично — добавить проверку:
-
-js
-if (req.user.role !== 'admin' && req.user.only_own_department && req.user.department
-    && rows[0].department !== req.user.department) {
-  return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
-}
-4. Мёртвый код в savePipette — не убран
-js
-if (editId && fieldId === 'lastCalibration' && !value) {
-  const original = pipettes.find(x => x.id === editId);
-  if (original && original.last_calibration) {
-    continue;   // недостижимо: если required и пусто — уже в missing
-  }
-}
-Не баг, но логически недостижимая ветка. Можно смело убрать — на поведение не влияет.
-
-5. Frontend fallback _equipmentTypes без microscope
-В loadPipetteData:
+2. Frontend fallback _equipmentTypes без microscope
+В loadPipetteData():
 
 js
 _equipmentTypes = [
-  { value: 'pipette',     label: 'Пипетка',     ... },
-  { value: 'analyzer',    label: 'Анализатор',  ... },
-  { value: 'thermometer', label: 'Термометр',   ... },
-  { value: 'scales',      label: 'Весы',        ... },
-  { value: 'photometer',  label: 'Фотометр',    ... }
+  { value: 'pipette',     label: 'Пипетка', ... },
+  { value: 'analyzer',    label: 'Анализатор', ... },
+  { value: 'thermometer', label: 'Термометр', ... },
+  { value: 'scales',      label: 'Весы', ... },
+  { value: 'photometer',  label: 'Фотометр', ... }
+  // ← microscope нет
 ];
-В бэкенде microscope уже есть и в дефолтах БД, и в fallback-префиксах (pipettes.js, import.js) — а здесь забыт. Сработает только если GET /settings/equipment-types упадёт, но лучше добавить для консистентности:
+Сработает только если GET /settings/equipment-types упадёт. На бэке microscope есть и в дефолтах, и в fallback-префиксах. Добавь для консистентности.
 
-js
-{ value: 'microscope',  label: 'Микроскоп',   icon: '🔬', prefix: 'M' }
-6. JWT_SECRET в docker-compose.yaml
+3. JWT_SECRET в docker-compose.yaml и .env.example
 yaml
 JWT_SECRET: change_this_secret_key
-Не код-баг, но на прод обязательно заменить на случайную строку. И в .env.example тоже.
+Для продакшена — заменить на случайную строку. Для локальной разработки и тестов — некритично.
+
+🟠 Не критично, но стоит знать
+4. GET /api/pipettes/:id и GET /api/pipettes/:id/calibration — без проверки only_own_department
+Пользователь с ограничением на отдел в списке видит только свой отдел, но по прямому ID может открыть чужое оборудование. Если в лаборатории все свои — оставляй. Если строго — добавь проверку на бэке.
+
+5. N+1 запрос в GET /api/pipettes/
+js
+for (const p of pipettes) {
+  const [h] = await db.query('SELECT * FROM calibration_history WHERE pipette_id = ?', [p.id]);
+  p.history = h;
+}
+Для 100–200 единиц — не проблема. Для 1000+ — стоит объединить в один JOIN. Для лабораторной системы — оставляй.
 
