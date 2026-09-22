@@ -27,12 +27,36 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     const [pipettes] = await db.query(sql, params);
+
+    // Пустой список — нечего обогащать историей
+    if (!pipettes.length) return res.json([]);
+
+    // Один запрос на всю историю
+    const ids = pipettes.map(p => p.id);
+    const placeholders = ids.map(() => '?').join(',');
+    const [history] = await db.query(
+      `SELECT * FROM calibration_history
+       WHERE pipette_id IN (${placeholders})
+       ORDER BY \`date\` DESC`,
+      ids
+    );
+
+    // Раскладываем по пипеткам
+    const byId = {};
+    for (const h of history) {
+      (byId[h.pipette_id] ||= []).push(h);
+    }
+
+    // Явная сортировка на случай, если кто-то изменит ORDER BY в SQL
+    for (const id in byId) {
+      byId[id].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    }
+
     for (const p of pipettes) {
       p.active = !!p.active;
-      const [h] = await db.query(
-        'SELECT * FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC', [p.id]);
-      p.history = h;
+      p.history = byId[p.id] || [];
     }
+
     res.json(pipettes);
   } catch (e) {
     console.error(e);
