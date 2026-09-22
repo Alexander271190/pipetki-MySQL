@@ -16,6 +16,7 @@ let _equipmentTypes = [];
 let _cachedEquipmentTypes = []; 
 let _bulkSendIds = [];    
 let _bulkReturnIds = [];
+let _dataLoadedForUser = null;
 
 function todayStr() {
   const d = new Date();
@@ -317,6 +318,7 @@ async function impersonateUser(userId) {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
     myPrefs = { visibleFields: null, tableColumns: null };
+    _dataLoadedForUser = null;
     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.reminder-overlay.active').forEach(m => m.classList.remove('active'));
     showToast('Вы вошли как ' + result.user.fullName, 'success');
@@ -340,10 +342,10 @@ function stopImpersonate() {
     token: originalToken
   }));
   myPrefs = { visibleFields: null, tableColumns: null };
+  _dataLoadedForUser = null;
   showToast('Вернулись к своей учётной записи', 'success');
   renderAuthUI();
-  loadPipetteData();
-}
+  }
 
 // ============================================================
 // ЗАГРУЗКА ДАННЫХ
@@ -1250,6 +1252,11 @@ async function savePipette(e) {
     return;
   }
 
+  if (data.lastCalibration) {
+    const m = String(data.lastCalibration).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    data.lastCalibration = m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+  }
+  
   if (data.interval) data.interval = parseInt(data.interval) || 12;
   if (data.active !== undefined) {
     data.active = data.active === 'true' || data.active === true;
@@ -1772,7 +1779,10 @@ function renderAuthUI() {
     document.body.classList.toggle('can-export', canExport);
     document.body.classList.toggle('is-admin', admin);
 
-    loadPipetteData();
+    if (_dataLoadedForUser !== currentUser.id) {
+      _dataLoadedForUser = currentUser.id;
+      loadPipetteData();
+    }
 
     if (currentUser.mustChangePassword) {
       openChangePasswordModal(true);
@@ -1786,6 +1796,7 @@ function renderAuthUI() {
     document.body.classList.remove('can-manage', 'can-import', 'can-export', 'is-admin');
     const btnStop = document.getElementById('btn-impersonate-stop');
     if (btnStop) btnStop.style.display = 'none';
+    _dataLoadedForUser = null;
   }
 }
 
