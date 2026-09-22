@@ -82,17 +82,22 @@ router.get('/departments-full', authenticate, requireRole(['admin']), async (req
 // ПОЛЯ ФОРМЫ
 // ============================================================
 router.get('/fields', authenticate, async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM field_config ORDER BY field_order');
-  res.json(rows.map(f => ({
-    id: f.id,
-    label: f.label,
-    type: f.type,
-    required: !!f.required,
-    enabled: !!f.enabled,
-    options: JSON.parse(f.options || '[]'),
-    default: f.default_value || '',
-    order: f.field_order
-  })));
+  try {
+    const [rows] = await db.query('SELECT * FROM field_config ORDER BY field_order');
+    res.json(rows.map(f => ({
+      id: f.id,
+      label: f.label,
+      type: f.type,
+      required: !!f.required,
+      enabled: !!f.enabled,
+      options: db.safeParse(f.options, []),
+      default: f.default_value || '',
+      order: f.field_order
+    })));
+  } catch (e) {
+    console.error('GET /fields:', e);
+    res.status(500).json({ error: 'Ошибка загрузки полей' });
+  }
 });
 
 router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => {
@@ -126,9 +131,14 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
 // НАСТРОЙКИ ЭКСПОРТА
 // ============================================================
 router.get('/export', authenticate, async (req, res) => {
-  const [rows] = await db.query('SELECT fields FROM export_settings WHERE id = 1');
-  if (!rows.length) return res.json([]);
-  res.json(JSON.parse(rows[0].fields));
+  try {
+    const [rows] = await db.query('SELECT fields FROM export_settings WHERE id = 1');
+    if (!rows.length) return res.json([]);
+    res.json(db.safeParse(rows[0].fields, []));
+  } catch (e) {
+    console.error('GET /export:', e);
+    res.status(500).json({ error: 'Ошибка загрузки настроек экспорта' });
+  }
 });
 
 router.put('/export', authenticate, requireRole(['admin']), async (req, res) => {
@@ -146,10 +156,15 @@ router.put('/export', authenticate, requireRole(['admin']), async (req, res) => 
 // СИСТЕМНЫЕ НАСТРОЙКИ
 // ============================================================
 router.get('/system', authenticate, async (req, res) => {
-  const [rows] = await db.query('SELECT setting_key, setting_value FROM system_settings');
-  const result = {};
-  for (const s of rows) result[s.setting_key] = s.setting_value;
-  res.json(result);
+  try {
+    const [rows] = await db.query('SELECT setting_key, setting_value FROM system_settings');
+    const result = {};
+    for (const s of rows) result[s.setting_key] = s.setting_value;
+    res.json(result);
+  } catch (e) {
+    console.error('GET /system:', e);
+    res.status(500).json({ error: 'Ошибка загрузки настроек' });
+  }
 });
 
 router.put('/system', authenticate, requireRole(['admin']), async (req, res) => {
@@ -216,21 +231,27 @@ router.put('/filters', authenticate, requireRole(['admin']), async (req, res) =>
 
 // GET /api/settings/equipment-types
 router.get('/equipment-types', authenticate, async (req, res) => {
-  const [rows] = await db.query(
-    "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-  );
-  if (!rows.length) {
-    return res.json([
-      { value: 'pipette',     label: 'Пипетка',     prefix: 'P' },
-      { value: 'analyzer',    label: 'Анализатор',  prefix: 'A' },
-      { value: 'thermometer', label: 'Термометр',   prefix: 'T' },
-      { value: 'scales',      label: 'Весы',        prefix: 'S' },
-      { value: 'photometer',  label: 'Фотометр',    prefix: 'F' },
-      { value: 'microscope',  label: 'Микроскоп',   prefix: 'M' },
-    ]);
+  const fallback = [
+    { value: 'pipette',     label: 'Пипетка',     prefix: 'P' },
+    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A' },
+    { value: 'thermometer', label: 'Термометр',   prefix: 'T' },
+    { value: 'scales',      label: 'Весы',        prefix: 'S' },
+    { value: 'photometer',  label: 'Фотометр',    prefix: 'F' },
+    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M' },
+  ];
+
+  try {
+    const [rows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    if (!rows.length) return res.json(fallback);
+    res.json(db.safeParse(rows[0].setting_value, fallback));
+  } catch (e) {
+    console.error('GET /equipment-types:', e);
+    res.json(fallback);
   }
-  res.json(JSON.parse(rows[0].setting_value));
 });
+
 // PUT /api/settings/equipment-types (только админ)
 router.put('/equipment-types', authenticate, requireRole(['admin']), async (req, res) => {
   const types = req.body;
@@ -306,7 +327,7 @@ router.get('/user-preferences/:userId', authenticate, requireRole(['admin']), as
       [req.params.userId]
     );
     if (!rows.length) return res.json({});
-    res.json(JSON.parse(rows[0].preferences || '{}'));
+    res.json(db.safeParse(rows[0].preferences, {}));
   } catch (e) {
     console.error('user-preferences GET error:', e);
     res.json({});
@@ -355,7 +376,7 @@ router.get('/my-preferences', authenticate, async (req, res) => {
       [req.user.id]
     );
     if (!rows.length) return res.json({});
-    res.json(JSON.parse(rows[0].preferences || '{}'));
+    res.json(db.safeParse(rows[0].preferences, {}));
   } catch (e) {
     console.error('my-preferences GET error:', e);
     res.json({});
