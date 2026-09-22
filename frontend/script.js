@@ -13,7 +13,9 @@ let exportFields = null;
 let selectedPipettes = new Set();
 let myPrefs = { visibleFields: null, tableColumns: null };
 let _equipmentTypes = [];            
-let _cachedEquipmentTypes = [];   
+let _cachedEquipmentTypes = []; 
+let _bulkSendIds = [];    
+let _bulkReturnIds = [];
 
 function todayStr() {
   const d = new Date();
@@ -2742,6 +2744,8 @@ async function openBulkSendModal() {
     showToast('Не выбрано ни одной пипетки. На внешнюю поверку отправляются только пипетки (дозаторы).', 'error');
     return;
   }
+  
+  _bulkSendIds = [...toSend];
 
   document.getElementById('bulk-send-count').textContent = toSend.length;
 
@@ -2763,16 +2767,15 @@ async function openBulkSendModal() {
 
 function closeBulkSendModal() {
   document.getElementById('bulk-send-modal').classList.remove('active');
+  _bulkSendIds = [];
 }
 
 async function saveBulkSend(e) {
   e.preventDefault();
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
-
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-  const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
- const toSend = selected.filter(id => {
+        
+  const toSend = _bulkSendIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
   return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
   });
@@ -2821,12 +2824,10 @@ async function saveBulkSend(e) {
 // ============================================================
 // ПЕЧАТЬ АКТА ОТПРАВКИ
 // ============================================================
-function printSendAct() {
+async function printSendAct() {
+  await refreshCurrentUser();  
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
-
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-  const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
-  const sendItems = selected.filter(id => {
+  const sendItems = _bulkSendIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
   return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
   });
@@ -2958,6 +2959,8 @@ async function openBulkReturnModal() {
     return;
   }
 
+  _bulkReturnIds = sentItems.map(p => p.id);
+
   document.getElementById('bulk-return-count').textContent = sentItems.length;
 
   const container = document.getElementById('bulk-return-items-container');
@@ -3012,6 +3015,7 @@ async function openBulkReturnModal() {
 
 function closeBulkReturnModal() {
   document.getElementById('bulk-return-modal').classList.remove('active');
+  _bulkReturnIds = [];
 }
 
 function toggleSingleCert(checked) {
@@ -3052,9 +3056,7 @@ async function saveBulkReturn(e) {
     return;
   }
 
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-  const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
-  const sentIds = selected.filter(id => {
+  const sentIds = _bulkReturnIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
   return p && p.sent_for_calibration && p.equipment_type === 'pipette';
   });
