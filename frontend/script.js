@@ -1832,6 +1832,9 @@ document.getElementById('change-password-modal').addEventListener('click', e => 
 document.getElementById('history-export-modal').addEventListener('click', e => {
   if (e.target.id === 'history-export-modal') closeHistoryExportModal();
 });
+document.getElementById('temp-password-modal').addEventListener('click', e => {
+  if (e.target.id === 'temp-password-modal') closeTempPasswordModal();
+});
 
 const session = getSession();
 if (session) {
