@@ -457,8 +457,8 @@ async function loadFilterConfig() {
 // ============================================================
 function calcStatus(p) {
   if (p.sent_for_calibration) return 'sent';
-  if (!p.active) return 'inactive';
   if (p.last_result === 'fail') return 'fail';
+  if (!p.active) return 'inactive';
   if (p.last_result === 'wip') return 'wip';
   if (!p.last_calibration || !p.interval) return 'danger';
   const last = new Date(p.last_calibration);
@@ -3512,7 +3512,10 @@ function openChangePasswordModal(force) {
   const isImpersonatingNow = isImpersonating();
   const reallyForce = force && !isImpersonatingNow;
 
-  if (cancelBtn) cancelBtn.style.display = reallyForce ? 'none' : 'inline-flex';
+  if (cancelBtn) {
+    cancelBtn.style.display = reallyForce ? 'none' : 'inline-flex';
+    cancelBtn.textContent = (force && isImpersonatingNow) ? 'Позже' : 'Отмена';
+  }
 
   if (modal) modal.classList.add('active');
   if (newInput) setTimeout(() => newInput.focus(), 100);
