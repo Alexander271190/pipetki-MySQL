@@ -716,13 +716,13 @@ const SCENARIOS = [
   { tag: "S13", title: "Сценарий 13. Аудит и восстановление после сбоев", time: "20 мин", priority: "🟢", blocks: "всё", steps: [
     "Пройти 20 пунктов, разные статусы, комментарии",
     "Закрыть вкладку. Открыть → всё на месте",
-    "DevTools → удалить kdl_checklist_v34. F5",
+    "DevTools → удалить kdl_checklist_v35. F5",
     "Чек-лист пустой, не сломан. Console без ошибок",
     "Пройти несколько. Закрыть браузер полностью. Открыть → сохранилось",
-    "localStorage.setItem('kdl_checklist_v34', '{broken'). F5",
+    "localStorage.setItem('kdl_checklist_v35', '{broken'). F5",
     "Приложение стартует с чистого, не падает, нет красных ошибок",
     "localStorage.setItem(..., 'null'). F5 → то же",
-    "{\"version\":4,\"items\":{},\"settings\":{}} → пустой чек-лист, без ошибок",
+    "{\"version\":5,\"items\":{},\"settings\":{}} → пустой чек-лист, без ошибок",
     "Инкогнито: 5 пунктов, закрыть, обычное окно → прогресса нет (ожидаемо)"
   ], expected: "Приложение устойчиво к порче localStorage, битому JSON, отсутствию ключа" },
 
@@ -911,13 +911,17 @@ function updateUndoRedoBtns(){
   if(r)r.disabled=historyIndex>=history.length-1;
 }
 
-function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
 function escapeAttr(s){return escapeHtml(s)}
 
 function getSectionStats(si){
   const s = DATA[si];
   let done = 0, fail = 0;
-  s.items.forEach((_, ii) => {
+  s.items.forEach(function(_, ii){
     const st = getItem(itemKey(si, ii)).s;
     if (st === "pass") done++;
     if (st === "fail") fail++;
@@ -929,7 +933,7 @@ function getSectionStats(si){
 function renderChecklist(){
   const root=document.getElementById("checklist");
   root.innerHTML="";
-  DATA.forEach((section,si)=>{
+  DATA.forEach(function(section,si){
     const secEl=document.createElement("div");
     secEl.className="section";
     secEl.dataset.section=si;
@@ -949,16 +953,20 @@ function renderChecklist(){
       '<button data-op="skip-all" title="Всем пунктам блока ⏭️">⏭️</button>'+
       '<button data-op="clear-all" title="Очистить блок">🧹</button>'+
       '</div>';
-    header.onclick=()=>secEl.classList.toggle("collapsed");
-    bindSectionOps(header,section.items.length,(ii)=>itemKey(si,ii),section.title);
+    header.onclick=function(){secEl.classList.toggle("collapsed")};
+    bindSectionOps(header,section.items.length,function(ii){return itemKey(si,ii)},section.title);
     secEl.appendChild(header);
 
     const body=document.createElement("div");
     body.className="section-body";
     let lastGroup="";
-    section.items.forEach((item,ii)=>{
+    section.items.forEach(function(item,ii){
       if(item.g&&item.g!==lastGroup){
-        const g=document.createElement("div");g.className="group-title";g.textContent=item.g;body.appendChild(g);lastGroup=item.g;
+        const g=document.createElement("div");
+        g.className="group-title";
+        g.textContent=item.g;
+        body.appendChild(g);
+        lastGroup=item.g;
       }
       body.appendChild(makeItemEl({
         key:itemKey(si,ii), tag:section.tag, text:item.t,
@@ -974,13 +982,17 @@ function renderChecklist(){
 function renderScenarios(){
   const root=document.getElementById("scenarios");
   root.innerHTML="";
-  SCENARIOS.forEach((sc,si)=>{
+  SCENARIOS.forEach(function(sc,si){
     const secEl=document.createElement("div");
     secEl.className="section scenario";
     secEl.dataset.section=si;
     secEl.dataset.type="scenario";
     let done=0,fail=0;
-    sc.steps.forEach((_,st)=>{const s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    sc.steps.forEach(function(_,st){
+      const s=getItem(scenarioKey(si,st)).s;
+      if(s==="pass")done++;
+      if(s==="fail")fail++;
+    });
     const total=sc.steps.length;
     const pct=total?(done/total*100):0;
     const header=document.createElement("div");
@@ -989,8 +1001,8 @@ function renderScenarios(){
     header.innerHTML=
       '<span class="arrow">▼</span>'+
       '<span class="section-title">'+escapeHtml(sc.title)+'</span>'+
-      '<span class="section-meta">⏱ '+sc.time+'</span>'+
-      '<span class="section-meta">'+sc.priority+' '+sc.blocks+'</span>'+
+      '<span class="section-meta">⏱ '+escapeHtml(sc.time)+'</span>'+
+      '<span class="section-meta">'+escapeHtml(sc.priority)+' '+escapeHtml(sc.blocks)+'</span>'+
       '<div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div>'+
       '<span class="section-badge '+badgeClass+'">'+done+"/"+total+(fail>0?" · ❌"+fail:"")+'</span>'+
       '<div class="section-ops">'+
@@ -998,13 +1010,13 @@ function renderScenarios(){
       '<button data-op="skip-all" title="Всем шагам ⏭️">⏭️</button>'+
       '<button data-op="clear-all" title="Очистить сценарий">🧹</button>'+
       '</div>';
-    header.onclick=()=>secEl.classList.toggle("collapsed");
-    bindSectionOps(header,sc.steps.length,(st)=>scenarioKey(si,st),sc.title);
+    header.onclick=function(){secEl.classList.toggle("collapsed")};
+    bindSectionOps(header,sc.steps.length,function(st){return scenarioKey(si,st)},sc.title);
     secEl.appendChild(header);
 
     const body=document.createElement("div");
     body.className="section-body";
-    sc.steps.forEach((step,st)=>{
+    sc.steps.forEach(function(step,st){
       body.appendChild(makeItemEl({
         key:scenarioKey(si,st), tag:sc.tag, text:step,
         data:getItem(scenarioKey(si,st)),
@@ -1021,8 +1033,8 @@ function renderScenarios(){
 }
 
 function bindSectionOps(header,count,keyFn,label){
-  header.querySelectorAll(".section-ops button").forEach(btn=>{
-    btn.onclick=e=>{
+  header.querySelectorAll(".section-ops button").forEach(function(btn){
+    btn.onclick=function(e){
       e.stopPropagation();
       const op=btn.dataset.op;
       if(op==="pass-all"){
@@ -1046,7 +1058,8 @@ function bindSectionOps(header,count,keyFn,label){
 }
 
 function makeItemEl(opts){
-  const {key,tag,text,data,sectionTitle,isScenario,stepNum}=opts;
+  const key=opts.key, tag=opts.tag, text=opts.text, data=opts.data;
+  const isScenario=opts.isScenario, stepNum=opts.stepNum;
   const status=data.s;
   const hasMeta=!!(data.c||data.b);
   const el=document.createElement("div");
@@ -1059,7 +1072,7 @@ function makeItemEl(opts){
 
   const commentBadge=data.c?'<span class="badge">💬</span>':"";
   const bugBadge=data.b?'<span class="badge">🐞</span>':"";
-  const prefix=isScenario?'<span class="step-num">'+stepNum+'.</span>':'<span class="block-tag">'+tag+'</span>';
+  const prefix=isScenario?'<span class="step-num">'+stepNum+'.</span>':'<span class="block-tag">'+escapeHtml(tag)+'</span>';
 
   el.innerHTML=
     '<input type="checkbox" class="item-check" '+(status?"checked":"")+'>'+
@@ -1090,17 +1103,17 @@ function makeItemEl(opts){
   const label=el.querySelector(".item-text");
   const meta=el.querySelector("[data-meta]");
 
-  const toggleStatus=()=>{
+  function toggleStatus(){
     pushHistory();
     const c=getItem(key);
     setItem(key,{s:c.s==="pass"?null:"pass"});
     renderAll();
-  };
+  }
   checkbox.onchange=toggleStatus;
   label.onclick=toggleStatus;
 
-  el.querySelectorAll(".status-btn").forEach(btn=>{
-    btn.onclick=e=>{
+  el.querySelectorAll(".status-btn").forEach(function(btn){
+    btn.onclick=function(e){
       e.stopPropagation();
       pushHistory();
       const s=btn.dataset.status;
@@ -1109,15 +1122,15 @@ function makeItemEl(opts){
       renderAll();
     };
   });
-  el.querySelector('[data-action="comment"]').onclick=()=>{
+  el.querySelector('[data-action="comment"]').onclick=function(){
     meta.classList.toggle("open");
     if(meta.classList.contains("open"))meta.querySelector("textarea").focus();
   };
-  el.querySelector('[data-action="bug"]').onclick=()=>{
+  el.querySelector('[data-action="bug"]').onclick=function(){
     meta.classList.add("open");
     meta.querySelector('input[type="url"]').focus();
   };
-  meta.querySelector('[data-action="save-meta"]').onclick=()=>{
+  meta.querySelector('[data-action="save-meta"]').onclick=function(){
     pushHistory();
     const c=meta.querySelector("textarea").value;
     const b=meta.querySelector('input[type="url"]').value.trim();
@@ -1125,13 +1138,13 @@ function makeItemEl(opts){
     toast("Сохранено","success");
     renderAll();
   };
-  meta.querySelector('[data-action="clear-meta"]').onclick=()=>{
+  meta.querySelector('[data-action="clear-meta"]').onclick=function(){
     if(!confirm("Очистить комментарий и ссылку?"))return;
     pushHistory();
     setItem(key,{c:"",b:""});
     renderAll();
   };
-  meta.querySelector("textarea").onkeydown=e=>{
+  meta.querySelector("textarea").onkeydown=function(e){
     if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))meta.querySelector('[data-action="save-meta"]').click();
   };
   return el;
@@ -1150,9 +1163,9 @@ function renderAll(){
 function getAllItemsForTab(tab){
   const items=[];
   if(tab==="checklist"){
-    DATA.forEach((sec,si)=>sec.items.forEach((_,ii)=>{items.push(itemKey(si,ii))}));
+    DATA.forEach(function(sec,si){sec.items.forEach(function(_,ii){items.push(itemKey(si,ii))})});
   }else{
-    SCENARIOS.forEach((sc,si)=>sc.steps.forEach((_,st)=>{items.push(scenarioKey(si,st))}));
+    SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(_,st){items.push(scenarioKey(si,st))})});
   }
   return items;
 }
@@ -1160,7 +1173,10 @@ function getAllItemsForTab(tab){
 function updateStats(){
   const keys=getAllItemsForTab(activeTab);
   let pass=0,fail=0,warn=0,skip=0,total=keys.length;
-  keys.forEach(k=>{const s=getItem(k).s;if(s==="pass")pass++;else if(s==="fail")fail++;else if(s==="warn")warn++;else if(s==="skip")skip++});
+  keys.forEach(function(k){
+    const s=getItem(k).s;
+    if(s==="pass")pass++;else if(s==="fail")fail++;else if(s==="warn")warn++;else if(s==="skip")skip++;
+  });
   const left=total-pass-fail-warn-skip;
   document.getElementById("stat-total").textContent=total;
   document.getElementById("stat-pass").textContent=pass;
@@ -1175,8 +1191,8 @@ function updateStats(){
 function updateTabCounts(){
   const ckKeys=getAllItemsForTab("checklist");
   const scKeys=getAllItemsForTab("scenarios");
-  const ckDone=ckKeys.filter(k=>{const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
-  const scDone=scKeys.filter(k=>{const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  const ckDone=ckKeys.filter(function(k){const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  const scDone=scKeys.filter(function(k){const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
   document.getElementById("tab-count-checklist").textContent=ckDone+"/"+ckKeys.length;
   document.getElementById("tab-count-scenarios").textContent=scDone+"/"+scKeys.length;
 }
@@ -1185,9 +1201,9 @@ function applyFilters(){
   const q=searchQuery.trim().toLowerCase();
   const activeContent=document.getElementById("tab-"+activeTab);
   if(!activeContent)return;
-  activeContent.querySelectorAll(".section").forEach(secEl=>{
+  activeContent.querySelectorAll(".section").forEach(function(secEl){
     let visible=0;
-    secEl.querySelectorAll(".item").forEach(item=>{
+    secEl.querySelectorAll(".item").forEach(function(item){
       const tm=!q||item.dataset.text.indexOf(q)!==-1;
       const st=item.dataset.status||"";
       const hm=item.dataset.hasMeta==="1";
@@ -1206,7 +1222,7 @@ function applyFilters(){
     if(q&&visible)secEl.classList.remove("collapsed");
     if(q&&!visible)secEl.classList.add("collapsed");
   });
-  ["all","left","fail","with-meta","with-bugs"].forEach(f=>{
+  ["all","left","fail","with-meta","with-bugs"].forEach(function(f){
     const btn=document.getElementById("f-"+f);
     if(btn)btn.classList.toggle("active",f===activeFilter);
   });
@@ -1217,7 +1233,7 @@ function switchTab(tab){
   activeTab=tab;
   state.settings.tab=tab;
   saveState();
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===tab));
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.tab===tab)});
   document.getElementById("tab-checklist").style.display=tab==="checklist"?"":"none";
   document.getElementById("tab-scenarios").style.display=tab==="scenarios"?"":"none";
   applyFilters();
@@ -1225,12 +1241,17 @@ function switchTab(tab){
 }
 
 /* ================ UI EVENTS ================ */
-document.getElementById("search").addEventListener("input",e=>{searchQuery=e.target.value;applyFilters()});
+document.getElementById("search").addEventListener("input",function(e){searchQuery=e.target.value;applyFilters()});
 function filterStatus(f){activeFilter=f;applyFilters()}
-function expandAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(s=>s.classList.remove("collapsed"))}
-function collapseAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(s=>s.classList.add("collapsed"))}
+function expandAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(function(s){s.classList.remove("collapsed")})}
+function collapseAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(function(s){s.classList.add("collapsed")})}
 
-function applyTheme(t){document.documentElement.setAttribute("data-theme",t);document.getElementById("theme-btn").textContent=t==="dark"?"☀️":"🌙";state.settings.theme=t;saveState()}
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme",t);
+  document.getElementById("theme-btn").textContent=t==="dark"?"☀️":"🌙";
+  state.settings.theme=t;
+  saveState();
+}
 function toggleTheme(){applyTheme(state.settings.theme==="dark"?"light":"dark")}
 
 /* ================ EXPORT / IMPORT / SHARE ================ */
@@ -1241,18 +1262,18 @@ function exportJSON(){
     settings:{theme:state.settings.theme,tab:state.settings.tab},
     items:{}
   };
-  DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{
+  DATA.forEach(function(sec,si){sec.items.forEach(function(it,ii){
     const k=itemKey(si,ii);
     const d=state.items[k];
     if(!d)return;
     result.items[k]={kind:"block",block:sec.tag,group:it.g||"",text:it.t,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
-  }));
-  SCENARIOS.forEach((sc,si)=>sc.steps.forEach((step,st)=>{
+  })});
+  SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(step,st){
     const k=scenarioKey(si,st);
     const d=state.items[k];
     if(!d)return;
     result.items[k]={kind:"scenario",block:sc.tag,title:sc.title,step:st+1,text:step,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
-  }));
+  })});
   const blob=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -1262,11 +1283,11 @@ function exportJSON(){
 }
 
 function triggerImport(){document.getElementById("import-file").click()}
-document.getElementById("import-file").addEventListener("change",e=>{
+document.getElementById("import-file").addEventListener("change",function(e){
   const file=e.target.files[0];
   if(!file)return;
   const reader=new FileReader();
-  reader.onload=ev=>{
+  reader.onload=function(ev){
     try{importData(JSON.parse(ev.target.result))}
     catch(err){toast("Ошибка чтения файла: "+err.message,"error")}
   };
@@ -1275,11 +1296,13 @@ document.getElementById("import-file").addEventListener("change",e=>{
 });
 
 function importData(parsed){
+  if(!parsed||typeof parsed!=="object"){toast("Некорректный файл","error");return}
   pushHistory();
   let imported=0;
-  if(parsed.items){
-    Object.keys(parsed.items).forEach(k=>{
+  if(parsed.items&&typeof parsed.items==="object"){
+    Object.keys(parsed.items).forEach(function(k){
       const v=parsed.items[k];
+      if(!v||typeof v!=="object")return;
       const norm={s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||Date.now()};
       if(!state.items[k]){state.items[k]=norm;imported++;return}
       const lt=state.items[k]._t||0;
@@ -1287,7 +1310,7 @@ function importData(parsed){
       if(rt>=lt){state.items[k]=norm;imported++}
     });
   }else{
-    Object.keys(parsed).forEach(k=>{
+    Object.keys(parsed).forEach(function(k){
       if(k==="settings"||k==="_updated"||k==="version"||k==="exported"||k==="stats")return;
       const v=parsed[k];
       if(typeof v==="string"){state.items[k]={s:v,c:"",b:"",_t:Date.now()};imported++}
@@ -1301,7 +1324,7 @@ function importData(parsed){
 
 function shareLink(){
   const compact={v:5,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
-  Object.keys(state.items).forEach(k=>{
+  Object.keys(state.items).forEach(function(k){
     const v=state.items[k];
     const short={};
     if(v.s)short.s=v.s;
@@ -1315,8 +1338,8 @@ function shareLink(){
     if(url.length>32000){toast("Ссылка слишком длинная ("+url.length+" симв.). Используйте экспорт JSON.","warn");return}
     if(navigator.clipboard){
       navigator.clipboard.writeText(url).then(
-        ()=>toast("Ссылка скопирована ("+url.length+" симв.)","success"),
-        ()=>prompt("Скопируйте ссылку:",url)
+        function(){toast("Ссылка скопирована ("+url.length+" симв.)","success")},
+        function(){prompt("Скопируйте ссылку:",url)}
       );
     }else prompt("Скопируйте ссылку:",url);
   }catch(e){toast("Ошибка: "+e.message,"error")}
@@ -1330,7 +1353,7 @@ function loadFromHash(){
     const json=decodeURIComponent(escape(atob(encoded)));
     const parsed=JSON.parse(json);
     if(parsed.i){
-      Object.keys(parsed.i).forEach(k=>{
+      Object.keys(parsed.i).forEach(function(k){
         const v=parsed.i[k];
         if(!state.items[k])state.items[k]={s:v.s||null,c:v.c||"",b:v.b||"",_t:Date.now()};
       });
@@ -1353,14 +1376,14 @@ function openDiff(){
   document.getElementById("diff-modal").classList.add("open");
 }
 function closeDiff(){document.getElementById("diff-modal").classList.remove("open")}
-document.getElementById("diff-a").addEventListener("change",e=>{readJsonFile(e.target.files[0],d=>{diffData.a=d;renderDiff()})});
-document.getElementById("diff-b").addEventListener("change",e=>{readJsonFile(e.target.files[0],d=>{diffData.b=d;renderDiff()})});
-document.getElementById("diff-modal").addEventListener("click",e=>{if(e.target.id==="diff-modal")closeDiff()});
+document.getElementById("diff-a").addEventListener("change",function(e){readJsonFile(e.target.files[0],function(d){diffData.a=d;renderDiff()})});
+document.getElementById("diff-b").addEventListener("change",function(e){readJsonFile(e.target.files[0],function(d){diffData.b=d;renderDiff()})});
+document.getElementById("diff-modal").addEventListener("click",function(e){if(e.target.id==="diff-modal")closeDiff()});
 
 function readJsonFile(file,cb){
   if(!file){cb(null);return}
   const r=new FileReader();
-  r.onload=ev=>{try{cb(JSON.parse(ev.target.result))}catch(e){toast("Ошибка чтения: "+e.message,"error");cb(null)}};
+  r.onload=function(ev){try{cb(JSON.parse(ev.target.result))}catch(e){toast("Ошибка чтения: "+e.message,"error");cb(null)}};
   r.readAsText(file);
 }
 
@@ -1391,20 +1414,21 @@ function renderDiff(){
   }
   function normalize(obj){
     const out={};
-    Object.keys(obj||{}).forEach(k=>{
+    Object.keys(obj||{}).forEach(function(k){
       const v=obj[k];
       if(typeof v==="string")out[k]={s:v,c:"",b:""};
-      else out[k]={s:v.s||null,c:v.c||"",b:v.b||""};
+      else if(v&&typeof v==="object")out[k]={s:v.s||null,c:v.c||"",b:v.b||""};
+      else out[k]={s:null,c:"",b:""};
     });
     return out;
   }
   const A=normalize(a.items),B=normalize(b.items);
   const allKeys={};
-  Object.keys(A).forEach(k=>allKeys[k]=true);
-  Object.keys(B).forEach(k=>allKeys[k]=true);
+  Object.keys(A).forEach(function(k){allKeys[k]=true});
+  Object.keys(B).forEach(function(k){allKeys[k]=true});
   const changes=[];
   let added=0,removed=0,changed=0,same=0;
-  Object.keys(allKeys).forEach(key=>{
+  Object.keys(allKeys).forEach(function(key){
     const o=A[key],n=B[key];
     if(o&&!n){removed++;changes.push({key:key,type:"removed",oldV:o,newV:n})}
     else if(!o&&n){added++;changes.push({key:key,type:"added",oldV:o,newV:n})}
@@ -1425,8 +1449,8 @@ function renderDiff(){
     '</div>';
   if(!changes.length){result.innerHTML=summary+'<div class="diff-empty">✓ Различий нет</div>';return}
   const order={changed:0,added:1,removed:2};
-  changes.sort((x,y)=>order[x.type]-order[y.type]);
-  const rows=changes.map(ch=>{
+  changes.sort(function(x,y){return order[x.type]-order[y.type]});
+  const rows=changes.map(function(ch){
     const info=lookupText(ch.key);
     let body="";
     if(ch.type==="changed"){
@@ -1434,14 +1458,14 @@ function renderDiff(){
       if((ch.oldV.s||"")!==(ch.newV.s||""))parts.push('Статус: <span class="old">'+statusLabel(ch.oldV.s)+'</span> → <span class="new">'+statusLabel(ch.newV.s)+'</span>');
       if((ch.oldV.c||"")!==(ch.newV.c||""))parts.push('Комментарий: <span class="old">'+escapeHtml(ch.oldV.c||"—")+'</span> → <span class="new">'+escapeHtml(ch.newV.c||"—")+'</span>');
       if((ch.oldV.b||"")!==(ch.newV.b||""))parts.push('Баг: <span class="old">'+escapeHtml(ch.oldV.b||"—")+'</span> → <span class="new">'+escapeHtml(ch.newV.b||"—")+'</span>');
-      body=parts.map(p=>'<span class="diff-change">'+p+'</span>').join("");
+      body=parts.map(function(p){return '<span class="diff-change">'+p+'</span>'}).join("");
     }else if(ch.type==="added"){
       body='<span class="diff-change">+ добавлено: '+statusLabel(ch.newV.s)+(ch.newV.c?" · 💬":"")+(ch.newV.b?" · 🐞":"")+'</span>';
     }else{
       body='<span class="diff-change">− удалено: '+statusLabel(ch.oldV.s)+(ch.oldV.c?" · 💬":"")+(ch.oldV.b?" · 🐞":"")+'</span>';
     }
     return '<div class="diff-row '+ch.type+'">'+
-      '<div><span class="diff-block">'+info.block+'</span><span class="diff-text">'+escapeHtml(info.text)+'</span></div>'+
+      '<div><span class="diff-block">'+escapeHtml(info.block)+'</span><span class="diff-text">'+escapeHtml(info.text)+'</span></div>'+
       body+'</div>';
   }).join("");
   result.innerHTML=summary+'<div class="diff-list">'+rows+'</div>';
@@ -1456,7 +1480,7 @@ function csvEscape(v){
 
 function exportJiraCSV(){
   const rows=[];
-  DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{
+  DATA.forEach(function(sec,si){sec.items.forEach(function(it,ii){
     const k=itemKey(si,ii);
     const d=getItem(k);
     if(!(d.b||d.s==="fail"))return;
@@ -1466,8 +1490,8 @@ function exportJiraCSV(){
     if(d.b)parts.push("Ссылка на баг: "+d.b);
     if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌ Провалено",warn:"⚠️",skip:"⏭️"})[d.s]);
     rows.push(["[КДЛ][Блок "+sec.tag+"] "+it.t,"Bug",p,"kdl-checklist,block-"+sec.tag,parts.join("\n")]);
-  }));
-  SCENARIOS.forEach((sc,si)=>sc.steps.forEach((step,st)=>{
+  })});
+  SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(step,st){
     const k=scenarioKey(si,st);
     const d=getItem(k);
     if(!(d.b||d.s==="fail"))return;
@@ -1477,10 +1501,10 @@ function exportJiraCSV(){
     if(d.b)parts.push("Ссылка на баг: "+d.b);
     if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌",warn:"⚠️",skip:"⏭️"})[d.s]);
     rows.push(["[КДЛ][Сценарий "+sc.tag+"] Шаг "+(st+1)+": "+step,"Bug",p,"kdl-scenarios,"+sc.tag,parts.join("\n")]);
-  }));
+  })});
   if(!rows.length){toast("Нет багов для экспорта","warn");return}
   const header=["Summary","Issue Type","Priority","Labels","Description"];
-  const lines=[header].concat(rows).map(r=>r.map(csvEscape).join(",")).join("\r\n");
+  const lines=[header].concat(rows).map(function(r){return r.map(csvEscape).join(",")}).join("\r\n");
   const blob=new Blob(["\uFEFF"+lines],{type:"text/csv;charset=utf-8"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -1494,14 +1518,14 @@ function exportMarkdown(){
   let md="# Чек-лист КДЛ v3.5\n\n**Дата:** "+date+"\n\n";
   const ckKeys=getAllItemsForTab("checklist");
   const ckStats={pass:0,fail:0,warn:0,skip:0};
-  ckKeys.forEach(k=>{const s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
+  ckKeys.forEach(function(k){const s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
   md+="## 📋 Чек-лист ("+(ckStats.pass+ckStats.skip)+"/"+ckKeys.length+")\n\n";
   md+="✅ "+ckStats.pass+" · ❌ "+ckStats.fail+" · ⚠️ "+ckStats.warn+" · ⏭️ "+ckStats.skip+"\n\n";
-  DATA.forEach((sec,si)=>{
+  DATA.forEach(function(sec,si){
     let done=0,fail=0;
-    sec.items.forEach((_,ii)=>{const s=getItem(itemKey(si,ii)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    sec.items.forEach(function(_,ii){const s=getItem(itemKey(si,ii)).s;if(s==="pass")done++;if(s==="fail")fail++});
     md+="### "+sec.title+" ("+done+"/"+sec.items.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
-    sec.items.forEach((it,ii)=>{
+    sec.items.forEach(function(it,ii){
       const k=itemKey(si,ii);
       const d=getItem(k);
       let mark=" ";
@@ -1520,15 +1544,15 @@ function exportMarkdown(){
   });
   const scKeys=getAllItemsForTab("scenarios");
   const scStats={pass:0,fail:0,warn:0,skip:0};
-  scKeys.forEach(k=>{const s=getItem(k).s;if(s&&scStats[s]!==undefined)scStats[s]++});
+  scKeys.forEach(function(k){const s=getItem(k).s;if(s&&scStats[s]!==undefined)scStats[s]++});
   md+="---\n\n## 🎬 Сценарии ("+(scStats.pass+scStats.skip)+"/"+scKeys.length+")\n\n";
   md+="✅ "+scStats.pass+" · ❌ "+scStats.fail+" · ⚠️ "+scStats.warn+" · ⏭️ "+scStats.skip+"\n\n";
-  SCENARIOS.forEach((sc,si)=>{
+  SCENARIOS.forEach(function(sc,si){
     let done=0,fail=0;
-    sc.steps.forEach((_,st)=>{const s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    sc.steps.forEach(function(_,st){const s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
     md+="### "+sc.title+" ("+done+"/"+sc.steps.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
     md+="⏱ "+sc.time+" · "+sc.priority+" · Блоки: "+sc.blocks+"\n\n";
-    sc.steps.forEach((step,st)=>{
+    sc.steps.forEach(function(step,st){
       const k=scenarioKey(si,st);
       const d=getItem(k);
       let mark=" ";
@@ -1570,18 +1594,20 @@ function toast(msg,type){
   if(!el){el=document.createElement("div");el.className="toast";document.body.appendChild(el)}
   el.className="toast "+(type||"");
   el.textContent=msg;
-  requestAnimationFrame(()=>el.classList.add("show"));
+  requestAnimationFrame(function(){el.classList.add("show")});
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>el.classList.remove("show"),2600);
+  toastTimer=setTimeout(function(){el.classList.remove("show")},2600);
 }
 
-document.addEventListener("keydown",e=>{
+document.addEventListener("keydown",function(e){
   const tag=(e.target.tagName||"").toLowerCase();
   const isInput=tag==="input"||tag==="textarea";
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!e.shiftKey){
-    if(isInput)return;e.preventDefault();undo();
+    if(isInput)return;
+    e.preventDefault();undo();
   }else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==="y"||(e.shiftKey&&e.key.toLowerCase()==="z"))){
-    if(isInput)return;e.preventDefault();redo();
+    if(isInput)return;
+    e.preventDefault();redo();
   }else if(e.key==="Escape"){
     closeDiff();
   }
