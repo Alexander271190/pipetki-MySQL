@@ -31,8 +31,33 @@ function esc(s) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+// Парсим 'YYYY-MM-DD' как локальную дату, без UTC-сдвига
+function parseLocalDate(s) {
+  if (!s) return null;
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3]);
+}
+
+// Прибавить месяцы, не перескакивая через конец месяца
+// (31 янв + 1 мес → 28/29 фев, а не 3 мар)
+function addMonths(date, months) {
+  const d = new Date(date);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return d;
+}
+
 function formatDate(d) {
   if (!d) return '—';
+  // YYYY-MM-DD — парсим как локальную, чтобы не съезжала в UTC
+  const parsed = parseLocalDate(d);
+  if (parsed) {
+    return parsed.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 function normalizeSearch(s) {
@@ -128,22 +153,30 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 
   const response = await fetch(`${API_URL}${endpoint}`, options);
 
-    if (response.status === 401 && !endpoint.startsWith('/auth/login')) {
+     if (response.status === 401 && !endpoint.startsWith('/auth/login')) {
     clearSession();
     renderAuthUI();
     showToast('Сессия истекла, войдите заново', 'error');
     throw new Error('Неавторизован');
   }
-  
+
+  // Обязательная смена пароля: сервер вернул 403 с кодом
   if (response.status === 403 && !endpoint.startsWith('/auth/')) {
-  await refreshCurrentUser();
-}
-  // Проверка прав с throttle (не чаще раза в 60 секунд)
+    let body = null;
+    try { body = await response.clone().json(); } catch (e) { /* ignore */ }
+    if (body && body.code === 'password_change_required') {
+      openChangePasswordModal(true);
+      throw new Error('Требуется смена пароля');
+    }
+  }
+
+  // Обновление прав с throttle (не чаще раза в 60 секунд)
   const now = Date.now();
   if (!endpoint.startsWith('/auth/') && now - _lastPermsCheck > 60_000) {
     _lastPermsCheck = now;
-    refreshCurrentUser();   // fire-and-forget, не ждём
+    refreshCurrentUser();   // fire-and-forget
   }
+
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || 'Ошибка запроса');
   return result;
@@ -428,7 +461,8 @@ async function loadFilterConfig() {
             { value: 'inactive', label: 'Неактивны' },
             { value: 'sent', label: '📦 На поверке' },
             { value: 'fail', label: '❌ Брак' },
-            { value: 'wip', label: '⏳ В процессе' }
+            { value: 'wip', label: '⏳ В процессе' },
+            { value: 'unknown', label: 'Не задано' }
              ];
            } else if (f.optionsSource === 'equipment_type_list') {
            f.options = _equipmentTypes.map(t => ({
@@ -461,10 +495,10 @@ function calcStatus(p) {
   if (p.last_result === 'fail') return 'fail';
   if (!p.active) return 'inactive';
   if (p.last_result === 'wip') return 'wip';
-  if (!p.last_calibration || !p.interval) return 'danger';
-  const last = new Date(p.last_calibration);
-  const next = new Date(last);
-  next.setMonth(next.getMonth() + p.interval);
+  if (!p.last_calibration || !p.interval) return 'unknown';
+  const last = parseLocalDate(p.last_calibration);
+  if (!last) return 'unknown';
+  const next = addMonths(last, p.interval);
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const daysLeft = Math.ceil((next - now) / 86400000);
   if (daysLeft < 0) return 'danger';
@@ -474,9 +508,9 @@ function calcStatus(p) {
 
 function getNextDate(p) {
   if (!p.last_calibration || !p.interval) return null;
-  const d = new Date(p.last_calibration);
-  d.setMonth(d.getMonth() + p.interval);
-  return d;
+  const d = parseLocalDate(p.last_calibration);
+  if (!d) return null;
+  return addMonths(d, p.interval);
 }
 
 function daysLeft(p) {
@@ -614,17 +648,18 @@ pipettes.forEach(p => {
   table.style.display = '';
   empty.style.display = 'none';
 
-  const labels = {
+    const labels = {
   ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
   inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',
-  wip: '⏳ В процессе'
+  wip: '⏳ В процессе',
+  unknown: '<i class="fa-solid fa-circle-question"></i> Не задано'
 };
 
   tbody.innerHTML = filtered.map(p => {
     const status = calcStatus(p);
     const next = getNextDate(p);
     const dl = daysLeft(p);
-    const daysText = status === 'inactive' || status === 'sent' || status === 'wip' ? '' :
+    const daysText = status === 'inactive' || status === 'sent' || status === 'wip' || status === 'unknown' ? '' :
   status === 'fail' ? ' (брак)' :
   status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
   ` (${dl} дн.)`;
@@ -677,6 +712,8 @@ pipettes.forEach(p => {
             ? `<small style="color:#0ea5e9;font-weight:600;">📦 ${formatDate(p.sent_for_calibration)}</small>`
             : status === 'wip'
             ? `<small style="color:#ca8a04;font-weight:600;">⏳ В процессе поверки</small>`
+            : status === 'unknown'
+            ? `<small style="color:#94a3b8;">Дата не задана</small>`
             : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? '#dc2626' : status === 'warn' ? '#eab308' : '#16a34a'}">${daysText}</small>` : ''}`}</td>`;
         case 'responsible':
           return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
@@ -1001,7 +1038,8 @@ function matchCalPeriodDynamic(p, cfg) {
   if (!dateStr) return false;
 
   const pureDate = String(dateStr).split(' ')[0].split('T')[0];
-  const targetDate = new Date(pureDate);
+  const targetDate = parseLocalDate(pureDate);
+  if (!targetDate) return false;
   targetDate.setHours(0, 0, 0, 0);
 
   const today = new Date();
@@ -1401,7 +1439,9 @@ async function renderHistoryContent(p) {
   const status = calcStatus(p);
   const statusLabels = {
   ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',  wip: '⏳ В процессе'
+  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',
+  wip: '⏳ В процессе',
+  unknown: '<i class="fa-solid fa-circle-question"></i> Не задано'
 };
 
     let history = [];
@@ -1513,10 +1553,10 @@ const EXPORT_FIELD_MAP = {
   lastCalibration: { label: 'Дата поверки', get: p => formatDate(p.last_calibration) },
   nextCalibration: { label: 'Следующая', get: p => formatDate(getNextDate(p)) },
   interval: { label: 'МПИ', get: p => p.interval || '' },
-  daysLeft: {
+daysLeft: {
   label: 'Дней', get: p => {
     const s = calcStatus(p); const dl = daysLeft(p);
-    return s === 'inactive' ? '—'
+    return (s === 'inactive' || s === 'unknown') ? '—'
       : (s === 'sent' ? 'на поверке'
       : (s === 'wip' ? 'в процессе'
       : (s === 'fail' ? 'брак'
@@ -1525,9 +1565,13 @@ const EXPORT_FIELD_MAP = {
 },
   responsible: { label: 'Ответственный', get: p => p.responsible || '' },
   location: { label: 'Место', get: p => p.location || '' },
- status: {
+  status: {
   label: 'Статус', get: p => {
-    const L = { ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена', inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак',  wip: 'В процессе'};
+    const L = {
+      ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+      inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак',
+      wip: 'В процессе', unknown: 'Не задано'
+    };
     return L[calcStatus(p)] || calcStatus(p);
   }
 },
@@ -1613,7 +1657,11 @@ async function exportToPDF() {
     return `<tr>${cells}</tr>`;
   }).join('');
 
-  const win = window.open('', '_blank');
+    const win = window.open('', '_blank');
+  if (!win) {
+    showToast('Разрешите всплывающие окна для экспорта в PDF', 'error');
+    return;
+  }
   win.document.write(`
     <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
     <title>Реестр пипеток — ${today}</title>
@@ -1863,6 +1911,13 @@ async function openImportModal() {
 function closeImportModal() {
   document.getElementById('import-modal').classList.remove('active');
   document.getElementById('import-file').value = '';
+
+  // Сбросить прогресс, чтобы при повторном открытии не мигал старый текст
+  const progress = document.getElementById('import-progress');
+  if (progress) {
+    progress.style.display = 'none';
+    progress.textContent = '⏳ Загрузка…';
+  }
 }
 
 async function handleImport() {
@@ -3826,10 +3881,16 @@ async function exportHistoryToPDF() {
     </body></html>
   `;
 
-  // Открываем через Blob URL (без document.write)
+    // Открываем через Blob URL
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
+
+  const win = window.open(url, '_blank');
+  if (!win) {
+    URL.revokeObjectURL(url);
+    showToast('Разрешите всплывающие окна для экспорта в PDF', 'error');
+    return;
+  }
   // Освобождаем URL через 10 сек
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 
