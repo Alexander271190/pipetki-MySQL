@@ -1648,6 +1648,9 @@ async function exportToPDF() {
         if (st === 'sent') {
           return `<td>📦 ${formatDate(p.sent_for_calibration)}</td>`;
         }
+        if (st === 'unknown') {
+          return `<td>—<br><small>дата не задана</small></td>`;
+        }
         const dl = daysLeft(p);
         const dlText = st === 'inactive' ? '' : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.');
         return `<td>${esc(val)}${dlText ? '<br><small>' + dlText + '</small>' : ''}</td>`;
@@ -2939,7 +2942,11 @@ async function printSendAct() {
     `;
   }).join('');
 
-  const win = window.open('', '_blank');
+const win = window.open('', '_blank');
+  if (!win) {
+    showToast('Разрешите всплывающие окна для печати акта', 'error');
+    return;
+  }
   win.document.write(`
     <!DOCTYPE html>
     <html lang="ru">
