@@ -479,6 +479,10 @@
 
     <form id="change-password-form" onsubmit="submitChangePassword(event)" novalidate>
       <div class="form-group">
+        <label>Текущий пароль *</label>
+        <input type="password" id="cp-current" autocomplete="current-password" placeholder="Введите текущий пароль">
+      </div>
+      <div class="form-group">
         <label>Новый пароль *</label>
         <input type="password" id="cp-new" autocomplete="new-password" placeholder="Введите новый пароль">
       </div>
