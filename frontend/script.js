@@ -2027,7 +2027,7 @@ async function renderFieldsSettings(skipFetch = false) {
           <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},-1)">▲</button>
           <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},1)">▼</button>
         </div></td>
-        <td><input type="text" value="${esc(f.label)}" onchange="_cachedFields[${i}].label=this.value"></td>
+        <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
         <td><select onchange="onFieldTypeChange(${i}, this.value)">
           <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
           <option value="number" ${f.type === 'number' ? 'selected' : ''}>Число</option>
@@ -2052,7 +2052,7 @@ async function renderFieldsSettings(skipFetch = false) {
 function renderFieldOptionsCell(idx, type) {
   if (type === 'select') {
     const opts = (_cachedFields[idx].options || []).join('\n');
-    return `<textarea rows="2" onchange="_cachedFields[${idx}].options=this.value.split('\\n').map(s=>s.trim()).filter(Boolean)">${esc(opts)}</textarea>`;
+        return `<textarea rows="2" oninput="_cachedFields[${idx}].options=this.value.split('\\n').map(s=>s.trim()).filter(Boolean)">${esc(opts)}</textarea>`;
   }
   return '—';
 }
@@ -2129,7 +2129,7 @@ async function renderDepartmentsSettings(skipFetch = false) {
                  onchange="_cachedDepartmentsFull[${i}].enabled=this.checked">
         </td>
         <td><input type="text" value="${esc(d.name)}" 
-                   onchange="onDepartmentNameChange(${i}, this.value)"></td>
+                   oninput="onDepartmentNameChange(${i}, this.value)"></td>
         <td><button class="btn btn-danger btn-sm btn-icon-only" 
                     onclick="deleteDepartmentItem(${i})" title="Удалить">
           <i class="fa-solid fa-trash"></i>
@@ -2284,8 +2284,8 @@ async function renderFiltersSettings(skipFetch = false) {
           <input type="checkbox" ${f.enabled ? 'checked' : ''} 
                  onchange="_cachedFilters[${i}].enabled=this.checked">
         </td>
-        <td><input type="text" value="${esc(f.label)}" 
-                   onchange="_cachedFilters[${i}].label=this.value"></td>
+           <td><input type="text" value="${esc(f.label)}" 
+                   oninput="_cachedFilters[${i}].label=this.value"></td>
         
          <td><select onchange="_cachedFilters[${i}].type=this.value">
             <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
@@ -3419,12 +3419,12 @@ function renderEquipmentTypesTable() {
       </td>
       <td>
         <input type="text" value="${esc(t.label)}"
-               onchange="updateEquipmentType(${i}, 'label', this.value)">
+               oninput="updateEquipmentType(${i}, 'label', this.value)">
       </td>
       <td>
         <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
                style="text-align:center;text-transform:uppercase;"
-               onchange="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
+               oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
       </td>
       <td>
         <button class="btn btn-danger btn-sm btn-icon-only"
@@ -3650,24 +3650,16 @@ async function submitChangePassword(e) {
       confirmPassword: confirmPwd
     });
 
-    currentUser.mustChangePassword = false;
+   currentUser.mustChangePassword = false;
 
     // Обновляем токен: сервер выдал свежий, т.к. старый уже невалиден
     if (res.token) {
       authToken = res.token;
     }
 
-    const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
-    if (s.user) {
-      s.user.mustChangePassword = false;
-      s.token = authToken;
-      sessionStorage.setItem('pipette_session', JSON.stringify(s));
-    } else {
-      sessionStorage.setItem('pipette_session', JSON.stringify({
-        user: currentUser,
-        token: authToken
-      }));
-    }
+    // Сохраняем сессию целиком через setSession —
+    // так не теряются originalUser/originalToken (режим impersonate)
+    setSession(currentUser, authToken, getOriginalUser(), getOriginalToken());
 
     showToast('Пароль успешно изменён', 'success');
     closeChangePasswordModal();
