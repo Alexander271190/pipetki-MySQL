@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Чек-лист «Учёт оборудования КДЛ» v3.3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --card-2: #f8fafc;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --primary: #4f46e5;
+    --primary-light: #eef2ff;
+    --success: #16a34a;
+    --success-light: #dcfce7;
+    --danger: #dc2626;
+    --danger-light: #fee2e2;
+    --warn: #d97706;
+    --warn-light: #fef3c7;
+    --skip: #64748b;
+    --skip-light: #f1f5f9;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  html[data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-2: #273449;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --primary: #818cf8;
+    --primary-light: #312e81;
+    --success: #4ade80;
+    --success-light: #14532d;
+    --danger: #f87171;
+    --danger-light: #7f1d1d;
+    --warn: #fbbf24;
+    --warn-light: #78350f;
+    --skip: #94a3b8;
+    --skip-light: #334155;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 20px;
+    font-size: 14px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 12px;
+    z-index: 100;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .stat {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .stat-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  .stat.total .stat-value { color: var(--text); }
+  .stat.pass .stat-value { color: var(--success); }
+  .stat.fail .stat-value { color: var(--danger); }
+  .stat.warn .stat-value { color: var(--warn); }
+  .stat.skip .stat-value { color: var(--skip); }
+  .stat.left .stat-value { color: var(--primary); }
+
+  .progress-bar {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4f46e5, #7c3aed);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .controls input[type="search"] {
+    flex: 1;
+    min-width: 180px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    background: var(--card);
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .controls input[type="search"]:focus { border-color: var(--primary); }
+
+  button {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    transition: all 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--bg); border-color: var(--primary); }
+  button.primary { background: var(--primary); color: white; border-color: var(--primary); }
+  button.primary:hover { opacity: 0.9; }
+  button.danger { background: var(--danger); color: white; border-color: var(--danger); }
+  button.danger:hover { opacity: 0.9; }
+  button.icon { padding: 8px 10px; font-size: 15px; }
+  button.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+
+  /* Section */
+  .section {
+    background: var(--card);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 14px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    user-select: none;
+    background: var(--card);
+    transition: background 0.15s;
+  }
+  .section-header:hover { background: var(--bg); }
+  .section-header .arrow {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform 0.2s;
+    width: 14px;
+    display: inline-block;
+  }
+  .section.collapsed .section-header .arrow { transform: rotate(-90deg); }
+  .section.collapsed .section-body { display: none; }
+  .section-title { font-weight: 600; font-size: 15px; flex: 1; }
+  .section-badge {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .section-badge.done { background: var(--success-light); color: var(--success); }
+  .section-badge.fail { background: var(--danger-light); color: var(--danger); }
+
+  .section-body { padding: 4px 20px 16px; }
+
+  /* Section ops */
+  .section-ops {
+    display: flex;
+    gap: 3px;
+    margin-left: auto;
+    margin-right: 8px;
+  }
+  .section-ops button {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    font-size: 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Item */
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: 6px;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+    flex-wrap: wrap;
+  }
+  .item:hover { background: var(--bg); }
+  .item.status-pass { border-left-color: var(--success); background: var(--success-light); }
+  .item.status-fail { border-left-color: var(--danger); background: var(--danger-light); }
+  .item.status-warn { border-left-color: var(--warn); background: var(--warn-light); }
+  .item.status-skip { border-left-color: var(--skip); background: var(--skip-light); }
+
+  .item-check {
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    cursor: pointer;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+  }
+  .item-text {
+    flex: 1;
+    font-size: 13.5px;
+    cursor: pointer;
+    min-width: 200px;
+  }
+  .item-text .block-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .item.hidden { display: none; }
+  .item-actions { display: flex; gap: 3px; flex-shrink: 0; margin-top: 1px; }
+
+  .status-group { display: flex; gap: 3px; flex-shrink: 0; margin-top: 1px; }
+  .status-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.15s;
+  }
+  .status-btn:hover { transform: scale(1.1); }
+  .status-btn.active[data-status="pass"] { background: var(--success); color: white; border-color: var(--success); }
+  .status-btn.active[data-status="fail"] { background: var(--danger); color: white; border-color: var(--danger); }
+  .status-btn.active[data-status="warn"] { background: var(--warn); color: white; border-color: var(--warn); }
+  .status-btn.active[data-status="skip"] { background: var(--skip); color: white; border-color: var(--skip); }
+
+  .meta-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .meta-btn:hover { border-color: var(--primary); }
+  .meta-btn.has-data { background: var(--primary-light); border-color: var(--primary); }
+  .meta-btn .badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--primary);
+    color: white;
+    font-size: 9px;
+    border-radius: 8px;
+    padding: 0 4px;
+    min-width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  /* Meta expand area */
+  .item-meta {
+    flex-basis: 100%;
+    margin: 6px 0 2px 26px;
+    padding: 10px 12px;
+    background: var(--card-2);
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    display: none;
+  }
+  .item-meta.open { display: block; }
+  .item-meta label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .item-meta textarea,
+  .item-meta input[type="url"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 10px;
+    resize: vertical;
+    min-height: 36px;
+  }
+  .item-meta textarea:focus,
+  .item-meta input[type="url"]:focus { border-color: var(--primary); }
+  .item-meta .meta-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .bug-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--danger-light);
+    color: var(--danger);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .bug-link:hover { opacity: 0.85; }
+
+  footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .group-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 14px 0 6px;
+    padding-left: 8px;
+    border-left: 3px solid var(--primary);
+  }
+  .group-title:first-child { margin-top: 4px; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    padding: 12px 18px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-size: 13px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.25s;
+    max-width: 360px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-left-color: var(--success); }
+  .toast.error { border-left-color: var(--danger); }
+  .toast.warn { border-left-color: var(--warn); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 720px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    position: relative;
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 8px; }
+  .modal p { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .modal-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-size: 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    line-height: 1;
+    border-radius: 6px;
+  }
+  .modal-close:hover { background: var(--bg); }
+  .diff-files {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .diff-files label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .diff-files input[type="file"] {
+    width: 100%;
+    font-size: 12px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+  }
+  .diff-summary {
+    display: flex;
+    gap: 14px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .diff-summary span { color: var(--muted); }
+  .diff-summary b { color: var(--text); }
+  .diff-list {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+  .diff-row {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .diff-row:last-child { border-bottom: none; }
+  .diff-row.changed { background: var(--warn-light); }
+  .diff-row.added { background: var(--success-light); }
+  .diff-row.removed { background: var(--danger-light); }
+  .diff-row .diff-block {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .diff-row .diff-text { font-weight: 500; }
+  .diff-row .diff-change {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    padding-left: 20px;
+  }
+  .diff-row .diff-change .old { color: var(--danger); text-decoration: line-through; }
+  .diff-row .diff-change .new { color: var(--success); font-weight: 600; }
+  .diff-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  @media print {
+    header { position: static; box-shadow: none; }
+    .controls, .status-group, .meta-btn, .item-meta, footer button, .section-ops { display: none !important; }
+    .section { break-inside: avoid; box-shadow: none; border: 1px solid var(--border); }
+    body { background: white; padding: 0; }
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 10px; }
+    header { padding: 14px; }
+    h1 { font-size: 16px; }
+    .stat-value { font-size: 18px; }
+    .item-text { font-size: 13px; min-width: 0; }
+    .controls input[type="search"] { min-width: 100%; }
+    .item-meta { margin-left: 0; }
+    .diff-files { grid-template-columns: 1fr; }
+    .section-ops { margin-right: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400;">v3.3</span></h1>
+  <div class="subtitle">Прогресс, комментарии, баг-ссылки, diff, групповые операции и Jira CSV</div>
+
+  <div class="stats">
+    <div class="stat total"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Всего</div></div>
+    <div class="stat pass"><div class="stat-value" id="stat-pass">0</div><div class="stat-label">Пройдено</div></div>
+    <div class="stat fail"><div class="stat-value" id="stat-fail">0</div><div class="stat-label">Провалено</div></div>
+    <div class="stat warn"><div class="stat-value" id="stat-warn">0</div><div class="stat-label">Подозр.</div></div>
+    <div class="stat skip"><div class="stat-value" id="stat-skip">0</div><div class="stat-label">Пропущено</div></div>
+    <div class="stat left"><div class="stat-value" id="stat-left">0</div><div class="stat-label">Осталось</div></div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <div class="controls">
+    <input type="search" id="search" placeholder="🔍 Поиск по пунктам…">
+    <button onclick="expandAll()">Развернуть</button>
+    <button onclick="collapseAll()">Свернуть</button>
+    <button onclick="filterStatus('all')" id="f-all" class="active">Все</button>
+    <button onclick="filterStatus('left')" id="f-left">Не пройдено</button>
+    <button onclick="filterStatus('fail')" id="f-fail">❌ Провалы</button>
+    <button onclick="filterStatus('with-meta')" id="f-meta" title="С комментарием или баг-ссылкой">💬 С мета</button>
+    <button onclick="filterStatus('with-bugs')" id="f-bugs" title="Только баги (❌ или ссылка на баг)">🐞 С багами</button>
+    <button class="primary" onclick="exportJSON()" title="Скачать JSON">💾 Экспорт</button>
+    <button onclick="triggerImport()" title="Загрузить JSON">📥 Импорт</button>
+    <button onclick="openDiff()" title="Сравнить два JSON-экспорта">📊 Diff</button>
+    <button onclick="exportJiraCSV()" title="Экспорт багов в CSV для Jira">📤 Jira CSV</button>
+    <button onclick="shareLink()" title="Скопировать ссылку с прогрессом">🔗 Ссылка</button>
+    <button class="icon" onclick="toggleTheme()" id="theme-btn" title="Тема">🌙</button>
+    <button class="danger" onclick="resetAll()" title="Сбросить всё">🗑️</button>
+  </div>
+</header>
+
+<div id="checklist"></div>
+
+<footer>
+  Прогресс хранится в localStorage браузера. · <button onclick="window.print()" style="padding:4px 10px;font-size:12px;">🖨️ Печать</button>
+</footer>
+
+</div>
+
+<div class="modal-overlay" id="diff-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDiff()">✕</button>
+    <h2>📊 Diff-режим</h2>
+    <p>Загрузите два JSON-экспорта (A — старый, B — новый). Показаны только различия.</p>
+    <div class="diff-files">
+      <div>
+        <label>A (старый)</label>
+        <input type="file" id="diff-a" accept="application/json,.json">
+      </div>
+      <div>
+        <label>B (новый)</label>
+        <input type="file" id="diff-b" accept="application/json,.json">
+      </div>
+    </div>
+    <div id="diff-result">
+      <div class="diff-empty">Загрузите оба файла для сравнения</div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="import-file" accept="application/json,.json" style="display:none">
+
+<script>
+/* ============================== DATA ============================== */
+const DATA = [
+  { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
+    { g: "1.1 Backend", t: "docker-compose up -d без ошибок" },
+    { g: "1.1 Backend", t: "Лог: ✅ MySQL подключён" },
+    { g: "1.1 Backend", t: "Лог: ✅ Схема БД готова" },
+    { g: "1.1 Backend", t: "Лог: 🚀 Server on http://0.0.0.0:3000" },
+    { g: "1.1 Backend", t: "Лог с разовыми паролями (если нет SEED_ADMIN_PASSWORD)" },
+    { g: "1.2 Frontend", t: "http://localhost:3000 открывается" },
+    { g: "1.2 Frontend", t: "F12 → Console без Unexpected token, SyntaxError, is not defined" },
+    { g: "1.2 Frontend", t: "Виден экран логина с фоновой картинкой" },
+    { g: "1.2 Frontend", t: "Логин подставлен из предыдущей сессии (если есть)" },
+    { g: "1.2 Frontend", t: "Пароль пустой" },
+    { g: "1.3 БД", t: "Таблицы: users, pipettes, calibration_history, audit_log, departments, filter_config, system_settings, field_config, export_settings, user_preferences" },
+    { g: "1.3 БД", t: "3 пользователя, 8 отделов, 5 демо-пипеток" },
+    { g: "1.3 БД", t: "В system_settings есть ключ equipment_types с 6 типами" },
+    { g: "1.3 БД", t: "В system_settings есть warn_days = 30" }
+  ]},
+  { title: "Блок 2. Авторизация и права", tag: "2", items: [
+    { g: "2.1 Экран входа", t: "Вход admin / admin → система" },
+    { g: "2.1 Экран входа", t: "Тост «Добро пожаловать, Администратор!»" },
+    { g: "2.1 Экран входа", t: "В шапке: ФИО = «Администратор», должность = «Администратор системы (админ)»" },
+    { g: "2.1 Экран входа", t: "Вход senior / senior → «Петров Петр (ст. лаборант) · Гематологический отдел»" },
+    { g: "2.1 Экран входа", t: "Вход user / user → «Иванов Иван · Биохимический отдел»" },
+    { g: "2.2 Ошибки входа", t: "Пустой логин → «Заполните поле «Логин»»" },
+    { g: "2.2 Ошибки входа", t: "Пустой пароль → «Заполните поле «Пароль»»" },
+    { g: "2.2 Ошибки входа", t: "Пусто оба → «Заполните поля: «Логин», «Пароль»»" },
+    { g: "2.2 Ошибки входа", t: "Неверный логин/пароль → «Неверный логин или пароль»" },
+    { g: "2.2 Ошибки входа", t: "Пароль скрыт за точками" },
+    { g: "2.3 Хранение логина", t: "После выхода логин остался в поле" },
+    { g: "2.3 Хранение логина", t: "Пароль очистился" },
+    { g: "2.3 Хранение логина", t: "F5 → логин подставлен из localStorage" },
+    { g: "2.4 Роли", t: "user: нет «➕ Добавить», «📥 Импорт», «⚙️ Настройки», «📤 Экспорт»" },
+    { g: "2.4 Роли", t: "user: в истории нет «➕ Добавить поверку»" },
+    { g: "2.4 Роли", t: "user: в таблице только кнопка 📋 (История)" },
+    { g: "2.4 Роли", t: "user + openModal() из консоли → «Доступ запрещён»" },
+    { g: "2.4 Роли", t: "user + apiRequest('/pipettes/P-001','DELETE') → 403" },
+    { g: "2.4 Роли", t: "senior: есть «Добавить», «Импорт», «Экспорт», «Добавить поверку», нет «Настройки»" },
+    { g: "2.4 Роли", t: "admin: всё доступно" },
+    { g: "2.5 Истёкшая сессия", t: "Удалить pipette_session → F5 → логин" },
+    { g: "2.5 Истёкшая сессия", t: "Токен = «мусор» → F5 → «Недействительный токен»" },
+    { g: "2.5 Истёкшая сессия", t: "clearSession() + apiRequest('/pipettes') → 401" }
+  ]},
+  { title: "Блок 3. Главная таблица", tag: "3", items: [
+    { g: "3.1 Базовый рендер", t: "5 демо-строк: P-001, P-002, P-003, A-001, M-001" },
+    { g: "3.1 Базовый рендер", t: "Тип — бейджем (P — синий, остальные — фиолетовый)" },
+    { g: "3.1 Базовый рендер", t: "Объём с «мкл», у не-пипеток «—»" },
+    { g: "3.1 Базовый рендер", t: "В «Следующая» дата + «(N дн.)» / «(просрочка N дн.)»" },
+    { g: "3.1 Базовый рендер", t: "M-001 — «Неактивна» (серый)" },
+    { g: "3.1 Базовый рендер", t: "Счётчики в шапке совпадают" },
+    { g: "3.1 Базовый рендер", t: "Баннер появляется при danger/fail" },
+    { g: "3.2 Пустая таблица", t: "Таблица скрыта, счётчики = 0" },
+    { g: "3.3 Строка выбрана", t: "Фон строки #eef2ff (светло-синий)" },
+    { g: "3.3 Строка выбрана", t: "Hover #e0e7ff" }
+  ]},
+  { title: "Блок 4. CRUD", tag: "4", items: [
+    { g: "4.2 Создание", t: "Все поля пустые (кроме даты, интервала, результата, статуса — дефолт)" },
+    { g: "4.2 Создание", t: "Заполнить → «💾 Сохранить» → тост «Оборудование добавлено»" },
+    { g: "4.2 Создание", t: "ID в формате P-XXX (генерируется сервером)" },
+    { g: "4.2 Создание", t: "Без модели → «Заполните поле «Модель»»" },
+    { g: "4.2 Создание", t: "Без даты → «Заполните поле «Дата последней поверки»»" },
+    { g: "4.2 Создание", t: "Дата в будущем → «Дата поверки не может быть в будущем»" },
+    { g: "4.2 Создание", t: "ID вручную уже занят → 409 «ID уже существует»" },
+    { g: "4.2 Создание", t: "Анализатор → ID начинается на A-" },
+    { g: "4.2 Создание", t: "Микроскоп → M-" },
+    { g: "4.2 Создание", t: "Отмена → ничего не сохранено" },
+    { g: "4.3 Редактирование", t: "✏️ → поля заполнены" },
+    { g: "4.3 Редактирование", t: "ID read-only, серый фон" },
+    { g: "4.3 Редактирование", t: "Модель → Сохранить → «Оборудование обновлено»" },
+    { g: "4.3 Редактирование", t: "Стереть дату → Сохранить → дата не обнуляется (фолбэк)" },
+    { g: "4.3 Редактирование", t: "🆕 Поле «Результат» скрыто → Сохранить → last_result сохраняется прежним" },
+    { g: "4.4 Удаление", t: "Отмена → ничего" },
+    { g: "4.4 Удаление", t: "Подтвердить → тост, строка исчезла, история удалена" },
+    { g: "4.4 Удаление", t: "Несуществующий (через API) → 404" }
+  ]},
+  { title: "Блок 5. Быстрая поверка", tag: "5", items: [
+    { g: "", t: "Кнопка ✔️ открывает модалку" },
+    { g: "", t: "Инфо о приборе в шапке" },
+    { g: "", t: "Дата = сегодня" },
+    { g: "", t: "Заполнить → «💾 Записать» → «Поверка зарегистрирована»" },
+    { g: "", t: "Обновились «Поверка» и «Следующая»" },
+    { g: "", t: "Результат = «Брак» → статус 🔴" },
+    { g: "", t: "«В процессе» → ⏳" },
+    { g: "", t: "Пустая дата → ошибка" },
+    { g: "", t: "Дата в будущем → ошибка" },
+    { g: "", t: "Поверка на «На поверке» → sent_for_calibration очищен" }
+  ]},
+  { title: "Блок 6. История поверок", tag: "6", items: [
+    { g: "6.2 Просмотр", t: "Таймлайн свежий сверху" },
+    { g: "6.2 Просмотр", t: "Свидетельство в синем бейдже, результат цветным" },
+    { g: "6.2 Просмотр", t: "Организация и примечание серым" },
+    { g: "6.3 Добавление поверки", t: "«➕ Добавить поверку» → форма появляется ниже" },
+    { g: "6.3 Добавление поверки", t: "Заполнить → «💾 Записать» → «Запись о поверке добавлена»" },
+    { g: "6.3 Добавление поверки", t: "Модалка закрылась, таблица обновлена" },
+    { g: "6.3 Добавление поверки", t: "Валидация даты" },
+    { g: "6.4 Экспорт истории", t: "Пустой период → вся история" },
+    { g: "6.4 Экспорт истории", t: "CSV: history_P-001_YYYY-MM-DD.csv, открывается в Excel" },
+    { g: "6.4 Экспорт истории", t: "PDF: вкладка с печатной формой" },
+    { g: "6.4 Экспорт истории", t: "Фильтр С/По работает" },
+    { g: "6.4 Экспорт истории", t: "Пусто с фильтром → «Нет записей за выбранный период»" }
+  ]},
+  { title: "Блок 7. Массовая отправка", tag: "7", items: [
+    { g: "", t: "Выбрать 3 пипетки → счётчик «(3)»" },
+    { g: "", t: "Пипетка + анализатор → счётчик = 1" },
+    { g: "", t: "Дата в будущем → ошибка" },
+    { g: "", t: "Подтверждение → тост" },
+    { g: "", t: "Статус «📦 На поверке»" },
+    { g: "", t: "Кнопка «Отправить» пропала, появилась «Вернулись (N)»" },
+    { g: "", t: "Печать акта открывает окно с таблицей" },
+    { g: "", t: "Без выбора → «Нет пипеток для печати»" }
+  ]},
+  { title: "Блок 8. Массовый возврат", tag: "8", items: [
+    { g: "", t: "Один чекбокс → индивидуальные поля отключаются" },
+    { g: "", t: "Общий select → все строки меняются" },
+    { g: "", t: "Без свидетельства → предупреждение" },
+    { g: "", t: "Подтверждение → тост «Возврат оформлен…»" }
+  ]},
+  { title: "Блок 9. Фильтры и поиск", tag: "9", items: [
+    { g: "9.1 Панель фильтра", t: "Кнопка «🔍 Фильтр» открывает панель" },
+    { g: "9.1 Панель фильтра", t: "Все поля из БД" },
+    { g: "9.1 Панель фильтра", t: "Статус = Просрочены → только danger" },
+    { g: "9.1 Панель фильтра", t: "Период «Произвольный» → от/до" },
+    { g: "9.1 Панель фильтра", t: "Комбинация 3 фильтров + поиск" },
+    { g: "9.1 Панель фильтра", t: "«Сбросить» → всё снято" },
+    { g: "9.1 Панель фильтра", t: "Фильтр без результатов → заглушка" },
+    { g: "9.2 Поиск", t: "«P-001» → одна строка" },
+    { g: "9.2 Поиск", t: "«eppendorf» → все Eppendorf" },
+    { g: "9.2 Поиск", t: "По отделу, ответственному, модели" },
+    { g: "9.2 Поиск", t: "Пустой → все" },
+    { g: "9.3 Сортировка", t: "Клик по «ID» → ▲, повторный → ▼" },
+    { g: "9.3 Сортировка", t: "Клик по «Модель» → переключение стрелок" },
+    { g: "9.4 Массовый выбор", t: "Чекбокс в шапке → все видимые" },
+    { g: "9.4 Массовый выбор", t: "Частичный → indeterminate" },
+    { g: "9.4 Массовый выбор", t: "Смена фильтра → выбор видимых сохраняется" }
+  ]},
+  { title: "Блок 10. Экспорт данных", tag: "10", items: [
+    { g: "10.1 Меню", t: "CSV: pipettes_YYYY-MM-DD.csv с BOM, кириллица корректна" },
+    { g: "10.1 Меню", t: "PDF: печатная форма, кнопка «Печать»" },
+    { g: "10.1 Меню", t: "Активный фильтр → только отфильтрованные" },
+    { g: "10.1 Меню", t: "Без прав → «Нет прав на экспорт»" },
+    { g: "10.2 🆕 CSV injection", t: "Модель =1+1 → в Excel текст =1+1, а не 2" },
+    { g: "10.2 🆕 CSV injection", t: "Модель +7 999 → текст, не число" },
+    { g: "10.2 🆕 CSV injection", t: "Модель -5 отклонение → текст" },
+    { g: "10.2 🆕 CSV injection", t: "Модель @user → текст" }
+  ]},
+  { title: "Блок 11. Импорт", tag: "11", items: [
+    { g: "", t: "XLSX/XLS/CSV/JSON/TXT работают" },
+    { g: "", t: "Битый файл → ошибка" },
+    { g: "", t: "Без заголовков → «Не удалось распознать…»" },
+    { g: "", t: "Дубли ID → в skipped" },
+    { g: "", t: "Дата 21.10.2024 → 2024-10-21" },
+    { g: "", t: "Дата 10.21.2024 → 2024-10-21 (US)" },
+    { g: "", t: "Результат «Брак» → fail" },
+    { g: "", t: "Тип «Микроскоп» → microscope" },
+    { g: "", t: "<script>alert(1)</script> → экранирование, нет всплытия" },
+    { g: "", t: "Импорт под user → «Нет прав»" },
+    { g: "11.6 Нагрузка", t: "500 строк < 30 сек" },
+    { g: "11.6 Нагрузка", t: "1000 строк < 60 сек" },
+    { g: "11.6 Нагрузка", t: "Таблица не тормозит" }
+  ]},
+  { title: "Блок 12. Напоминания", tag: "12", items: [
+    { g: "", t: "Появляется через 600 мс при наличии danger/warn" },
+    { g: "", t: "«✅ Понятно» → не появляется до завтра" },
+    { g: "", t: "«Позже» → появится при следующем входе" },
+    { g: "", t: "F5 → не появляется" },
+    { g: "", t: "🆕 Привязано к currentUser.id — при impersonate свой набор" }
+  ]},
+  { title: "Блок 13. Настройки — Поля формы", tag: "13", items: [
+    { g: "", t: "Снять «Активно» у «Примечание» → пропало из формы" },
+    { g: "", t: "Переместить ▲▼ → порядок изменился" },
+    { g: "", t: "«Обяз.» → поле required" },
+    { g: "", t: "🆕 oninput для label — правка, не убирая фокус, кликнуть ▲▼ → правка сохранилась" },
+    { g: "", t: "Добавить поле → появилось" },
+    { g: "", t: "Тип «select» → textarea для опций" },
+    { g: "", t: "«💾 Сохранить» → тост" }
+  ]},
+  { title: "Блок 14. Настройки — Отделы", tag: "14", items: [
+    { g: "", t: "Дубликат → «Такой отдел уже есть»" },
+    { g: "", t: "🆕 oninput — правка названия без blur + клик ▲/▼ не теряет правку" },
+    { g: "", t: "«Сохранить» → тост" }
+  ]},
+  { title: "Блок 15. Настройки — Фильтры", tag: "15", items: [
+    { g: "", t: "Отключить «Статус» → пропал из UI после F5" },
+    { g: "", t: "Добавить фильтр → появился" }
+  ]},
+  { title: "Блок 16. Настройки — Экспорт", tag: "16", items: [
+    { g: "", t: "Отметить 3 → CSV с 3 столбцами" },
+    { g: "", t: "Снять все → дефолт" }
+  ]},
+  { title: "Блок 17. Настройки — Пользователи", tag: "17", items: [
+    { g: "", t: "Своя строка — без 🔍/🔑/🗑️" },
+    { g: "", t: "Создать → модалка разового пароля" },
+    { g: "", t: "🆕 Нельзя понизить себя → «Нельзя понизить собственную роль администратора»" },
+    { g: "", t: "Последнего админа → «Нельзя понизить последнего администратора»" },
+    { g: "", t: "Сброс пароля себе → «Используйте «Сменить пароль» в шапке»" },
+    { g: "", t: "Роль admin → все чекбоксы disabled" },
+    { g: "", t: "«Только свой отдел» → user видит только свой отдел" },
+    { g: "17.7 Модалка разового пароля", t: "Показаны логин, ФИО, пароль" },
+    { g: "17.7 Модалка разового пароля", t: "«📋 Скопировать» → тост, пароль в буфере" },
+    { g: "17.7 Модалка разового пароля", t: "Закрыть → модалка закрыта" }
+  ]},
+  { title: "Блок 18. Настройки — Система", tag: "18", items: [
+    { g: "", t: "value read-only" },
+    { g: "", t: "Изменить label → Сохранить" },
+    { g: "", t: "Пустой prefix → авто EQ" },
+    { g: "", t: "Дубли value → ошибка" },
+    { g: "", t: "Удалить используемый тип → «Нельзя удалить…»" }
+  ]},
+  { title: "Блок 19. Настройки — Лог", tag: "19", items: [
+    { g: "", t: "Все действия видны" },
+    { g: "", t: "«🗑️ Очистить» → подтверждение → пусто" }
+  ]},
+  { title: "Блок 20. Impersonate", tag: "20", items: [
+    { g: "", t: "«🔍 Войти как» под user1 → тост «Вы вошли как Иванов Иван»" },
+    { g: "", t: "В шапке «⬅️ Вернуться»" },
+    { g: "", t: "Кнопки управления скрыты (права user)" },
+    { g: "", t: "«⬅️ Вернуться» → тост «Вернулись…»" },
+    { g: "", t: "F5 под impersonate → сессия сохранена" },
+    { g: "", t: "Действия логируются от имени user1" },
+    { g: "", t: "🆕 Свои prefs — у impersonated видны его поля/колонки, не оригинала" }
+  ]},
+  { title: "Блок 21. Смена пароля", tag: "21", items: [
+    { g: "", t: "Пустые → «Заполните поле «Новый пароль»»" },
+    { g: "", t: "< 8 → «Минимум 8 символов»" },
+    { g: "", t: "Без заглавной → «Хотя бы одна заглавная буква»" },
+    { g: "", t: "Без спецсимвола → ошибка" },
+    { g: "", t: "Пароли не совпадают" },
+    { g: "", t: "Такой же как текущий → ошибка" },
+    { g: "", t: "Правильный → тост «Пароль успешно изменён»" },
+    { g: "", t: "🆕 После смены не выкидывает — свежий токен, следующий запрос работает" },
+    { g: "", t: "🆕 Impersonate + смена пароля → originalUser/originalToken сохранены" }
+  ]},
+  { title: "Блок 22. Настройки вида пользователя", tag: "22", items: [
+    { g: "", t: "Снять 3 поля → у user их нет" },
+    { g: "", t: "Вкладка «Колонки таблицы» → ▲▼" },
+    { g: "", t: "Переместить «Отдел» вверх → порядок изменён" },
+    { g: "", t: "Пустой список → «Нужно выбрать хотя бы одно поле»" }
+  ]},
+  { title: "Блок 23. UI и адаптивность", tag: "23", items: [
+    { g: "", t: "375px — всё в одну колонку" },
+    { g: "", t: "768px — планшетная адаптация" },
+    { g: "", t: "Клик по фону модалки → закрывается" },
+    { g: "", t: "Esc → закрывает confirm" },
+    { g: "", t: "Двойной клик «Сохранить» → не дублируется" },
+    { g: "", t: "Долгие названия отделов → не ломают вёрстку" },
+    { g: "", t: "Эмодзи и кириллица в названиях → корректны" }
+  ]},
+  { title: "Блок 24. Безопасность", tag: "24", items: [
+    { g: "", t: "JWT в sessionStorage (не localStorage)" },
+    { g: "", t: "Подделать токен → 401" },
+    { g: "", t: "Истёк токен → авторазлогин" },
+    { g: "", t: "SQL-инъекция в поиске ' OR '1'='1 → экранирование через ?" },
+    { g: "", t: "XSS <img src=x onerror=alert(1)> → экранирование через esc()" },
+    { g: "", t: "Права проверяются и на фронте, и на бэке" },
+    { g: "", t: "apiRequest('/settings/fields','PUT',[]) под user → 403" },
+    { g: "", t: "🆕 CSV injection → =HYPERLINK(...) в модели → в CSV не выполняется" }
+  ]},
+  { title: "Блок 25. Нагрузка", tag: "25", items: [
+    { g: "", t: "Импорт 500 строк < 30 сек" },
+    { g: "", t: "Импорт 1000 строк < 60 сек" },
+    { g: "", t: "Таблица после импорта не тормозит" },
+    { g: "", t: "Фильтры/поиск на 1000 работают" },
+    { g: "", t: "Экспорт 1000 → файл корректный" }
+  ]},
+  { title: "Блок 26. 🆕 Регрессия исправленных багов", tag: "26", items: [
+    { g: "26.1 Смена пароля не разлогинивает", t: "Войти → 🔒 Пароль → ввести корректно → не выкинуло" },
+    { g: "26.1 Смена пароля не разлогинивает", t: "Следующее действие → работает, не «Сессия истекла»" },
+    { g: "26.2 Fresh token на клиенте", t: "После смены пароля authToken в sessionStorage обновился" },
+    { g: "26.2 Fresh token на клиенте", t: "Если был режим impersonate → originalUser/originalToken не потерялись" },
+    { g: "26.3 information_schema миграция", t: "На чистой БД db.js не пытается ALTER TABLE ... IF NOT EXISTS" },
+    { g: "26.3 information_schema миграция", t: "На старой БД (без password_changed_at) — колонка добавилась" },
+    { g: "26.4 PUBLIC_WHEN_FORCED по req.path", t: "must_change_password=1 → GET /api/pipettes → 403 с кодом password_change_required" },
+    { g: "26.4 PUBLIC_WHEN_FORCED по req.path", t: "POST /api/auth/change-password → не 403, работает" },
+    { g: "26.4 PUBLIC_WHEN_FORCED по req.path", t: "GET /api/auth/verify → 200" },
+    { g: "26.5 Clock skew допуск", t: "После смены пароля сразу refreshCurrentUser() → не 401" },
+    { g: "26.5 Clock skew допуск", t: "Смена пароля в 23:59 → следующий запрос в 00:00 → OK" },
+    { g: "26.6 bulk-return проверяет статус", t: "POST /api/pipettes/bulk-return для не отправленной → skipped" },
+    { g: "26.6 bulk-return проверяет статус", t: "В calibration_history запись не создана" },
+    { g: "26.7 Защита от понижения себя", t: "Админ понижает себя → «Нельзя понизить собственную роль администратора»" },
+    { g: "26.7 Защита от понижения себя", t: "Последнего админа другой админ понижает → ошибка" },
+    { g: "26.8 oninput в настройках", t: "Поля формы → правка label → клик ▲▼ → правка сохранена" },
+    { g: "26.8 oninput в настройках", t: "То же для отделов, фильтров, типов" },
+    { g: "26.9 lastResult при скрытом поле", t: "У пользователя скрыто поле «Результат» в prefs" },
+    { g: "26.9 lastResult при скрытом поле", t: "Редактирование без «Результат» → last_result сохранился прежним" },
+    { g: "26.9 lastResult при скрытом поле", t: "Не сбросилось в pass по умолчанию" },
+    { g: "26.10 Напоминания per-user", t: "User A закрыл → User B видит своё" },
+    { g: "26.10 Напоминания per-user", t: "Impersonate → своё напоминание для impersonated" },
+    { g: "26.11 CSV sanitize", t: "Модель =1+1 → Excel показывает текст" },
+    { g: "26.11 CSV sanitize", t: "Модель +7 (999) 123-45-67 → текст, не формула" },
+    { g: "26.11 CSV sanitize", t: "Обычная модель Research Plus → без изменений" },
+    { g: "26.12 getSession при битом JSON", t: "sessionStorage.setItem('pipette_session', '{broken') → F5 → логин, без JS-ошибки" }
+  ]}
+];
+
+/* ============================== STATE ============================== */
+const STORAGE_KEY = "kdl_checklist_v33";
+const LEGACY_KEY  = "kdl_checklist_v32";
+
+let state = loadState();
+let activeFilter = "all";
+let searchQuery = "";
+
+function defaultState() {
+  return { version: 3, items: {}, settings: { theme: "light" } };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_KEY) || localStorage.getItem("kdl_checklist_v31");
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.version === undefined && !parsed.items) {
+      const migrated = defaultState();
+      Object.keys(parsed).forEach(k => {
+        if (k === "settings" || k === "_updated") return;
+        const v = parsed[k];
+        if (typeof v === "string") migrated.items[k] = { s: v, _t: Date.now() };
+        else migrated.items[k] = v;
+      });
+      return migrated;
+    }
+    if (!parsed.items) parsed.items = {};
+    if (!parsed.settings) parsed.settings = defaultState().settings;
+    return parsed;
+  } catch (e) { return defaultState(); }
+}
+function saveState() {
+  state._updated = Date.now();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function itemKey(si, ii) { return `s${si}_i${ii}`; }
+function getItem(key) {
+  const v = state.items[key];
+  if (!v) return { s: null, c: "", b: "", _t: 0 };
+  return { s: v.s || null, c: v.c || "", b: v.b || "", _t: v._t || 0 };
+}
+function setItem(key, patch) {
+  const cur = getItem(key);
+  const next = { ...cur, ...patch, _t: Date.now() };
+  if (!next.s && !next.c && !next.b) delete state.items[key];
+  else state.items[key] = next;
+  saveState();
+}
+
+/* ============================== RENDER ============================== */
+function render() {
+  const root = document.getElementById("checklist");
+  root.innerHTML = "";
+  DATA.forEach((section, si) => {
+    const secEl = document.createElement("div");
+    secEl.className = "section";
+    secEl.dataset.section = si;
+
+    const secStats = getSectionStats(si);
+    const header = document.createElement("div");
+    header.className = "section-header";
+    header.innerHTML = `
+      <span class="arrow">▼</span>
+      <span class="section-title">${escapeHtml(section.title)}</span>
+      <span class="section-badge ${secStats.fail > 0 ? 'fail' : secStats.done === secStats.total ? 'done' : ''}">
+        ${secStats.done}/${secStats.total}${secStats.fail > 0 ? ` · ❌${secStats.fail}` : ''}
+      </span>
+      <div class="section-ops">
+        <button data-op="pass-all" title="Всем пунктам блока поставить ✅">✅</button>
+        <button data-op="skip-all" title="Всем пунктам блока поставить ⏭️">⏭️</button>
+        <button data-op="clear-all" title="Очистить статусы, комментарии и ссылки блока">🧹</button>
+      </div>
+    `;
+    header.onclick = () => secEl.classList.toggle("collapsed");
+    header.querySelectorAll(".section-ops button").forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const op = btn.dataset.op;
+        const label = section.title;
+        if (op === "pass-all") {
+          if (!confirm(`Поставить ✅ всем пунктам блока «${label}»?`)) return;
+          section.items.forEach((_, ii) => {
+            const k = itemKey(si, ii);
+            const cur = getItem(k);
+            state.items[k] = { ...cur, s: "pass", _t: Date.now() };
+          });
+          saveState(); render(); updateStats();
+          toast("Блок отмечен как пройденный", "success");
+        } else if (op === "skip-all") {
+          if (!confirm(`Поставить ⏭️ всем пунктам блока «${label}»?`)) return;
+          section.items.forEach((_, ii) => {
+            const k = itemKey(si, ii);
+            const cur = getItem(k);
+            state.items[k] = { ...cur, s: "skip", _t: Date.now() };
+          });
+          saveState(); render(); updateStats();
+          toast("Блок помечен как пропущенный", "warn");
+        } else if (op === "clear-all") {
+          if (!confirm(`Очистить все статусы, комментарии и ссылки блока «${label}»?`)) return;
+          section.items.forEach((_, ii) => {
+            delete state.items[itemKey(si, ii)];
+          });
+          saveState(); render(); updateStats();
+          toast("Блок очищен", "warn");
+        }
+      };
+    });
+    secEl.appendChild(header);
+
+    const body = document.createElement("div");
+    body.className = "section-body";
+
+    let lastGroup = "";
+    section.items.forEach((item, ii) => {
+      if (item.g && item.g !== lastGroup) {
+        const g = document.createElement("div");
+        g.className = "group-title";
+        g.textContent = item.g;
+        body.appendChild(g);
+        lastGroup = item.g;
+      }
+      const key = itemKey(si, ii);
+      const data = getItem(key);
+      const status = data.s;
+      const hasMeta = !!(data.c || data.b);
+
+      const el = document.createElement("div");
+      el.className = "item" + (status ? " status-" + status : "");
+      el.dataset.key = key;
+      el.dataset.status = status || "";
+      el.dataset.hasMeta = hasMeta ? "1" : "0";
+      el.dataset.hasBug = (data.b || status === "fail") ? "1" : "0";
+      el.dataset.text = (section.tag + " " + item.t + " " + (item.g || "")).toLowerCase();
+
+      const commentBadge = data.c ? `<span class="badge">💬</span>` : "";
+      const bugBadge = data.b ? `<span class="badge">🐞</span>` : "";
+
+      el.innerHTML = `
+        <input type="checkbox" class="item-check" ${status ? 'checked' : ''}>
+        <label class="item-text">
+          <span class="block-tag">${section.tag}</span>${escapeHtml(item.t)}
+        </label>
+        <div class="item-actions">
+          <button class="meta-btn ${data.c ? 'has-data' : ''}" data-action="comment" title="Комментарий">💬${commentBadge}</button>
+          <button class="meta-btn ${data.b ? 'has-data' : ''}" data-action="bug" title="Ссылка на баг">🐞${bugBadge}</button>
+        </div>
+        <div class="status-group">
+          <button class="status-btn ${status === 'pass' ? 'active' : ''}" data-status="pass" title="Пройдено">✅</button>
+          <button class="status-btn ${status === 'fail' ? 'active' : ''}" data-status="fail" title="Провалено">❌</button>
+          <button class="status-btn ${status === 'warn' ? 'active' : ''}" data-status="warn" title="Подозрительно">⚠️</button>
+          <button class="status-btn ${status === 'skip' ? 'active' : ''}" data-status="skip" title="Пропущено">⏭️</button>
+        </div>
+        <div class="item-meta" data-meta>
+          <label>Комментарий</label>
+          <textarea rows="2" placeholder="Заметки по пункту…">${escapeHtml(data.c)}</textarea>
+          <label>Ссылка на баг-трекер</label>
+          <input type="url" placeholder="https://jira.company.com/browse/KDL-123" value="${escapeAttr(data.b)}">
+          <div class="meta-actions">
+            ${data.b ? `<a class="bug-link" href="${escapeAttr(data.b)}" target="_blank" rel="noopener">🐞 Открыть баг</a>` : ""}
+            <button class="primary" data-action="save-meta">💾 Сохранить</button>
+            <button data-action="clear-meta" ${hasMeta ? '' : 'style="display:none;"'}>🧹 Очистить</button>
+          </div>
+        </div>
+      `;
+
+      const checkbox = el.querySelector(".item-check");
+      const label = el.querySelector(".item-text");
+      const meta = el.querySelector("[data-meta]");
+
+      const toggleStatus = () => {
+        const cur = getItem(key);
+        setItem(key, { s: cur.s === "pass" ? null : "pass" });
+        render(); updateStats();
+      };
+      checkbox.onchange = toggleStatus;
+      label.onclick = toggleStatus;
+
+      el.querySelectorAll(".status-btn").forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const s = btn.dataset.status;
+          const cur = getItem(key);
+          setItem(key, { s: cur.s === s ? null : s });
+          render(); updateStats();
+        };
+      });
+
+      el.querySelector('[data-action="comment"]').onclick = () => {
+        meta.classList.toggle("open");
+        if (meta.classList.contains("open")) meta.querySelector("textarea").focus();
+      };
+      el.querySelector('[data-action="bug"]').onclick = () => {
+        meta.classList.add("open");
+        meta.querySelector('input[type="url"]').focus();
+      };
+
+      meta.querySelector('[data-action="save-meta"]').onclick = () => {
+        const c = meta.querySelector("textarea").value;
+        const b = meta.querySelector('input[type="url"]').value.trim();
+        setItem(key, { c, b });
+        toast("Сохранено", "success");
+        render();
+      };
+      meta.querySelector('[data-action="clear-meta"]').onclick = () => {
+        if (!confirm("Очистить комментарий и ссылку?")) return;
+        setItem(key, { c: "", b: "" });
+        render();
+      };
+      meta.querySelector("textarea").onkeydown = (e) => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) meta.querySelector('[data-action="save-meta"]').click();
+      };
+
+      body.appendChild(el);
+    });
+
+    secEl.appendChild(body);
+    root.appendChild(secEl);
+  });
+  applyFilters();
+  updateStats();
+}
+
+function getSectionStats(si) {
+  const section = DATA[si];
+  let done = 0, fail = 0;
+  section.items.forEach((_, ii) => {
+    const s = getItem(itemKey(si, ii)).s;
+    if (s === "pass") done++;
+    if (s === "fail") fail++;
+  });
+  return { done, fail, total: section.items.length };
+}
+
+function updateStats() {
+  let pass = 0, fail = 0, warn = 0, skip = 0, total = 0;
+  DATA.forEach((sec, si) => sec.items.forEach((_, ii) => {
+    total++;
+    const s = getItem(itemKey(si, ii)).s;
+    if (s === "pass") pass++;
+    else if (s === "fail") fail++;
+    else if (s === "warn") warn++;
+    else if (s === "skip") skip++;
+  }));
+  const left = total - pass - fail - warn - skip;
+  document.getElementById("stat-total").textContent = total;
+  document.getElementById("stat-pass").textContent = pass;
+  document.getElementById("stat-fail").textContent = fail;
+  document.getElementById("stat-warn").textContent = warn;
+  document.getElementById("stat-skip").textContent = skip;
+  document.getElementById("stat-left").textContent = left;
+  const pct = total ? ((pass + skip) / total * 100) : 0;
+  document.getElementById("progress-fill").style.width = pct + "%";
+}
+
+function applyFilters() {
+  const q = searchQuery.trim().toLowerCase();
+  document.querySelectorAll(".section").forEach(secEl => {
+    let visibleItems = 0;
+    secEl.querySelectorAll(".item").forEach(item => {
+      const textMatch = !q || item.dataset.text.includes(q);
+      const st = item.dataset.status || "";
+      const hasMeta = item.dataset.hasMeta === "1";
+      const hasBug = item.dataset.hasBug === "1";
+      let statusMatch = true;
+      if (activeFilter === "left") statusMatch = !st;
+      else if (activeFilter === "fail") statusMatch = st === "fail";
+      else if (activeFilter === "pass") statusMatch = st === "pass";
+      else if (activeFilter === "with-meta") statusMatch = hasMeta;
+      else if (activeFilter === "with-bugs") statusMatch = hasBug;
+      const show = textMatch && statusMatch;
+      item.classList.toggle("hidden", !show);
+      if (show) visibleItems++;
+    });
+    secEl.style.display = visibleItems ? "" : "none";
+    if (q && visibleItems) secEl.classList.remove("collapsed");
+    if (q && !visibleItems) secEl.classList.add("collapsed");
+  });
+  ["all", "left", "fail", "with-meta", "with-bugs"].forEach(f => {
+    const btn = document.getElementById("f-" + f);
+    if (btn) btn.classList.toggle("active", f === activeFilter);
+  });
+}
+
+/* ============================== UI EVENTS ============================== */
+document.getElementById("search").addEventListener("input", (e) => {
+  searchQuery = e.target.value;
+  applyFilters();
+});
+
+function filterStatus(f) { activeFilter = f; applyFilters(); }
+function expandAll() { document.querySelectorAll(".section").forEach(s => s.classList.remove("collapsed")); }
+function collapseAll() { document.querySelectorAll(".section").forEach(s => s.classList.add("collapsed")); }
+
+/* ============================== THEME ============================== */
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  document.getElementById("theme-btn").textContent = t === "dark" ? "☀️" : "🌙";
+  state.settings.theme = t;
+  saveState();
+}
+function toggleTheme() {
+  applyTheme(state.settings.theme === "dark" ? "light" : "dark");
+}
+
+/* ============================== EXPORT / IMPORT / SHARE ============================== */
+function exportJSON() {
+  const result = {
+    version: "3.3",
+    exported: new Date().toISOString(),
+    stats: {
+      total: +document.getElementById("stat-total").textContent,
+      pass: +document.getElementById("stat-pass").textContent,
+      fail: +document.getElementById("stat-fail").textContent,
+      warn: +document.getElementById("stat-warn").textContent,
+      skip: +document.getElementById("stat-skip").textContent,
+      left: +document.getElementById("stat-left").textContent
+    },
+    settings: { theme: state.settings.theme },
+    items: {}
+  };
+  DATA.forEach((sec, si) => sec.items.forEach((it, ii) => {
+    const key = itemKey(si, ii);
+    const d = state.items[key];
+    if (!d) return;
+    result.items[key] = {
+      block: sec.tag,
+      group: it.g || "",
+      text: it.t,
+      s: d.s || null,
+      c: d.c || "",
+      b: d.b || "",
+      _t: d._t || 0
+    };
+  }));
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `kdl_checklist_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast("Экспортировано в JSON", "success");
+}
+
+function triggerImport() { document.getElementById("import-file").click(); }
+document.getElementById("import-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    importData(parsed);
+  } catch (err) {
+    toast("Ошибка чтения файла: " + err.message, "error");
+  }
+  e.target.value = "";
+});
+
+function importData(parsed) {
+  let imported = 0;
+  if (parsed.items) {
+    Object.entries(parsed.items).forEach(([k, v]) => {
+      const normalized = {
+        s: v.s || null,
+        c: v.c || "",
+        b: v.b || "",
+        _t: v._t || Date.now()
+      };
+      if (!state.items[k]) { state.items[k] = normalized; imported++; return; }
+      const lt = state.items[k]._t || 0;
+      const rt = normalized._t || 0;
+      if (rt >= lt) { state.items[k] = normalized; imported++; }
+    });
+  } else {
+    Object.entries(parsed).forEach(([k, v]) => {
+      if (k === "settings" || k === "_updated" || k === "version" || k === "exported" || k === "stats") return;
+      if (typeof v === "string") {
+        state.items[k] = { s: v, c: "", b: "", _t: Date.now() };
+        imported++;
+      } else if (v && typeof v === "object") {
+        state.items[k] = { s: v.s || null, c: v.c || "", b: v.b || "", _t: v._t || Date.now() };
+        imported++;
+      }
+    });
+  }
+  if (parsed.settings && parsed.settings.theme) {
+    applyTheme(parsed.settings.theme);
+  }
+  saveState();
+  render();
+  toast(`Импортировано: ${imported} записей`, "success");
+}
+
+function shareLink() {
+  const compact = { v: 3, i: {}, s: { theme: state.settings.theme } };
+  Object.entries(state.items).forEach(([k, v]) => {
+    const short = {};
+    if (v.s) short.s = v.s;
+    if (v.c) short.c = v.c;
+    if (v.b) short.b = v.b;
+    if (Object.keys(short).length) compact.i[k] = short;
+  });
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
+    const url = location.origin + location.pathname + "#data=" + encoded;
+    if (url.length > 32000) {
+      toast("Ссылка слишком длинная (" + url.length + " симв.). Используйте экспорт JSON.", "warn");
+      return;
+    }
+    navigator.clipboard.writeText(url).then(
+      () => toast("Ссылка скопирована в буфер (" + url.length + " симв.)", "success"),
+      () => prompt("Скопируйте ссылку:", url)
+    );
+  } catch (e) {
+    toast("Не удалось сформировать ссылку: " + e.message, "error");
+  }
+}
+
+function loadFromHash() {
+  const hash = location.hash;
+  if (!hash || !hash.startsWith("#data=")) return;
+  try {
+    const encoded = hash.slice(6);
+    const json = decodeURIComponent(escape(atob(encoded)));
+    const parsed = JSON.parse(json);
+    if (parsed.i) {
+      Object.entries(parsed.i).forEach(([k, v]) => {
+        if (!state.items[k]) state.items[k] = { s: v.s || null, c: v.c || "", b: v.b || "", _t: Date.now() };
+      });
+      if (parsed.s && parsed.s.theme) state.settings.theme = parsed.s.theme;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      history.replaceState(null, "", location.pathname);
+      toast("Прогресс загружен из ссылки", "success");
+    }
+  } catch (e) { /* ignore */ }
+}
+
+/* ============================== DIFF ============================== */
+let diffData = { a: null, b: null };
+
+function openDiff() {
+  diffData = { a: null, b: null };
+  document.getElementById("diff-a").value = "";
+  document.getElementById("diff-b").value = "";
+  document.getElementById("diff-result").innerHTML = `<div class="diff-empty">Загрузите оба файла для сравнения</div>`;
+  document.getElementById("diff-modal").classList.add("open");
+}
+function closeDiff() {
+  document.getElementById("diff-modal").classList.remove("open");
+}
+
+document.getElementById("diff-a").addEventListener("change", async (e) => {
+  diffData.a = await readJsonFile(e.target.files[0]);
+  renderDiff();
+});
+document.getElementById("diff-b").addEventListener("change", async (e) => {
+  diffData.b = await readJsonFile(e.target.files[0]);
+  renderDiff();
+});
+document.getElementById("diff-modal").addEventListener("click", (e) => {
+  if (e.target.id === "diff-modal") closeDiff();
+});
+
+async function readJsonFile(file) {
+  if (!file) return null;
+  try {
+    const text = await file.text();
+    return JSON.parse(text);
+  } catch (e) {
+    toast("Ошибка чтения: " + e.message, "error");
+    return null;
+  }
+}
+
+function renderDiff() {
+  const result = document.getElementById("diff-result");
+  const { a, b } = diffData;
+  if (!a || !b) {
+    result.innerHTML = `<div class="diff-empty">Загрузите оба файла для сравнения${a ? " · A ✓" : ""}${b ? " · B ✓" : ""}</div>`;
+    return;
+  }
+  const normalize = (obj) => {
+    const out = {};
+    Object.entries(obj || {}).forEach(([k, v]) => {
+      if (typeof v === "string") out[k] = { s: v, c: "", b: "" };
+      else out[k] = { s: v.s || null, c: v.c || "", b: v.b || "" };
+    });
+    return out;
+  };
+  const A = normalize(a.items);
+  const B = normalize(b.items);
+  const allKeys = new Set([...Object.keys(A), ...Object.keys(B)]);
+  const changes = [];
+  let addedCount = 0, removedCount = 0, changedCount = 0, sameCount = 0;
+
+  allKeys.forEach(key => {
+    const oldV = A[key], newV = B[key];
+    if (oldV && !newV) { removedCount++; changes.push({ key, type: "removed", oldV, newV }); }
+    else if (!oldV && newV) { addedCount++; changes.push({ key, type: "added", oldV, newV }); }
+    else {
+      const sameStatus = (oldV.s || "") === (newV.s || "");
+      const sameComment = (oldV.c || "") === (newV.c || "");
+      const sameBug = (oldV.b || "") === (newV.b || "");
+      if (!sameStatus || !sameComment || !sameBug) {
+        changedCount++;
+        changes.push({ key, type: "changed", oldV, newV });
+      } else sameCount++;
+    }
+  });
+
+  const lookup = (key) => {
+    const m = key.match(/^s(\d+)_i(\d+)$/);
+    if (!m) return { text: key, block: "?" };
+    const si = +m[1], ii = +m[2];
+    const sec = DATA[si];
+    if (!sec || !sec.items[ii]) return { text: key, block: sec ? sec.tag : "?" };
+    return { text: sec.items[ii].t, block: sec.tag };
+  };
+
+  const statusLabel = s => ({ pass: "✅", fail: "❌", warn: "⚠️", skip: "⏭️" }[s] || "—");
+
+  const summary = `
+    <div class="diff-summary">
+      <span>Изменено: <b>${changedCount}</b></span>
+      <span>Добавлено: <b>${addedCount}</b></span>
+      <span>Удалено: <b>${removedCount}</b></span>
+      <span>Без изменений: <b>${sameCount}</b></span>
+    </div>
+  `;
+
+  if (!changes.length) {
+    result.innerHTML = summary + `<div class="diff-empty">✓ Различий нет</div>`;
+    return;
+  }
+
+  const order = { changed: 0, added: 1, removed: 2 };
+  changes.sort((x, y) => order[x.type] - order[y.type]);
+
+  const rowsHtml = changes.map(ch => {
+    const info = lookup(ch.key);
+    let body = "";
+    if (ch.type === "changed") {
+      const parts = [];
+      if ((ch.oldV.s || "") !== (ch.newV.s || "")) {
+        parts.push(`Статус: <span class="old">${statusLabel(ch.oldV.s)}</span> → <span class="new">${statusLabel(ch.newV.s)}</span>`);
+      }
+      if ((ch.oldV.c || "") !== (ch.newV.c || "")) {
+        parts.push(`Комментарий: <span class="old">${escapeHtml(ch.oldV.c || "—")}</span> → <span class="new">${escapeHtml(ch.newV.c || "—")}</span>`);
+      }
+      if ((ch.oldV.b || "") !== (ch.newV.b || "")) {
+        parts.push(`Баг: <span class="old">${escapeHtml(ch.oldV.b || "—")}</span> → <span class="new">${escapeHtml(ch.newV.b || "—")}</span>`);
+      }
+      body = parts.map(p => `<span class="diff-change">${p}</span>`).join("");
+    } else if (ch.type === "added") {
+      body = `<span class="diff-change">+ добавлено: ${statusLabel(ch.newV.s)}${ch.newV.c ? " · 💬" : ""}${ch.newV.b ? " · 🐞" : ""}</span>`;
+    } else {
+      body = `<span class="diff-change">− удалено: ${statusLabel(ch.oldV.s)}${ch.oldV.c ? " · 💬" : ""}${ch.oldV.b ? " · 🐞" : ""}</span>`;
+    }
+    return `<div class="diff-row ${ch.type}">
+      <div><span class="diff-block">${info.block}</span><span class="diff-text">${escapeHtml(info.text)}</span></div>
+      ${body}
+    </div>`;
+  }).join("");
+
+  result.innerHTML = summary + `<div class="diff-list">${rowsHtml}</div>`;
+}
+
+/* ============================== JIRA CSV ============================== */
+function csvEscape(v) {
+  const s = String(v == null ? "" : v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function exportJiraCSV() {
+  const rows = [];
+  DATA.forEach((sec, si) => sec.items.forEach((it, ii) => {
+    const key = itemKey(si, ii);
+    const d = getItem(key);
+    const isBug = d.b || d.s === "fail";
+    if (!isBug) return;
+    const priority = d.s === "fail" ? "High" : d.s === "warn" ? "Medium" : "Low";
+    const descParts = [];
+    if (d.c) descParts.push("Комментарий: " + d.c);
+    if (d.b) descParts.push("Ссылка на баг: " + d.b);
+    if (d.s) descParts.push("Статус: " + ({ pass: "✅ Пройдено", fail: "❌ Провалено", warn: "⚠️ Подозрительно", skip: "⏭️ Пропущено" }[d.s] || d.s));
+    const summary = `[КДЛ][Блок ${sec.tag}] ${it.t}`;
+    rows.push([
+      summary,
+      "Bug",
+      priority,
+      `kdl-checklist,block-${sec.tag}`,
+      descParts.join("\n")
+    ]);
+  }));
+
+  if (!rows.length) { toast("Нет багов для экспорта", "warn"); return; }
+
+  const header = ["Summary", "Issue Type", "Priority", "Labels", "Description"];
+  const csv = [header, ...rows].map(r => r.map(csvEscape).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `kdl_bugs_jira_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast(`Экспортировано ${rows.length} багов для Jira`, "success");
+}
+
+/* ============================== UTILS ============================== */
+function resetAll() {
+  if (!confirm("Сбросить весь прогресс, комментарии и баг-ссылки? Действие необратимо.")) return;
+  const keepTheme = state.settings.theme;
+  state = defaultState();
+  state.settings.theme = keepTheme;
+  saveState();
+  render();
+  toast("Всё сброшено", "warn");
+}
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+let toastTimer = null;
+function toast(msg, type) {
+  let el = document.querySelector(".toast");
+  if (!el) { el = document.createElement("div"); el.className = "toast"; document.body.appendChild(el); }
+  el.className = "toast " + (type || "");
+  el.textContent = msg;
+  requestAnimationFrame(() => el.classList.add("show"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+/* ============================== INIT ============================== */
+applyTheme(state.settings.theme || "light");
+loadFromHash();
+render();
+</script>
+</body>
+</html>
