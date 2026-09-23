@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Чек-лист КДЛ v3.4</title>
+<title>Чек-лист КДЛ v3.5</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f5f7fb;--card:#fff;--card-2:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--primary:#4f46e5;--primary-light:#eef2ff;--success:#16a34a;--success-light:#dcfce7;--danger:#dc2626;--danger-light:#fee2e2;--warn:#d97706;--warn-light:#fef3c7;--skip:#64748b;--skip-light:#f1f5f9;--shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -12,7 +12,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 .container{max-width:1100px;margin:0 auto}
 header{background:var(--card);border-radius:12px;padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow);position:sticky;top:12px;z-index:100}
 h1{font-size:20px;margin-bottom:4px}
-.subtitle{color:var(--muted);font-size:13px;margin-bottom:16px}
+.subtitle{color:var(--muted);font-size:13px;margin-bottom:14px}
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0}
+.tab{padding:10px 20px;background:transparent;border:none;border-bottom:3px solid transparent;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);font-family:inherit;margin-bottom:-2px;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab .count{display:inline-block;font-size:11px;background:var(--bg);color:var(--muted);padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600}
+.tab.active .count{background:var(--primary-light);color:var(--primary)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px}
 .stat{background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center}
 .stat-value{font-size:22px;font-weight:700;line-height:1.1}
@@ -33,6 +39,7 @@ button.danger:hover{opacity:.9}
 button.icon{padding:8px 10px;font-size:15px}
 button.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
 .section{background:var(--card);border-radius:12px;margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
+.section.scenario{border-left:4px solid var(--primary)}
 .section-header{padding:14px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;user-select:none}
 .section-header:hover{background:var(--bg)}
 .section-header .arrow{font-size:12px;color:var(--muted);transition:transform .2s;width:14px;display:inline-block}
@@ -42,6 +49,7 @@ button.active{background:var(--primary-light);border-color:var(--primary);color:
 .section-badge{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--bg);color:var(--muted);font-weight:600}
 .section-badge.done{background:var(--success-light);color:var(--success)}
 .section-badge.fail{background:var(--danger-light);color:var(--danger)}
+.section-meta{font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px}
 .mini-bar{width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;flex-shrink:0}
 .mini-bar-fill{height:100%;background:var(--success);width:0;transition:width .3s;border-radius:3px}
 .section-body{padding:4px 20px 16px}
@@ -56,6 +64,7 @@ button.active{background:var(--primary-light);border-color:var(--primary);color:
 .item-check{width:16px;height:16px;margin-top:3px;cursor:pointer;accent-color:var(--primary);flex-shrink:0}
 .item-text{flex:1;font-size:13.5px;cursor:pointer;min-width:200px}
 .item-text .block-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:var(--primary-light);color:var(--primary);font-weight:600;margin-right:6px;vertical-align:1px}
+.item-text .step-num{display:inline-block;font-size:11px;color:var(--muted);font-weight:700;margin-right:6px;min-width:20px}
 .item.hidden{display:none}
 .item-actions{display:flex;gap:3px;flex-shrink:0;margin-top:1px}
 .status-group{display:flex;gap:3px;flex-shrink:0;margin-top:1px}
@@ -78,6 +87,8 @@ button.active{background:var(--primary-light);border-color:var(--primary);color:
 .bug-link{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:3px 8px;border-radius:6px;background:var(--danger-light);color:var(--danger);text-decoration:none;font-weight:600}
 .group-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;padding-left:8px;border-left:3px solid var(--primary)}
 .group-title:first-child{margin-top:4px}
+.expected-box{background:var(--card-2);border-left:3px solid var(--success);padding:10px 14px;margin:10px 0 6px 0;border-radius:6px;font-size:13px}
+.expected-box b{color:var(--success);display:block;margin-bottom:4px;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
 footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--primary);padding:12px 18px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:13px;z-index:1000;opacity:0;transform:translateY(20px);transition:all .25s;max-width:360px}
 .toast.show{opacity:1;transform:translateY(0)}
@@ -103,24 +114,30 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .diff-row .diff-change .old{color:var(--danger);text-decoration:line-through}
 .diff-row .diff-change .new{color:var(--success);font-weight:600}
 .diff-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
-.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column-reverse;gap:8px}
 .hint{display:inline-block;font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px;margin-left:6px}
 @media print{
   header{position:static;box-shadow:none}
-  .controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint{display:none!important}
+  .controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint,.tabs{display:none!important}
   .section{box-shadow:none;border:1px solid var(--border);break-inside:avoid}
   .item.hidden{display:none!important}
   .section[style*="display: none"]{display:none!important}
   body{background:#fff;padding:0}
+  .tab-content{display:block!important}
 }
-@media (max-width:600px){body{padding:10px}header{padding:14px}h1{font-size:16px}.stat-value{font-size:18px}.item-text{font-size:13px;min-width:0}.controls input[type=search]{min-width:100%}.item-meta{margin-left:0}.diff-files{grid-template-columns:1fr}.section-ops{margin-right:0}}
+@media (max-width:600px){body{padding:10px}header{padding:14px}h1{font-size:16px}.stat-value{font-size:18px}.item-text{font-size:13px;min-width:0}.controls input[type=search]{min-width:100%}.item-meta{margin-left:0}.diff-files{grid-template-columns:1fr}.section-ops{margin-right:0}.tab{padding:8px 12px;font-size:13px}}
 </style>
 </head>
 <body>
 <div class="container">
 <header>
-  <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400">v3.4</span></h1>
-  <div class="subtitle">Прогресс, комментарии, баг-ссылки, diff, групповые операции, Jira CSV, Markdown, undo/redo. Всё офлайн.</div>
+  <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400">v3.5</span></h1>
+  <div class="subtitle">Блоки 1–26 + сквозные сценарии 1–20. Комментарии, баг-ссылки, diff, Jira CSV, Markdown, undo/redo.</div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="checklist" onclick="switchTab('checklist')">📋 Чек-лист <span class="count" id="tab-count-checklist">0/0</span></button>
+    <button class="tab" data-tab="scenarios" onclick="switchTab('scenarios')">🎬 Сценарии <span class="count" id="tab-count-scenarios">0/0</span></button>
+  </div>
+
   <div class="stats">
     <div class="stat total"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Всего</div></div>
     <div class="stat pass"><div class="stat-value" id="stat-pass">0</div><div class="stat-label">Пройдено</div></div>
@@ -132,29 +149,32 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   <div class="controls">
     <input type="search" id="search" placeholder="🔍 Поиск по пунктам…">
-    <button onclick="expandAll()" title="Развернуть все блоки">Развернуть</button>
-    <button onclick="collapseAll()" title="Свернуть все блоки">Свернуть</button>
+    <button onclick="expandAll()">Развернуть</button>
+    <button onclick="collapseAll()">Свернуть</button>
     <button onclick="filterStatus('all')" id="f-all" class="active">Все</button>
     <button onclick="filterStatus('left')" id="f-left">Не пройдено</button>
     <button onclick="filterStatus('fail')" id="f-fail">❌ Провалы</button>
     <button onclick="filterStatus('with-meta')" id="f-meta">💬 С мета</button>
     <button onclick="filterStatus('with-bugs')" id="f-bugs">🐞 С багами</button>
-    <button class="primary" onclick="exportJSON()" title="Скачать JSON с прогрессом">💾 Экспорт</button>
-    <button onclick="triggerImport()" title="Загрузить JSON">📥 Импорт</button>
-    <button onclick="openDiff()" title="Сравнить два JSON-экспорта">📊 Diff</button>
-    <button onclick="exportJiraCSV()" title="Выгрузить баги для Jira">📤 Jira CSV</button>
-    <button onclick="exportMarkdown()" title="Экспорт в Markdown для README">📝 Markdown</button>
-    <button onclick="undo()" title="Отменить (Ctrl+Z)" id="btn-undo">↩️</button>
-    <button onclick="redo()" title="Вернуть (Ctrl+Y)" id="btn-redo">↪️</button>
-    <button onclick="shareLink()" title="Скопировать ссылку с прогрессом">🔗 Ссылка</button>
-    <button class="icon" onclick="toggleTheme()" id="theme-btn" title="Тема">🌙</button>
-    <button class="danger" onclick="resetAll()" title="Сбросить всё">🗑️</button>
+    <button class="primary" onclick="exportJSON()">💾 Экспорт</button>
+    <button onclick="triggerImport()">📥 Импорт</button>
+    <button onclick="openDiff()">📊 Diff</button>
+    <button onclick="exportJiraCSV()">📤 Jira CSV</button>
+    <button onclick="exportMarkdown()">📝 Markdown</button>
+    <button onclick="undo()" id="btn-undo" title="Ctrl+Z">↩️</button>
+    <button onclick="redo()" id="btn-redo" title="Ctrl+Y">↪️</button>
+    <button onclick="shareLink()">🔗 Ссылка</button>
+    <button class="icon" onclick="toggleTheme()" id="theme-btn">🌙</button>
+    <button class="danger" onclick="resetAll()">🗑️</button>
   </div>
 </header>
-<div id="checklist"></div>
+
+<div class="tab-content" id="tab-checklist"><div id="checklist"></div></div>
+<div class="tab-content" id="tab-scenarios" style="display:none"><div id="scenarios"></div></div>
+
 <footer>
-  Прогресс хранится в localStorage. · <button onclick="window.print()" style="padding:4px 10px;font-size:12px">🖨️ Печать с учётом фильтра</button>
-  <div class="hint">Ctrl+Z — отменить · Ctrl+Y — вернуть</div>
+  Прогресс в localStorage. · <button onclick="window.print()" style="padding:4px 10px;font-size:12px">🖨️ Печать активной вкладки</button>
+  <div class="hint">Ctrl+Z — отменить · Ctrl+Y — вернуть · Esc — закрыть модалку</div>
 </footer>
 </div>
 
@@ -174,6 +194,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <input type="file" id="import-file" accept=".json,application/json" style="display:none">
 
 <script>
+/* ================ ДАННЫЕ: БЛОКИ ЧЕК-ЛИСТА ================ */
 const DATA = [
   { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
     { g: "1.1 Backend", t: "docker-compose up -d без ошибок" },
@@ -467,20 +488,373 @@ const DATA = [
   ]}
 ];
 
-const STORAGE_KEY = "kdl_checklist_v34";
-const LEGACY_KEYS = ["kdl_checklist_v33","kdl_checklist_v32","kdl_checklist_v31"];
+/* ================ ДАННЫЕ: СЦЕНАРИИ ================ */
+const SCENARIOS = [
+  { tag: "S1", title: "Сценарий 1. Администратор: от запуска до аудита", time: "60 мин", priority: "🔴", blocks: "1, 2.1, 3–6, 9, 10, 13–19", steps: [
+    "docker-compose up -d, проверить логи MySQL, БД, сервера, разовые пароли",
+    "SHOW TABLES — все 10 таблиц, 3 пользователя, 8 отделов, 5 демо-пипеток",
+    "system_settings: equipment_types (6), warn_days = 30",
+    "Открыть http://localhost:3000, Console без ошибок",
+    "Войти admin/admin — тост, ФИО, должность в шапке",
+    "Создать P-006, A-002, M-002. Проверить префиксы ID",
+    "Проверить ошибки: без модели, без даты, дата в будущем, занятый ID",
+    "Редактировать P-001: модель, стереть дату → дата не обнулилась",
+    "Удалить P-003: подтверждение, тост, история удалена",
+    "Быстрая поверка P-001: Годен, дата сегодня. Проверить Поверка/Следующая",
+    "Записать Брак для другой пипетки → статус красный",
+    "История P-001: таймлайн, свидетельство, организация, примечание",
+    "Добавить поверку вручную из истории. Тост, таблица обновлена",
+    "Экспорт истории: пустой период и конкретный. CSV и PDF",
+    "Фильтры: статус Просрочены, период, отдел, ответственный, модель",
+    "Сбросить фильтры. Сортировка по ID и модели",
+    "Открыть настройки: поля, отделы, фильтры, экспорт, система, лог",
+    "В логе проверить: вход, добавление, смена пароля, импорт",
+    "Очистить лог с подтверждением → пусто"
+  ], expected: "Все действия проходят, данные не теряются, ошибки валидации корректны, лог заполняется" },
+
+  { tag: "S2", title: "Сценарий 2. Роли, права и impersonate", time: "30 мин", priority: "🔴", blocks: "2.4, 2.5, 20", steps: [
+    "Войти user/user. Проверить: Иванов Иван · Биохимический отдел",
+    "Нет кнопок Добавить, Импорт, Настройки, Экспорт",
+    "В истории нет Добавить поверку, в таблице только История",
+    "openModal() из консоли → Доступ запрещён",
+    "apiRequest('/pipettes/P-001','DELETE') → 403",
+    "Войти senior/senior. Есть Добавить, Импорт, Экспорт, Добавить поверку; нет Настройки",
+    "Войти admin/admin. Всё доступно",
+    "Открыть пользователей, Войти как под user → тост, кнопка Вернуться",
+    "Кнопки управления скрыты, права user",
+    "Действие от имени user — в логе от user",
+    "Вернуться — тост, права admin вернулись",
+    "Снова Войти как user, F5 — сессия impersonate сохранилась",
+    "Напоминания: у user свой набор, у admin свой",
+    "Включить Только свой отдел у user — видит только Биохимический"
+  ], expected: "Права работают и на фронте, и на бэке; impersonate не теряет originalUser/originalToken; лог пишется от impersonated" },
+
+  { tag: "S3", title: "Сценарий 3. Массовые операции и напоминания", time: "30 мин", priority: "🔴", blocks: "7, 8, 12", steps: [
+    "Войти admin",
+    "Выбрать 3 пипетки → счётчик (3)",
+    "Добавить анализатор — счётчик стал 1 или не учитывается",
+    "Открыть Отправить на поверку: список, дата, примечание",
+    "Дата в будущем → ошибка",
+    "Подтвердить: тост, статус На поверке, кнопка Отправить пропала, Вернулись (N)",
+    "Распечатать акт — окно с таблицей. Без выбора — Нет пипеток",
+    "Открыть Возврат: счётчик возвращаемых",
+    "Одно свидетельство на всех — индивидуальные поля отключились",
+    "Общий результат Годен, изменить общий select — все строки поменялись",
+    "Пустое свидетельство → предупреждение",
+    "Подтвердить: тост Возврат оформлен, статус и история обновились",
+    "curl POST /api/pipettes/bulk-return для не отправленной → skipped, истории нет",
+    "Перезагрузить: напоминание через 600 мс при danger/warn",
+    "Понятно → не появляется до завтра. Позже → появится при входе",
+    "F5 → напоминание не появляется",
+    "Другой пользователь в том же браузере → своё напоминание",
+    "Impersonate → своё напоминание"
+  ], expected: "Массовые операции корректны, статусы обновляются, напоминания per-user" },
+
+  { tag: "S4", title: "Сценарий 4. Настройки и пользовательский вид", time: "45 мин", priority: "🟡", blocks: "13–18, 22", steps: [
+    "Войти admin, открыть Настройки",
+    "Поля формы: снять Активно у Примечание → пропало из формы",
+    "Переместить поле ▲▼ → порядок изменился",
+    "Поставить Обяз. → поле стало required",
+    "Изменить label, не убирая фокус, кликнуть ▲▼ → правка сохранилась",
+    "Добавить поле, тип select → textarea для опций",
+    "Сохранить → тост",
+    "Отделы: дубликат → Такой отдел уже есть",
+    "Изменить название без blur, кликнуть ▲/▼ — правка не потерялась",
+    "Сохранить → тост",
+    "Фильтры: отключить Статус → после F5 пропал из UI",
+    "Добавить фильтр → появился",
+    "Экспорт: 3 поля → CSV с 3 столбцами. Снять все → дефолт",
+    "Пользователи: своя строка без 🔍/🔑/🗑️",
+    "Создать пользователя → модалка разового пароля. Скопировать пароль",
+    "Понизить себя → Нельзя понизить собственную роль",
+    "Понизить последнего админа → Нельзя понизить последнего администратора",
+    "Сброс пароля себе → Используйте Сменить пароль",
+    "Роль admin → все чекбоксы disabled",
+    "Система: изменить warn_days, сохранить",
+    "Типы: value read-only, label изменить, пустой prefix → EQ, дубли → ошибка, используемый → Нельзя удалить",
+    "Лог: все действия, Очистить с подтверждением",
+    "Настройки вида: снять 3 поля у user, Колонки таблицы, Отдел вверх",
+    "Войти user — скрытых полей нет, порядок изменён",
+    "Пустой список → Нужно выбрать хотя бы одно поле"
+  ], expected: "Настройки применяются, валидации работают, права не ломаются" },
+
+  { tag: "S5", title: "Сценарий 5. Пароли, сессии и безопасность", time: "40 мин", priority: "🔴", blocks: "2.2, 21, 24, 26.1–26.5", steps: [
+    "Войти admin, Пароль",
+    "Валидации: пустые, меньше 8, без заглавной, без спецсимвола, не совпадают, такой же",
+    "Корректный новый пароль → тост Пароль успешно изменён",
+    "Не выкинуло, сразу открыть таблицу — работает",
+    "authToken в sessionStorage обновился",
+    "Создать пользователя, получить разовый пароль",
+    "Войти с разовым → система требует смену",
+    "must_change_password=1: GET /api/pipettes → 403 password_change_required",
+    "POST /api/auth/change-password → не 403, работает",
+    "GET /api/auth/verify → 200",
+    "Impersonate + смена пароля → originalUser/originalToken сохранены",
+    "Удалить pipette_session → F5 → логин",
+    "Токен мусор → F5 → Недействительный токен",
+    "clearSession() + apiRequest('/pipettes') → 401",
+    "JWT в sessionStorage, не localStorage",
+    "Подделать токен → 401. Истёк токен → авторазлогин",
+    "SQL-инъекция ' OR '1'='1 → экранирование",
+    "XSS-тег → экранирование через esc()",
+    "apiRequest('/settings/fields','PUT',[]) под user → 403",
+    "CSV injection: =1+1, +7 999, -5, @user → текст в Excel",
+    "=HYPERLINK(...) → в CSV не выполняется",
+    "Смена пароля в 23:59, запрос в 00:00 → OK",
+    "sessionStorage с '{broken' → F5 → логин без JS-ошибки"
+  ], expected: "Пароли и сессии работают, безопасность не пробивается, регрессия не возвращается" },
+
+  { tag: "S6", title: "Сценарий 6. Импорт, экспорт и нагрузка", time: "30 мин", priority: "🟡", blocks: "10, 11, 25", steps: [
+    "Войти admin, открыть Импорт",
+    "Загрузить XLSX, XLS, CSV, JSON, TXT — все работают",
+    "Битый файл → ошибка",
+    "Без заголовков → Не удалось распознать…",
+    "Дубли ID → в skipped",
+    "Дата 21.10.2024 → 2024-10-21",
+    "Дата 10.21.2024 → 2024-10-21 (US)",
+    "Результат Брак → fail",
+    "Тип Микроскоп → microscope",
+    "Скрипт-тег → экранирование, нет всплытия",
+    "Импорт под user → Нет прав",
+    "Импортировать 500 строк < 30 сек. Таблица, фильтры, поиск",
+    "Импортировать 1000 строк < 60 сек. Не тормозит",
+    "Экспорт 1000 → CSV корректен, PDF открывается",
+    "Активный фильтр → экспорт только отфильтрованных",
+    "Без прав → Нет прав на экспорт",
+    "CSV: BOM, кириллица, pipettes_YYYY-MM-DD.csv",
+    "PDF: печатная форма, кнопка Печать",
+    "docker exec SELECT COUNT(*) — совпадает"
+  ], expected: "Импорт и экспорт стабильны, нагрузка в норме, безопасность соблюдена" },
+
+  { tag: "S7", title: "Сценарий 7. Регрессия исправленных багов", time: "20 мин", priority: "🔴", blocks: "26", steps: [
+    "26.1. Смена пароля не разлогинивает: сменить, открыть таблицу — работает",
+    "26.2. Fresh token: authToken обновился, impersonate сохранил original",
+    "26.3. На чистой БД нет ALTER, на старой — колонка добавилась",
+    "26.4. must_change_password: GET pipettes 403, change-password OK, verify 200",
+    "26.5. Clock skew: refreshCurrentUser() сразу — не 401; смена в 23:59, запрос в 00:00 — OK",
+    "26.6. bulk-return для не отправленной → skipped, истории нет",
+    "26.7. Понижение себя и последнего админа → ошибка",
+    "26.8. oninput в Поля/Отделы/Фильтры/Типы — правка сохраняется",
+    "26.9. lastResult при скрытом поле → не сбрасывается в pass",
+    "26.10. Напоминания per-user: A закрыл, B видит своё; impersonate своё",
+    "26.11. CSV sanitize: =1+1, +7 (999), Research Plus — корректно",
+    "26.12. sessionStorage '{broken' → F5 → логин без ошибки"
+  ], expected: "Все 12 регрессионных пунктов проходят, старые баги не вернулись" },
+
+  { tag: "S8", title: "Сценарий 8. UI и адаптивность", time: "15 мин", priority: "🟢", blocks: "23", steps: [
+    "375px — всё в одну колонку",
+    "768px — планшетная адаптация",
+    "Клик по фону модалки — закрывается",
+    "Esc — закрывает confirm",
+    "Двойной клик Сохранить — не дублируется",
+    "Долгие названия отделов — не ломают вёрстку",
+    "Эмодзи и кириллица в названиях — корректны"
+  ], expected: "UI работает на всех разрешениях, эмодзи и кириллица не ломают вёрстку" },
+
+  { tag: "S9", title: "Сценарий 9. Жизненный цикл пипетки", time: "30 мин", priority: "🔴", blocks: "4, 5, 6, 7, 8", steps: [
+    "Создать P-100 с полными данными: модель, производитель, объём 1000, отдел, МПИ 12, дата сегодня, Годен, В работе, ответственный, место, примечание",
+    "P-100 появилась, счётчики обновились, статус зелёный",
+    "История P-100 — одна запись (создание)",
+    "Быстрая поверка через 6 мес (симулировать дату): Годен → Поверка и Следующая обновились, в истории 2 записи",
+    "Изменить отдел → в истории остался старый отдел",
+    "Сменить ответственного → в истории зафиксировано",
+    "Отправить на внешнюю поверку → статус На поверке",
+    "Вернуть с Брак → статус красный, запись с браком в истории",
+    "Изменить статус эксплуатации на Неактивна → серый цвет",
+    "Удалить P-100 → история удалена каскадом"
+  ], expected: "На каждом шаге данные консистентны, история полная, удаление каскадное" },
+
+  { tag: "S10", title: "Сценарий 10. Граничные значения и валидация", time: "30 мин", priority: "🟡", blocks: "4, 5, 11", steps: [
+    "Пустые: без модели, без даты, без отдела → все ошибки",
+    "Модель 500 символов, примечание 5000 → сохраняется или обрезается?",
+    "Спецсимволы <>\"'&/\\| в модели → экранирование, нет XSS",
+    "Эмодзи в отделе: 🔬 Гематология 🩸 → корректно",
+    "Модель только из пробелов → Заполните поле",
+    "Дата сегодня → сохраняется",
+    "Дата завтра → ошибка",
+    "Дата 1900-01-01 → сохраняется или ошибка?",
+    "Дата 2100-01-01 → ошибка",
+    "МПИ 0 → ошибка или дефолт",
+    "МПИ -1 → ошибка",
+    "МПИ 999 → сохраняется?",
+    "Объём 0 для пипетки → ошибка или допустимо",
+    "Объём отрицательный → ошибка",
+    "Объём 999999 мкл → сохраняется?",
+    "ID P-!@# → ошибка",
+    "ID длиной 100 символов → обрезается или ошибка"
+  ], expected: "Все граничные случаи обрабатываются предсказуемо, нет падений, нет XSS, ошибки понятны" },
+
+  { tag: "S11", title: "Сценарий 11. Комбинированные фильтры и экспорт", time: "20 мин", priority: "🟡", blocks: "9, 10", steps: [
+    "Минимум 50 пипеток разных отделов, статусов, моделей",
+    "Открыть панель фильтров",
+    "Статус Просрочены + отдел Гематологический + период от/до",
+    "В таблице только подходящие строки",
+    "Добавить в поиск eppendorf — строки сузились",
+    "Счётчики в шапке совпадают с числом видимых",
+    "Отсортировать по Следующая (возрастание)",
+    "Экспорт CSV → только отфильтрованные строки, правильный порядок",
+    "Экспорт PDF → печатная форма только с отфильтрованным",
+    "Сбросить фильтры — таблица полностью вернулась",
+    "Фильтр Без ответственного (если есть)",
+    "Фильтр по дате только С — работает",
+    "Противоречивые фильтры → заглушка Ничего не найдено"
+  ], expected: "Фильтры комбинируются логично, экспорт синхронизирован с экраном, сортировка сохраняется" },
+
+  { tag: "S12", title: "Сценарий 12. Многопользовательская работа через экспорт/импорт", time: "30 мин", priority: "🟡", blocks: "всё", steps: [
+    "Браузер A: admin, блоки 1–5, экспорт A.json",
+    "Браузер B: admin, блоки 6–10, экспорт B.json",
+    "A импортирует B.json → появились блоки 6–10, 1–5 не затронуты",
+    "B импортирует A.json → симметрично",
+    "Оба имеют полный прогресс? Счётчики совпадают",
+    "A: пункт 3.1 в ❌, экспорт A2.json",
+    "B импортирует A2.json → пункт 3.1 стал ❌, не перезаписался ✅",
+    "B: пункт 3.1 в ⚠️, экспорт B2.json",
+    "A импортирует B2.json → победил более свежий timestamp",
+    "Комментарии и баг-ссылки тоже мерджатся, не теряются"
+  ], expected: "Импорт мерджит по timestamp, не затирает более свежие правки, комментарии сохраняются" },
+
+  { tag: "S13", title: "Сценарий 13. Аудит и восстановление после сбоев", time: "20 мин", priority: "🟢", blocks: "всё", steps: [
+    "Пройти 20 пунктов, разные статусы, комментарии",
+    "Закрыть вкладку. Открыть → всё на месте",
+    "DevTools → удалить kdl_checklist_v34. F5",
+    "Чек-лист пустой, не сломан. Console без ошибок",
+    "Пройти несколько. Закрыть браузер полностью. Открыть → сохранилось",
+    "localStorage.setItem('kdl_checklist_v34', '{broken'). F5",
+    "Приложение стартует с чистого, не падает, нет красных ошибок",
+    "localStorage.setItem(..., 'null'). F5 → то же",
+    "{"version":4,"items":{},"settings":{}} → пустой чек-лист, без ошибок",
+    "Инкогнито: 5 пунктов, закрыть, обычное окно → прогресса нет (ожидаемо)"
+  ], expected: "Приложение устойчиво к порче localStorage, битому JSON, отсутствию ключа" },
+
+  { tag: "S14", title: "Сценарий 14. Даты и часовые пояса", time: "25 мин", priority: "🟡", blocks: "4, 5, 6, 11", steps: [
+    "Системное время 23:59, создать с датой сегодня → не завтра",
+    "Время 00:01 следующего дня → Следующая пересчиталась",
+    "Дата 21.10.2024 → распознана",
+    "10.21.2024 → 21 октября (US)",
+    "2024-10-21 → распознана",
+    "21/10/2024 → распознана",
+    "2024/10/21 → распознана",
+    "32.13.2024 → ошибка",
+    "abc → ошибка",
+    "Пустая строка → Заполните поле",
+    "МПИ 12 мес → ровно через год",
+    "МПИ 1 мес → через месяц",
+    "МПИ 0 → ошибка или дефолт",
+    "просрочка N дн. считается от сегодня, не от последней поверки"
+  ], expected: "Все форматы дат распознаются, часовые пояса не ломают логику, МПИ считает корректно" },
+
+  { tag: "S15", title: "Сценарий 15. Кросс-браузерное тестирование", time: "30 мин", priority: "🟢", blocks: "всё", steps: [
+    "Chrome: без JS-ошибок, пройти 10, F5 сохранил",
+    "Chrome: экспорт/импорт JSON работают",
+    "Chrome: Diff двух JSON, различия видны",
+    "Chrome: Jira CSV, кириллица в Excel",
+    "Chrome: Markdown, чекбоксы на месте",
+    "Chrome: тёмная тема, адаптив 375/768/1440, печать",
+    "Firefox: те же шаги 1–6",
+    "Safari: те же шаги 1–6",
+    "Edge: те же шаги 1–6"
+  ], expected: "Одинаковое поведение во всех браузерах, нет браузер-специфичных багов" },
+
+  { tag: "S16", title: "Сценарий 16. Негативные сценарии и что если", time: "25 мин", priority: "🟡", blocks: "всё", steps: [
+    "Console: undo() 100 раз → не падает, Нечего отменять",
+    "redo() 100 раз → аналогично",
+    "importData({}) → не падает",
+    "importData(null) → обрабатывается",
+    "exportJiraCSV() без багов → Нет багов для экспорта",
+    "Diff: загрузить один файл → Загрузите оба файла",
+    "Diff: .txt вместо JSON → Ошибка чтения",
+    "Diff: JSON без items → не падает",
+    "Diff: items: null → не падает",
+    "🔗 Ссылка при 250+ пунктах → предупреждение",
+    "Поиск: 1000 символов → не тормозит",
+    "Поиск: regex .*+?[]{}() → не падает",
+    "Двойной клик Сохранить в мета → не дублируется",
+    "Сброс + отмена в confirm → прогресс на месте",
+    "Сброс + подтверждение → очищено, тема сохранена"
+  ], expected: "Все негативные сценарии обрабатываются, приложение не падает" },
+
+  { tag: "S17", title: "Сценарий 17. Производительность на больших объёмах", time: "20 мин", priority: "🟢", blocks: "25", steps: [
+    "Заполнить все ~280 пунктов статусами (скриптом)",
+    "Замер render() через performance.now() < 500 мс",
+    "Поиск и → отфильтровалось мгновенно < 100 мс",
+    "Фильтр Провалы при 0 → заглушка мгновенно",
+    "Фильтр С мета при 280 комментариях → без тормозов",
+    "Экспорт JSON < 500 КБ, скачался < 1 сек",
+    "Импорт этого JSON < 1 сек",
+    "Diff двух полных JSON < 1 сек",
+    "Jira CSV при 280 багах < 1 сек",
+    "Markdown при 280 пунктах < 1 сек",
+    "Undo 50 раз подряд → не тормозит"
+  ], expected: "Все операции < 1 сек, UI не залипает" },
+
+  { tag: "S18", title: "Сценарий 18. Командная работа 3 тестировщиков", time: "60 мин", priority: "🔴", blocks: "всё", steps: [
+    "A: блоки 1–7 (запуск, авторизация, таблица, CRUD, поверки, история, отправка)",
+    "B: блоки 8–15 (возврат, фильтры, экспорт, импорт, напоминания, настройки)",
+    "C: блоки 16–26 (пользователи, система, лог, impersonate, пароль, вид, UI, безопасность, нагрузка, регрессия)",
+    "Каждый находит баги, ставит ❌, комментарий, ссылку",
+    "A экспортирует A.json, B и C импортируют → у всех 1–7",
+    "B экспортирует B.json, A и C импортируют → у всех 8–15",
+    "C экспортирует C.json, A и B импортируют → у всех полный прогресс",
+    "Лидер: Jira CSV → все баги в трекер",
+    "Лидер: Markdown → TESTING.md → коммит в репозиторий",
+    "Лидер: Diff before.json / after.json → видит все изменения"
+  ], expected: "Командная работа без потерь, мердж корректен, отчёт готов" },
+
+  { tag: "S19", title: "Сценарий 19. Безопасность экспортов и импортов", time: "25 мин", priority: "🔴", blocks: "10, 11, 24", steps: [
+    "Комментарий <script>alert(1)</script> → экспорт/импорт → не выполнился",
+    "Баг-ссылка javascript:alert(1) → не кликабельна",
+    "Модель =cmd|'/c calc'!A1 → CSV → формула не выполняется",
+    "Модель +7 (999) 123-45-67 → не число",
+    "Комментарий с \\r\\nINJECTED → не ломает CSV",
+    "Комментарий 100 КБ → экспорт не падает",
+    "JSON с __proto__ в ключах → prototype pollution не происходит",
+    "JSON с constructor в ключах → не падает",
+    "JSON с вложенными объектами в items → корректно или отклоняется",
+    "JSON с items как массивом → не падает",
+    "JSON с 10 000 пунктов → не виснет"
+  ], expected: "Все экспорты безопасны, импорты не создают уязвимостей" },
+
+  { tag: "S20", title: "Сценарий 20. Полный smoke-тест перед сдачей", time: "15 мин", priority: "🔴", blocks: "всё", steps: [
+    "Открыть — нет JS-ошибок",
+    "1 пункт через чекбокс → ✅, счётчики обновились",
+    "1 пункт через ❌ → ❌",
+    "1 пункт через ⏭️ → ⏭️",
+    "Комментарий → 💬-бейдж",
+    "Баг-ссылка → 🐞-бейдж, кликабельна",
+    "Фильтр Провалы → только провалы",
+    "Фильтр С мета → только с комментами",
+    "Фильтр С багами → только баги",
+    "Поиск P-001 → одна строка",
+    "Групповая ✅ на блоке → весь блок зелёный",
+    "Групповая 🧹 → блок чистый",
+    "Ctrl+Z → вернулось. Ctrl+Y → снова очистилось",
+    "Тёмная тема → переключилась",
+    "Экспорт JSON → файл скачался",
+    "Импорт JSON → данные на месте",
+    "Diff двух JSON → различия видны",
+    "Jira CSV → файл с багами",
+    "Markdown → чекбоксы на месте",
+    "Сброс → чисто, тема сохранена",
+    "F5 → прогресс на месте"
+  ], expected: "Все 22 шага проходят без ошибок. Если что-то падает — блокер для сдачи" }
+];
+
+/* ================ STATE ================ */
+const STORAGE_KEY = "kdl_checklist_v35";
+const LEGACY_KEYS = ["kdl_checklist_v34","kdl_checklist_v33","kdl_checklist_v32","kdl_checklist_v31"];
 const MAX_HISTORY = 50;
 
 let state = loadState();
 let activeFilter = "all";
 let searchQuery = "";
+let activeTab = "checklist";
 let history = [], historyIndex = -1;
 
-function defaultState(){return {version:4,items:{},settings:{theme:"light"}}}
+function defaultState(){return {version:5,items:{},settings:{theme:"light",tab:"checklist"}}}
 function loadState(){
   try{
     let raw=localStorage.getItem(STORAGE_KEY);
-    if(!raw){for(const k of LEGACY_KEYS){raw=localStorage.getItem(k);if(raw)break;}}
+    if(!raw){for(const k of LEGACY_KEYS){raw=localStorage.getItem(k);if(raw)break}}
     if(!raw)return defaultState();
     const p=JSON.parse(raw);
     if(p&&p.version===undefined&&!p.items){
@@ -494,12 +868,13 @@ function loadState(){
       return m;
     }
     if(!p.items)p.items={};
-    if(!p.settings)p.settings={theme:"light"};
+    if(!p.settings)p.settings={theme:"light",tab:"checklist"};
     return p;
   }catch(e){return defaultState()}
 }
 function saveState(){state._updated=Date.now();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
 function itemKey(si,ii){return "s"+si+"_i"+ii}
+function scenarioKey(si,st){return "sc"+si+"_st"+st}
 function getItem(key){const v=state.items[key];if(!v)return{s:null,c:"",b:"",_t:0};return{s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||0}}
 function setItem(key,patch){
   const cur=getItem(key);
@@ -522,15 +897,13 @@ function undo(){
   if(historyIndex<=0){toast("Нечего отменять","warn");return}
   historyIndex--;
   state.items=JSON.parse(history[historyIndex]);
-  saveState();render();updateUndoRedoBtns();
-  toast("Отменено","warn");
+  saveState();renderAll();toast("Отменено","warn");
 }
 function redo(){
   if(historyIndex>=history.length-1){toast("Нечего возвращать","warn");return}
   historyIndex++;
   state.items=JSON.parse(history[historyIndex]);
-  saveState();render();updateUndoRedoBtns();
-  toast("Возвращено","success");
+  saveState();renderAll();toast("Возвращено","success");
 }
 function updateUndoRedoBtns(){
   const u=document.getElementById("btn-undo"),r=document.getElementById("btn-redo");
@@ -538,58 +911,35 @@ function updateUndoRedoBtns(){
   if(r)r.disabled=historyIndex>=history.length-1;
 }
 
-function escapeHtml(s){
-  return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
+function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function escapeAttr(s){return escapeHtml(s)}
 
-function render(){
+/* ================ RENDER: ЧЕК-ЛИСТ ================ */
+function renderChecklist(){
   const root=document.getElementById("checklist");
   root.innerHTML="";
   DATA.forEach((section,si)=>{
     const secEl=document.createElement("div");
     secEl.className="section";
     secEl.dataset.section=si;
-    const secStats=getSectionStats(si);
-    const pct=secStats.total?(secStats.done/secStats.total*100):0;
+    secEl.dataset.type="checklist";
+    const stats=getSectionStats(si);
+    const pct=stats.total?(stats.done/stats.total*100):0;
     const header=document.createElement("div");
     header.className="section-header";
-    const badgeClass=secStats.fail>0?"fail":(secStats.done===secStats.total?"done":"");
+    const badgeClass=stats.fail>0?"fail":(stats.done===stats.total?"done":"");
     header.innerHTML=
       '<span class="arrow">▼</span>'+
       '<span class="section-title">'+escapeHtml(section.title)+'</span>'+
       '<div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div>'+
-      '<span class="section-badge '+badgeClass+'">'+secStats.done+"/"+secStats.total+
-      (secStats.fail>0?" · ❌"+secStats.fail:"")+'</span>'+
+      '<span class="section-badge '+badgeClass+'">'+stats.done+"/"+stats.total+(stats.fail>0?" · ❌"+stats.fail:"")+'</span>'+
       '<div class="section-ops">'+
       '<button data-op="pass-all" title="Всем пунктам блока ✅">✅</button>'+
       '<button data-op="skip-all" title="Всем пунктам блока ⏭️">⏭️</button>'+
       '<button data-op="clear-all" title="Очистить блок">🧹</button>'+
       '</div>';
     header.onclick=()=>secEl.classList.toggle("collapsed");
-    header.querySelectorAll(".section-ops button").forEach(btn=>{
-      btn.onclick=e=>{
-        e.stopPropagation();
-        const op=btn.dataset.op;
-        const label=section.title;
-        if(op==="pass-all"){
-          if(!confirm("Поставить ✅ всем пунктам блока «"+label+"»?"))return;
-          pushHistory();
-          section.items.forEach((_,ii)=>{const k=itemKey(si,ii);const c=getItem(k);state.items[k]=Object.assign({},c,{s:"pass",_t:Date.now()})});
-          saveState();render();toast("Блок отмечен как пройденный","success");
-        }else if(op==="skip-all"){
-          if(!confirm("Поставить ⏭️ всем пунктам блока «"+label+"»?"))return;
-          pushHistory();
-          section.items.forEach((_,ii)=>{const k=itemKey(si,ii);const c=getItem(k);state.items[k]=Object.assign({},c,{s:"skip",_t:Date.now()})});
-          saveState();render();toast("Блок помечен как пропущенный","warn");
-        }else if(op==="clear-all"){
-          if(!confirm("Очистить все статусы, комментарии и ссылки блока «"+label+"»?"))return;
-          pushHistory();
-          section.items.forEach((_,ii)=>{delete state.items[itemKey(si,ii)]});
-          saveState();render();toast("Блок очищен","warn");
-        }
-      };
-    });
+    bindSectionOps(header,section.items.length,(ii)=>itemKey(si,ii),section.title);
     secEl.appendChild(header);
 
     const body=document.createElement("div");
@@ -597,122 +947,209 @@ function render(){
     let lastGroup="";
     section.items.forEach((item,ii)=>{
       if(item.g&&item.g!==lastGroup){
-        const g=document.createElement("div");
-        g.className="group-title";
-        g.textContent=item.g;
-        body.appendChild(g);
-        lastGroup=item.g;
+        const g=document.createElement("div");g.className="group-title";g.textContent=item.g;body.appendChild(g);lastGroup=item.g;
       }
-      const key=itemKey(si,ii);
-      const data=getItem(key);
-      const status=data.s;
-      const hasMeta=!!(data.c||data.b);
-      const el=document.createElement("div");
-      el.className="item"+(status?" status-"+status:"");
-      el.dataset.key=key;
-      el.dataset.status=status||"";
-      el.dataset.hasMeta=hasMeta?"1":"0";
-      el.dataset.hasBug=(data.b||status==="fail")?"1":"0";
-      el.dataset.text=(section.tag+" "+item.t+" "+(item.g||"")).toLowerCase();
-      const commentBadge=data.c?'<span class="badge">💬</span>':"";
-      const bugBadge=data.b?'<span class="badge">🐞</span>':"";
-      el.innerHTML=
-        '<input type="checkbox" class="item-check" '+(status?"checked":"")+'>'+
-        '<label class="item-text"><span class="block-tag">'+section.tag+'</span>'+escapeHtml(item.t)+'</label>'+
-        '<div class="item-actions">'+
-          '<button class="meta-btn '+(data.c?"has-data":"")+'" data-action="comment" title="Комментарий">💬'+commentBadge+'</button>'+
-          '<button class="meta-btn '+(data.b?"has-data":"")+'" data-action="bug" title="Ссылка на баг">🐞'+bugBadge+'</button>'+
-        '</div>'+
-        '<div class="status-group">'+
-          '<button class="status-btn '+(status==="pass"?"active":"")+'" data-status="pass" title="Пройдено">✅</button>'+
-          '<button class="status-btn '+(status==="fail"?"active":"")+'" data-status="fail" title="Провалено">❌</button>'+
-          '<button class="status-btn '+(status==="warn"?"active":"")+'" data-status="warn" title="Подозрительно">⚠️</button>'+
-          '<button class="status-btn '+(status==="skip"?"active":"")+'" data-status="skip" title="Пропущено">⏭️</button>'+
-        '</div>'+
-        '<div class="item-meta" data-meta>'+
-          '<label>Комментарий</label>'+
-          '<textarea rows="2" placeholder="Заметки по пункту…">'+escapeHtml(data.c)+'</textarea>'+
-          '<label>Ссылка на баг-трекер</label>'+
-          '<input type="url" placeholder="https://jira.company.com/browse/KDL-123" value="'+escapeAttr(data.b)+'">'+
-          '<div class="meta-actions">'+
-            (data.b?'<a class="bug-link" href="'+escapeAttr(data.b)+'" target="_blank" rel="noopener">🐞 Открыть баг</a>':"")+
-            '<button class="primary" data-action="save-meta">💾 Сохранить</button>'+
-            '<button data-action="clear-meta" '+(hasMeta?"":'style="display:none"')+'>🧹 Очистить</button>'+
-          '</div>'+
-        '</div>';
-
-      const checkbox=el.querySelector(".item-check");
-      const label=el.querySelector(".item-text");
-      const meta=el.querySelector("[data-meta]");
-
-      const toggleStatus=()=>{
-        pushHistory();
-        const c=getItem(key);
-        setItem(key,{s:c.s==="pass"?null:"pass"});
-        render();
-      };
-      checkbox.onchange=toggleStatus;
-      label.onclick=toggleStatus;
-
-      el.querySelectorAll(".status-btn").forEach(btn=>{
-        btn.onclick=e=>{
-          e.stopPropagation();
-          pushHistory();
-          const s=btn.dataset.status;
-          const c=getItem(key);
-          setItem(key,{s:c.s===s?null:s});
-          render();
-        };
-      });
-      el.querySelector('[data-action="comment"]').onclick=()=>{
-        meta.classList.toggle("open");
-        if(meta.classList.contains("open"))meta.querySelector("textarea").focus();
-      };
-      el.querySelector('[data-action="bug"]').onclick=()=>{
-        meta.classList.add("open");
-        meta.querySelector('input[type="url"]').focus();
-      };
-      meta.querySelector('[data-action="save-meta"]').onclick=()=>{
-        pushHistory();
-        const c=meta.querySelector("textarea").value;
-        const b=meta.querySelector('input[type="url"]').value.trim();
-        setItem(key,{c:c,b:b});
-        toast("Сохранено","success");
-        render();
-      };
-      meta.querySelector('[data-action="clear-meta"]').onclick=()=>{
-        if(!confirm("Очистить комментарий и ссылку?"))return;
-        pushHistory();
-        setItem(key,{c:"",b:""});
-        render();
-      };
-      meta.querySelector("textarea").onkeydown=e=>{
-        if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))meta.querySelector('[data-action="save-meta"]').click();
-      };
-
-      body.appendChild(el);
+      body.appendChild(makeItemEl({
+        key:itemKey(si,ii), tag:section.tag, text:item.t,
+        data:getItem(itemKey(si,ii)), sectionTitle:section.title
+      }));
     });
     secEl.appendChild(body);
     root.appendChild(secEl);
   });
+}
+
+/* ================ RENDER: СЦЕНАРИИ ================ */
+function renderScenarios(){
+  const root=document.getElementById("scenarios");
+  root.innerHTML="";
+  SCENARIOS.forEach((sc,si)=>{
+    const secEl=document.createElement("div");
+    secEl.className="section scenario";
+    secEl.dataset.section=si;
+    secEl.dataset.type="scenario";
+    let done=0,fail=0;
+    sc.steps.forEach((_,st)=>{const s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    const total=sc.steps.length;
+    const pct=total?(done/total*100):0;
+    const header=document.createElement("div");
+    header.className="section-header";
+    const badgeClass=fail>0?"fail":(done===total?"done":"");
+    header.innerHTML=
+      '<span class="arrow">▼</span>'+
+      '<span class="section-title">'+escapeHtml(sc.title)+'</span>'+
+      '<span class="section-meta">⏱ '+sc.time+'</span>'+
+      '<span class="section-meta">'+sc.priority+' '+sc.blocks+'</span>'+
+      '<div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div>'+
+      '<span class="section-badge '+badgeClass+'">'+done+"/"+total+(fail>0?" · ❌"+fail:"")+'</span>'+
+      '<div class="section-ops">'+
+      '<button data-op="pass-all" title="Всем шагам ✅">✅</button>'+
+      '<button data-op="skip-all" title="Всем шагам ⏭️">⏭️</button>'+
+      '<button data-op="clear-all" title="Очистить сценарий">🧹</button>'+
+      '</div>';
+    header.onclick=()=>secEl.classList.toggle("collapsed");
+    bindSectionOps(header,sc.steps.length,(st)=>scenarioKey(si,st),sc.title);
+    secEl.appendChild(header);
+
+    const body=document.createElement("div");
+    body.className="section-body";
+    sc.steps.forEach((step,st)=>{
+      body.appendChild(makeItemEl({
+        key:scenarioKey(si,st), tag:sc.tag, text:step,
+        data:getItem(scenarioKey(si,st)),
+        sectionTitle:sc.title, isScenario:true, stepNum:st+1
+      }));
+    });
+    const exp=document.createElement("div");
+    exp.className="expected-box";
+    exp.innerHTML='<b>Ожидаемый результат</b>'+escapeHtml(sc.expected);
+    body.appendChild(exp);
+    secEl.appendChild(body);
+    root.appendChild(secEl);
+  });
+}
+
+function bindSectionOps(header,count,keyFn,label){
+  header.querySelectorAll(".section-ops button").forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      const op=btn.dataset.op;
+      if(op==="pass-all"){
+        if(!confirm("Поставить ✅ всем пунктам «"+label+"»?"))return;
+        pushHistory();
+        for(let i=0;i<count;i++){const k=keyFn(i);const c=getItem(k);state.items[k]=Object.assign({},c,{s:"pass",_t:Date.now()})}
+        saveState();renderAll();toast("Отмечено как пройденное","success");
+      }else if(op==="skip-all"){
+        if(!confirm("Поставить ⏭️ всем пунктам «"+label+"»?"))return;
+        pushHistory();
+        for(let i=0;i<count;i++){const k=keyFn(i);const c=getItem(k);state.items[k]=Object.assign({},c,{s:"skip",_t:Date.now()})}
+        saveState();renderAll();toast("Помечено как пропущенное","warn");
+      }else if(op==="clear-all"){
+        if(!confirm("Очистить «"+label+"»?"))return;
+        pushHistory();
+        for(let i=0;i<count;i++)delete state.items[keyFn(i)];
+        saveState();renderAll();toast("Очищено","warn");
+      }
+    };
+  });
+}
+
+function makeItemEl(opts){
+  const {key,tag,text,data,sectionTitle,isScenario,stepNum}=opts;
+  const status=data.s;
+  const hasMeta=!!(data.c||data.b);
+  const el=document.createElement("div");
+  el.className="item"+(status?" status-"+status:"");
+  el.dataset.key=key;
+  el.dataset.status=status||"";
+  el.dataset.hasMeta=hasMeta?"1":"0";
+  el.dataset.hasBug=(data.b||status==="fail")?"1":"0";
+  el.dataset.text=(tag+" "+text).toLowerCase();
+
+  const commentBadge=data.c?'<span class="badge">💬</span>':"";
+  const bugBadge=data.b?'<span class="badge">🐞</span>':"";
+  const prefix=isScenario?'<span class="step-num">'+stepNum+'.</span>':'<span class="block-tag">'+tag+'</span>';
+
+  el.innerHTML=
+    '<input type="checkbox" class="item-check" '+(status?"checked":"")+'>'+
+    '<label class="item-text">'+prefix+escapeHtml(text)+'</label>'+
+    '<div class="item-actions">'+
+      '<button class="meta-btn '+(data.c?"has-data":"")+'" data-action="comment">💬'+commentBadge+'</button>'+
+      '<button class="meta-btn '+(data.b?"has-data":"")+'" data-action="bug">🐞'+bugBadge+'</button>'+
+    '</div>'+
+    '<div class="status-group">'+
+      '<button class="status-btn '+(status==="pass"?"active":"")+'" data-status="pass" title="Пройдено">✅</button>'+
+      '<button class="status-btn '+(status==="fail"?"active":"")+'" data-status="fail" title="Провалено">❌</button>'+
+      '<button class="status-btn '+(status==="warn"?"active":"")+'" data-status="warn" title="Подозрительно">⚠️</button>'+
+      '<button class="status-btn '+(status==="skip"?"active":"")+'" data-status="skip" title="Пропущено">⏭️</button>'+
+    '</div>'+
+    '<div class="item-meta" data-meta>'+
+      '<label>Комментарий</label>'+
+      '<textarea rows="2" placeholder="Заметки…">'+escapeHtml(data.c)+'</textarea>'+
+      '<label>Ссылка на баг-трекер</label>'+
+      '<input type="url" placeholder="https://jira.company.com/browse/KDL-123" value="'+escapeAttr(data.b)+'">'+
+      '<div class="meta-actions">'+
+        (data.b?'<a class="bug-link" href="'+escapeAttr(data.b)+'" target="_blank" rel="noopener">🐞 Открыть</a>':"")+
+        '<button class="primary" data-action="save-meta">💾 Сохранить</button>'+
+        '<button data-action="clear-meta" '+(hasMeta?"":'style="display:none"')+'>🧹 Очистить</button>'+
+      '</div>'+
+    '</div>';
+
+  const checkbox=el.querySelector(".item-check");
+  const label=el.querySelector(".item-text");
+  const meta=el.querySelector("[data-meta]");
+
+  const toggleStatus=()=>{
+    pushHistory();
+    const c=getItem(key);
+    setItem(key,{s:c.s==="pass"?null:"pass"});
+    renderAll();
+  };
+  checkbox.onchange=toggleStatus;
+  label.onclick=toggleStatus;
+
+  el.querySelectorAll(".status-btn").forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      pushHistory();
+      const s=btn.dataset.status;
+      const c=getItem(key);
+      setItem(key,{s:c.s===s?null:s});
+      renderAll();
+    };
+  });
+  el.querySelector('[data-action="comment"]').onclick=()=>{
+    meta.classList.toggle("open");
+    if(meta.classList.contains("open"))meta.querySelector("textarea").focus();
+  };
+  el.querySelector('[data-action="bug"]').onclick=()=>{
+    meta.classList.add("open");
+    meta.querySelector('input[type="url"]').focus();
+  };
+  meta.querySelector('[data-action="save-meta"]').onclick=()=>{
+    pushHistory();
+    const c=meta.querySelector("textarea").value;
+    const b=meta.querySelector('input[type="url"]').value.trim();
+    setItem(key,{c:c,b:b});
+    toast("Сохранено","success");
+    renderAll();
+  };
+  meta.querySelector('[data-action="clear-meta"]').onclick=()=>{
+    if(!confirm("Очистить комментарий и ссылку?"))return;
+    pushHistory();
+    setItem(key,{c:"",b:""});
+    renderAll();
+  };
+  meta.querySelector("textarea").onkeydown=e=>{
+    if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))meta.querySelector('[data-action="save-meta"]').click();
+  };
+  return el;
+}
+
+function renderAll(){
+  renderChecklist();
+  renderScenarios();
   applyFilters();
   updateStats();
+  updateTabCounts();
   updateUndoRedoBtns();
 }
 
-function getSectionStats(si){
-  const s=DATA[si];let done=0,fail=0;
-  s.items.forEach((_,ii)=>{const st=getItem(itemKey(si,ii)).s;if(st==="pass")done++;if(st==="fail")fail++});
-  return{done:done,fail:fail,total:s.items.length};
+/* ================ STATS / FILTERS ================ */
+function getAllItemsForTab(tab){
+  const items=[];
+  if(tab==="checklist"){
+    DATA.forEach((sec,si)=>sec.items.forEach((_,ii)=>{items.push(itemKey(si,ii))}));
+  }else{
+    SCENARIOS.forEach((sc,si)=>sc.steps.forEach((_,st)=>{items.push(scenarioKey(si,st))}));
+  }
+  return items;
 }
 
 function updateStats(){
-  let pass=0,fail=0,warn=0,skip=0,total=0;
-  DATA.forEach((sec,si)=>sec.items.forEach((_,ii)=>{
-    total++;
-    const s=getItem(itemKey(si,ii)).s;
-    if(s==="pass")pass++;else if(s==="fail")fail++;else if(s==="warn")warn++;else if(s==="skip")skip++;
-  }));
+  const keys=getAllItemsForTab(activeTab);
+  let pass=0,fail=0,warn=0,skip=0,total=keys.length;
+  keys.forEach(k=>{const s=getItem(k).s;if(s==="pass")pass++;else if(s==="fail")fail++;else if(s==="warn")warn++;else if(s==="skip")skip++});
   const left=total-pass-fail-warn-skip;
   document.getElementById("stat-total").textContent=total;
   document.getElementById("stat-pass").textContent=pass;
@@ -724,9 +1161,20 @@ function updateStats(){
   document.getElementById("progress-fill").style.width=pct+"%";
 }
 
+function updateTabCounts(){
+  const ckKeys=getAllItemsForTab("checklist");
+  const scKeys=getAllItemsForTab("scenarios");
+  const ckDone=ckKeys.filter(k=>{const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  const scDone=scKeys.filter(k=>{const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  document.getElementById("tab-count-checklist").textContent=ckDone+"/"+ckKeys.length;
+  document.getElementById("tab-count-scenarios").textContent=scDone+"/"+scKeys.length;
+}
+
 function applyFilters(){
   const q=searchQuery.trim().toLowerCase();
-  document.querySelectorAll(".section").forEach(secEl=>{
+  const activeContent=document.getElementById("tab-"+activeTab);
+  if(!activeContent)return;
+  activeContent.querySelectorAll(".section").forEach(secEl=>{
     let visible=0;
     secEl.querySelectorAll(".item").forEach(item=>{
       const tm=!q||item.dataset.text.indexOf(q)!==-1;
@@ -753,34 +1201,46 @@ function applyFilters(){
   });
 }
 
+/* ================ TABS ================ */
+function switchTab(tab){
+  activeTab=tab;
+  state.settings.tab=tab;
+  saveState();
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===tab));
+  document.getElementById("tab-checklist").style.display=tab==="checklist"?"":"none";
+  document.getElementById("tab-scenarios").style.display=tab==="scenarios"?"":"none";
+  applyFilters();
+  updateStats();
+}
+
+/* ================ UI EVENTS ================ */
 document.getElementById("search").addEventListener("input",e=>{searchQuery=e.target.value;applyFilters()});
 function filterStatus(f){activeFilter=f;applyFilters()}
-function expandAll(){document.querySelectorAll(".section").forEach(s=>s.classList.remove("collapsed"))}
-function collapseAll(){document.querySelectorAll(".section").forEach(s=>s.classList.add("collapsed"))}
+function expandAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(s=>s.classList.remove("collapsed"))}
+function collapseAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(s=>s.classList.add("collapsed"))}
 
 function applyTheme(t){document.documentElement.setAttribute("data-theme",t);document.getElementById("theme-btn").textContent=t==="dark"?"☀️":"🌙";state.settings.theme=t;saveState()}
 function toggleTheme(){applyTheme(state.settings.theme==="dark"?"light":"dark")}
 
+/* ================ EXPORT / IMPORT / SHARE ================ */
 function exportJSON(){
   const result={
-    version:"3.4",
+    version:"3.5",
     exported:new Date().toISOString(),
-    stats:{
-      total:+document.getElementById("stat-total").textContent,
-      pass:+document.getElementById("stat-pass").textContent,
-      fail:+document.getElementById("stat-fail").textContent,
-      warn:+document.getElementById("stat-warn").textContent,
-      skip:+document.getElementById("stat-skip").textContent,
-      left:+document.getElementById("stat-left").textContent
-    },
-    settings:{theme:state.settings.theme},
+    settings:{theme:state.settings.theme,tab:state.settings.tab},
     items:{}
   };
   DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{
-    const key=itemKey(si,ii);
-    const d=state.items[key];
+    const k=itemKey(si,ii);
+    const d=state.items[k];
     if(!d)return;
-    result.items[key]={block:sec.tag,group:it.g||"",text:it.t,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
+    result.items[k]={kind:"block",block:sec.tag,group:it.g||"",text:it.t,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
+  }));
+  SCENARIOS.forEach((sc,si)=>sc.steps.forEach((step,st)=>{
+    const k=scenarioKey(si,st);
+    const d=state.items[k];
+    if(!d)return;
+    result.items[k]={kind:"scenario",block:sc.tag,title:sc.title,step:st+1,text:step,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
   }));
   const blob=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
   const a=document.createElement("a");
@@ -796,10 +1256,8 @@ document.getElementById("import-file").addEventListener("change",e=>{
   if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>{
-    try{
-      const parsed=JSON.parse(ev.target.result);
-      importData(parsed);
-    }catch(err){toast("Ошибка чтения файла: "+err.message,"error")}
+    try{importData(JSON.parse(ev.target.result))}
+    catch(err){toast("Ошибка чтения файла: "+err.message,"error")}
   };
   reader.readAsText(file);
   e.target.value="";
@@ -826,12 +1284,12 @@ function importData(parsed){
     });
   }
   if(parsed.settings&&parsed.settings.theme)applyTheme(parsed.settings.theme);
-  saveState();render();
+  saveState();renderAll();
   toast("Импортировано: "+imported+" записей","success");
 }
 
 function shareLink(){
-  const compact={v:4,i:{},s:{theme:state.settings.theme}};
+  const compact={v:5,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
   Object.keys(state.items).forEach(k=>{
     const v=state.items[k];
     const short={};
@@ -846,11 +1304,11 @@ function shareLink(){
     if(url.length>32000){toast("Ссылка слишком длинная ("+url.length+" симв.). Используйте экспорт JSON.","warn");return}
     if(navigator.clipboard){
       navigator.clipboard.writeText(url).then(
-        ()=>toast("Ссылка скопирована в буфер ("+url.length+" симв.)","success"),
+        ()=>toast("Ссылка скопирована ("+url.length+" симв.)","success"),
         ()=>prompt("Скопируйте ссылку:",url)
       );
     }else prompt("Скопируйте ссылку:",url);
-  }catch(e){toast("Не удалось сформировать ссылку: "+e.message,"error")}
+  }catch(e){toast("Ошибка: "+e.message,"error")}
 }
 
 function loadFromHash(){
@@ -866,6 +1324,7 @@ function loadFromHash(){
         if(!state.items[k])state.items[k]={s:v.s||null,c:v.c||"",b:v.b||"",_t:Date.now()};
       });
       if(parsed.s&&parsed.s.theme)state.settings.theme=parsed.s.theme;
+      if(parsed.s&&parsed.s.tab)state.settings.tab=parsed.s.tab;
       localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
       history.replaceState(null,"",location.pathname);
       toast("Прогресс загружен из ссылки","success");
@@ -873,6 +1332,7 @@ function loadFromHash(){
   }catch(e){}
 }
 
+/* ================ DIFF ================ */
 let diffData={a:null,b:null};
 function openDiff(){
   diffData={a:null,b:null};
@@ -891,6 +1351,24 @@ function readJsonFile(file,cb){
   const r=new FileReader();
   r.onload=ev=>{try{cb(JSON.parse(ev.target.result))}catch(e){toast("Ошибка чтения: "+e.message,"error");cb(null)}};
   r.readAsText(file);
+}
+
+function lookupText(key){
+  let m=key.match(/^s(\d+)_i(\d+)$/);
+  if(m){
+    const si=+m[1],ii=+m[2];
+    const sec=DATA[si];
+    if(sec&&sec.items[ii])return{text:sec.items[ii].t,block:sec.tag};
+    return{text:key,block:sec?sec.tag:"?"};
+  }
+  m=key.match(/^sc(\d+)_st(\d+)$/);
+  if(m){
+    const si=+m[1],st=+m[2];
+    const sc=SCENARIOS[si];
+    if(sc&&sc.steps[st])return{text:sc.steps[st],block:sc.tag};
+    return{text:key,block:sc?sc.tag:"?"};
+  }
+  return{text:key,block:"?"};
 }
 
 function renderDiff(){
@@ -927,14 +1405,6 @@ function renderDiff(){
       else same++;
     }
   });
-  function lookup(key){
-    const m=key.match(/^s(\d+)_i(\d+)$/);
-    if(!m)return{text:key,block:"?"};
-    const si=+m[1],ii=+m[2];
-    const sec=DATA[si];
-    if(!sec||!sec.items[ii])return{text:key,block:sec?sec.tag:"?"};
-    return{text:sec.items[ii].t,block:sec.tag};
-  }
   function statusLabel(s){return({pass:"✅",fail:"❌",warn:"⚠️",skip:"⏭️"})[s]||"—"}
   const summary='<div class="diff-summary">'+
     '<span>Изменено: <b>'+changed+'</b></span>'+
@@ -946,7 +1416,7 @@ function renderDiff(){
   const order={changed:0,added:1,removed:2};
   changes.sort((x,y)=>order[x.type]-order[y.type]);
   const rows=changes.map(ch=>{
-    const info=lookup(ch.key);
+    const info=lookupText(ch.key);
     let body="";
     if(ch.type==="changed"){
       const parts=[];
@@ -966,6 +1436,7 @@ function renderDiff(){
   result.innerHTML=summary+'<div class="diff-list">'+rows+'</div>';
 }
 
+/* ================ JIRA CSV / MARKDOWN ================ */
 function csvEscape(v){
   const s=String(v==null?"":v);
   if(/[",\n\r]/.test(s))return '"'+s.replace(/"/g,'""')+'"';
@@ -975,15 +1446,26 @@ function csvEscape(v){
 function exportJiraCSV(){
   const rows=[];
   DATA.forEach((sec,si)=>sec.items.forEach((it,ii)=>{
-    const key=itemKey(si,ii);
-    const d=getItem(key);
+    const k=itemKey(si,ii);
+    const d=getItem(k);
     if(!(d.b||d.s==="fail"))return;
-    const priority=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
-    const descParts=[];
-    if(d.c)descParts.push("Комментарий: "+d.c);
-    if(d.b)descParts.push("Ссылка на баг: "+d.b);
-    if(d.s)descParts.push("Статус: "+({pass:"✅ Пройдено",fail:"❌ Провалено",warn:"⚠️ Подозрительно",skip:"⏭️ Пропущено"})[d.s]);
-    rows.push(["[КДЛ][Блок "+sec.tag+"] "+it.t,"Bug",priority,"kdl-checklist,block-"+sec.tag,descParts.join("\n")]);
+    const p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
+    const parts=[];
+    if(d.c)parts.push("Комментарий: "+d.c);
+    if(d.b)parts.push("Ссылка на баг: "+d.b);
+    if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌ Провалено",warn:"⚠️",skip:"⏭️"})[d.s]);
+    rows.push(["[КДЛ][Блок "+sec.tag+"] "+it.t,"Bug",p,"kdl-checklist,block-"+sec.tag,parts.join("\n")]);
+  }));
+  SCENARIOS.forEach((sc,si)=>sc.steps.forEach((step,st)=>{
+    const k=scenarioKey(si,st);
+    const d=getItem(k);
+    if(!(d.b||d.s==="fail"))return;
+    const p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
+    const parts=[];
+    if(d.c)parts.push("Комментарий: "+d.c);
+    if(d.b)parts.push("Ссылка на баг: "+d.b);
+    if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌",warn:"⚠️",skip:"⏭️"})[d.s]);
+    rows.push(["[КДЛ][Сценарий "+sc.tag+"] Шаг "+(st+1)+": "+step,"Bug",p,"kdl-scenarios,"+sc.tag,parts.join("\n")]);
   }));
   if(!rows.length){toast("Нет багов для экспорта","warn");return}
   const header=["Summary","Issue Type","Priority","Labels","Description"];
@@ -993,28 +1475,25 @@ function exportJiraCSV(){
   a.href=URL.createObjectURL(blob);
   a.download="kdl_bugs_jira_"+new Date().toISOString().slice(0,10)+".csv";
   a.click();
-  toast("Экспортировано "+rows.length+" багов для Jira","success");
+  toast("Экспортировано "+rows.length+" багов","success");
 }
 
 function exportMarkdown(){
-  const total=+document.getElementById("stat-total").textContent;
-  const pass=+document.getElementById("stat-pass").textContent;
-  const fail=+document.getElementById("stat-fail").textContent;
-  const warn=+document.getElementById("stat-warn").textContent;
-  const skip=+document.getElementById("stat-skip").textContent;
-  const left=+document.getElementById("stat-left").textContent;
   const date=new Date().toISOString().slice(0,10);
-  let md="# Чек-лист КДЛ v3.4\n\n";
-  md+="**Дата:** "+date+"  \n";
-  md+="**Прогресс:** "+(pass+skip)+"/"+total+" ("+Math.round((pass+skip)/total*100)+"%)  \n";
-  md+="✅ "+pass+" · ❌ "+fail+" · ⚠️ "+warn+" · ⏭️ "+skip+" · ⬜ "+left+"\n\n";
-  md+="---\n\n";
+  let md="# Чек-лист КДЛ v3.5\n\n**Дата:** "+date+"\n\n";
+  // Секция чек-листа
+  const ckKeys=getAllItemsForTab("checklist");
+  const ckStats={pass:0,fail:0,warn:0,skip:0};
+  ckKeys.forEach(k=>{const s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
+  md+="## 📋 Чек-лист ("+(ckStats.pass+ckStats.skip)+"/"+ckKeys.length+")\n\n";
+  md+="✅ "+ckStats.pass+" · ❌ "+ckStats.fail+" · ⚠️ "+ckStats.warn+" · ⏭️ "+ckStats.skip+"\n\n";
   DATA.forEach((sec,si)=>{
-    const stats=getSectionStats(si);
-    md+="## "+sec.title+" ("+stats.done+"/"+stats.total+")\n\n";
+    let done=0,fail=0;
+    sec.items.forEach((_,ii)=>{const s=getItem(itemKey(si,ii)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    md+="### "+sec.title+" ("+done+"/"+sec.items.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
     sec.items.forEach((it,ii)=>{
-      const key=itemKey(si,ii);
-      const d=getItem(key);
+      const k=itemKey(si,ii);
+      const d=getItem(k);
       let mark=" ";
       if(d.s==="pass")mark="x";
       else if(d.s==="fail")mark="!";
@@ -1029,6 +1508,32 @@ function exportMarkdown(){
     });
     md+="\n";
   });
+  // Секция сценариев
+  const scKeys=getAllItemsForTab("scenarios");
+  const scStats={pass:0,fail:0,warn:0,skip:0};
+  scKeys.forEach(k=>{const s=getItem(k).s;if(s&&scStats[s]!==undefined)scStats[s]++});
+  md+="---\n\n## 🎬 Сценарии ("+(scStats.pass+scStats.skip)+"/"+scKeys.length+")\n\n";
+  md+="✅ "+scStats.pass+" · ❌ "+scStats.fail+" · ⚠️ "+scStats.warn+" · ⏭️ "+scStats.skip+"\n\n";
+  SCENARIOS.forEach((sc,si)=>{
+    let done=0,fail=0;
+    sc.steps.forEach((_,st)=>{const s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    md+="### "+sc.title+" ("+done+"/"+sc.steps.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
+    md+="⏱ "+sc.time+" · "+sc.priority+" · Блоки: "+sc.blocks+"\n\n";
+    sc.steps.forEach((step,st)=>{
+      const k=scenarioKey(si,st);
+      const d=getItem(k);
+      let mark=" ";
+      if(d.s==="pass")mark="x";
+      else if(d.s==="fail")mark="!";
+      else if(d.s==="warn")mark="~";
+      else if(d.s==="skip")mark="-";
+      let line="- ["+mark+"] "+(st+1)+". "+step;
+      if(d.b)line+=" [🐞]("+d.b+")";
+      md+=line+"\n";
+      if(d.c)md+="  > "+d.c.replace(/\n/g,"\n  > ")+"\n";
+    });
+    md+="\n> **Ожидаемый результат:** "+sc.expected+"\n\n";
+  });
   const blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -1037,13 +1542,16 @@ function exportMarkdown(){
   toast("Экспортировано в Markdown","success");
 }
 
+/* ================ UTILS ================ */
 function resetAll(){
-  if(!confirm("Сбросить весь прогресс, комментарии и баг-ссылки? Действие необратимо."))return;
+  if(!confirm("Сбросить весь прогресс (и блоки, и сценарии)? Действие необратимо."))return;
   pushHistory();
   const keepTheme=state.settings.theme;
+  const keepTab=state.settings.tab;
   state=defaultState();
   state.settings.theme=keepTheme;
-  saveState();render();
+  state.settings.tab=keepTab;
+  saveState();renderAll();
   toast("Всё сброшено","warn");
 }
 
@@ -1062,20 +1570,20 @@ document.addEventListener("keydown",e=>{
   const tag=(e.target.tagName||"").toLowerCase();
   const isInput=tag==="input"||tag==="textarea";
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!e.shiftKey){
-    if(isInput)return;
-    e.preventDefault();undo();
+    if(isInput)return;e.preventDefault();undo();
   }else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==="y"||(e.shiftKey&&e.key.toLowerCase()==="z"))){
-    if(isInput)return;
-    e.preventDefault();redo();
+    if(isInput)return;e.preventDefault();redo();
   }else if(e.key==="Escape"){
     closeDiff();
   }
 });
 
+/* ================ INIT ================ */
 applyTheme(state.settings.theme||"light");
 loadFromHash();
 pushHistory();
-render();
+renderAll();
+if(state.settings.tab==="scenarios")switchTab("scenarios");
 </script>
 </body>
 </html>
