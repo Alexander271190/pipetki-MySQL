@@ -324,7 +324,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
       });
     }
 
-    const added = [], skipped = [], errors = [];
+        const added = [], skipped = [], errors = [];
 
     for (let i = 0; i < objects.length; i++) {
       const raw = objects[i];
@@ -347,47 +347,60 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         continue;
       }
 
-      // Если ID указан — проверяем на дубль
+      // Быстрая отсечка: если ID задан и уже занят — не тратим соединение
       if (id) {
         const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
         if (ex.length) { skipped.push(`${id}: ID уже существует`); continue; }
-      } else {
-        // ─── Автогенерация ID ───
-        const eqType = await normalizeEquipmentType(obj.equipmentType);
-        let prefix = null;
-
-        try {
-          const [rows] = await db.query(
-            "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-          );
-          if (rows.length && rows[0].setting_value) {
-            const types = JSON.parse(rows[0].setting_value);
-            const found = types.find(t => t.value === eqType);
-            if (found && found.prefix && found.prefix.trim()) {
-              prefix = found.prefix.trim().toUpperCase();
-            }
-          }
-        } catch (e) { /* игнорируем, будет fallback */ }
-
-        if (!prefix) {
-          const fallback = {
-            pipette: 'P', analyzer: 'A', thermometer: 'T',
-            scales: 'S', photometer: 'F', microscope: 'M'
-          };
-          prefix = fallback[eqType] || 'EQ';
-        }
-
-        id = await db.generatePipetteId(prefix);
       }
 
+      // ─── Одна транзакция на строку ───
+      const conn = await db.getConnection();
       try {
-        const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
-        if (ex.length) { skipped.push(`${id}: уже существует`); continue; }
+        await conn.beginTransaction();
+
+        // Нормализуем тип один раз и переиспользуем
+        const eqType = await normalizeEquipmentType(obj.equipmentType);
+
+        // ─── Автогенерация ID внутри транзакции ───
+        if (!id) {
+          let prefix = null;
+
+          try {
+            const [rows] = await conn.query(
+              "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+            );
+            if (rows.length && rows[0].setting_value) {
+              const types = db.safeParse(rows[0].setting_value, []);
+              const found = types.find(t => t.value === eqType);
+              if (found && found.prefix && found.prefix.trim()) {
+                prefix = found.prefix.trim().toUpperCase();
+              }
+            }
+          } catch (e) { /* fallback ниже */ }
+
+          if (!prefix) {
+            const fallback = {
+              pipette: 'P', analyzer: 'A', thermometer: 'T',
+              scales: 'S', photometer: 'F', microscope: 'M'
+            };
+            prefix = fallback[eqType] || 'EQ';
+          }
+
+          id = await db.generatePipetteId(prefix, conn);
+        }
+
+        // Финальная проверка дубля внутри транзакции
+        const [ex] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [id]);
+        if (ex.length) {
+          await conn.rollback();
+          skipped.push(`${id}: ID уже существует`);
+          continue;
+        }
 
         const lastCal = parseDate(obj.lastCalibration);
-        const result = normalizeResult(obj.result);
+        const result  = normalizeResult(obj.result);
 
-        await db.query(
+        await conn.query(
           `INSERT INTO pipettes
             (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
              last_calibration, cert, last_result, active, responsible, location, notes)
@@ -397,7 +410,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
             String(obj.serial || '').trim(),
             String(obj.manufacturer || '').trim(),
             model,
-            await normalizeEquipmentType(obj.equipmentType),
+            eqType,                                    // ← используем уже посчитанный
             String(obj.volume || '').trim(),
             String(obj.department || '').trim(),
             parseInterval(obj.interval),
@@ -412,19 +425,29 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         );
 
         if (lastCal) {
-          await db.query(
+          await conn.query(
             `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
              VALUES (?, ?, ?, ?, ?)`,
             [id, lastCal, String(obj.cert || '').trim(), result, 'Импорт из файла']
           );
         }
 
+        await conn.commit();
         added.push(id);
+
       } catch (e) {
-        errors.push(`${id}: ${e.message}`);
+        await conn.rollback();
+
+        if (e.code === 'ER_DUP_ENTRY') {
+          // Гонка с параллельным запросом — ID занял кто-то другой
+          skipped.push(`${id}: ID уже занят (гонка с параллельным запросом)`);
+        } else {
+          errors.push(`${id}: ${e.message}`);
+        }
+      } finally {
+        conn.release();
       }
     }
-
     await db.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
       [req.user.id, req.user.full_name, 'Импорт из файла',
