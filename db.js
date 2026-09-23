@@ -169,12 +169,19 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // Совместимость: добавить password_changed_at, если база уже была создана
-    await conn.query(`
-      ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP NULL DEFAULT NULL
-    `).catch(() => { /* MySQL < 8.0.29 или колонка уже есть — игнорируем */ });
-
+  // Совместимость: добавить password_changed_at, если база уже была создана
+    const [cols] = await conn.query(`
+      SELECT COLUMN_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'users'
+        AND COLUMN_NAME = 'password_changed_at'
+    `);
+    if (cols.length === 0) {
+      await conn.query(`
+        ALTER TABLE users
+        ADD COLUMN password_changed_at TIMESTAMP NULL DEFAULT NULL
+      `);
+    }
   } finally {
     conn.release();
   }
