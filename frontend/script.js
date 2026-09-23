@@ -188,12 +188,17 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 function getSession() {
   try {
     const data = JSON.parse(sessionStorage.getItem('pipette_session'));
-    if (data && data.token) {
+    if (data && data.token && data.user) {
       authToken = data.token;
       currentUser = data.user;
       return data;
     }
-  } catch {}
+  } catch (e) {
+    // Битый JSON — чистим, чтобы не остаться в полусостоянии
+    sessionStorage.removeItem('pipette_session');
+  }
+  authToken = null;
+  currentUser = null;
   return null;
 }
 
