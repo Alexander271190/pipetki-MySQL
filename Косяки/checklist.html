@@ -195,7 +195,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 
 <script>
 /* ================ ДАННЫЕ: БЛОКИ ЧЕК-ЛИСТА ================ */
-const DATA = [
+var DATA = [
   { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
     { g: "1.1 Backend", t: "docker-compose up -d без ошибок" },
     { g: "1.1 Backend", t: "Лог: MySQL подключён" },
@@ -445,7 +445,7 @@ const DATA = [
     { g: "", t: "JWT в sessionStorage (не localStorage)" },
     { g: "", t: "Подделать токен — 401" },
     { g: "", t: "Истёк токен — авторазлогин" },
-    { g: "", t: "SQL-инъекция в поиске — экранирование через ?" },
+    { g: "", t: "SQL-инъекция в поиске — экранирование через знак вопроса" },
     { g: "", t: "XSS-тег — экранирование через esc()" },
     { g: "", t: "Права проверяются и на фронте, и на бэке" },
     { g: "", t: "apiRequest('/settings/fields','PUT',[]) под user — 403" },
@@ -489,7 +489,7 @@ const DATA = [
 ];
 
 /* ================ ДАННЫЕ: СЦЕНАРИИ ================ */
-const SCENARIOS = [
+var SCENARIOS = [
   { tag: "S1", title: "Сценарий 1. Администратор: от запуска до аудита", time: "60 мин", priority: "🔴", blocks: "1, 2.1, 3–6, 9, 10, 13–19", steps: [
     "docker-compose up -d, проверить логи MySQL, БД, сервера, разовые пароли",
     "SHOW TABLES — все 10 таблиц, 3 пользователя, 8 отделов, 5 демо-пипеток",
@@ -498,10 +498,10 @@ const SCENARIOS = [
     "Войти admin/admin — тост, ФИО, должность в шапке",
     "Создать P-006, A-002, M-002. Проверить префиксы ID",
     "Проверить ошибки: без модели, без даты, дата в будущем, занятый ID",
-    "Редактировать P-001: модель, стереть дату → дата не обнулилась",
+    "Редактировать P-001: модель, стереть дату — дата не обнулилась",
     "Удалить P-003: подтверждение, тост, история удалена",
     "Быстрая поверка P-001: Годен, дата сегодня. Проверить Поверка/Следующая",
-    "Записать Брак для другой пипетки → статус красный",
+    "Записать Брак для другой пипетки — статус красный",
     "История P-001: таймлайн, свидетельство, организация, примечание",
     "Добавить поверку вручную из истории. Тост, таблица обновлена",
     "Экспорт истории: пустой период и конкретный. CSV и PDF",
@@ -509,18 +509,18 @@ const SCENARIOS = [
     "Сбросить фильтры. Сортировка по ID и модели",
     "Открыть настройки: поля, отделы, фильтры, экспорт, система, лог",
     "В логе проверить: вход, добавление, смена пароля, импорт",
-    "Очистить лог с подтверждением → пусто"
+    "Очистить лог с подтверждением — пусто"
   ], expected: "Все действия проходят, данные не теряются, ошибки валидации корректны, лог заполняется" },
 
   { tag: "S2", title: "Сценарий 2. Роли, права и impersonate", time: "30 мин", priority: "🔴", blocks: "2.4, 2.5, 20", steps: [
-    "Войти user/user. Проверить: Иванов Иван · Биохимический отдел",
+    "Войти user/user. Проверить: Иванов Иван, Биохимический отдел",
     "Нет кнопок Добавить, Импорт, Настройки, Экспорт",
     "В истории нет Добавить поверку, в таблице только История",
-    "openModal() из консоли → Доступ запрещён",
-    "apiRequest('/pipettes/P-001','DELETE') → 403",
+    "openModal() из консоли — Доступ запрещён",
+    "apiRequest('/pipettes/P-001','DELETE') — 403",
     "Войти senior/senior. Есть Добавить, Импорт, Экспорт, Добавить поверку; нет Настройки",
     "Войти admin/admin. Всё доступно",
-    "Открыть пользователей, Войти как под user → тост, кнопка Вернуться",
+    "Открыть пользователей, Войти как под user — тост, кнопка Вернуться",
     "Кнопки управления скрыты, права user",
     "Действие от имени user — в логе от user",
     "Вернуться — тост, права admin вернулись",
@@ -531,96 +531,96 @@ const SCENARIOS = [
 
   { tag: "S3", title: "Сценарий 3. Массовые операции и напоминания", time: "30 мин", priority: "🔴", blocks: "7, 8, 12", steps: [
     "Войти admin",
-    "Выбрать 3 пипетки → счётчик (3)",
+    "Выбрать 3 пипетки — счётчик (3)",
     "Добавить анализатор — счётчик стал 1 или не учитывается",
     "Открыть Отправить на поверку: список, дата, примечание",
-    "Дата в будущем → ошибка",
+    "Дата в будущем — ошибка",
     "Подтвердить: тост, статус На поверке, кнопка Отправить пропала, Вернулись (N)",
     "Распечатать акт — окно с таблицей. Без выбора — Нет пипеток",
     "Открыть Возврат: счётчик возвращаемых",
     "Одно свидетельство на всех — индивидуальные поля отключились",
     "Общий результат Годен, изменить общий select — все строки поменялись",
-    "Пустое свидетельство → предупреждение",
+    "Пустое свидетельство — предупреждение",
     "Подтвердить: тост Возврат оформлен, статус и история обновились",
-    "curl POST /api/pipettes/bulk-return для не отправленной → skipped, истории нет",
+    "curl POST /api/pipettes/bulk-return для не отправленной — skipped, истории нет",
     "Перезагрузить: напоминание через 600 мс при danger/warn",
-    "Понятно → не появляется до завтра. Позже → появится при входе",
-    "F5 → напоминание не появляется",
-    "Другой пользователь в том же браузере → своё напоминание",
-    "Impersonate → своё напоминание"
+    "Понятно — не появляется до завтра. Позже — появится при входе",
+    "F5 — напоминание не появляется",
+    "Другой пользователь в том же браузере — своё напоминание",
+    "Impersonate — своё напоминание"
   ], expected: "Массовые операции корректны, статусы обновляются, напоминания per-user" },
 
   { tag: "S4", title: "Сценарий 4. Настройки и пользовательский вид", time: "45 мин", priority: "🟡", blocks: "13–18, 22", steps: [
     "Войти admin, открыть Настройки",
-    "Поля формы: снять Активно у Примечание → пропало из формы",
-    "Переместить поле ▲▼ → порядок изменился",
-    "Поставить Обяз. → поле стало required",
-    "Изменить label, не убирая фокус, кликнуть ▲▼ → правка сохранилась",
-    "Добавить поле, тип select → textarea для опций",
-    "Сохранить → тост",
-    "Отделы: дубликат → Такой отдел уже есть",
-    "Изменить название без blur, кликнуть ▲/▼ — правка не потерялась",
-    "Сохранить → тост",
-    "Фильтры: отключить Статус → после F5 пропал из UI",
-    "Добавить фильтр → появился",
-    "Экспорт: 3 поля → CSV с 3 столбцами. Снять все → дефолт",
-    "Пользователи: своя строка без 🔍/🔑/🗑️",
-    "Создать пользователя → модалка разового пароля. Скопировать пароль",
-    "Понизить себя → Нельзя понизить собственную роль",
-    "Понизить последнего админа → Нельзя понизить последнего администратора",
-    "Сброс пароля себе → Используйте Сменить пароль",
-    "Роль admin → все чекбоксы disabled",
+    "Поля формы: снять Активно у Примечание — пропало из формы",
+    "Переместить поле — порядок изменился",
+    "Поставить Обяз. — поле стало required",
+    "Изменить label, не убирая фокус, кликнуть стрелку — правка сохранилась",
+    "Добавить поле, тип select — textarea для опций",
+    "Сохранить — тост",
+    "Отделы: дубликат — Такой отдел уже есть",
+    "Изменить название без blur, кликнуть стрелку — правка не потерялась",
+    "Сохранить — тост",
+    "Фильтры: отключить Статус — после F5 пропал из UI",
+    "Добавить фильтр — появился",
+    "Экспорт: 3 поля — CSV с 3 столбцами. Снять все — дефолт",
+    "Пользователи: своя строка без действий",
+    "Создать пользователя — модалка разового пароля. Скопировать пароль",
+    "Понизить себя — Нельзя понизить собственную роль",
+    "Понизить последнего админа — Нельзя понизить последнего администратора",
+    "Сброс пароля себе — Используйте Сменить пароль",
+    "Роль admin — все чекбоксы disabled",
     "Система: изменить warn_days, сохранить",
-    "Типы: value read-only, label изменить, пустой prefix → EQ, дубли → ошибка, используемый → Нельзя удалить",
+    "Типы: value read-only, label изменить, пустой prefix — EQ, дубли — ошибка, используемый — Нельзя удалить",
     "Лог: все действия, Очистить с подтверждением",
     "Настройки вида: снять 3 поля у user, Колонки таблицы, Отдел вверх",
     "Войти user — скрытых полей нет, порядок изменён",
-    "Пустой список → Нужно выбрать хотя бы одно поле"
+    "Пустой список — Нужно выбрать хотя бы одно поле"
   ], expected: "Настройки применяются, валидации работают, права не ломаются" },
 
   { tag: "S5", title: "Сценарий 5. Пароли, сессии и безопасность", time: "40 мин", priority: "🔴", blocks: "2.2, 21, 24, 26.1–26.5", steps: [
     "Войти admin, Пароль",
     "Валидации: пустые, меньше 8, без заглавной, без спецсимвола, не совпадают, такой же",
-    "Корректный новый пароль → тост Пароль успешно изменён",
+    "Корректный новый пароль — тост Пароль успешно изменён",
     "Не выкинуло, сразу открыть таблицу — работает",
     "authToken в sessionStorage обновился",
     "Создать пользователя, получить разовый пароль",
-    "Войти с разовым → система требует смену",
-    "must_change_password=1: GET /api/pipettes → 403 password_change_required",
-    "POST /api/auth/change-password → не 403, работает",
-    "GET /api/auth/verify → 200",
-    "Impersonate + смена пароля → originalUser/originalToken сохранены",
-    "Удалить pipette_session → F5 → логин",
-    "Токен мусор → F5 → Недействительный токен",
-    "clearSession() + apiRequest('/pipettes') → 401",
+    "Войти с разовым — система требует смену",
+    "must_change_password=1: GET /api/pipettes — 403 password_change_required",
+    "POST /api/auth/change-password — не 403, работает",
+    "GET /api/auth/verify — 200",
+    "Impersonate + смена пароля — originalUser/originalToken сохранены",
+    "Удалить pipette_session — F5 — логин",
+    "Токен мусор — F5 — Недействительный токен",
+    "clearSession() + apiRequest('/pipettes') — 401",
     "JWT в sessionStorage, не localStorage",
-    "Подделать токен → 401. Истёк токен → авторазлогин",
-    "SQL-инъекция ' OR '1'='1 → экранирование",
-    "XSS-тег → экранирование через esc()",
-    "apiRequest('/settings/fields','PUT',[]) под user → 403",
-    "CSV injection: =1+1, +7 999, -5, @user → текст в Excel",
-    "=HYPERLINK(...) → в CSV не выполняется",
-    "Смена пароля в 23:59, запрос в 00:00 → OK",
-    "sessionStorage с '{broken' → F5 → логин без JS-ошибки"
+    "Подделать токен — 401. Истёк токен — авторазлогин",
+    "SQL-инъекция в поле поиска — экранирование через знак вопроса",
+    "XSS-тег — экранирование через esc()",
+    "apiRequest('/settings/fields','PUT',[]) под user — 403",
+    "CSV injection: =1+1, +7 999, -5, @user — текст в Excel",
+    "=HYPERLINK(...) — в CSV не выполняется",
+    "Смена пароля в 23:59, запрос в 00:00 — OK",
+    "sessionStorage с битым JSON — F5 — логин без JS-ошибки"
   ], expected: "Пароли и сессии работают, безопасность не пробивается, регрессия не возвращается" },
 
   { tag: "S6", title: "Сценарий 6. Импорт, экспорт и нагрузка", time: "30 мин", priority: "🟡", blocks: "10, 11, 25", steps: [
     "Войти admin, открыть Импорт",
     "Загрузить XLSX, XLS, CSV, JSON, TXT — все работают",
-    "Битый файл → ошибка",
-    "Без заголовков → Не удалось распознать…",
-    "Дубли ID → в skipped",
-    "Дата 21.10.2024 → 2024-10-21",
-    "Дата 10.21.2024 → 2024-10-21 (US)",
-    "Результат Брак → fail",
-    "Тип Микроскоп → microscope",
-    "Скрипт-тег → экранирование, нет всплытия",
-    "Импорт под user → Нет прав",
+    "Битый файл — ошибка",
+    "Без заголовков — Не удалось распознать…",
+    "Дубли ID — в skipped",
+    "Дата 21.10.2024 — 2024-10-21",
+    "Дата 10.21.2024 — 2024-10-21 (US)",
+    "Результат Брак — fail",
+    "Тип Микроскоп — microscope",
+    "Скрипт-тег — экранирование, нет всплытия",
+    "Импорт под user — Нет прав",
     "Импортировать 500 строк < 30 сек. Таблица, фильтры, поиск",
     "Импортировать 1000 строк < 60 сек. Не тормозит",
-    "Экспорт 1000 → CSV корректен, PDF открывается",
-    "Активный фильтр → экспорт только отфильтрованных",
-    "Без прав → Нет прав на экспорт",
+    "Экспорт 1000 — CSV корректен, PDF открывается",
+    "Активный фильтр — экспорт только отфильтрованных",
+    "Без прав — Нет прав на экспорт",
     "CSV: BOM, кириллица, pipettes_YYYY-MM-DD.csv",
     "PDF: печатная форма, кнопка Печать",
     "docker exec SELECT COUNT(*) — совпадает"
@@ -632,13 +632,13 @@ const SCENARIOS = [
     "26.3. На чистой БД нет ALTER, на старой — колонка добавилась",
     "26.4. must_change_password: GET pipettes 403, change-password OK, verify 200",
     "26.5. Clock skew: refreshCurrentUser() сразу — не 401; смена в 23:59, запрос в 00:00 — OK",
-    "26.6. bulk-return для не отправленной → skipped, истории нет",
-    "26.7. Понижение себя и последнего админа → ошибка",
+    "26.6. bulk-return для не отправленной — skipped, истории нет",
+    "26.7. Понижение себя и последнего админа — ошибка",
     "26.8. oninput в Поля/Отделы/Фильтры/Типы — правка сохраняется",
-    "26.9. lastResult при скрытом поле → не сбрасывается в pass",
+    "26.9. lastResult при скрытом поле — не сбрасывается в pass",
     "26.10. Напоминания per-user: A закрыл, B видит своё; impersonate своё",
     "26.11. CSV sanitize: =1+1, +7 (999), Research Plus — корректно",
-    "26.12. sessionStorage '{broken' → F5 → логин без ошибки"
+    "26.12. sessionStorage с битым JSON — F5 — логин без ошибки"
   ], expected: "Все 12 регрессионных пунктов проходят, старые баги не вернулись" },
 
   { tag: "S8", title: "Сценарий 8. UI и адаптивность", time: "15 мин", priority: "🟢", blocks: "23", steps: [
@@ -655,33 +655,33 @@ const SCENARIOS = [
     "Создать P-100 с полными данными: модель, производитель, объём 1000, отдел, МПИ 12, дата сегодня, Годен, В работе, ответственный, место, примечание",
     "P-100 появилась, счётчики обновились, статус зелёный",
     "История P-100 — одна запись (создание)",
-    "Быстрая поверка через 6 мес (симулировать дату): Годен → Поверка и Следующая обновились, в истории 2 записи",
-    "Изменить отдел → в истории остался старый отдел",
-    "Сменить ответственного → в истории зафиксировано",
-    "Отправить на внешнюю поверку → статус На поверке",
-    "Вернуть с Брак → статус красный, запись с браком в истории",
-    "Изменить статус эксплуатации на Неактивна → серый цвет",
-    "Удалить P-100 → история удалена каскадом"
+    "Быстрая поверка через 6 мес: Годен — Поверка и Следующая обновились, в истории 2 записи",
+    "Изменить отдел — в истории остался старый отдел",
+    "Сменить ответственного — в истории зафиксировано",
+    "Отправить на внешнюю поверку — статус На поверке",
+    "Вернуть с Брак — статус красный, запись с браком в истории",
+    "Изменить статус эксплуатации на Неактивна — серый цвет",
+    "Удалить P-100 — история удалена каскадом"
   ], expected: "На каждом шаге данные консистентны, история полная, удаление каскадное" },
 
   { tag: "S10", title: "Сценарий 10. Граничные значения и валидация", time: "30 мин", priority: "🟡", blocks: "4, 5, 11", steps: [
-    "Пустые: без модели, без даты, без отдела → все ошибки",
-    "Модель 500 символов, примечание 5000 → сохраняется или обрезается?",
-    "Спецсимволы <>\"'&/\\| в модели → экранирование, нет XSS",
-    "Эмодзи в отделе: 🔬 Гематология 🩸 → корректно",
-    "Модель только из пробелов → Заполните поле",
-    "Дата сегодня → сохраняется",
-    "Дата завтра → ошибка",
-    "Дата 1900-01-01 → сохраняется или ошибка?",
-    "Дата 2100-01-01 → ошибка",
-    "МПИ 0 → ошибка или дефолт",
-    "МПИ -1 → ошибка",
-    "МПИ 999 → сохраняется?",
-    "Объём 0 для пипетки → ошибка или допустимо",
-    "Объём отрицательный → ошибка",
-    "Объём 999999 мкл → сохраняется?",
-    "ID P-!@# → ошибка",
-    "ID длиной 100 символов → обрезается или ошибка"
+    "Пустые: без модели, без даты, без отдела — все ошибки",
+    "Модель 500 символов, примечание 5000 — сохраняется или обрезается?",
+    "Спецсимволы в модели (угловые скобки, кавычки, амперсанд, слэш, пайп) — экранирование, нет XSS",
+    "Эмодзи в отделе: микроскоп Гематология кровь — корректно",
+    "Модель только из пробелов — Заполните поле",
+    "Дата сегодня — сохраняется",
+    "Дата завтра — ошибка",
+    "Дата 1900-01-01 — сохраняется или ошибка?",
+    "Дата 2100-01-01 — ошибка",
+    "МПИ 0 — ошибка или дефолт",
+    "МПИ -1 — ошибка",
+    "МПИ 999 — сохраняется?",
+    "Объём 0 для пипетки — ошибка или допустимо",
+    "Объём отрицательный — ошибка",
+    "Объём 999999 мкл — сохраняется?",
+    "ID P-!@# — ошибка",
+    "ID длиной 100 символов — обрезается или ошибка"
   ], expected: "Все граничные случаи обрабатываются предсказуемо, нет падений, нет XSS, ошибки понятны" },
 
   { tag: "S11", title: "Сценарий 11. Комбинированные фильтры и экспорт", time: "20 мин", priority: "🟡", blocks: "9, 10", steps: [
@@ -692,54 +692,54 @@ const SCENARIOS = [
     "Добавить в поиск eppendorf — строки сузились",
     "Счётчики в шапке совпадают с числом видимых",
     "Отсортировать по Следующая (возрастание)",
-    "Экспорт CSV → только отфильтрованные строки, правильный порядок",
-    "Экспорт PDF → печатная форма только с отфильтрованным",
+    "Экспорт CSV — только отфильтрованные строки, правильный порядок",
+    "Экспорт PDF — печатная форма только с отфильтрованным",
     "Сбросить фильтры — таблица полностью вернулась",
     "Фильтр Без ответственного (если есть)",
     "Фильтр по дате только С — работает",
-    "Противоречивые фильтры → заглушка Ничего не найдено"
+    "Противоречивые фильтры — заглушка Ничего не найдено"
   ], expected: "Фильтры комбинируются логично, экспорт синхронизирован с экраном, сортировка сохраняется" },
 
   { tag: "S12", title: "Сценарий 12. Многопользовательская работа через экспорт/импорт", time: "30 мин", priority: "🟡", blocks: "всё", steps: [
     "Браузер A: admin, блоки 1–5, экспорт A.json",
     "Браузер B: admin, блоки 6–10, экспорт B.json",
-    "A импортирует B.json → появились блоки 6–10, 1–5 не затронуты",
-    "B импортирует A.json → симметрично",
+    "A импортирует B.json — появились блоки 6–10, 1–5 не затронуты",
+    "B импортирует A.json — симметрично",
     "Оба имеют полный прогресс? Счётчики совпадают",
-    "A: пункт 3.1 в ❌, экспорт A2.json",
-    "B импортирует A2.json → пункт 3.1 стал ❌, не перезаписался ✅",
-    "B: пункт 3.1 в ⚠️, экспорт B2.json",
-    "A импортирует B2.json → победил более свежий timestamp",
+    "A: пункт 3.1 в fail, экспорт A2.json",
+    "B импортирует A2.json — пункт 3.1 стал fail, не перезаписался pass",
+    "B: пункт 3.1 в warn, экспорт B2.json",
+    "A импортирует B2.json — победил более свежий timestamp",
     "Комментарии и баг-ссылки тоже мерджатся, не теряются"
   ], expected: "Импорт мерджит по timestamp, не затирает более свежие правки, комментарии сохраняются" },
 
   { tag: "S13", title: "Сценарий 13. Аудит и восстановление после сбоев", time: "20 мин", priority: "🟢", blocks: "всё", steps: [
     "Пройти 20 пунктов, разные статусы, комментарии",
-    "Закрыть вкладку. Открыть → всё на месте",
-    "DevTools → удалить kdl_checklist_v35. F5",
+    "Закрыть вкладку. Открыть — всё на месте",
+    "DevTools — удалить kdl_checklist_v35. F5",
     "Чек-лист пустой, не сломан. Console без ошибок",
-    "Пройти несколько. Закрыть браузер полностью. Открыть → сохранилось",
-    "localStorage.setItem('kdl_checklist_v35', '{broken'). F5",
+    "Пройти несколько. Закрыть браузер полностью. Открыть — сохранилось",
+    "localStorage.setItem('kdl_checklist_v35', битый JSON). F5",
     "Приложение стартует с чистого, не падает, нет красных ошибок",
-    "localStorage.setItem(..., 'null'). F5 → то же",
-    "{\"version\":5,\"items\":{},\"settings\":{}} → пустой чек-лист, без ошибок",
-    "Инкогнито: 5 пунктов, закрыть, обычное окно → прогресса нет (ожидаемо)"
+    "localStorage.setItem(..., 'null'). F5 — то же",
+    "Пустой JSON с version, items, settings — пустой чек-лист, без ошибок",
+    "Инкогнито: 5 пунктов, закрыть, обычное окно — прогресса нет (ожидаемо)"
   ], expected: "Приложение устойчиво к порче localStorage, битому JSON, отсутствию ключа" },
 
   { tag: "S14", title: "Сценарий 14. Даты и часовые пояса", time: "25 мин", priority: "🟡", blocks: "4, 5, 6, 11", steps: [
-    "Системное время 23:59, создать с датой сегодня → не завтра",
-    "Время 00:01 следующего дня → Следующая пересчиталась",
-    "Дата 21.10.2024 → распознана",
-    "10.21.2024 → 21 октября (US)",
-    "2024-10-21 → распознана",
-    "21/10/2024 → распознана",
-    "2024/10/21 → распознана",
-    "32.13.2024 → ошибка",
-    "abc → ошибка",
-    "Пустая строка → Заполните поле",
-    "МПИ 12 мес → ровно через год",
-    "МПИ 1 мес → через месяц",
-    "МПИ 0 → ошибка или дефолт",
+    "Системное время 23:59, создать с датой сегодня — не завтра",
+    "Время 00:01 следующего дня — Следующая пересчиталась",
+    "Дата 21.10.2024 — распознана",
+    "10.21.2024 — 21 октября (US)",
+    "2024-10-21 — распознана",
+    "21/10/2024 — распознана",
+    "2024/10/21 — распознана",
+    "32.13.2024 — ошибка",
+    "abc — ошибка",
+    "Пустая строка — Заполните поле",
+    "МПИ 12 мес — ровно через год",
+    "МПИ 1 мес — через месяц",
+    "МПИ 0 — ошибка или дефолт",
     "просрочка N дн. считается от сегодня, не от последней поверки"
   ], expected: "Все форматы дат распознаются, часовые пояса не ломают логику, МПИ считает корректно" },
 
@@ -756,112 +756,112 @@ const SCENARIOS = [
   ], expected: "Одинаковое поведение во всех браузерах, нет браузер-специфичных багов" },
 
   { tag: "S16", title: "Сценарий 16. Негативные сценарии и что если", time: "25 мин", priority: "🟡", blocks: "всё", steps: [
-    "Console: undo() 100 раз → не падает, Нечего отменять",
-    "redo() 100 раз → аналогично",
-    "importData({}) → не падает",
-    "importData(null) → обрабатывается",
-    "exportJiraCSV() без багов → Нет багов для экспорта",
-    "Diff: загрузить один файл → Загрузите оба файла",
-    "Diff: .txt вместо JSON → Ошибка чтения",
-    "Diff: JSON без items → не падает",
-    "Diff: items: null → не падает",
-    "🔗 Ссылка при 250+ пунктах → предупреждение",
-    "Поиск: 1000 символов → не тормозит",
-    "Поиск: regex .*+?[]{}() → не падает",
-    "Двойной клик Сохранить в мета → не дублируется",
-    "Сброс + отмена в confirm → прогресс на месте",
-    "Сброс + подтверждение → очищено, тема сохранена"
+    "Console: undo() 100 раз — не падает, Нечего отменять",
+    "redo() 100 раз — аналогично",
+    "importData({}) — не падает",
+    "importData(null) — обрабатывается",
+    "exportJiraCSV() без багов — Нет багов для экспорта",
+    "Diff: загрузить один файл — Загрузите оба файла",
+    "Diff: .txt вместо JSON — Ошибка чтения",
+    "Diff: JSON без items — не падает",
+    "Diff: items: null — не падает",
+    "Ссылка при 250+ пунктах — предупреждение",
+    "Поиск: 1000 символов — не тормозит",
+    "Поиск: regex-спецсимволы — не падает",
+    "Двойной клик Сохранить в мета — не дублируется",
+    "Сброс + отмена в confirm — прогресс на месте",
+    "Сброс + подтверждение — очищено, тема сохранена"
   ], expected: "Все негативные сценарии обрабатываются, приложение не падает" },
 
   { tag: "S17", title: "Сценарий 17. Производительность на больших объёмах", time: "20 мин", priority: "🟢", blocks: "25", steps: [
     "Заполнить все ~280 пунктов статусами (скриптом)",
     "Замер render() через performance.now() < 500 мс",
-    "Поиск и → отфильтровалось мгновенно < 100 мс",
-    "Фильтр Провалы при 0 → заглушка мгновенно",
-    "Фильтр С мета при 280 комментариях → без тормозов",
+    "Поиск по букве — отфильтровалось мгновенно < 100 мс",
+    "Фильтр Провалы при 0 — заглушка мгновенно",
+    "Фильтр С мета при 280 комментариях — без тормозов",
     "Экспорт JSON < 500 КБ, скачался < 1 сек",
     "Импорт этого JSON < 1 сек",
     "Diff двух полных JSON < 1 сек",
     "Jira CSV при 280 багах < 1 сек",
     "Markdown при 280 пунктах < 1 сек",
-    "Undo 50 раз подряд → не тормозит"
+    "Undo 50 раз подряд — не тормозит"
   ], expected: "Все операции < 1 сек, UI не залипает" },
 
   { tag: "S18", title: "Сценарий 18. Командная работа 3 тестировщиков", time: "60 мин", priority: "🔴", blocks: "всё", steps: [
     "A: блоки 1–7 (запуск, авторизация, таблица, CRUD, поверки, история, отправка)",
     "B: блоки 8–15 (возврат, фильтры, экспорт, импорт, напоминания, настройки)",
     "C: блоки 16–26 (пользователи, система, лог, impersonate, пароль, вид, UI, безопасность, нагрузка, регрессия)",
-    "Каждый находит баги, ставит ❌, комментарий, ссылку",
-    "A экспортирует A.json, B и C импортируют → у всех 1–7",
-    "B экспортирует B.json, A и C импортируют → у всех 8–15",
-    "C экспортирует C.json, A и B импортируют → у всех полный прогресс",
-    "Лидер: Jira CSV → все баги в трекер",
-    "Лидер: Markdown → TESTING.md → коммит в репозиторий",
-    "Лидер: Diff before.json / after.json → видит все изменения"
+    "Каждый находит баги, ставит fail, комментарий, ссылку",
+    "A экспортирует A.json, B и C импортируют — у всех 1–7",
+    "B экспортирует B.json, A и C импортируют — у всех 8–15",
+    "C экспортирует C.json, A и B импортируют — у всех полный прогресс",
+    "Лидер: Jira CSV — все баги в трекер",
+    "Лидер: Markdown — TESTING.md — коммит в репозиторий",
+    "Лидер: Diff before.json / after.json — видит все изменения"
   ], expected: "Командная работа без потерь, мердж корректен, отчёт готов" },
 
   { tag: "S19", title: "Сценарий 19. Безопасность экспортов и импортов", time: "25 мин", priority: "🔴", blocks: "10, 11, 24", steps: [
-    "Комментарий <script>alert(1)</script> → экспорт/импорт → не выполнился",
-    "Баг-ссылка javascript:alert(1) → не кликабельна",
-    "Модель =cmd|'/c calc'!A1 → CSV → формула не выполняется",
-    "Модель +7 (999) 123-45-67 → не число",
-    "Комментарий с \\r\\nINJECTED → не ломает CSV",
-    "Комментарий 100 КБ → экспорт не падает",
-    "JSON с __proto__ в ключах → prototype pollution не происходит",
-    "JSON с constructor в ключах → не падает",
-    "JSON с вложенными объектами в items → корректно или отклоняется",
-    "JSON с items как массивом → не падает",
-    "JSON с 10 000 пунктов → не виснет"
+    "Комментарий с HTML-тегом script — экспорт/импорт — не выполнился",
+    "Баг-ссылка javascript:alert(1) — не кликабельна",
+    "Модель =cmd с вертикальной чертой — CSV — формула не выполняется",
+    "Модель +7 (999) 123-45-67 — не число",
+    "Комментарий с символами CRLF (инъекция) — не ломает CSV",
+    "Комментарий 100 КБ — экспорт не падает",
+    "JSON с dunder-proto в ключах — prototype pollution не происходит",
+    "JSON с constructor в ключах — не падает",
+    "JSON с вложенными объектами в items — корректно или отклоняется",
+    "JSON с items как массивом — не падает",
+    "JSON с 10 000 пунктов — не виснет"
   ], expected: "Все экспорты безопасны, импорты не создают уязвимостей" },
 
   { tag: "S20", title: "Сценарий 20. Полный smoke-тест перед сдачей", time: "15 мин", priority: "🔴", blocks: "всё", steps: [
     "Открыть — нет JS-ошибок",
-    "1 пункт через чекбокс → ✅, счётчики обновились",
-    "1 пункт через ❌ → ❌",
-    "1 пункт через ⏭️ → ⏭️",
-    "Комментарий → 💬-бейдж",
-    "Баг-ссылка → 🐞-бейдж, кликабельна",
-    "Фильтр Провалы → только провалы",
-    "Фильтр С мета → только с комментами",
-    "Фильтр С багами → только баги",
-    "Поиск P-001 → одна строка",
-    "Групповая ✅ на блоке → весь блок зелёный",
-    "Групповая 🧹 → блок чистый",
-    "Ctrl+Z → вернулось. Ctrl+Y → снова очистилось",
-    "Тёмная тема → переключилась",
-    "Экспорт JSON → файл скачался",
-    "Импорт JSON → данные на месте",
-    "Diff двух JSON → различия видны",
-    "Jira CSV → файл с багами",
-    "Markdown → чекбоксы на месте",
-    "Сброс → чисто, тема сохранена",
-    "F5 → прогресс на месте"
+    "1 пункт через чекбокс — pass, счётчики обновились",
+    "1 пункт через fail — fail",
+    "1 пункт через skip — skip",
+    "Комментарий — 💬-бейдж",
+    "Баг-ссылка — 🐞-бейдж, кликабельна",
+    "Фильтр Провалы — только провалы",
+    "Фильтр С мета — только с комментами",
+    "Фильтр С багами — только баги",
+    "Поиск P-001 — одна строка",
+    "Групповая pass на блоке — весь блок зелёный",
+    "Групповая очистка — блок чистый",
+    "Ctrl+Z — вернулось. Ctrl+Y — снова очистилось",
+    "Тёмная тема — переключилась",
+    "Экспорт JSON — файл скачался",
+    "Импорт JSON — данные на месте",
+    "Diff двух JSON — различия видны",
+    "Jira CSV — файл с багами",
+    "Markdown — чекбоксы на месте",
+    "Сброс — чисто, тема сохранена",
+    "F5 — прогресс на месте"
   ], expected: "Все 22 шага проходят без ошибок. Если что-то падает — блокер для сдачи" }
 ];
 
 /* ================ STATE ================ */
-const STORAGE_KEY = "kdl_checklist_v35";
-const LEGACY_KEYS = ["kdl_checklist_v34","kdl_checklist_v33","kdl_checklist_v32","kdl_checklist_v31"];
-const MAX_HISTORY = 50;
+var STORAGE_KEY = "kdl_checklist_v35";
+var LEGACY_KEYS = ["kdl_checklist_v34","kdl_checklist_v33","kdl_checklist_v32","kdl_checklist_v31"];
+var MAX_HISTORY = 50;
 
-let state = loadState();
-let activeFilter = "all";
-let searchQuery = "";
-let activeTab = "checklist";
-let history = [], historyIndex = -1;
+var state = loadState();
+var activeFilter = "all";
+var searchQuery = "";
+var activeTab = "checklist";
+var history = [], historyIndex = -1;
 
 function defaultState(){return {version:5,items:{},settings:{theme:"light",tab:"checklist"}}}
 function loadState(){
   try{
-    let raw=localStorage.getItem(STORAGE_KEY);
-    if(!raw){for(const k of LEGACY_KEYS){raw=localStorage.getItem(k);if(raw)break}}
+    var raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw){for(var i=0;i<LEGACY_KEYS.length;i++){raw=localStorage.getItem(LEGACY_KEYS[i]);if(raw)break}}
     if(!raw)return defaultState();
-    const p=JSON.parse(raw);
+    var p=JSON.parse(raw);
     if(p&&p.version===undefined&&!p.items){
-      const m=defaultState();
-      Object.keys(p).forEach(k=>{
+      var m=defaultState();
+      Object.keys(p).forEach(function(k){
         if(k==="settings"||k==="_updated")return;
-        const v=p[k];
+        var v=p[k];
         if(typeof v==="string")m.items[k]={s:v,c:"",b:"",_t:Date.now()};
         else if(v&&typeof v==="object")m.items[k]=v;
       });
@@ -875,17 +875,17 @@ function loadState(){
 function saveState(){state._updated=Date.now();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
 function itemKey(si,ii){return "s"+si+"_i"+ii}
 function scenarioKey(si,st){return "sc"+si+"_st"+st}
-function getItem(key){const v=state.items[key];if(!v)return{s:null,c:"",b:"",_t:0};return{s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||0}}
+function getItem(key){var v=state.items[key];if(!v)return{s:null,c:"",b:"",_t:0};return{s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||0}}
 function setItem(key,patch){
-  const cur=getItem(key);
-  const next=Object.assign({},cur,patch,{_t:Date.now()});
+  var cur=getItem(key);
+  var next=Object.assign({},cur,patch,{_t:Date.now()});
   if(!next.s&&!next.c&&!next.b)delete state.items[key];
   else state.items[key]=next;
   saveState();
 }
 
 function pushHistory(){
-  const snap=JSON.stringify(state.items);
+  var snap=JSON.stringify(state.items);
   if(historyIndex>=0&&history[historyIndex]===snap)return;
   history=history.slice(0,historyIndex+1);
   history.push(snap);
@@ -906,7 +906,7 @@ function redo(){
   saveState();renderAll();toast("Возвращено","success");
 }
 function updateUndoRedoBtns(){
-  const u=document.getElementById("btn-undo"),r=document.getElementById("btn-redo");
+  var u=document.getElementById("btn-undo"),r=document.getElementById("btn-redo");
   if(u)u.disabled=historyIndex<=0;
   if(r)r.disabled=historyIndex>=history.length-1;
 }
@@ -919,10 +919,10 @@ function escapeHtml(s){
 function escapeAttr(s){return escapeHtml(s)}
 
 function getSectionStats(si){
-  const s = DATA[si];
-  let done = 0, fail = 0;
+  var s = DATA[si];
+  var done = 0, fail = 0;
   s.items.forEach(function(_, ii){
-    const st = getItem(itemKey(si, ii)).s;
+    var st = getItem(itemKey(si, ii)).s;
     if (st === "pass") done++;
     if (st === "fail") fail++;
   });
@@ -931,18 +931,18 @@ function getSectionStats(si){
 
 /* ================ RENDER: ЧЕК-ЛИСТ ================ */
 function renderChecklist(){
-  const root=document.getElementById("checklist");
+  var root=document.getElementById("checklist");
   root.innerHTML="";
   DATA.forEach(function(section,si){
-    const secEl=document.createElement("div");
+    var secEl=document.createElement("div");
     secEl.className="section";
     secEl.dataset.section=si;
     secEl.dataset.type="checklist";
-    const stats=getSectionStats(si);
-    const pct=stats.total?(stats.done/stats.total*100):0;
-    const header=document.createElement("div");
+    var stats=getSectionStats(si);
+    var pct=stats.total?(stats.done/stats.total*100):0;
+    var header=document.createElement("div");
     header.className="section-header";
-    const badgeClass=stats.fail>0?"fail":(stats.done===stats.total?"done":"");
+    var badgeClass=stats.fail>0?"fail":(stats.done===stats.total?"done":"");
     header.innerHTML=
       '<span class="arrow">▼</span>'+
       '<span class="section-title">'+escapeHtml(section.title)+'</span>'+
@@ -957,12 +957,12 @@ function renderChecklist(){
     bindSectionOps(header,section.items.length,function(ii){return itemKey(si,ii)},section.title);
     secEl.appendChild(header);
 
-    const body=document.createElement("div");
+    var body=document.createElement("div");
     body.className="section-body";
-    let lastGroup="";
+    var lastGroup="";
     section.items.forEach(function(item,ii){
       if(item.g&&item.g!==lastGroup){
-        const g=document.createElement("div");
+        var g=document.createElement("div");
         g.className="group-title";
         g.textContent=item.g;
         body.appendChild(g);
@@ -980,24 +980,24 @@ function renderChecklist(){
 
 /* ================ RENDER: СЦЕНАРИИ ================ */
 function renderScenarios(){
-  const root=document.getElementById("scenarios");
+  var root=document.getElementById("scenarios");
   root.innerHTML="";
   SCENARIOS.forEach(function(sc,si){
-    const secEl=document.createElement("div");
+    var secEl=document.createElement("div");
     secEl.className="section scenario";
     secEl.dataset.section=si;
     secEl.dataset.type="scenario";
-    let done=0,fail=0;
+    var done=0,fail=0;
     sc.steps.forEach(function(_,st){
-      const s=getItem(scenarioKey(si,st)).s;
+      var s=getItem(scenarioKey(si,st)).s;
       if(s==="pass")done++;
       if(s==="fail")fail++;
     });
-    const total=sc.steps.length;
-    const pct=total?(done/total*100):0;
-    const header=document.createElement("div");
+    var total=sc.steps.length;
+    var pct=total?(done/total*100):0;
+    var header=document.createElement("div");
     header.className="section-header";
-    const badgeClass=fail>0?"fail":(done===total?"done":"");
+    var badgeClass=fail>0?"fail":(done===total?"done":"");
     header.innerHTML=
       '<span class="arrow">▼</span>'+
       '<span class="section-title">'+escapeHtml(sc.title)+'</span>'+
@@ -1014,7 +1014,7 @@ function renderScenarios(){
     bindSectionOps(header,sc.steps.length,function(st){return scenarioKey(si,st)},sc.title);
     secEl.appendChild(header);
 
-    const body=document.createElement("div");
+    var body=document.createElement("div");
     body.className="section-body";
     sc.steps.forEach(function(step,st){
       body.appendChild(makeItemEl({
@@ -1023,7 +1023,7 @@ function renderScenarios(){
         sectionTitle:sc.title, isScenario:true, stepNum:st+1
       }));
     });
-    const exp=document.createElement("div");
+    var exp=document.createElement("div");
     exp.className="expected-box";
     exp.innerHTML='<b>Ожидаемый результат</b>'+escapeHtml(sc.expected);
     body.appendChild(exp);
@@ -1036,21 +1036,21 @@ function bindSectionOps(header,count,keyFn,label){
   header.querySelectorAll(".section-ops button").forEach(function(btn){
     btn.onclick=function(e){
       e.stopPropagation();
-      const op=btn.dataset.op;
+      var op=btn.dataset.op;
       if(op==="pass-all"){
         if(!confirm("Поставить ✅ всем пунктам «"+label+"»?"))return;
         pushHistory();
-        for(let i=0;i<count;i++){const k=keyFn(i);const c=getItem(k);state.items[k]=Object.assign({},c,{s:"pass",_t:Date.now()})}
+        for(var i=0;i<count;i++){var k=keyFn(i);var c=getItem(k);state.items[k]=Object.assign({},c,{s:"pass",_t:Date.now()})}
         saveState();renderAll();toast("Отмечено как пройденное","success");
       }else if(op==="skip-all"){
         if(!confirm("Поставить ⏭️ всем пунктам «"+label+"»?"))return;
         pushHistory();
-        for(let i=0;i<count;i++){const k=keyFn(i);const c=getItem(k);state.items[k]=Object.assign({},c,{s:"skip",_t:Date.now()})}
+        for(var j=0;j<count;j++){var k2=keyFn(j);var c2=getItem(k2);state.items[k2]=Object.assign({},c2,{s:"skip",_t:Date.now()})}
         saveState();renderAll();toast("Помечено как пропущенное","warn");
       }else if(op==="clear-all"){
         if(!confirm("Очистить «"+label+"»?"))return;
         pushHistory();
-        for(let i=0;i<count;i++)delete state.items[keyFn(i)];
+        for(var m=0;m<count;m++)delete state.items[keyFn(m)];
         saveState();renderAll();toast("Очищено","warn");
       }
     };
@@ -1058,11 +1058,11 @@ function bindSectionOps(header,count,keyFn,label){
 }
 
 function makeItemEl(opts){
-  const key=opts.key, tag=opts.tag, text=opts.text, data=opts.data;
-  const isScenario=opts.isScenario, stepNum=opts.stepNum;
-  const status=data.s;
-  const hasMeta=!!(data.c||data.b);
-  const el=document.createElement("div");
+  var key=opts.key, tag=opts.tag, text=opts.text, data=opts.data;
+  var isScenario=opts.isScenario, stepNum=opts.stepNum;
+  var status=data.s;
+  var hasMeta=!!(data.c||data.b);
+  var el=document.createElement("div");
   el.className="item"+(status?" status-"+status:"");
   el.dataset.key=key;
   el.dataset.status=status||"";
@@ -1070,9 +1070,9 @@ function makeItemEl(opts){
   el.dataset.hasBug=(data.b||status==="fail")?"1":"0";
   el.dataset.text=(tag+" "+text).toLowerCase();
 
-  const commentBadge=data.c?'<span class="badge">💬</span>':"";
-  const bugBadge=data.b?'<span class="badge">🐞</span>':"";
-  const prefix=isScenario?'<span class="step-num">'+stepNum+'.</span>':'<span class="block-tag">'+escapeHtml(tag)+'</span>';
+  var commentBadge=data.c?'<span class="badge">💬</span>':"";
+  var bugBadge=data.b?'<span class="badge">🐞</span>':"";
+  var prefix=isScenario?'<span class="step-num">'+stepNum+'.</span>':'<span class="block-tag">'+escapeHtml(tag)+'</span>';
 
   el.innerHTML=
     '<input type="checkbox" class="item-check" '+(status?"checked":"")+'>'+
@@ -1099,13 +1099,13 @@ function makeItemEl(opts){
       '</div>'+
     '</div>';
 
-  const checkbox=el.querySelector(".item-check");
-  const label=el.querySelector(".item-text");
-  const meta=el.querySelector("[data-meta]");
+  var checkbox=el.querySelector(".item-check");
+  var label=el.querySelector(".item-text");
+  var meta=el.querySelector("[data-meta]");
 
   function toggleStatus(){
     pushHistory();
-    const c=getItem(key);
+    var c=getItem(key);
     setItem(key,{s:c.s==="pass"?null:"pass"});
     renderAll();
   }
@@ -1116,8 +1116,8 @@ function makeItemEl(opts){
     btn.onclick=function(e){
       e.stopPropagation();
       pushHistory();
-      const s=btn.dataset.status;
-      const c=getItem(key);
+      var s=btn.dataset.status;
+      var c=getItem(key);
       setItem(key,{s:c.s===s?null:s});
       renderAll();
     };
@@ -1132,8 +1132,8 @@ function makeItemEl(opts){
   };
   meta.querySelector('[data-action="save-meta"]').onclick=function(){
     pushHistory();
-    const c=meta.querySelector("textarea").value;
-    const b=meta.querySelector('input[type="url"]').value.trim();
+    var c=meta.querySelector("textarea").value;
+    var b=meta.querySelector('input[type="url"]').value.trim();
     setItem(key,{c:c,b:b});
     toast("Сохранено","success");
     renderAll();
@@ -1161,7 +1161,7 @@ function renderAll(){
 
 /* ================ STATS / FILTERS ================ */
 function getAllItemsForTab(tab){
-  const items=[];
+  var items=[];
   if(tab==="checklist"){
     DATA.forEach(function(sec,si){sec.items.forEach(function(_,ii){items.push(itemKey(si,ii))})});
   }else{
@@ -1171,50 +1171,50 @@ function getAllItemsForTab(tab){
 }
 
 function updateStats(){
-  const keys=getAllItemsForTab(activeTab);
-  let pass=0,fail=0,warn=0,skip=0,total=keys.length;
+  var keys=getAllItemsForTab(activeTab);
+  var pass=0,fail=0,warn=0,skip=0,total=keys.length;
   keys.forEach(function(k){
-    const s=getItem(k).s;
+    var s=getItem(k).s;
     if(s==="pass")pass++;else if(s==="fail")fail++;else if(s==="warn")warn++;else if(s==="skip")skip++;
   });
-  const left=total-pass-fail-warn-skip;
+  var left=total-pass-fail-warn-skip;
   document.getElementById("stat-total").textContent=total;
   document.getElementById("stat-pass").textContent=pass;
   document.getElementById("stat-fail").textContent=fail;
   document.getElementById("stat-warn").textContent=warn;
   document.getElementById("stat-skip").textContent=skip;
   document.getElementById("stat-left").textContent=left;
-  const pct=total?((pass+skip)/total*100):0;
+  var pct=total?((pass+skip)/total*100):0;
   document.getElementById("progress-fill").style.width=pct+"%";
 }
 
 function updateTabCounts(){
-  const ckKeys=getAllItemsForTab("checklist");
-  const scKeys=getAllItemsForTab("scenarios");
-  const ckDone=ckKeys.filter(function(k){const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
-  const scDone=scKeys.filter(function(k){const s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  var ckKeys=getAllItemsForTab("checklist");
+  var scKeys=getAllItemsForTab("scenarios");
+  var ckDone=ckKeys.filter(function(k){var s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  var scDone=scKeys.filter(function(k){var s=getItem(k).s;return s==="pass"||s==="skip"}).length;
   document.getElementById("tab-count-checklist").textContent=ckDone+"/"+ckKeys.length;
   document.getElementById("tab-count-scenarios").textContent=scDone+"/"+scKeys.length;
 }
 
 function applyFilters(){
-  const q=searchQuery.trim().toLowerCase();
-  const activeContent=document.getElementById("tab-"+activeTab);
+  var q=searchQuery.trim().toLowerCase();
+  var activeContent=document.getElementById("tab-"+activeTab);
   if(!activeContent)return;
   activeContent.querySelectorAll(".section").forEach(function(secEl){
-    let visible=0;
+    var visible=0;
     secEl.querySelectorAll(".item").forEach(function(item){
-      const tm=!q||item.dataset.text.indexOf(q)!==-1;
-      const st=item.dataset.status||"";
-      const hm=item.dataset.hasMeta==="1";
-      const hb=item.dataset.hasBug==="1";
-      let sm=true;
+      var tm=!q||item.dataset.text.indexOf(q)!==-1;
+      var st=item.dataset.status||"";
+      var hm=item.dataset.hasMeta==="1";
+      var hb=item.dataset.hasBug==="1";
+      var sm=true;
       if(activeFilter==="left")sm=!st;
       else if(activeFilter==="fail")sm=st==="fail";
       else if(activeFilter==="pass")sm=st==="pass";
       else if(activeFilter==="with-meta")sm=hm;
       else if(activeFilter==="with-bugs")sm=hb;
-      const show=tm&&sm;
+      var show=tm&&sm;
       item.classList.toggle("hidden",!show);
       if(show)visible++;
     });
@@ -1223,7 +1223,7 @@ function applyFilters(){
     if(q&&!visible)secEl.classList.add("collapsed");
   });
   ["all","left","fail","with-meta","with-bugs"].forEach(function(f){
-    const btn=document.getElementById("f-"+f);
+    var btn=document.getElementById("f-"+f);
     if(btn)btn.classList.toggle("active",f===activeFilter);
   });
 }
@@ -1256,26 +1256,26 @@ function toggleTheme(){applyTheme(state.settings.theme==="dark"?"light":"dark")}
 
 /* ================ EXPORT / IMPORT / SHARE ================ */
 function exportJSON(){
-  const result={
+  var result={
     version:"3.5",
     exported:new Date().toISOString(),
     settings:{theme:state.settings.theme,tab:state.settings.tab},
     items:{}
   };
   DATA.forEach(function(sec,si){sec.items.forEach(function(it,ii){
-    const k=itemKey(si,ii);
-    const d=state.items[k];
+    var k=itemKey(si,ii);
+    var d=state.items[k];
     if(!d)return;
     result.items[k]={kind:"block",block:sec.tag,group:it.g||"",text:it.t,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
   })});
   SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(step,st){
-    const k=scenarioKey(si,st);
-    const d=state.items[k];
+    var k=scenarioKey(si,st);
+    var d=state.items[k];
     if(!d)return;
     result.items[k]={kind:"scenario",block:sc.tag,title:sc.title,step:st+1,text:step,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
   })});
-  const blob=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
-  const a=document.createElement("a");
+  var blob=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
+  var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download="kdl_checklist_"+new Date().toISOString().slice(0,10)+".json";
   a.click();
@@ -1284,9 +1284,9 @@ function exportJSON(){
 
 function triggerImport(){document.getElementById("import-file").click()}
 document.getElementById("import-file").addEventListener("change",function(e){
-  const file=e.target.files[0];
+  var file=e.target.files[0];
   if(!file)return;
-  const reader=new FileReader();
+  var reader=new FileReader();
   reader.onload=function(ev){
     try{importData(JSON.parse(ev.target.result))}
     catch(err){toast("Ошибка чтения файла: "+err.message,"error")}
@@ -1298,21 +1298,21 @@ document.getElementById("import-file").addEventListener("change",function(e){
 function importData(parsed){
   if(!parsed||typeof parsed!=="object"){toast("Некорректный файл","error");return}
   pushHistory();
-  let imported=0;
+  var imported=0;
   if(parsed.items&&typeof parsed.items==="object"){
     Object.keys(parsed.items).forEach(function(k){
-      const v=parsed.items[k];
+      var v=parsed.items[k];
       if(!v||typeof v!=="object")return;
-      const norm={s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||Date.now()};
+      var norm={s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||Date.now()};
       if(!state.items[k]){state.items[k]=norm;imported++;return}
-      const lt=state.items[k]._t||0;
-      const rt=norm._t||0;
+      var lt=state.items[k]._t||0;
+      var rt=norm._t||0;
       if(rt>=lt){state.items[k]=norm;imported++}
     });
   }else{
     Object.keys(parsed).forEach(function(k){
       if(k==="settings"||k==="_updated"||k==="version"||k==="exported"||k==="stats")return;
-      const v=parsed[k];
+      var v=parsed[k];
       if(typeof v==="string"){state.items[k]={s:v,c:"",b:"",_t:Date.now()};imported++}
       else if(v&&typeof v==="object"){state.items[k]={s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||Date.now()};imported++}
     });
@@ -1323,18 +1323,18 @@ function importData(parsed){
 }
 
 function shareLink(){
-  const compact={v:5,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
+  var compact={v:5,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
   Object.keys(state.items).forEach(function(k){
-    const v=state.items[k];
-    const short={};
+    var v=state.items[k];
+    var short={};
     if(v.s)short.s=v.s;
     if(v.c)short.c=v.c;
     if(v.b)short.b=v.b;
     if(Object.keys(short).length)compact.i[k]=short;
   });
   try{
-    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
-    const url=location.origin+location.pathname+"#data="+encoded;
+    var encoded=btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
+    var url=location.origin+location.pathname+"#data="+encoded;
     if(url.length>32000){toast("Ссылка слишком длинная ("+url.length+" симв.). Используйте экспорт JSON.","warn");return}
     if(navigator.clipboard){
       navigator.clipboard.writeText(url).then(
@@ -1346,15 +1346,15 @@ function shareLink(){
 }
 
 function loadFromHash(){
-  const hash=location.hash;
+  var hash=location.hash;
   if(!hash||hash.indexOf("#data=")!==0)return;
   try{
-    const encoded=hash.slice(6);
-    const json=decodeURIComponent(escape(atob(encoded)));
-    const parsed=JSON.parse(json);
+    var encoded=hash.slice(6);
+    var json=decodeURIComponent(escape(atob(encoded)));
+    var parsed=JSON.parse(json);
     if(parsed.i){
       Object.keys(parsed.i).forEach(function(k){
-        const v=parsed.i[k];
+        var v=parsed.i[k];
         if(!state.items[k])state.items[k]={s:v.s||null,c:v.c||"",b:v.b||"",_t:Date.now()};
       });
       if(parsed.s&&parsed.s.theme)state.settings.theme=parsed.s.theme;
@@ -1367,7 +1367,7 @@ function loadFromHash(){
 }
 
 /* ================ DIFF ================ */
-let diffData={a:null,b:null};
+var diffData={a:null,b:null};
 function openDiff(){
   diffData={a:null,b:null};
   document.getElementById("diff-a").value="";
@@ -1382,79 +1382,79 @@ document.getElementById("diff-modal").addEventListener("click",function(e){if(e.
 
 function readJsonFile(file,cb){
   if(!file){cb(null);return}
-  const r=new FileReader();
+  var r=new FileReader();
   r.onload=function(ev){try{cb(JSON.parse(ev.target.result))}catch(e){toast("Ошибка чтения: "+e.message,"error");cb(null)}};
   r.readAsText(file);
 }
 
 function lookupText(key){
-  let m=key.match(/^s(\d+)_i(\d+)$/);
+  var m=key.match(/^s(\d+)_i(\d+)$/);
   if(m){
-    const si=+m[1],ii=+m[2];
-    const sec=DATA[si];
+    var si=+m[1],ii=+m[2];
+    var sec=DATA[si];
     if(sec&&sec.items[ii])return{text:sec.items[ii].t,block:sec.tag};
     return{text:key,block:sec?sec.tag:"?"};
   }
   m=key.match(/^sc(\d+)_st(\d+)$/);
   if(m){
-    const si=+m[1],st=+m[2];
-    const sc=SCENARIOS[si];
-    if(sc&&sc.steps[st])return{text:sc.steps[st],block:sc.tag};
+    var si2=+m[1],st2=+m[2];
+    var sc=SCENARIOS[si2];
+    if(sc&&sc.steps[st2])return{text:sc.steps[st2],block:sc.tag};
     return{text:key,block:sc?sc.tag:"?"};
   }
   return{text:key,block:"?"};
 }
 
 function renderDiff(){
-  const result=document.getElementById("diff-result");
-  const a=diffData.a,b=diffData.b;
+  var result=document.getElementById("diff-result");
+  var a=diffData.a,b=diffData.b;
   if(!a||!b){
     result.innerHTML='<div class="diff-empty">Загрузите оба файла для сравнения'+(a?" · A ✓":"")+(b?" · B ✓":"")+'</div>';
     return;
   }
   function normalize(obj){
-    const out={};
+    var out={};
     Object.keys(obj||{}).forEach(function(k){
-      const v=obj[k];
+      var v=obj[k];
       if(typeof v==="string")out[k]={s:v,c:"",b:""};
       else if(v&&typeof v==="object")out[k]={s:v.s||null,c:v.c||"",b:v.b||""};
       else out[k]={s:null,c:"",b:""};
     });
     return out;
   }
-  const A=normalize(a.items),B=normalize(b.items);
-  const allKeys={};
+  var A=normalize(a.items),B=normalize(b.items);
+  var allKeys={};
   Object.keys(A).forEach(function(k){allKeys[k]=true});
   Object.keys(B).forEach(function(k){allKeys[k]=true});
-  const changes=[];
-  let added=0,removed=0,changed=0,same=0;
+  var changes=[];
+  var added=0,removed=0,changed=0,same=0;
   Object.keys(allKeys).forEach(function(key){
-    const o=A[key],n=B[key];
+    var o=A[key],n=B[key];
     if(o&&!n){removed++;changes.push({key:key,type:"removed",oldV:o,newV:n})}
     else if(!o&&n){added++;changes.push({key:key,type:"added",oldV:o,newV:n})}
     else{
-      const ss=(o.s||"")===(n.s||"");
-      const sc=(o.c||"")===(n.c||"");
-      const sb=(o.b||"")===(n.b||"");
+      var ss=(o.s||"")===(n.s||"");
+      var sc=(o.c||"")===(n.c||"");
+      var sb=(o.b||"")===(n.b||"");
       if(!ss||!sc||!sb){changed++;changes.push({key:key,type:"changed",oldV:o,newV:n})}
       else same++;
     }
   });
   function statusLabel(s){return({pass:"✅",fail:"❌",warn:"⚠️",skip:"⏭️"})[s]||"—"}
-  const summary='<div class="diff-summary">'+
+  var summary='<div class="diff-summary">'+
     '<span>Изменено: <b>'+changed+'</b></span>'+
     '<span>Добавлено: <b>'+added+'</b></span>'+
     '<span>Удалено: <b>'+removed+'</b></span>'+
     '<span>Без изменений: <b>'+same+'</b></span>'+
     '</div>';
   if(!changes.length){result.innerHTML=summary+'<div class="diff-empty">✓ Различий нет</div>';return}
-  const order={changed:0,added:1,removed:2};
+  var order={changed:0,added:1,removed:2};
   changes.sort(function(x,y){return order[x.type]-order[y.type]});
-  const rows=changes.map(function(ch){
-    const info=lookupText(ch.key);
-    let body="";
+  var rows=changes.map(function(ch){
+    var info=lookupText(ch.key);
+    var body="";
     if(ch.type==="changed"){
-      const parts=[];
+      var parts=[];
       if((ch.oldV.s||"")!==(ch.newV.s||""))parts.push('Статус: <span class="old">'+statusLabel(ch.oldV.s)+'</span> → <span class="new">'+statusLabel(ch.newV.s)+'</span>');
       if((ch.oldV.c||"")!==(ch.newV.c||""))parts.push('Комментарий: <span class="old">'+escapeHtml(ch.oldV.c||"—")+'</span> → <span class="new">'+escapeHtml(ch.newV.c||"—")+'</span>');
       if((ch.oldV.b||"")!==(ch.newV.b||""))parts.push('Баг: <span class="old">'+escapeHtml(ch.oldV.b||"—")+'</span> → <span class="new">'+escapeHtml(ch.newV.b||"—")+'</span>');
@@ -1473,40 +1473,40 @@ function renderDiff(){
 
 /* ================ JIRA CSV / MARKDOWN ================ */
 function csvEscape(v){
-  const s=String(v==null?"":v);
+  var s=String(v==null?"":v);
   if(/[",\n\r]/.test(s))return '"'+s.replace(/"/g,'""')+'"';
   return s;
 }
 
 function exportJiraCSV(){
-  const rows=[];
+  var rows=[];
   DATA.forEach(function(sec,si){sec.items.forEach(function(it,ii){
-    const k=itemKey(si,ii);
-    const d=getItem(k);
+    var k=itemKey(si,ii);
+    var d=getItem(k);
     if(!(d.b||d.s==="fail"))return;
-    const p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
-    const parts=[];
+    var p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
+    var parts=[];
     if(d.c)parts.push("Комментарий: "+d.c);
     if(d.b)parts.push("Ссылка на баг: "+d.b);
     if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌ Провалено",warn:"⚠️",skip:"⏭️"})[d.s]);
     rows.push(["[КДЛ][Блок "+sec.tag+"] "+it.t,"Bug",p,"kdl-checklist,block-"+sec.tag,parts.join("\n")]);
   })});
   SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(step,st){
-    const k=scenarioKey(si,st);
-    const d=getItem(k);
+    var k=scenarioKey(si,st);
+    var d=getItem(k);
     if(!(d.b||d.s==="fail"))return;
-    const p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
-    const parts=[];
+    var p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
+    var parts=[];
     if(d.c)parts.push("Комментарий: "+d.c);
     if(d.b)parts.push("Ссылка на баг: "+d.b);
     if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌",warn:"⚠️",skip:"⏭️"})[d.s]);
     rows.push(["[КДЛ][Сценарий "+sc.tag+"] Шаг "+(st+1)+": "+step,"Bug",p,"kdl-scenarios,"+sc.tag,parts.join("\n")]);
   })});
   if(!rows.length){toast("Нет багов для экспорта","warn");return}
-  const header=["Summary","Issue Type","Priority","Labels","Description"];
-  const lines=[header].concat(rows).map(function(r){return r.map(csvEscape).join(",")}).join("\r\n");
-  const blob=new Blob(["\uFEFF"+lines],{type:"text/csv;charset=utf-8"});
-  const a=document.createElement("a");
+  var header=["Summary","Issue Type","Priority","Labels","Description"];
+  var lines=[header].concat(rows).map(function(r){return r.map(csvEscape).join(",")}).join("\r\n");
+  var blob=new Blob(["\uFEFF"+lines],{type:"text/csv;charset=utf-8"});
+  var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download="kdl_bugs_jira_"+new Date().toISOString().slice(0,10)+".csv";
   a.click();
@@ -1514,26 +1514,26 @@ function exportJiraCSV(){
 }
 
 function exportMarkdown(){
-  const date=new Date().toISOString().slice(0,10);
-  let md="# Чек-лист КДЛ v3.5\n\n**Дата:** "+date+"\n\n";
-  const ckKeys=getAllItemsForTab("checklist");
-  const ckStats={pass:0,fail:0,warn:0,skip:0};
-  ckKeys.forEach(function(k){const s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
+  var date=new Date().toISOString().slice(0,10);
+  var md="# Чек-лист КДЛ v3.5\n\n**Дата:** "+date+"\n\n";
+  var ckKeys=getAllItemsForTab("checklist");
+  var ckStats={pass:0,fail:0,warn:0,skip:0};
+  ckKeys.forEach(function(k){var s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
   md+="## 📋 Чек-лист ("+(ckStats.pass+ckStats.skip)+"/"+ckKeys.length+")\n\n";
   md+="✅ "+ckStats.pass+" · ❌ "+ckStats.fail+" · ⚠️ "+ckStats.warn+" · ⏭️ "+ckStats.skip+"\n\n";
   DATA.forEach(function(sec,si){
-    let done=0,fail=0;
-    sec.items.forEach(function(_,ii){const s=getItem(itemKey(si,ii)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    var done=0,fail=0;
+    sec.items.forEach(function(_,ii){var s=getItem(itemKey(si,ii)).s;if(s==="pass")done++;if(s==="fail")fail++});
     md+="### "+sec.title+" ("+done+"/"+sec.items.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
     sec.items.forEach(function(it,ii){
-      const k=itemKey(si,ii);
-      const d=getItem(k);
-      let mark=" ";
+      var k=itemKey(si,ii);
+      var d=getItem(k);
+      var mark=" ";
       if(d.s==="pass")mark="x";
       else if(d.s==="fail")mark="!";
       else if(d.s==="warn")mark="~";
       else if(d.s==="skip")mark="-";
-      let line="- ["+mark+"] ";
+      var line="- ["+mark+"] ";
       if(it.g)line+="**"+it.g+"** — ";
       line+=it.t;
       if(d.b)line+=" [🐞]("+d.b+")";
@@ -1542,33 +1542,33 @@ function exportMarkdown(){
     });
     md+="\n";
   });
-  const scKeys=getAllItemsForTab("scenarios");
-  const scStats={pass:0,fail:0,warn:0,skip:0};
-  scKeys.forEach(function(k){const s=getItem(k).s;if(s&&scStats[s]!==undefined)scStats[s]++});
+  var scKeys=getAllItemsForTab("scenarios");
+  var scStats={pass:0,fail:0,warn:0,skip:0};
+  scKeys.forEach(function(k){var s=getItem(k).s;if(s&&scStats[s]!==undefined)scStats[s]++});
   md+="---\n\n## 🎬 Сценарии ("+(scStats.pass+scStats.skip)+"/"+scKeys.length+")\n\n";
   md+="✅ "+scStats.pass+" · ❌ "+scStats.fail+" · ⚠️ "+scStats.warn+" · ⏭️ "+scStats.skip+"\n\n";
   SCENARIOS.forEach(function(sc,si){
-    let done=0,fail=0;
-    sc.steps.forEach(function(_,st){const s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    var done=0,fail=0;
+    sc.steps.forEach(function(_,st){var s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
     md+="### "+sc.title+" ("+done+"/"+sc.steps.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
     md+="⏱ "+sc.time+" · "+sc.priority+" · Блоки: "+sc.blocks+"\n\n";
     sc.steps.forEach(function(step,st){
-      const k=scenarioKey(si,st);
-      const d=getItem(k);
-      let mark=" ";
+      var k=scenarioKey(si,st);
+      var d=getItem(k);
+      var mark=" ";
       if(d.s==="pass")mark="x";
       else if(d.s==="fail")mark="!";
       else if(d.s==="warn")mark="~";
       else if(d.s==="skip")mark="-";
-      let line="- ["+mark+"] "+(st+1)+". "+step;
+      var line="- ["+mark+"] "+(st+1)+". "+step;
       if(d.b)line+=" [🐞]("+d.b+")";
       md+=line+"\n";
       if(d.c)md+="  > "+d.c.replace(/\n/g,"\n  > ")+"\n";
     });
     md+="\n> **Ожидаемый результат:** "+sc.expected+"\n\n";
   });
-  const blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
-  const a=document.createElement("a");
+  var blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
+  var a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download="kdl_checklist_"+date+".md";
   a.click();
@@ -1579,8 +1579,8 @@ function exportMarkdown(){
 function resetAll(){
   if(!confirm("Сбросить весь прогресс (и блоки, и сценарии)? Действие необратимо."))return;
   pushHistory();
-  const keepTheme=state.settings.theme;
-  const keepTab=state.settings.tab;
+  var keepTheme=state.settings.theme;
+  var keepTab=state.settings.tab;
   state=defaultState();
   state.settings.theme=keepTheme;
   state.settings.tab=keepTab;
@@ -1588,9 +1588,9 @@ function resetAll(){
   toast("Всё сброшено","warn");
 }
 
-let toastTimer=null;
+var toastTimer=null;
 function toast(msg,type){
-  let el=document.querySelector(".toast");
+  var el=document.querySelector(".toast");
   if(!el){el=document.createElement("div");el.className="toast";document.body.appendChild(el)}
   el.className="toast "+(type||"");
   el.textContent=msg;
@@ -1600,8 +1600,8 @@ function toast(msg,type){
 }
 
 document.addEventListener("keydown",function(e){
-  const tag=(e.target.tagName||"").toLowerCase();
-  const isInput=tag==="input"||tag==="textarea";
+  var tag=(e.target.tagName||"").toLowerCase();
+  var isInput=tag==="input"||tag==="textarea";
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!e.shiftKey){
     if(isInput)return;
     e.preventDefault();undo();
