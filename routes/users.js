@@ -59,7 +59,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
     const [ex] = await db.query('SELECT id FROM users WHERE login = ?', [login]);
     if (ex.length) return res.status(409).json({ error: 'Логин уже занят' });
 
-    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const id = 'u_' + crypto.randomBytes(8).toString('hex');
 
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
