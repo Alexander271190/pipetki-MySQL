@@ -399,13 +399,14 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
     for (const item of items) {
       if (!item.id) { skipped.push('?'); continue; }
 
-     const [rows] = await conn.query(
-      'SELECT id, equipment_type, department FROM pipettes WHERE id = ?',
+    const [rows] = await conn.query(
+      'SELECT id, equipment_type, department, sent_for_calibration FROM pipettes WHERE id = ?',
       [item.id]
       );
       if (!rows.length) { skipped.push(item.id); continue; }
       if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
       if (rows[0].equipment_type !== 'pipette') { skipped.push(item.id); continue; }
+      if (!rows[0].sent_for_calibration) { skipped.push(item.id); continue; }
 
       const ALLOWED = ['pass', 'fail', 'wip'];
       const itemResult = ALLOWED.includes(item.result) ? item.result : 'pass';
