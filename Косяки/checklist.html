@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Чек-лист КДЛ v3.5</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f5f7fb;--card:#fff;--card-2:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--primary:#4f46e5;--primary-light:#eef2ff;--success:#16a34a;--success-light:#dcfce7;--danger:#dc2626;--danger-light:#fee2e2;--warn:#d97706;--warn-light:#fef3c7;--skip:#64748b;--skip-light:#f1f5f9;--shadow:0 1px 3px rgba(0,0,0,.06)}
+html[data-theme=dark]{--bg:#0f172a;--card:#1e293b;--card-2:#273449;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--primary:#818cf8;--primary-light:#312e81;--success:#4ade80;--success-light:#14532d;--danger:#f87171;--danger-light:#7f1d1d;--warn:#fbbf24;--warn-light:#78350f;--skip:#94a3b8;--skip-light:#334155;--shadow:0 1px 3px rgba(0,0,0,.4)}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding:20px;font-size:14px;transition:background .2s,color .2s}
+.container{max-width:1100px;margin:0 auto}
+header{background:var(--card);border-radius:12px;padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow);position:sticky;top:12px;z-index:100}
+h1{font-size:20px;margin-bottom:4px}
+.subtitle{color:var(--muted);font-size:13px;margin-bottom:14px}
+.tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0}
+.tab{padding:10px 20px;background:transparent;border:none;border-bottom:3px solid transparent;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);font-family:inherit;margin-bottom:-2px;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab .count{display:inline-block;font-size:11px;background:var(--bg);color:var(--muted);padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600}
+.tab.active .count{background:var(--primary-light);color:var(--primary)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center}
+.stat-value{font-size:22px;font-weight:700;line-height:1.1}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+.stat.total .stat-value{color:var(--text)}.stat.pass .stat-value{color:var(--success)}.stat.fail .stat-value{color:var(--danger)}
+.stat.warn .stat-value{color:var(--warn)}.stat.skip .stat-value{color:var(--skip)}.stat.left .stat-value{color:var(--primary)}
+.progress-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:14px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#4f46e5,#7c3aed);width:0;transition:width .3s;border-radius:4px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls input[type=search]{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:var(--card);color:var(--text)}
+.controls input[type=search]:focus{border-color:var(--primary)}
+button{padding:8px 14px;border:1px solid var(--border);background:var(--card);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text);font-family:inherit;white-space:nowrap;transition:all .15s}
+button:hover{background:var(--bg);border-color:var(--primary)}
+button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+button.primary:hover{opacity:.9}
+button.danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+button.danger:hover{opacity:.9}
+button.icon{padding:8px 10px;font-size:15px}
+button.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+.section{background:var(--card);border-radius:12px;margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
+.section.scenario{border-left:4px solid var(--primary)}
+.section-header{padding:14px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;user-select:none}
+.section-header:hover{background:var(--bg)}
+.section-header .arrow{font-size:12px;color:var(--muted);transition:transform .2s;width:14px;display:inline-block}
+.section.collapsed .section-header .arrow{transform:rotate(-90deg)}
+.section.collapsed .section-body{display:none}
+.section-title{font-weight:600;font-size:15px;flex:1}
+.section-badge{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--bg);color:var(--muted);font-weight:600}
+.section-badge.done{background:var(--success-light);color:var(--success)}
+.section-badge.fail{background:var(--danger-light);color:var(--danger)}
+.section-meta{font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px}
+.mini-bar{width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;flex-shrink:0}
+.mini-bar-fill{height:100%;background:var(--success);width:0;transition:width .3s;border-radius:3px}
+.section-body{padding:4px 20px 16px}
+.section-ops{display:flex;gap:3px;margin-left:auto;margin-right:8px}
+.section-ops button{width:26px;height:26px;padding:0;font-size:12px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.item{display:flex;align-items:flex-start;gap:10px;padding:7px 8px;border-radius:6px;border-left:3px solid transparent;flex-wrap:wrap}
+.item:hover{background:var(--bg)}
+.item.status-pass{border-left-color:var(--success);background:var(--success-light)}
+.item.status-fail{border-left-color:var(--danger);background:var(--danger-light)}
+.item.status-warn{border-left-color:var(--warn);background:var(--warn-light)}
+.item.status-skip{border-left-color:var(--skip);background:var(--skip-light)}
+.item-check{width:16px;height:16px;margin-top:3px;cursor:pointer;accent-color:var(--primary);flex-shrink:0}
+.item-text{flex:1;font-size:13.5px;cursor:pointer;min-width:200px}
+.item-text .block-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:var(--primary-light);color:var(--primary);font-weight:600;margin-right:6px;vertical-align:1px}
+.item-text .step-num{display:inline-block;font-size:11px;color:var(--muted);font-weight:700;margin-right:6px;min-width:20px}
+.item.hidden{display:none}
+.item-actions{display:flex;gap:3px;flex-shrink:0;margin-top:1px}
+.status-group{display:flex;gap:3px;flex-shrink:0;margin-top:1px}
+.status-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;padding:0}
+.status-btn:hover{transform:scale(1.1)}
+.status-btn.active[data-status=pass]{background:var(--success);color:#fff;border-color:var(--success)}
+.status-btn.active[data-status=fail]{background:var(--danger);color:#fff;border-color:var(--danger)}
+.status-btn.active[data-status=warn]{background:var(--warn);color:#fff;border-color:var(--warn)}
+.status-btn.active[data-status=skip]{background:var(--skip);color:#fff;border-color:var(--skip)}
+.meta-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0;position:relative}
+.meta-btn:hover{border-color:var(--primary)}
+.meta-btn.has-data{background:var(--primary-light);border-color:var(--primary)}
+.meta-btn .badge{position:absolute;top:-4px;right:-4px;background:var(--primary);color:#fff;font-size:9px;border-radius:8px;padding:0 4px;min-width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.item-meta{flex-basis:100%;margin:6px 0 2px 26px;padding:10px 12px;background:var(--card-2);border-radius:8px;border:1px dashed var(--border);display:none}
+.item-meta.open{display:block}
+.item-meta label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;font-weight:600}
+.item-meta textarea,.item-meta input[type=url]{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-family:inherit;font-size:13px;outline:none;margin-bottom:10px;resize:vertical;min-height:36px}
+.item-meta textarea:focus,.item-meta input[type=url]:focus{border-color:var(--primary)}
+.item-meta .meta-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.bug-link{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:3px 8px;border-radius:6px;background:var(--danger-light);color:var(--danger);text-decoration:none;font-weight:600}
+.group-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;padding-left:8px;border-left:3px solid var(--primary)}
+.group-title:first-child{margin-top:4px}
+.expected-box{background:var(--card-2);border-left:3px solid var(--success);padding:10px 14px;margin:10px 0 6px 0;border-radius:6px;font-size:13px}
+.expected-box b{color:var(--success);display:block;margin-bottom:4px;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--primary);padding:12px 18px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:13px;z-index:1000;opacity:0;transform:translateY(20px);transition:all .25s;max-width:360px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{border-left-color:var(--success)}.toast.error{border-left-color:var(--danger)}.toast.warn{border-left-color:var(--warn)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:500;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border-radius:12px;padding:24px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}
+.modal h2{font-size:18px;margin-bottom:8px}
+.modal p{color:var(--muted);font-size:13px;margin-bottom:16px}
+.modal-close{position:absolute;top:14px;right:14px;font-size:16px;border:none;background:none;cursor:pointer;color:var(--muted);width:28px;height:28px;border-radius:6px}
+.modal-close:hover{background:var(--bg)}
+.diff-files{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.diff-files label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.diff-files input[type=file]{width:100%;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text)}
+.diff-summary{display:flex;gap:14px;padding:10px 12px;background:var(--bg);border-radius:8px;margin-bottom:12px;flex-wrap:wrap;font-size:13px}
+.diff-summary span{color:var(--muted)}.diff-summary b{color:var(--text)}
+.diff-list{border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:420px;overflow-y:auto}
+.diff-row{padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px}
+.diff-row:last-child{border-bottom:none}
+.diff-row.changed{background:var(--warn-light)}.diff-row.added{background:var(--success-light)}.diff-row.removed{background:var(--danger-light)}
+.diff-row .diff-block{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;background:var(--primary-light);color:var(--primary);font-weight:600;margin-right:6px}
+.diff-row .diff-change{display:block;font-size:12px;color:var(--muted);margin-top:4px;padding-left:20px}
+.diff-row .diff-change .old{color:var(--danger);text-decoration:line-through}
+.diff-row .diff-change .new{color:var(--success);font-weight:600}
+.diff-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+.hint{display:inline-block;font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px;margin-left:6px}
+@media print{
+  header{position:static;box-shadow:none}
+  .controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint,.tabs{display:none!important}
+  .section{box-shadow:none;border:1px solid var(--border);break-inside:avoid}
+  .item.hidden{display:none!important}
+  .section[style*="display: none"]{display:none!important}
+  body{background:#fff;padding:0}
+  .tab-content{display:block!important}
+}
+@media (max-width:600px){body{padding:10px}header{padding:14px}h1{font-size:16px}.stat-value{font-size:18px}.item-text{font-size:13px;min-width:0}.controls input[type=search]{min-width:100%}.item-meta{margin-left:0}.diff-files{grid-template-columns:1fr}.section-ops{margin-right:0}.tab{padding:8px 12px;font-size:13px}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+  <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400">v3.5</span></h1>
+  <div class="subtitle">Блоки 1–26 + сквозные сценарии 1–20. Комментарии, баг-ссылки, diff, Jira CSV, Markdown, undo/redo.</div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="checklist" onclick="switchTab('checklist')">📋 Чек-лист <span class="count" id="tab-count-checklist">0/0</span></button>
+    <button class="tab" data-tab="scenarios" onclick="switchTab('scenarios')">🎬 Сценарии <span class="count" id="tab-count-scenarios">0/0</span></button>
+  </div>
+
+  <div class="stats">
+    <div class="stat total"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Всего</div></div>
+    <div class="stat pass"><div class="stat-value" id="stat-pass">0</div><div class="stat-label">Пройдено</div></div>
+    <div class="stat fail"><div class="stat-value" id="stat-fail">0</div><div class="stat-label">Провалено</div></div>
+    <div class="stat warn"><div class="stat-value" id="stat-warn">0</div><div class="stat-label">Подозр.</div></div>
+    <div class="stat skip"><div class="stat-value" id="stat-skip">0</div><div class="stat-label">Пропущено</div></div>
+    <div class="stat left"><div class="stat-value" id="stat-left">0</div><div class="stat-label">Осталось</div></div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="controls">
+    <input type="search" id="search" placeholder="🔍 Поиск по пунктам…">
+    <button onclick="expandAll()">Развернуть</button>
+    <button onclick="collapseAll()">Свернуть</button>
+    <button onclick="filterStatus('all')" id="f-all" class="active">Все</button>
+    <button onclick="filterStatus('left')" id="f-left">Не пройдено</button>
+    <button onclick="filterStatus('fail')" id="f-fail">❌ Провалы</button>
+    <button onclick="filterStatus('with-meta')" id="f-meta">💬 С мета</button>
+    <button onclick="filterStatus('with-bugs')" id="f-bugs">🐞 С багами</button>
+    <button class="primary" onclick="exportJSON()">💾 Экспорт</button>
+    <button onclick="triggerImport()">📥 Импорт</button>
+    <button onclick="openDiff()">📊 Diff</button>
+    <button onclick="exportJiraCSV()">📤 Jira CSV</button>
+    <button onclick="exportMarkdown()">📝 Markdown</button>
+    <button onclick="undo()" id="btn-undo" title="Ctrl+Z">↩️</button>
+    <button onclick="redo()" id="btn-redo" title="Ctrl+Y">↪️</button>
+    <button onclick="shareLink()">🔗 Ссылка</button>
+    <button class="icon" onclick="toggleTheme()" id="theme-btn">🌙</button>
+    <button class="danger" onclick="resetAll()">🗑️</button>
+  </div>
+</header>
+
+<div class="tab-content" id="tab-checklist"><div id="checklist"></div></div>
+<div class="tab-content" id="tab-scenarios" style="display:none"><div id="scenarios"></div></div>
+
+<footer>
+  Прогресс в localStorage. · <button onclick="window.print()" style="padding:4px 10px;font-size:12px">🖨️ Печать активной вкладки</button>
+  <div class="hint">Ctrl+Z — отменить · Ctrl+Y — вернуть · Esc — закрыть модалку</div>
+</footer>
+</div>
+
+<div class="modal-overlay" id="diff-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDiff()">✕</button>
+    <h2>📊 Diff-режим</h2>
+    <p>Загрузите два JSON-экспорта (A — старый, B — новый). Показаны только различия.</p>
+    <div class="diff-files">
+      <div><label>A (старый)</label><input type="file" id="diff-a" accept=".json,application/json"></div>
+      <div><label>B (новый)</label><input type="file" id="diff-b" accept=".json,application/json"></div>
+    </div>
+    <div id="diff-result"><div class="diff-empty">Загрузите оба файла для сравнения</div></div>
+  </div>
+</div>
+
+<input type="file" id="import-file" accept=".json,application/json" style="display:none">
+
+<script>
+/* ================ ДАННЫЕ: БЛОКИ ЧЕК-ЛИСТА ================ */
+var DATA = [
+  { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
+    { g: "1.1 Backend", t: "docker-compose up -d без ошибок" },
+    { g: "1.1 Backend", t: "Лог: MySQL подключён" },
+    { g: "1.1 Backend", t: "Лог: Схема БД готова" },
+    { g: "1.1 Backend", t: "Лог: Server on http://0.0.0.0:3000" },
+    { g: "1.1 Backend", t: "Лог с разовыми паролями (если нет SEED_ADMIN_PASSWORD)" },
+    { g: "1.2 Frontend", t: "http://localhost:3000 открывается" },
+    { g: "1.2 Frontend", t: "F12 Console без Unexpected token, SyntaxError, is not defined" },
+    { g: "1.2 Frontend", t: "Виден экран логина с фоновой картинкой" },
+    { g: "1.2 Frontend", t: "Логин подставлен из предыдущей сессии (если есть)" },
+    { g: "1.2 Frontend", t: "Пароль пустой" },
+    { g: "1.3 БД", t: "Таблицы: users, pipettes, calibration_history, audit_log, departments, filter_config, system_settings, field_config, export_settings, user_preferences" },
+    { g: "1.3 БД", t: "3 пользователя, 8 отделов, 5 демо-пипеток" },
+    { g: "1.3 БД", t: "В system_settings есть ключ equipment_types с 6 типами" },
+    { g: "1.3 БД", t: "В system_settings есть warn_days = 30" }
+  ]},
+  { title: "Блок 2. Авторизация и права", tag: "2", items: [
+    { g: "2.1 Экран входа", t: "Вход admin / admin — система" },
+    { g: "2.1 Экран входа", t: "Тост «Добро пожаловать, Администратор!»" },
+    { g: "2.1 Экран входа", t: "В шапке: ФИО Администратор, должность Администратор системы (админ)" },
+    { g: "2.1 Экран входа", t: "Вход senior / senior — Петров Петр (ст. лаборант) · Гематологический отдел" },
+    { g: "2.1 Экран входа", t: "Вход user / user — Иванов Иван · Биохимический отдел" },
+    { g: "2.2 Ошибки входа", t: "Пустой логин — Заполните поле Логин" },
+    { g: "2.2 Ошибки входа", t: "Пустой пароль — Заполните поле Пароль" },
+    { g: "2.2 Ошибки входа", t: "Пусто оба — Заполните поля: Логин, Пароль" },
+    { g: "2.2 Ошибки входа", t: "Неверный логин/пароль — Неверный логин или пароль" },
+    { g: "2.2 Ошибки входа", t: "Пароль скрыт за точками" },
+    { g: "2.3 Хранение логина", t: "После выхода логин остался в поле" },
+    { g: "2.3 Хранение логина", t: "Пароль очистился" },
+    { g: "2.3 Хранение логина", t: "F5 — логин подставлен из localStorage" },
+    { g: "2.4 Роли", t: "user: нет Добавить, Импорт, Настройки, Экспорт" },
+    { g: "2.4 Роли", t: "user: в истории нет Добавить поверку" },
+    { g: "2.4 Роли", t: "user: в таблице только кнопка История" },
+    { g: "2.4 Роли", t: "user + openModal() из консоли — Доступ запрещён" },
+    { g: "2.4 Роли", t: "user + apiRequest('/pipettes/P-001','DELETE') — 403" },
+    { g: "2.4 Роли", t: "senior: есть Добавить, Импорт, Экспорт, Добавить поверку, нет Настройки" },
+    { g: "2.4 Роли", t: "admin: всё доступно" },
+    { g: "2.5 Истёкшая сессия", t: "Удалить pipette_session — F5 — логин" },
+    { g: "2.5 Истёкшая сессия", t: "Токен мусор — F5 — Недействительный токен" },
+    { g: "2.5 Истёкшая сессия", t: "clearSession() + apiRequest('/pipettes') — 401" }
+  ]},
+  { title: "Блок 3. Главная таблица", tag: "3", items: [
+    { g: "3.1 Базовый рендер", t: "5 демо-строк: P-001, P-002, P-003, A-001, M-001" },
+    { g: "3.1 Базовый рендер", t: "Тип бейджем (P синий, остальные фиолетовый)" },
+    { g: "3.1 Базовый рендер", t: "Объём с мкл, у не-пипеток прочерк" },
+    { g: "3.1 Базовый рендер", t: "В Следующая дата + (N дн.) / (просрочка N дн.)" },
+    { g: "3.1 Базовый рендер", t: "M-001 — Неактивна (серый)" },
+    { g: "3.1 Базовый рендер", t: "Счётчики в шапке совпадают" },
+    { g: "3.1 Базовый рендер", t: "Баннер появляется при danger/fail" },
+    { g: "3.2 Пустая таблица", t: "Таблица скрыта, счётчики = 0" },
+    { g: "3.3 Строка выбрана", t: "Фон строки #eef2ff" },
+    { g: "3.3 Строка выбрана", t: "Hover #e0e7ff" }
+  ]},
+  { title: "Блок 4. CRUD", tag: "4", items: [
+    { g: "4.2 Создание", t: "Все поля пустые (кроме даты, интервала, результата, статуса — дефолт)" },
+    { g: "4.2 Создание", t: "Заполнить — Сохранить — тост Оборудование добавлено" },
+    { g: "4.2 Создание", t: "ID в формате P-XXX (генерируется сервером)" },
+    { g: "4.2 Создание", t: "Без модели — Заполните поле Модель" },
+    { g: "4.2 Создание", t: "Без даты — Заполните поле Дата последней поверки" },
+    { g: "4.2 Создание", t: "Дата в будущем — Дата поверки не может быть в будущем" },
+    { g: "4.2 Создание", t: "ID вручную уже занят — 409 ID уже существует" },
+    { g: "4.2 Создание", t: "Анализатор — ID начинается на A-" },
+    { g: "4.2 Создание", t: "Микроскоп — M-" },
+    { g: "4.2 Создание", t: "Отмена — ничего не сохранено" },
+    { g: "4.3 Редактирование", t: "Поля заполнены" },
+    { g: "4.3 Редактирование", t: "ID read-only, серый фон" },
+    { g: "4.3 Редактирование", t: "Модель — Сохранить — Оборудование обновлено" },
+    { g: "4.3 Редактирование", t: "Стереть дату — Сохранить — дата не обнуляется (фолбэк)" },
+    { g: "4.3 Редактирование", t: "Поле Результат скрыто — Сохранить — last_result сохраняется прежним" },
+    { g: "4.4 Удаление", t: "Отмена — ничего" },
+    { g: "4.4 Удаление", t: "Подтвердить — тост, строка исчезла, история удалена" },
+    { g: "4.4 Удаление", t: "Несуществующий (через API) — 404" }
+  ]},
+  { title: "Блок 5. Быстрая поверка", tag: "5", items: [
+    { g: "", t: "Кнопка открывает модалку" },
+    { g: "", t: "Инфо о приборе в шапке" },
+    { g: "", t: "Дата = сегодня" },
+    { g: "", t: "Заполнить — Записать — Поверка зарегистрирована" },
+    { g: "", t: "Обновились Поверка и Следующая" },
+    { g: "", t: "Результат Брак — статус красный" },
+    { g: "", t: "В процессе — статус ожидания" },
+    { g: "", t: "Пустая дата — ошибка" },
+    { g: "", t: "Дата в будущем — ошибка" },
+    { g: "", t: "Поверка на На поверке — sent_for_calibration очищен" }
+  ]},
+  { title: "Блок 6. История поверок", tag: "6", items: [
+    { g: "6.2 Просмотр", t: "Таймлайн свежий сверху" },
+    { g: "6.2 Просмотр", t: "Свидетельство в синем бейдже, результат цветным" },
+    { g: "6.2 Просмотр", t: "Организация и примечание серым" },
+    { g: "6.3 Добавление поверки", t: "Добавить поверку — форма появляется ниже" },
+    { g: "6.3 Добавление поверки", t: "Заполнить — Записать — Запись о поверке добавлена" },
+    { g: "6.3 Добавление поверки", t: "Модалка закрылась, таблица обновлена" },
+    { g: "6.3 Добавление поверки", t: "Валидация даты" },
+    { g: "6.4 Экспорт истории", t: "Пустой период — вся история" },
+    { g: "6.4 Экспорт истории", t: "CSV: history_P-001_YYYY-MM-DD.csv, открывается в Excel" },
+    { g: "6.4 Экспорт истории", t: "PDF: вкладка с печатной формой" },
+    { g: "6.4 Экспорт истории", t: "Фильтр С/По работает" },
+    { g: "6.4 Экспорт истории", t: "Пусто с фильтром — Нет записей за выбранный период" }
+  ]},
+  { title: "Блок 7. Массовая отправка", tag: "7", items: [
+    { g: "", t: "Выбрать 3 пипетки — счётчик (3)" },
+    { g: "", t: "Пипетка + анализатор — счётчик = 1" },
+    { g: "", t: "Дата в будущем — ошибка" },
+    { g: "", t: "Подтверждение — тост" },
+    { g: "", t: "Статус На поверке" },
+    { g: "", t: "Кнопка Отправить пропала, появилась Вернулись (N)" },
+    { g: "", t: "Печать акта открывает окно с таблицей" },
+    { g: "", t: "Без выбора — Нет пипеток для печати" }
+  ]},
+  { title: "Блок 8. Массовый возврат", tag: "8", items: [
+    { g: "", t: "Один чекбокс — индивидуальные поля отключаются" },
+    { g: "", t: "Общий select — все строки меняются" },
+    { g: "", t: "Без свидетельства — предупреждение" },
+    { g: "", t: "Подтверждение — тост Возврат оформлен…" }
+  ]},
+  { title: "Блок 9. Фильтры и поиск", tag: "9", items: [
+    { g: "9.1 Панель фильтра", t: "Кнопка Фильтр открывает панель" },
+    { g: "9.1 Панель фильтра", t: "Все поля из БД" },
+    { g: "9.1 Панель фильтра", t: "Статус Просрочены — только danger" },
+    { g: "9.1 Панель фильтра", t: "Период Произвольный — от/до" },
+    { g: "9.1 Панель фильтра", t: "Комбинация 3 фильтров + поиск" },
+    { g: "9.1 Панель фильтра", t: "Сбросить — всё снято" },
+    { g: "9.1 Панель фильтра", t: "Фильтр без результатов — заглушка" },
+    { g: "9.2 Поиск", t: "P-001 — одна строка" },
+    { g: "9.2 Поиск", t: "eppendorf — все Eppendorf" },
+    { g: "9.2 Поиск", t: "По отделу, ответственному, модели" },
+    { g: "9.2 Поиск", t: "Пустой — все" },
+    { g: "9.3 Сортировка", t: "Клик по ID — вверх, повторный — вниз" },
+    { g: "9.3 Сортировка", t: "Клик по Модель — переключение стрелок" },
+    { g: "9.4 Массовый выбор", t: "Чекбокс в шапке — все видимые" },
+    { g: "9.4 Массовый выбор", t: "Частичный — indeterminate" },
+    { g: "9.4 Массовый выбор", t: "Смена фильтра — выбор видимых сохраняется" }
+  ]},
+  { title: "Блок 10. Экспорт данных", tag: "10", items: [
+    { g: "10.1 Меню", t: "CSV: pipettes_YYYY-MM-DD.csv с BOM, кириллица корректна" },
+    { g: "10.1 Меню", t: "PDF: печатная форма, кнопка Печать" },
+    { g: "10.1 Меню", t: "Активный фильтр — только отфильтрованные" },
+    { g: "10.1 Меню", t: "Без прав — Нет прав на экспорт" },
+    { g: "10.2 CSV injection", t: "Модель =1+1 — в Excel текст =1+1, а не 2" },
+    { g: "10.2 CSV injection", t: "Модель +7 999 — текст, не число" },
+    { g: "10.2 CSV injection", t: "Модель -5 отклонение — текст" },
+    { g: "10.2 CSV injection", t: "Модель @user — текст" }
+  ]},
+  { title: "Блок 11. Импорт", tag: "11", items: [
+    { g: "", t: "XLSX/XLS/CSV/JSON/TXT работают" },
+    { g: "", t: "Битый файл — ошибка" },
+    { g: "", t: "Без заголовков — Не удалось распознать…" },
+    { g: "", t: "Дубли ID — в skipped" },
+    { g: "", t: "Дата 21.10.2024 — 2024-10-21" },
+    { g: "", t: "Дата 10.21.2024 — 2024-10-21 (US)" },
+    { g: "", t: "Результат Брак — fail" },
+    { g: "", t: "Тип Микроскоп — microscope" },
+    { g: "", t: "Скрипт-тег — экранирование, нет всплытия" },
+    { g: "", t: "Импорт под user — Нет прав" },
+    { g: "11.6 Нагрузка", t: "500 строк < 30 сек" },
+    { g: "11.6 Нагрузка", t: "1000 строк < 60 сек" },
+    { g: "11.6 Нагрузка", t: "Таблица не тормозит" }
+  ]},
+  { title: "Блок 12. Напоминания", tag: "12", items: [
+    { g: "", t: "Появляется через 600 мс при наличии danger/warn" },
+    { g: "", t: "Понятно — не появляется до завтра" },
+    { g: "", t: "Позже — появится при следующем входе" },
+    { g: "", t: "F5 — не появляется" },
+    { g: "", t: "Привязано к currentUser.id — при impersonate свой набор" }
+  ]},
+  { title: "Блок 13. Настройки — Поля формы", tag: "13", items: [
+    { g: "", t: "Снять Активно у Примечание — пропало из формы" },
+    { g: "", t: "Переместить — порядок изменился" },
+    { g: "", t: "Обяз. — поле required" },
+    { g: "", t: "oninput для label — правка, не убирая фокус, кликнуть — правка сохранилась" },
+    { g: "", t: "Добавить поле — появилось" },
+    { g: "", t: "Тип select — textarea для опций" },
+    { g: "", t: "Сохранить — тост" }
+  ]},
+  { title: "Блок 14. Настройки — Отделы", tag: "14", items: [
+    { g: "", t: "Дубликат — Такой отдел уже есть" },
+    { g: "", t: "oninput — правка названия без blur + клик не теряет правку" },
+    { g: "", t: "Сохранить — тост" }
+  ]},
+  { title: "Блок 15. Настройки — Фильтры", tag: "15", items: [
+    { g: "", t: "Отключить Статус — пропал из UI после F5" },
+    { g: "", t: "Добавить фильтр — появился" }
+  ]},
+  { title: "Блок 16. Настройки — Экспорт", tag: "16", items: [
+    { g: "", t: "Отметить 3 — CSV с 3 столбцами" },
+    { g: "", t: "Снять все — дефолт" }
+  ]},
+  { title: "Блок 17. Настройки — Пользователи", tag: "17", items: [
+    { g: "", t: "Своя строка — без действий" },
+    { g: "", t: "Создать — модалка разового пароля" },
+    { g: "", t: "Нельзя понизить себя — Нельзя понизить собственную роль администратора" },
+    { g: "", t: "Последнего админа — Нельзя понизить последнего администратора" },
+    { g: "", t: "Сброс пароля себе — Используйте Сменить пароль в шапке" },
+    { g: "", t: "Роль admin — все чекбоксы disabled" },
+    { g: "", t: "Только свой отдел — user видит только свой отдел" },
+    { g: "17.7 Модалка разового пароля", t: "Показаны логин, ФИО, пароль" },
+    { g: "17.7 Модалка разового пароля", t: "Скопировать — тост, пароль в буфере" },
+    { g: "17.7 Модалка разового пароля", t: "Закрыть — модалка закрыта" }
+  ]},
+  { title: "Блок 18. Настройки — Система", tag: "18", items: [
+    { g: "", t: "value read-only" },
+    { g: "", t: "Изменить label — Сохранить" },
+    { g: "", t: "Пустой prefix — авто EQ" },
+    { g: "", t: "Дубли value — ошибка" },
+    { g: "", t: "Удалить используемый тип — Нельзя удалить…" }
+  ]},
+  { title: "Блок 19. Настройки — Лог", tag: "19", items: [
+    { g: "", t: "Все действия видны" },
+    { g: "", t: "Очистить — подтверждение — пусто" }
+  ]},
+  { title: "Блок 20. Impersonate", tag: "20", items: [
+    { g: "", t: "Войти как под user1 — тост Вы вошли как Иванов Иван" },
+    { g: "", t: "В шапке Вернуться" },
+    { g: "", t: "Кнопки управления скрыты (права user)" },
+    { g: "", t: "Вернуться — тост Вернулись…" },
+    { g: "", t: "F5 под impersonate — сессия сохранена" },
+    { g: "", t: "Действия логируются от имени user1" },
+    { g: "", t: "Свои prefs — у impersonated видны его поля/колонки, не оригинала" }
+  ]},
+  { title: "Блок 21. Смена пароля", tag: "21", items: [
+    { g: "", t: "Пустые — Заполните поле Новый пароль" },
+    { g: "", t: "Меньше 8 — Минимум 8 символов" },
+    { g: "", t: "Без заглавной — Хотя бы одна заглавная буква" },
+    { g: "", t: "Без спецсимвола — ошибка" },
+    { g: "", t: "Пароли не совпадают" },
+    { g: "", t: "Такой же как текущий — ошибка" },
+    { g: "", t: "Правильный — тост Пароль успешно изменён" },
+    { g: "", t: "После смены не выкидывает — свежий токен, следующий запрос работает" },
+    { g: "", t: "Impersonate + смена пароля — originalUser/originalToken сохранены" }
+  ]},
+  { title: "Блок 22. Настройки вида пользователя", tag: "22", items: [
+    { g: "", t: "Снять 3 поля — у user их нет" },
+    { g: "", t: "Вкладка Колонки таблицы — перемещение" },
+    { g: "", t: "Переместить Отдел вверх — порядок изменён" },
+    { g: "", t: "Пустой список — Нужно выбрать хотя бы одно поле" }
+  ]},
+  { title: "Блок 23. UI и адаптивность", tag: "23", items: [
+    { g: "", t: "375px — всё в одну колонку" },
+    { g: "", t: "768px — планшетная адаптация" },
+    { g: "", t: "Клик по фону модалки — закрывается" },
+    { g: "", t: "Esc — закрывает confirm" },
+    { g: "", t: "Двойной клик Сохранить — не дублируется" },
+    { g: "", t: "Долгие названия отделов — не ломают вёрстку" },
+    { g: "", t: "Эмодзи и кириллица в названиях — корректны" }
+  ]},
+  { title: "Блок 24. Безопасность", tag: "24", items: [
+    { g: "", t: "JWT в sessionStorage (не localStorage)" },
+    { g: "", t: "Подделать токен — 401" },
+    { g: "", t: "Истёк токен — авторазлогин" },
+    { g: "", t: "SQL-инъекция в поиске — экранирование через знак вопроса" },
+    { g: "", t: "XSS-тег — экранирование через esc()" },
+    { g: "", t: "Права проверяются и на фронте, и на бэке" },
+    { g: "", t: "apiRequest('/settings/fields','PUT',[]) под user — 403" },
+    { g: "", t: "CSV injection — =HYPERLINK(...) в модели — в CSV не выполняется" }
+  ]},
+  { title: "Блок 25. Нагрузка", tag: "25", items: [
+    { g: "", t: "Импорт 500 строк < 30 сек" },
+    { g: "", t: "Импорт 1000 строк < 60 сек" },
+    { g: "", t: "Таблица после импорта не тормозит" },
+    { g: "", t: "Фильтры/поиск на 1000 работают" },
+    { g: "", t: "Экспорт 1000 — файл корректный" }
+  ]},
+  { title: "Блок 26. Регрессия исправленных багов", tag: "26", items: [
+    { g: "26.1 Смена пароля не разлогинивает", t: "Войти — Пароль — ввести корректно — не выкинуло" },
+    { g: "26.1 Смена пароля не разлогинивает", t: "Следующее действие — работает, не Сессия истекла" },
+    { g: "26.2 Fresh token на клиенте", t: "После смены пароля authToken в sessionStorage обновился" },
+    { g: "26.2 Fresh token на клиенте", t: "Если был режим impersonate — originalUser/originalToken не потерялись" },
+    { g: "26.3 information_schema миграция", t: "На чистой БД db.js не пытается ALTER TABLE ... IF NOT EXISTS" },
+    { g: "26.3 information_schema миграция", t: "На старой БД (без password_changed_at) — колонка добавилась" },
+    { g: "26.4 PUBLIC_WHEN_FORCED", t: "must_change_password=1 — GET /api/pipettes — 403 password_change_required" },
+    { g: "26.4 PUBLIC_WHEN_FORCED", t: "POST /api/auth/change-password — не 403, работает" },
+    { g: "26.4 PUBLIC_WHEN_FORCED", t: "GET /api/auth/verify — 200" },
+    { g: "26.5 Clock skew допуск", t: "После смены пароля сразу refreshCurrentUser() — не 401" },
+    { g: "26.5 Clock skew допуск", t: "Смена пароля в 23:59 — следующий запрос в 00:00 — OK" },
+    { g: "26.6 bulk-return проверяет статус", t: "POST /api/pipettes/bulk-return для не отправленной — skipped" },
+    { g: "26.6 bulk-return проверяет статус", t: "В calibration_history запись не создана" },
+    { g: "26.7 Защита от понижения себя", t: "Админ понижает себя — Нельзя понизить собственную роль администратора" },
+    { g: "26.7 Защита от понижения себя", t: "Последнего админа другой админ понижает — ошибка" },
+    { g: "26.8 oninput в настройках", t: "Поля формы — правка label — клик — правка сохранена" },
+    { g: "26.8 oninput в настройках", t: "То же для отделов, фильтров, типов" },
+    { g: "26.9 lastResult при скрытом поле", t: "У пользователя скрыто поле Результат в prefs" },
+    { g: "26.9 lastResult при скрытом поле", t: "Редактирование без Результат — last_result сохранился прежним" },
+    { g: "26.9 lastResult при скрытом поле", t: "Не сбросилось в pass по умолчанию" },
+    { g: "26.10 Напоминания per-user", t: "User A закрыл — User B видит своё" },
+    { g: "26.10 Напоминания per-user", t: "Impersonate — своё напоминание для impersonated" },
+    { g: "26.11 CSV sanitize", t: "Модель =1+1 — Excel показывает текст" },
+    { g: "26.11 CSV sanitize", t: "Модель +7 (999) 123-45-67 — текст, не формула" },
+    { g: "26.11 CSV sanitize", t: "Обычная модель Research Plus — без изменений" },
+    { g: "26.12 getSession при битом JSON", t: "sessionStorage.setItem('pipette_session', '{broken') — F5 — логин, без JS-ошибки" }
+  ]}
+];
+
+/* ================ ДАННЫЕ: СЦЕНАРИИ ================ */
+var SCENARIOS = [
+  { tag: "S1", title: "Сценарий 1. Администратор: от запуска до аудита", time: "60 мин", priority: "🔴", blocks: "1, 2.1, 3–6, 9, 10, 13–19", steps: [
+    "docker-compose up -d, проверить логи MySQL, БД, сервера, разовые пароли",
+    "SHOW TABLES — все 10 таблиц, 3 пользователя, 8 отделов, 5 демо-пипеток",
+    "system_settings: equipment_types (6), warn_days = 30",
+    "Открыть http://localhost:3000, Console без ошибок",
+    "Войти admin/admin — тост, ФИО, должность в шапке",
+    "Создать P-006, A-002, M-002. Проверить префиксы ID",
+    "Проверить ошибки: без модели, без даты, дата в будущем, занятый ID",
+    "Редактировать P-001: модель, стереть дату — дата не обнулилась",
+    "Удалить P-003: подтверждение, тост, история удалена",
+    "Быстрая поверка P-001: Годен, дата сегодня. Проверить Поверка/Следующая",
+    "Записать Брак для другой пипетки — статус красный",
+    "История P-001: таймлайн, свидетельство, организация, примечание",
+    "Добавить поверку вручную из истории. Тост, таблица обновлена",
+    "Экспорт истории: пустой период и конкретный. CSV и PDF",
+    "Фильтры: статус Просрочены, период, отдел, ответственный, модель",
+    "Сбросить фильтры. Сортировка по ID и модели",
+    "Открыть настройки: поля, отделы, фильтры, экспорт, система, лог",
+    "В логе проверить: вход, добавление, смена пароля, импорт",
+    "Очистить лог с подтверждением — пусто"
+  ], expected: "Все действия проходят, данные не теряются, ошибки валидации корректны, лог заполняется" },
+
+  { tag: "S2", title: "Сценарий 2. Роли, права и impersonate", time: "30 мин", priority: "🔴", blocks: "2.4, 2.5, 20", steps: [
+    "Войти user/user. Проверить: Иванов Иван, Биохимический отдел",
+    "Нет кнопок Добавить, Импорт, Настройки, Экспорт",
+    "В истории нет Добавить поверку, в таблице только История",
+    "openModal() из консоли — Доступ запрещён",
+    "apiRequest('/pipettes/P-001','DELETE') — 403",
+    "Войти senior/senior. Есть Добавить, Импорт, Экспорт, Добавить поверку; нет Настройки",
+    "Войти admin/admin. Всё доступно",
+    "Открыть пользователей, Войти как под user — тост, кнопка Вернуться",
+    "Кнопки управления скрыты, права user",
+    "Действие от имени user — в логе от user",
+    "Вернуться — тост, права admin вернулись",
+    "Снова Войти как user, F5 — сессия impersonate сохранилась",
+    "Напоминания: у user свой набор, у admin свой",
+    "Включить Только свой отдел у user — видит только Биохимический"
+  ], expected: "Права работают и на фронте, и на бэке; impersonate не теряет originalUser/originalToken; лог пишется от impersonated" },
+
+  { tag: "S3", title: "Сценарий 3. Массовые операции и напоминания", time: "30 мин", priority: "🔴", blocks: "7, 8, 12", steps: [
+    "Войти admin",
+    "Выбрать 3 пипетки — счётчик (3)",
+    "Добавить анализатор — счётчик стал 1 или не учитывается",
+    "Открыть Отправить на поверку: список, дата, примечание",
+    "Дата в будущем — ошибка",
+    "Подтвердить: тост, статус На поверке, кнопка Отправить пропала, Вернулись (N)",
+    "Распечатать акт — окно с таблицей. Без выбора — Нет пипеток",
+    "Открыть Возврат: счётчик возвращаемых",
+    "Одно свидетельство на всех — индивидуальные поля отключились",
+    "Общий результат Годен, изменить общий select — все строки поменялись",
+    "Пустое свидетельство — предупреждение",
+    "Подтвердить: тост Возврат оформлен, статус и история обновились",
+    "curl POST /api/pipettes/bulk-return для не отправленной — skipped, истории нет",
+    "Перезагрузить: напоминание через 600 мс при danger/warn",
+    "Понятно — не появляется до завтра. Позже — появится при входе",
+    "F5 — напоминание не появляется",
+    "Другой пользователь в том же браузере — своё напоминание",
+    "Impersonate — своё напоминание"
+  ], expected: "Массовые операции корректны, статусы обновляются, напоминания per-user" },
+
+  { tag: "S4", title: "Сценарий 4. Настройки и пользовательский вид", time: "45 мин", priority: "🟡", blocks: "13–18, 22", steps: [
+    "Войти admin, открыть Настройки",
+    "Поля формы: снять Активно у Примечание — пропало из формы",
+    "Переместить поле — порядок изменился",
+    "Поставить Обяз. — поле стало required",
+    "Изменить label, не убирая фокус, кликнуть стрелку — правка сохранилась",
+    "Добавить поле, тип select — textarea для опций",
+    "Сохранить — тост",
+    "Отделы: дубликат — Такой отдел уже есть",
+    "Изменить название без blur, кликнуть стрелку — правка не потерялась",
+    "Сохранить — тост",
+    "Фильтры: отключить Статус — после F5 пропал из UI",
+    "Добавить фильтр — появился",
+    "Экспорт: 3 поля — CSV с 3 столбцами. Снять все — дефолт",
+    "Пользователи: своя строка без действий",
+    "Создать пользователя — модалка разового пароля. Скопировать пароль",
+    "Понизить себя — Нельзя понизить собственную роль",
+    "Понизить последнего админа — Нельзя понизить последнего администратора",
+    "Сброс пароля себе — Используйте Сменить пароль",
+    "Роль admin — все чекбоксы disabled",
+    "Система: изменить warn_days, сохранить",
+    "Типы: value read-only, label изменить, пустой prefix — EQ, дубли — ошибка, используемый — Нельзя удалить",
+    "Лог: все действия, Очистить с подтверждением",
+    "Настройки вида: снять 3 поля у user, Колонки таблицы, Отдел вверх",
+    "Войти user — скрытых полей нет, порядок изменён",
+    "Пустой список — Нужно выбрать хотя бы одно поле"
+  ], expected: "Настройки применяются, валидации работают, права не ломаются" },
+
+  { tag: "S5", title: "Сценарий 5. Пароли, сессии и безопасность", time: "40 мин", priority: "🔴", blocks: "2.2, 21, 24, 26.1–26.5", steps: [
+    "Войти admin, Пароль",
+    "Валидации: пустые, меньше 8, без заглавной, без спецсимвола, не совпадают, такой же",
+    "Корректный новый пароль — тост Пароль успешно изменён",
+    "Не выкинуло, сразу открыть таблицу — работает",
+    "authToken в sessionStorage обновился",
+    "Создать пользователя, получить разовый пароль",
+    "Войти с разовым — система требует смену",
+    "must_change_password=1: GET /api/pipettes — 403 password_change_required",
+    "POST /api/auth/change-password — не 403, работает",
+    "GET /api/auth/verify — 200",
+    "Impersonate + смена пароля — originalUser/originalToken сохранены",
+    "Удалить pipette_session — F5 — логин",
+    "Токен мусор — F5 — Недействительный токен",
+    "clearSession() + apiRequest('/pipettes') — 401",
+    "JWT в sessionStorage, не localStorage",
+    "Подделать токен — 401. Истёк токен — авторазлогин",
+    "SQL-инъекция в поле поиска — экранирование через знак вопроса",
+    "XSS-тег — экранирование через esc()",
+    "apiRequest('/settings/fields','PUT',[]) под user — 403",
+    "CSV injection: =1+1, +7 999, -5, @user — текст в Excel",
+    "=HYPERLINK(...) — в CSV не выполняется",
+    "Смена пароля в 23:59, запрос в 00:00 — OK",
+    "sessionStorage с битым JSON — F5 — логин без JS-ошибки"
+  ], expected: "Пароли и сессии работают, безопасность не пробивается, регрессия не возвращается" },
+
+  { tag: "S6", title: "Сценарий 6. Импорт, экспорт и нагрузка", time: "30 мин", priority: "🟡", blocks: "10, 11, 25", steps: [
+    "Войти admin, открыть Импорт",
+    "Загрузить XLSX, XLS, CSV, JSON, TXT — все работают",
+    "Битый файл — ошибка",
+    "Без заголовков — Не удалось распознать…",
+    "Дубли ID — в skipped",
+    "Дата 21.10.2024 — 2024-10-21",
+    "Дата 10.21.2024 — 2024-10-21 (US)",
+    "Результат Брак — fail",
+    "Тип Микроскоп — microscope",
+    "Скрипт-тег — экранирование, нет всплытия",
+    "Импорт под user — Нет прав",
+    "Импортировать 500 строк < 30 сек. Таблица, фильтры, поиск",
+    "Импортировать 1000 строк < 60 сек. Не тормозит",
+    "Экспорт 1000 — CSV корректен, PDF открывается",
+    "Активный фильтр — экспорт только отфильтрованных",
+    "Без прав — Нет прав на экспорт",
+    "CSV: BOM, кириллица, pipettes_YYYY-MM-DD.csv",
+    "PDF: печатная форма, кнопка Печать",
+    "docker exec SELECT COUNT(*) — совпадает"
+  ], expected: "Импорт и экспорт стабильны, нагрузка в норме, безопасность соблюдена" },
+
+  { tag: "S7", title: "Сценарий 7. Регрессия исправленных багов", time: "20 мин", priority: "🔴", blocks: "26", steps: [
+    "26.1. Смена пароля не разлогинивает: сменить, открыть таблицу — работает",
+    "26.2. Fresh token: authToken обновился, impersonate сохранил original",
+    "26.3. На чистой БД нет ALTER, на старой — колонка добавилась",
+    "26.4. must_change_password: GET pipettes 403, change-password OK, verify 200",
+    "26.5. Clock skew: refreshCurrentUser() сразу — не 401; смена в 23:59, запрос в 00:00 — OK",
+    "26.6. bulk-return для не отправленной — skipped, истории нет",
+    "26.7. Понижение себя и последнего админа — ошибка",
+    "26.8. oninput в Поля/Отделы/Фильтры/Типы — правка сохраняется",
+    "26.9. lastResult при скрытом поле — не сбрасывается в pass",
+    "26.10. Напоминания per-user: A закрыл, B видит своё; impersonate своё",
+    "26.11. CSV sanitize: =1+1, +7 (999), Research Plus — корректно",
+    "26.12. sessionStorage с битым JSON — F5 — логин без ошибки"
+  ], expected: "Все 12 регрессионных пунктов проходят, старые баги не вернулись" },
+
+  { tag: "S8", title: "Сценарий 8. UI и адаптивность", time: "15 мин", priority: "🟢", blocks: "23", steps: [
+    "375px — всё в одну колонку",
+    "768px — планшетная адаптация",
+    "Клик по фону модалки — закрывается",
+    "Esc — закрывает confirm",
+    "Двойной клик Сохранить — не дублируется",
+    "Долгие названия отделов — не ломают вёрстку",
+    "Эмодзи и кириллица в названиях — корректны"
+  ], expected: "UI работает на всех разрешениях, эмодзи и кириллица не ломают вёрстку" },
+
+  { tag: "S9", title: "Сценарий 9. Жизненный цикл пипетки", time: "30 мин", priority: "🔴", blocks: "4, 5, 6, 7, 8", steps: [
+    "Создать P-100 с полными данными: модель, производитель, объём 1000, отдел, МПИ 12, дата сегодня, Годен, В работе, ответственный, место, примечание",
+    "P-100 появилась, счётчики обновились, статус зелёный",
+    "История P-100 — одна запись (создание)",
+    "Быстрая поверка через 6 мес: Годен — Поверка и Следующая обновились, в истории 2 записи",
+    "Изменить отдел — в истории остался старый отдел",
+    "Сменить ответственного — в истории зафиксировано",
+    "Отправить на внешнюю поверку — статус На поверке",
+    "Вернуть с Брак — статус красный, запись с браком в истории",
+    "Изменить статус эксплуатации на Неактивна — серый цвет",
+    "Удалить P-100 — история удалена каскадом"
+  ], expected: "На каждом шаге данные консистентны, история полная, удаление каскадное" },
+
+  { tag: "S10", title: "Сценарий 10. Граничные значения и валидация", time: "30 мин", priority: "🟡", blocks: "4, 5, 11", steps: [
+    "Пустые: без модели, без даты, без отдела — все ошибки",
+    "Модель 500 символов, примечание 5000 — сохраняется или обрезается?",
+    "Спецсимволы в модели (угловые скобки, кавычки, амперсанд, слэш, пайп) — экранирование, нет XSS",
+    "Эмодзи в отделе: микроскоп Гематология кровь — корректно",
+    "Модель только из пробелов — Заполните поле",
+    "Дата сегодня — сохраняется",
+    "Дата завтра — ошибка",
+    "Дата 1900-01-01 — сохраняется или ошибка?",
+    "Дата 2100-01-01 — ошибка",
+    "МПИ 0 — ошибка или дефолт",
+    "МПИ -1 — ошибка",
+    "МПИ 999 — сохраняется?",
+    "Объём 0 для пипетки — ошибка или допустимо",
+    "Объём отрицательный — ошибка",
+    "Объём 999999 мкл — сохраняется?",
+    "ID P-!@# — ошибка",
+    "ID длиной 100 символов — обрезается или ошибка"
+  ], expected: "Все граничные случаи обрабатываются предсказуемо, нет падений, нет XSS, ошибки понятны" },
+
+  { tag: "S11", title: "Сценарий 11. Комбинированные фильтры и экспорт", time: "20 мин", priority: "🟡", blocks: "9, 10", steps: [
+    "Минимум 50 пипеток разных отделов, статусов, моделей",
+    "Открыть панель фильтров",
+    "Статус Просрочены + отдел Гематологический + период от/до",
+    "В таблице только подходящие строки",
+    "Добавить в поиск eppendorf — строки сузились",
+    "Счётчики в шапке совпадают с числом видимых",
+    "Отсортировать по Следующая (возрастание)",
+    "Экспорт CSV — только отфильтрованные строки, правильный порядок",
+    "Экспорт PDF — печатная форма только с отфильтрованным",
+    "Сбросить фильтры — таблица полностью вернулась",
+    "Фильтр Без ответственного (если есть)",
+    "Фильтр по дате только С — работает",
+    "Противоречивые фильтры — заглушка Ничего не найдено"
+  ], expected: "Фильтры комбинируются логично, экспорт синхронизирован с экраном, сортировка сохраняется" },
+
+  { tag: "S12", title: "Сценарий 12. Многопользовательская работа через экспорт/импорт", time: "30 мин", priority: "🟡", blocks: "всё", steps: [
+    "Браузер A: admin, блоки 1–5, экспорт A.json",
+    "Браузер B: admin, блоки 6–10, экспорт B.json",
+    "A импортирует B.json — появились блоки 6–10, 1–5 не затронуты",
+    "B импортирует A.json — симметрично",
+    "Оба имеют полный прогресс? Счётчики совпадают",
+    "A: пункт 3.1 в fail, экспорт A2.json",
+    "B импортирует A2.json — пункт 3.1 стал fail, не перезаписался pass",
+    "B: пункт 3.1 в warn, экспорт B2.json",
+    "A импортирует B2.json — победил более свежий timestamp",
+    "Комментарии и баг-ссылки тоже мерджатся, не теряются"
+  ], expected: "Импорт мерджит по timestamp, не затирает более свежие правки, комментарии сохраняются" },
+
+  { tag: "S13", title: "Сценарий 13. Аудит и восстановление после сбоев", time: "20 мин", priority: "🟢", blocks: "всё", steps: [
+    "Пройти 20 пунктов, разные статусы, комментарии",
+    "Закрыть вкладку. Открыть — всё на месте",
+    "DevTools — удалить kdl_checklist_v35. F5",
+    "Чек-лист пустой, не сломан. Console без ошибок",
+    "Пройти несколько. Закрыть браузер полностью. Открыть — сохранилось",
+    "localStorage.setItem('kdl_checklist_v35', битый JSON). F5",
+    "Приложение стартует с чистого, не падает, нет красных ошибок",
+    "localStorage.setItem(..., 'null'). F5 — то же",
+    "Пустой JSON с version, items, settings — пустой чек-лист, без ошибок",
+    "Инкогнито: 5 пунктов, закрыть, обычное окно — прогресса нет (ожидаемо)"
+  ], expected: "Приложение устойчиво к порче localStorage, битому JSON, отсутствию ключа" },
+
+  { tag: "S14", title: "Сценарий 14. Даты и часовые пояса", time: "25 мин", priority: "🟡", blocks: "4, 5, 6, 11", steps: [
+    "Системное время 23:59, создать с датой сегодня — не завтра",
+    "Время 00:01 следующего дня — Следующая пересчиталась",
+    "Дата 21.10.2024 — распознана",
+    "10.21.2024 — 21 октября (US)",
+    "2024-10-21 — распознана",
+    "21/10/2024 — распознана",
+    "2024/10/21 — распознана",
+    "32.13.2024 — ошибка",
+    "abc — ошибка",
+    "Пустая строка — Заполните поле",
+    "МПИ 12 мес — ровно через год",
+    "МПИ 1 мес — через месяц",
+    "МПИ 0 — ошибка или дефолт",
+    "просрочка N дн. считается от сегодня, не от последней поверки"
+  ], expected: "Все форматы дат распознаются, часовые пояса не ломают логику, МПИ считает корректно" },
+
+  { tag: "S15", title: "Сценарий 15. Кросс-браузерное тестирование", time: "30 мин", priority: "🟢", blocks: "всё", steps: [
+    "Chrome: без JS-ошибок, пройти 10, F5 сохранил",
+    "Chrome: экспорт/импорт JSON работают",
+    "Chrome: Diff двух JSON, различия видны",
+    "Chrome: Jira CSV, кириллица в Excel",
+    "Chrome: Markdown, чекбоксы на месте",
+    "Chrome: тёмная тема, адаптив 375/768/1440, печать",
+    "Firefox: те же шаги 1–6",
+    "Safari: те же шаги 1–6",
+    "Edge: те же шаги 1–6"
+  ], expected: "Одинаковое поведение во всех браузерах, нет браузер-специфичных багов" },
+
+  { tag: "S16", title: "Сценарий 16. Негативные сценарии и что если", time: "25 мин", priority: "🟡", blocks: "всё", steps: [
+    "Console: undo() 100 раз — не падает, Нечего отменять",
+    "redo() 100 раз — аналогично",
+    "importData({}) — не падает",
+    "importData(null) — обрабатывается",
+    "exportJiraCSV() без багов — Нет багов для экспорта",
+    "Diff: загрузить один файл — Загрузите оба файла",
+    "Diff: .txt вместо JSON — Ошибка чтения",
+    "Diff: JSON без items — не падает",
+    "Diff: items: null — не падает",
+    "Ссылка при 250+ пунктах — предупреждение",
+    "Поиск: 1000 символов — не тормозит",
+    "Поиск: regex-спецсимволы — не падает",
+    "Двойной клик Сохранить в мета — не дублируется",
+    "Сброс + отмена в confirm — прогресс на месте",
+    "Сброс + подтверждение — очищено, тема сохранена"
+  ], expected: "Все негативные сценарии обрабатываются, приложение не падает" },
+
+  { tag: "S17", title: "Сценарий 17. Производительность на больших объёмах", time: "20 мин", priority: "🟢", blocks: "25", steps: [
+    "Заполнить все ~280 пунктов статусами (скриптом)",
+    "Замер render() через performance.now() < 500 мс",
+    "Поиск по букве — отфильтровалось мгновенно < 100 мс",
+    "Фильтр Провалы при 0 — заглушка мгновенно",
+    "Фильтр С мета при 280 комментариях — без тормозов",
+    "Экспорт JSON < 500 КБ, скачался < 1 сек",
+    "Импорт этого JSON < 1 сек",
+    "Diff двух полных JSON < 1 сек",
+    "Jira CSV при 280 багах < 1 сек",
+    "Markdown при 280 пунктах < 1 сек",
+    "Undo 50 раз подряд — не тормозит"
+  ], expected: "Все операции < 1 сек, UI не залипает" },
+
+  { tag: "S18", title: "Сценарий 18. Командная работа 3 тестировщиков", time: "60 мин", priority: "🔴", blocks: "всё", steps: [
+    "A: блоки 1–7 (запуск, авторизация, таблица, CRUD, поверки, история, отправка)",
+    "B: блоки 8–15 (возврат, фильтры, экспорт, импорт, напоминания, настройки)",
+    "C: блоки 16–26 (пользователи, система, лог, impersonate, пароль, вид, UI, безопасность, нагрузка, регрессия)",
+    "Каждый находит баги, ставит fail, комментарий, ссылку",
+    "A экспортирует A.json, B и C импортируют — у всех 1–7",
+    "B экспортирует B.json, A и C импортируют — у всех 8–15",
+    "C экспортирует C.json, A и B импортируют — у всех полный прогресс",
+    "Лидер: Jira CSV — все баги в трекер",
+    "Лидер: Markdown — TESTING.md — коммит в репозиторий",
+    "Лидер: Diff before.json / after.json — видит все изменения"
+  ], expected: "Командная работа без потерь, мердж корректен, отчёт готов" },
+
+  { tag: "S19", title: "Сценарий 19. Безопасность экспортов и импортов", time: "25 мин", priority: "🔴", blocks: "10, 11, 24", steps: [
+    "Комментарий с HTML-тегом script — экспорт/импорт — не выполнился",
+    "Баг-ссылка javascript:alert(1) — не кликабельна",
+    "Модель =cmd с вертикальной чертой — CSV — формула не выполняется",
+    "Модель +7 (999) 123-45-67 — не число",
+    "Комментарий с символами CRLF (инъекция) — не ломает CSV",
+    "Комментарий 100 КБ — экспорт не падает",
+    "JSON с dunder-proto в ключах — prototype pollution не происходит",
+    "JSON с constructor в ключах — не падает",
+    "JSON с вложенными объектами в items — корректно или отклоняется",
+    "JSON с items как массивом — не падает",
+    "JSON с 10 000 пунктов — не виснет"
+  ], expected: "Все экспорты безопасны, импорты не создают уязвимостей" },
+
+  { tag: "S20", title: "Сценарий 20. Полный smoke-тест перед сдачей", time: "15 мин", priority: "🔴", blocks: "всё", steps: [
+    "Открыть — нет JS-ошибок",
+    "1 пункт через чекбокс — pass, счётчики обновились",
+    "1 пункт через fail — fail",
+    "1 пункт через skip — skip",
+    "Комментарий — 💬-бейдж",
+    "Баг-ссылка — 🐞-бейдж, кликабельна",
+    "Фильтр Провалы — только провалы",
+    "Фильтр С мета — только с комментами",
+    "Фильтр С багами — только баги",
+    "Поиск P-001 — одна строка",
+    "Групповая pass на блоке — весь блок зелёный",
+    "Групповая очистка — блок чистый",
+    "Ctrl+Z — вернулось. Ctrl+Y — снова очистилось",
+    "Тёмная тема — переключилась",
+    "Экспорт JSON — файл скачался",
+    "Импорт JSON — данные на месте",
+    "Diff двух JSON — различия видны",
+    "Jira CSV — файл с багами",
+    "Markdown — чекбоксы на месте",
+    "Сброс — чисто, тема сохранена",
+    "F5 — прогресс на месте"
+  ], expected: "Все 22 шага проходят без ошибок. Если что-то падает — блокер для сдачи" }
+];
+
+/* ================ STATE ================ */
+var STORAGE_KEY = "kdl_checklist_v35";
+var LEGACY_KEYS = ["kdl_checklist_v34","kdl_checklist_v33","kdl_checklist_v32","kdl_checklist_v31"];
+var MAX_HISTORY = 50;
+
+var state = loadState();
+var activeFilter = "all";
+var searchQuery = "";
+var activeTab = "checklist";
+/* ВАЖНО: переменная называется undoStack, а не history —
+   потому что window.history в браузере non-configurable,
+   и `var history = []` молча игнорируется. */
+var undoStack = [];
+var historyIndex = -1;
+
+function defaultState(){return {version:5,items:{},settings:{theme:"light",tab:"checklist"}}}
+function loadState(){
+  try{
+    var raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw){for(var i=0;i<LEGACY_KEYS.length;i++){raw=localStorage.getItem(LEGACY_KEYS[i]);if(raw)break}}
+    if(!raw)return defaultState();
+    var p=JSON.parse(raw);
+    if(p&&p.version===undefined&&!p.items){
+      var m=defaultState();
+      Object.keys(p).forEach(function(k){
+        if(k==="settings"||k==="_updated")return;
+        var v=p[k];
+        if(typeof v==="string")m.items[k]={s:v,c:"",b:"",_t:Date.now()};
+        else if(v&&typeof v==="object")m.items[k]=v;
+      });
+      return m;
+    }
+    if(!p.items)p.items={};
+    if(!p.settings)p.settings={theme:"light",tab:"checklist"};
+    return p;
+  }catch(e){return defaultState()}
+}
+function saveState(){state._updated=Date.now();try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){}}
+function itemKey(si,ii){return "s"+si+"_i"+ii}
+function scenarioKey(si,st){return "sc"+si+"_st"+st}
+function getItem(key){var v=state.items[key];if(!v)return{s:null,c:"",b:"",_t:0};return{s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||0}}
+function setItem(key,patch){
+  var cur=getItem(key);
+  var next=Object.assign({},cur,patch,{_t:Date.now()});
+  if(!next.s&&!next.c&&!next.b)delete state.items[key];
+  else state.items[key]=next;
+  saveState();
+}
+
+function pushHistory(){
+  var snap=JSON.stringify(state.items);
+  if(historyIndex>=0&&undoStack[historyIndex]===snap)return;
+  undoStack=undoStack.slice(0,historyIndex+1);
+  undoStack.push(snap);
+  if(undoStack.length>MAX_HISTORY)undoStack.shift();
+  historyIndex=undoStack.length-1;
+  updateUndoRedoBtns();
+}
+function undo(){
+  if(historyIndex<=0){toast("Нечего отменять","warn");return}
+  historyIndex--;
+  state.items=JSON.parse(undoStack[historyIndex]);
+  saveState();renderAll();toast("Отменено","warn");
+}
+function redo(){
+  if(historyIndex>=undoStack.length-1){toast("Нечего возвращать","warn");return}
+  historyIndex++;
+  state.items=JSON.parse(undoStack[historyIndex]);
+  saveState();renderAll();toast("Возвращено","success");
+}
+function updateUndoRedoBtns(){
+  var u=document.getElementById("btn-undo"),r=document.getElementById("btn-redo");
+  if(u)u.disabled=historyIndex<=0;
+  if(r)r.disabled=historyIndex>=undoStack.length-1;
+}
+
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function escapeAttr(s){return escapeHtml(s)}
+
+function getSectionStats(si){
+  var s = DATA[si];
+  var done = 0, fail = 0;
+  s.items.forEach(function(_, ii){
+    var st = getItem(itemKey(si, ii)).s;
+    if (st === "pass") done++;
+    if (st === "fail") fail++;
+  });
+  return { done: done, fail: fail, total: s.items.length };
+}
+
+/* ================ RENDER: ЧЕК-ЛИСТ ================ */
+function renderChecklist(){
+  var root=document.getElementById("checklist");
+  root.innerHTML="";
+  DATA.forEach(function(section,si){
+    var secEl=document.createElement("div");
+    secEl.className="section";
+    secEl.dataset.section=si;
+    secEl.dataset.type="checklist";
+    var stats=getSectionStats(si);
+    var pct=stats.total?(stats.done/stats.total*100):0;
+    var header=document.createElement("div");
+    header.className="section-header";
+    var badgeClass=stats.fail>0?"fail":(stats.done===stats.total?"done":"");
+    header.innerHTML=
+      '<span class="arrow">▼</span>'+
+      '<span class="section-title">'+escapeHtml(section.title)+'</span>'+
+      '<div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div>'+
+      '<span class="section-badge '+badgeClass+'">'+stats.done+"/"+stats.total+(stats.fail>0?" · ❌"+stats.fail:"")+'</span>'+
+      '<div class="section-ops">'+
+      '<button data-op="pass-all" title="Всем пунктам блока ✅">✅</button>'+
+      '<button data-op="skip-all" title="Всем пунктам блока ⏭️">⏭️</button>'+
+      '<button data-op="clear-all" title="Очистить блок">🧹</button>'+
+      '</div>';
+    header.onclick=function(){secEl.classList.toggle("collapsed")};
+    bindSectionOps(header,section.items.length,function(ii){return itemKey(si,ii)},section.title);
+    secEl.appendChild(header);
+
+    var body=document.createElement("div");
+    body.className="section-body";
+    var lastGroup="";
+    section.items.forEach(function(item,ii){
+      if(item.g&&item.g!==lastGroup){
+        var g=document.createElement("div");
+        g.className="group-title";
+        g.textContent=item.g;
+        body.appendChild(g);
+        lastGroup=item.g;
+      }
+      body.appendChild(makeItemEl({
+        key:itemKey(si,ii), tag:section.tag, text:item.t,
+        data:getItem(itemKey(si,ii)), sectionTitle:section.title
+      }));
+    });
+    secEl.appendChild(body);
+    root.appendChild(secEl);
+  });
+}
+
+/* ================ RENDER: СЦЕНАРИИ ================ */
+function renderScenarios(){
+  var root=document.getElementById("scenarios");
+  root.innerHTML="";
+  SCENARIOS.forEach(function(sc,si){
+    var secEl=document.createElement("div");
+    secEl.className="section scenario";
+    secEl.dataset.section=si;
+    secEl.dataset.type="scenario";
+    var done=0,fail=0;
+    sc.steps.forEach(function(_,st){
+      var s=getItem(scenarioKey(si,st)).s;
+      if(s==="pass")done++;
+      if(s==="fail")fail++;
+    });
+    var total=sc.steps.length;
+    var pct=total?(done/total*100):0;
+    var header=document.createElement("div");
+    header.className="section-header";
+    var badgeClass=fail>0?"fail":(done===total?"done":"");
+    header.innerHTML=
+      '<span class="arrow">▼</span>'+
+      '<span class="section-title">'+escapeHtml(sc.title)+'</span>'+
+      '<span class="section-meta">⏱ '+escapeHtml(sc.time)+'</span>'+
+      '<span class="section-meta">'+escapeHtml(sc.priority)+' '+escapeHtml(sc.blocks)+'</span>'+
+      '<div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div>'+
+      '<span class="section-badge '+badgeClass+'">'+done+"/"+total+(fail>0?" · ❌"+fail:"")+'</span>'+
+      '<div class="section-ops">'+
+      '<button data-op="pass-all" title="Всем шагам ✅">✅</button>'+
+      '<button data-op="skip-all" title="Всем шагам ⏭️">⏭️</button>'+
+      '<button data-op="clear-all" title="Очистить сценарий">🧹</button>'+
+      '</div>';
+    header.onclick=function(){secEl.classList.toggle("collapsed")};
+    bindSectionOps(header,sc.steps.length,function(st){return scenarioKey(si,st)},sc.title);
+    secEl.appendChild(header);
+
+    var body=document.createElement("div");
+    body.className="section-body";
+    sc.steps.forEach(function(step,st){
+      body.appendChild(makeItemEl({
+        key:scenarioKey(si,st), tag:sc.tag, text:step,
+        data:getItem(scenarioKey(si,st)),
+        sectionTitle:sc.title, isScenario:true, stepNum:st+1
+      }));
+    });
+    var exp=document.createElement("div");
+    exp.className="expected-box";
+    exp.innerHTML='<b>Ожидаемый результат</b>'+escapeHtml(sc.expected);
+    body.appendChild(exp);
+    secEl.appendChild(body);
+    root.appendChild(secEl);
+  });
+}
+
+function bindSectionOps(header,count,keyFn,label){
+  header.querySelectorAll(".section-ops button").forEach(function(btn){
+    btn.onclick=function(e){
+      e.stopPropagation();
+      var op=btn.dataset.op;
+      if(op==="pass-all"){
+        if(!confirm("Поставить ✅ всем пунктам «"+label+"»?"))return;
+        pushHistory();
+        for(var i=0;i<count;i++){var k=keyFn(i);var c=getItem(k);state.items[k]=Object.assign({},c,{s:"pass",_t:Date.now()})}
+        saveState();renderAll();toast("Отмечено как пройденное","success");
+      }else if(op==="skip-all"){
+        if(!confirm("Поставить ⏭️ всем пунктам «"+label+"»?"))return;
+        pushHistory();
+        for(var j=0;j<count;j++){var k2=keyFn(j);var c2=getItem(k2);state.items[k2]=Object.assign({},c2,{s:"skip",_t:Date.now()})}
+        saveState();renderAll();toast("Помечено как пропущенное","warn");
+      }else if(op==="clear-all"){
+        if(!confirm("Очистить «"+label+"»?"))return;
+        pushHistory();
+        for(var m=0;m<count;m++)delete state.items[keyFn(m)];
+        saveState();renderAll();toast("Очищено","warn");
+      }
+    };
+  });
+}
+
+function makeItemEl(opts){
+  var key=opts.key, tag=opts.tag, text=opts.text, data=opts.data;
+  var isScenario=opts.isScenario, stepNum=opts.stepNum;
+  var status=data.s;
+  var hasMeta=!!(data.c||data.b);
+  var el=document.createElement("div");
+  el.className="item"+(status?" status-"+status:"");
+  el.dataset.key=key;
+  el.dataset.status=status||"";
+  el.dataset.hasMeta=hasMeta?"1":"0";
+  el.dataset.hasBug=(data.b||status==="fail")?"1":"0";
+  el.dataset.text=(tag+" "+text).toLowerCase();
+
+  var commentBadge=data.c?'<span class="badge">💬</span>':"";
+  var bugBadge=data.b?'<span class="badge">🐞</span>':"";
+  var prefix=isScenario?'<span class="step-num">'+stepNum+'.</span>':'<span class="block-tag">'+escapeHtml(tag)+'</span>';
+
+  el.innerHTML=
+    '<input type="checkbox" class="item-check" '+(status?"checked":"")+'>'+
+    '<label class="item-text">'+prefix+escapeHtml(text)+'</label>'+
+    '<div class="item-actions">'+
+      '<button class="meta-btn '+(data.c?"has-data":"")+'" data-action="comment">💬'+commentBadge+'</button>'+
+      '<button class="meta-btn '+(data.b?"has-data":"")+'" data-action="bug">🐞'+bugBadge+'</button>'+
+    '</div>'+
+    '<div class="status-group">'+
+      '<button class="status-btn '+(status==="pass"?"active":"")+'" data-status="pass" title="Пройдено">✅</button>'+
+      '<button class="status-btn '+(status==="fail"?"active":"")+'" data-status="fail" title="Провалено">❌</button>'+
+      '<button class="status-btn '+(status==="warn"?"active":"")+'" data-status="warn" title="Подозрительно">⚠️</button>'+
+      '<button class="status-btn '+(status==="skip"?"active":"")+'" data-status="skip" title="Пропущено">⏭️</button>'+
+    '</div>'+
+    '<div class="item-meta" data-meta>'+
+      '<label>Комментарий</label>'+
+      '<textarea rows="2" placeholder="Заметки…">'+escapeHtml(data.c)+'</textarea>'+
+      '<label>Ссылка на баг-трекер</label>'+
+      '<input type="url" placeholder="https://jira.company.com/browse/KDL-123" value="'+escapeAttr(data.b)+'">'+
+      '<div class="meta-actions">'+
+        (data.b?'<a class="bug-link" href="'+escapeAttr(data.b)+'" target="_blank" rel="noopener">🐞 Открыть</a>':"")+
+        '<button class="primary" data-action="save-meta">💾 Сохранить</button>'+
+        '<button data-action="clear-meta" '+(hasMeta?"":'style="display:none"')+'>🧹 Очистить</button>'+
+      '</div>'+
+    '</div>';
+
+  var checkbox=el.querySelector(".item-check");
+  var label=el.querySelector(".item-text");
+  var meta=el.querySelector("[data-meta]");
+
+  function toggleStatus(){
+    pushHistory();
+    var c=getItem(key);
+    setItem(key,{s:c.s==="pass"?null:"pass"});
+    renderAll();
+  }
+  checkbox.onchange=toggleStatus;
+  label.onclick=toggleStatus;
+
+  el.querySelectorAll(".status-btn").forEach(function(btn){
+    btn.onclick=function(e){
+      e.stopPropagation();
+      pushHistory();
+      var s=btn.dataset.status;
+      var c=getItem(key);
+      setItem(key,{s:c.s===s?null:s});
+      renderAll();
+    };
+  });
+  el.querySelector('[data-action="comment"]').onclick=function(){
+    meta.classList.toggle("open");
+    if(meta.classList.contains("open"))meta.querySelector("textarea").focus();
+  };
+  el.querySelector('[data-action="bug"]').onclick=function(){
+    meta.classList.add("open");
+    meta.querySelector('input[type="url"]').focus();
+  };
+  meta.querySelector('[data-action="save-meta"]').onclick=function(){
+    pushHistory();
+    var c=meta.querySelector("textarea").value;
+    var b=meta.querySelector('input[type="url"]').value.trim();
+    setItem(key,{c:c,b:b});
+    toast("Сохранено","success");
+    renderAll();
+  };
+  meta.querySelector('[data-action="clear-meta"]').onclick=function(){
+    if(!confirm("Очистить комментарий и ссылку?"))return;
+    pushHistory();
+    setItem(key,{c:"",b:""});
+    renderAll();
+  };
+  meta.querySelector("textarea").onkeydown=function(e){
+    if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))meta.querySelector('[data-action="save-meta"]').click();
+  };
+  return el;
+}
+
+function renderAll(){
+  renderChecklist();
+  renderScenarios();
+  applyFilters();
+  updateStats();
+  updateTabCounts();
+  updateUndoRedoBtns();
+}
+
+/* ================ STATS / FILTERS ================ */
+function getAllItemsForTab(tab){
+  var items=[];
+  if(tab==="checklist"){
+    DATA.forEach(function(sec,si){sec.items.forEach(function(_,ii){items.push(itemKey(si,ii))})});
+  }else{
+    SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(_,st){items.push(scenarioKey(si,st))})});
+  }
+  return items;
+}
+
+function updateStats(){
+  var keys=getAllItemsForTab(activeTab);
+  var pass=0,fail=0,warn=0,skip=0,total=keys.length;
+  keys.forEach(function(k){
+    var s=getItem(k).s;
+    if(s==="pass")pass++;else if(s==="fail")fail++;else if(s==="warn")warn++;else if(s==="skip")skip++;
+  });
+  var left=total-pass-fail-warn-skip;
+  document.getElementById("stat-total").textContent=total;
+  document.getElementById("stat-pass").textContent=pass;
+  document.getElementById("stat-fail").textContent=fail;
+  document.getElementById("stat-warn").textContent=warn;
+  document.getElementById("stat-skip").textContent=skip;
+  document.getElementById("stat-left").textContent=left;
+  var pct=total?((pass+skip)/total*100):0;
+  document.getElementById("progress-fill").style.width=pct+"%";
+}
+
+function updateTabCounts(){
+  var ckKeys=getAllItemsForTab("checklist");
+  var scKeys=getAllItemsForTab("scenarios");
+  var ckDone=ckKeys.filter(function(k){var s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  var scDone=scKeys.filter(function(k){var s=getItem(k).s;return s==="pass"||s==="skip"}).length;
+  document.getElementById("tab-count-checklist").textContent=ckDone+"/"+ckKeys.length;
+  document.getElementById("tab-count-scenarios").textContent=scDone+"/"+scKeys.length;
+}
+
+function applyFilters(){
+  var q=searchQuery.trim().toLowerCase();
+  var activeContent=document.getElementById("tab-"+activeTab);
+  if(!activeContent)return;
+  activeContent.querySelectorAll(".section").forEach(function(secEl){
+    var visible=0;
+    secEl.querySelectorAll(".item").forEach(function(item){
+      var tm=!q||item.dataset.text.indexOf(q)!==-1;
+      var st=item.dataset.status||"";
+      var hm=item.dataset.hasMeta==="1";
+      var hb=item.dataset.hasBug==="1";
+      var sm=true;
+      if(activeFilter==="left")sm=!st;
+      else if(activeFilter==="fail")sm=st==="fail";
+      else if(activeFilter==="pass")sm=st==="pass";
+      else if(activeFilter==="with-meta")sm=hm;
+      else if(activeFilter==="with-bugs")sm=hb;
+      var show=tm&&sm;
+      item.classList.toggle("hidden",!show);
+      if(show)visible++;
+    });
+    secEl.style.display=visible?"":"none";
+    if(q&&visible)secEl.classList.remove("collapsed");
+    if(q&&!visible)secEl.classList.add("collapsed");
+  });
+  ["all","left","fail","with-meta","with-bugs"].forEach(function(f){
+    var btn=document.getElementById("f-"+f);
+    if(btn)btn.classList.toggle("active",f===activeFilter);
+  });
+}
+
+/* ================ TABS ================ */
+function switchTab(tab){
+  activeTab=tab;
+  state.settings.tab=tab;
+  saveState();
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.tab===tab)});
+  document.getElementById("tab-checklist").style.display=tab==="checklist"?"":"none";
+  document.getElementById("tab-scenarios").style.display=tab==="scenarios"?"":"none";
+  applyFilters();
+  updateStats();
+}
+
+/* ================ UI EVENTS ================ */
+document.getElementById("search").addEventListener("input",function(e){searchQuery=e.target.value;applyFilters()});
+function filterStatus(f){activeFilter=f;applyFilters()}
+function expandAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(function(s){s.classList.remove("collapsed")})}
+function collapseAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(function(s){s.classList.add("collapsed")})}
+
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme",t);
+  document.getElementById("theme-btn").textContent=t==="dark"?"☀️":"🌙";
+  state.settings.theme=t;
+  saveState();
+}
+function toggleTheme(){applyTheme(state.settings.theme==="dark"?"light":"dark")}
+
+/* ================ EXPORT / IMPORT / SHARE ================ */
+function exportJSON(){
+  var result={
+    version:"3.5",
+    exported:new Date().toISOString(),
+    settings:{theme:state.settings.theme,tab:state.settings.tab},
+    items:{}
+  };
+  DATA.forEach(function(sec,si){sec.items.forEach(function(it,ii){
+    var k=itemKey(si,ii);
+    var d=state.items[k];
+    if(!d)return;
+    result.items[k]={kind:"block",block:sec.tag,group:it.g||"",text:it.t,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
+  })});
+  SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(step,st){
+    var k=scenarioKey(si,st);
+    var d=state.items[k];
+    if(!d)return;
+    result.items[k]={kind:"scenario",block:sc.tag,title:sc.title,step:st+1,text:step,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0};
+  })});
+  var blob=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="kdl_checklist_"+new Date().toISOString().slice(0,10)+".json";
+  a.click();
+  toast("Экспортировано в JSON","success");
+}
+
+function triggerImport(){document.getElementById("import-file").click()}
+document.getElementById("import-file").addEventListener("change",function(e){
+  var file=e.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{importData(JSON.parse(ev.target.result))}
+    catch(err){toast("Ошибка чтения файла: "+err.message,"error")}
+  };
+  reader.readAsText(file);
+  e.target.value="";
+});
+
+function importData(parsed){
+  if(!parsed||typeof parsed!=="object"){toast("Некорректный файл","error");return}
+  pushHistory();
+  var imported=0;
+  if(parsed.items&&typeof parsed.items==="object"){
+    Object.keys(parsed.items).forEach(function(k){
+      var v=parsed.items[k];
+      if(!v||typeof v!=="object")return;
+      var norm={s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||Date.now()};
+      if(!state.items[k]){state.items[k]=norm;imported++;return}
+      var lt=state.items[k]._t||0;
+      var rt=norm._t||0;
+      if(rt>=lt){state.items[k]=norm;imported++}
+    });
+  }else{
+    Object.keys(parsed).forEach(function(k){
+      if(k==="settings"||k==="_updated"||k==="version"||k==="exported"||k==="stats")return;
+      var v=parsed[k];
+      if(typeof v==="string"){state.items[k]={s:v,c:"",b:"",_t:Date.now()};imported++}
+      else if(v&&typeof v==="object"){state.items[k]={s:v.s||null,c:v.c||"",b:v.b||"",_t:v._t||Date.now()};imported++}
+    });
+  }
+  if(parsed.settings&&parsed.settings.theme)applyTheme(parsed.settings.theme);
+  saveState();renderAll();
+  toast("Импортировано: "+imported+" записей","success");
+}
+
+function shareLink(){
+  var compact={v:5,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
+  Object.keys(state.items).forEach(function(k){
+    var v=state.items[k];
+    var short={};
+    if(v.s)short.s=v.s;
+    if(v.c)short.c=v.c;
+    if(v.b)short.b=v.b;
+    if(Object.keys(short).length)compact.i[k]=short;
+  });
+  try{
+    var encoded=btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
+    var url=location.origin+location.pathname+"#data="+encoded;
+    if(url.length>32000){toast("Ссылка слишком длинная ("+url.length+" симв.). Используйте экспорт JSON.","warn");return}
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(
+        function(){toast("Ссылка скопирована ("+url.length+" симв.)","success")},
+        function(){prompt("Скопируйте ссылку:",url)}
+      );
+    }else prompt("Скопируйте ссылку:",url);
+  }catch(e){toast("Ошибка: "+e.message,"error")}
+}
+
+function loadFromHash(){
+  var hash=location.hash;
+  if(!hash||hash.indexOf("#data=")!==0)return;
+  try{
+    var encoded=hash.slice(6);
+    var json=decodeURIComponent(escape(atob(encoded)));
+    var parsed=JSON.parse(json);
+    if(parsed.i){
+      Object.keys(parsed.i).forEach(function(k){
+        var v=parsed.i[k];
+        if(!state.items[k])state.items[k]={s:v.s||null,c:v.c||"",b:v.b||"",_t:Date.now()};
+      });
+      if(parsed.s&&parsed.s.theme)state.settings.theme=parsed.s.theme;
+      if(parsed.s&&parsed.s.tab)state.settings.tab=parsed.s.tab;
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+      /* Используем встроенный window.history намеренно */
+      window.history.replaceState(null,"",location.pathname);
+      toast("Прогресс загружен из ссылки","success");
+    }
+  }catch(e){}
+}
+
+/* ================ DIFF ================ */
+var diffData={a:null,b:null};
+function openDiff(){
+  diffData={a:null,b:null};
+  document.getElementById("diff-a").value="";
+  document.getElementById("diff-b").value="";
+  document.getElementById("diff-result").innerHTML='<div class="diff-empty">Загрузите оба файла для сравнения</div>';
+  document.getElementById("diff-modal").classList.add("open");
+}
+function closeDiff(){document.getElementById("diff-modal").classList.remove("open")}
+document.getElementById("diff-a").addEventListener("change",function(e){readJsonFile(e.target.files[0],function(d){diffData.a=d;renderDiff()})});
+document.getElementById("diff-b").addEventListener("change",function(e){readJsonFile(e.target.files[0],function(d){diffData.b=d;renderDiff()})});
+document.getElementById("diff-modal").addEventListener("click",function(e){if(e.target.id==="diff-modal")closeDiff()});
+
+function readJsonFile(file,cb){
+  if(!file){cb(null);return}
+  var r=new FileReader();
+  r.onload=function(ev){try{cb(JSON.parse(ev.target.result))}catch(e){toast("Ошибка чтения: "+e.message,"error");cb(null)}};
+  r.readAsText(file);
+}
+
+function lookupText(key){
+  var m=key.match(/^s(\d+)_i(\d+)$/);
+  if(m){
+    var si=+m[1],ii=+m[2];
+    var sec=DATA[si];
+    if(sec&&sec.items[ii])return{text:sec.items[ii].t,block:sec.tag};
+    return{text:key,block:sec?sec.tag:"?"};
+  }
+  m=key.match(/^sc(\d+)_st(\d+)$/);
+  if(m){
+    var si2=+m[1],st2=+m[2];
+    var sc=SCENARIOS[si2];
+    if(sc&&sc.steps[st2])return{text:sc.steps[st2],block:sc.tag};
+    return{text:key,block:sc?sc.tag:"?"};
+  }
+  return{text:key,block:"?"};
+}
+
+function renderDiff(){
+  var result=document.getElementById("diff-result");
+  var a=diffData.a,b=diffData.b;
+  if(!a||!b){
+    result.innerHTML='<div class="diff-empty">Загрузите оба файла для сравнения'+(a?" · A ✓":"")+(b?" · B ✓":"")+'</div>';
+    return;
+  }
+  function normalize(obj){
+    var out={};
+    Object.keys(obj||{}).forEach(function(k){
+      var v=obj[k];
+      if(typeof v==="string")out[k]={s:v,c:"",b:""};
+      else if(v&&typeof v==="object")out[k]={s:v.s||null,c:v.c||"",b:v.b||""};
+      else out[k]={s:null,c:"",b:""};
+    });
+    return out;
+  }
+  var A=normalize(a.items),B=normalize(b.items);
+  var allKeys={};
+  Object.keys(A).forEach(function(k){allKeys[k]=true});
+  Object.keys(B).forEach(function(k){allKeys[k]=true});
+  var changes=[];
+  var added=0,removed=0,changed=0,same=0;
+  Object.keys(allKeys).forEach(function(key){
+    var o=A[key],n=B[key];
+    if(o&&!n){removed++;changes.push({key:key,type:"removed",oldV:o,newV:n})}
+    else if(!o&&n){added++;changes.push({key:key,type:"added",oldV:o,newV:n})}
+    else{
+      var ss=(o.s||"")===(n.s||"");
+      var sc=(o.c||"")===(n.c||"");
+      var sb=(o.b||"")===(n.b||"");
+      if(!ss||!sc||!sb){changed++;changes.push({key:key,type:"changed",oldV:o,newV:n})}
+      else same++;
+    }
+  });
+  function statusLabel(s){return({pass:"✅",fail:"❌",warn:"⚠️",skip:"⏭️"})[s]||"—"}
+  var summary='<div class="diff-summary">'+
+    '<span>Изменено: <b>'+changed+'</b></span>'+
+    '<span>Добавлено: <b>'+added+'</b></span>'+
+    '<span>Удалено: <b>'+removed+'</b></span>'+
+    '<span>Без изменений: <b>'+same+'</b></span>'+
+    '</div>';
+  if(!changes.length){result.innerHTML=summary+'<div class="diff-empty">✓ Различий нет</div>';return}
+  var order={changed:0,added:1,removed:2};
+  changes.sort(function(x,y){return order[x.type]-order[y.type]});
+  var rows=changes.map(function(ch){
+    var info=lookupText(ch.key);
+    var body="";
+    if(ch.type==="changed"){
+      var parts=[];
+      if((ch.oldV.s||"")!==(ch.newV.s||""))parts.push('Статус: <span class="old">'+statusLabel(ch.oldV.s)+'</span> → <span class="new">'+statusLabel(ch.newV.s)+'</span>');
+      if((ch.oldV.c||"")!==(ch.newV.c||""))parts.push('Комментарий: <span class="old">'+escapeHtml(ch.oldV.c||"—")+'</span> → <span class="new">'+escapeHtml(ch.newV.c||"—")+'</span>');
+      if((ch.oldV.b||"")!==(ch.newV.b||""))parts.push('Баг: <span class="old">'+escapeHtml(ch.oldV.b||"—")+'</span> → <span class="new">'+escapeHtml(ch.newV.b||"—")+'</span>');
+      body=parts.map(function(p){return '<span class="diff-change">'+p+'</span>'}).join("");
+    }else if(ch.type==="added"){
+      body='<span class="diff-change">+ добавлено: '+statusLabel(ch.newV.s)+(ch.newV.c?" · 💬":"")+(ch.newV.b?" · 🐞":"")+'</span>';
+    }else{
+      body='<span class="diff-change">− удалено: '+statusLabel(ch.oldV.s)+(ch.oldV.c?" · 💬":"")+(ch.oldV.b?" · 🐞":"")+'</span>';
+    }
+    return '<div class="diff-row '+ch.type+'">'+
+      '<div><span class="diff-block">'+escapeHtml(info.block)+'</span><span class="diff-text">'+escapeHtml(info.text)+'</span></div>'+
+      body+'</div>';
+  }).join("");
+  result.innerHTML=summary+'<div class="diff-list">'+rows+'</div>';
+}
+
+/* ================ JIRA CSV / MARKDOWN ================ */
+function csvEscape(v){
+  var s=String(v==null?"":v);
+  if(/[",\n\r]/.test(s))return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+
+function exportJiraCSV(){
+  var rows=[];
+  DATA.forEach(function(sec,si){sec.items.forEach(function(it,ii){
+    var k=itemKey(si,ii);
+    var d=getItem(k);
+    if(!(d.b||d.s==="fail"))return;
+    var p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
+    var parts=[];
+    if(d.c)parts.push("Комментарий: "+d.c);
+    if(d.b)parts.push("Ссылка на баг: "+d.b);
+    if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌ Провалено",warn:"⚠️",skip:"⏭️"})[d.s]);
+    rows.push(["[КДЛ][Блок "+sec.tag+"] "+it.t,"Bug",p,"kdl-checklist,block-"+sec.tag,parts.join("\n")]);
+  })});
+  SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(step,st){
+    var k=scenarioKey(si,st);
+    var d=getItem(k);
+    if(!(d.b||d.s==="fail"))return;
+    var p=d.s==="fail"?"High":d.s==="warn"?"Medium":"Low";
+    var parts=[];
+    if(d.c)parts.push("Комментарий: "+d.c);
+    if(d.b)parts.push("Ссылка на баг: "+d.b);
+    if(d.s)parts.push("Статус: "+({pass:"✅",fail:"❌",warn:"⚠️",skip:"⏭️"})[d.s]);
+    rows.push(["[КДЛ][Сценарий "+sc.tag+"] Шаг "+(st+1)+": "+step,"Bug",p,"kdl-scenarios,"+sc.tag,parts.join("\n")]);
+  })});
+  if(!rows.length){toast("Нет багов для экспорта","warn");return}
+  var header=["Summary","Issue Type","Priority","Labels","Description"];
+  var lines=[header].concat(rows).map(function(r){return r.map(csvEscape).join(",")}).join("\r\n");
+  var blob=new Blob(["\uFEFF"+lines],{type:"text/csv;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="kdl_bugs_jira_"+new Date().toISOString().slice(0,10)+".csv";
+  a.click();
+  toast("Экспортировано "+rows.length+" багов","success");
+}
+
+function exportMarkdown(){
+  var date=new Date().toISOString().slice(0,10);
+  var md="# Чек-лист КДЛ v3.5\n\n**Дата:** "+date+"\n\n";
+  var ckKeys=getAllItemsForTab("checklist");
+  var ckStats={pass:0,fail:0,warn:0,skip:0};
+  ckKeys.forEach(function(k){var s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
+  md+="## 📋 Чек-лист ("+(ckStats.pass+ckStats.skip)+"/"+ckKeys.length+")\n\n";
+  md+="✅ "+ckStats.pass+" · ❌ "+ckStats.fail+" · ⚠️ "+ckStats.warn+" · ⏭️ "+ckStats.skip+"\n\n";
+  DATA.forEach(function(sec,si){
+    var done=0,fail=0;
+    sec.items.forEach(function(_,ii){var s=getItem(itemKey(si,ii)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    md+="### "+sec.title+" ("+done+"/"+sec.items.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
+    sec.items.forEach(function(it,ii){
+      var k=itemKey(si,ii);
+      var d=getItem(k);
+      var mark=" ";
+      if(d.s==="pass")mark="x";
+      else if(d.s==="fail")mark="!";
+      else if(d.s==="warn")mark="~";
+      else if(d.s==="skip")mark="-";
+      var line="- ["+mark+"] ";
+      if(it.g)line+="**"+it.g+"** — ";
+      line+=it.t;
+      if(d.b)line+=" [🐞]("+d.b+")";
+      md+=line+"\n";
+      if(d.c)md+="  > "+d.c.replace(/\n/g,"\n  > ")+"\n";
+    });
+    md+="\n";
+  });
+  var scKeys=getAllItemsForTab("scenarios");
+  var scStats={pass:0,fail:0,warn:0,skip:0};
+  scKeys.forEach(function(k){var s=getItem(k).s;if(s&&scStats[s]!==undefined)scStats[s]++});
+  md+="---\n\n## 🎬 Сценарии ("+(scStats.pass+scStats.skip)+"/"+scKeys.length+")\n\n";
+  md+="✅ "+scStats.pass+" · ❌ "+scStats.fail+" · ⚠️ "+scStats.warn+" · ⏭️ "+scStats.skip+"\n\n";
+  SCENARIOS.forEach(function(sc,si){
+    var done=0,fail=0;
+    sc.steps.forEach(function(_,st){var s=getItem(scenarioKey(si,st)).s;if(s==="pass")done++;if(s==="fail")fail++});
+    md+="### "+sc.title+" ("+done+"/"+sc.steps.length+")"+(fail>0?" ❌"+fail:"")+"\n\n";
+    md+="⏱ "+sc.time+" · "+sc.priority+" · Блоки: "+sc.blocks+"\n\n";
+    sc.steps.forEach(function(step,st){
+      var k=scenarioKey(si,st);
+      var d=getItem(k);
+      var mark=" ";
+      if(d.s==="pass")mark="x";
+      else if(d.s==="fail")mark="!";
+      else if(d.s==="warn")mark="~";
+      else if(d.s==="skip")mark="-";
+      var line="- ["+mark+"] "+(st+1)+". "+step;
+      if(d.b)line+=" [🐞]("+d.b+")";
+      md+=line+"\n";
+      if(d.c)md+="  > "+d.c.replace(/\n/g,"\n  > ")+"\n";
+    });
+    md+="\n> **Ожидаемый результат:** "+sc.expected+"\n\n";
+  });
+  var blob=new Blob([md],{type:"text/markdown;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="kdl_checklist_"+date+".md";
+  a.click();
+  toast("Экспортировано в Markdown","success");
+}
+
+/* ================ UTILS ================ */
+function resetAll(){
+  if(!confirm("Сбросить весь прогресс (и блоки, и сценарии)? Действие необратимо."))return;
+  pushHistory();
+  var keepTheme=state.settings.theme;
+  var keepTab=state.settings.tab;
+  state=defaultState();
+  state.settings.theme=keepTheme;
+  state.settings.tab=keepTab;
+  saveState();renderAll();
+  toast("Всё сброшено","warn");
+}
+
+var toastTimer=null;
+function toast(msg,type){
+  var el=document.querySelector(".toast");
+  if(!el){el=document.createElement("div");el.className="toast";document.body.appendChild(el)}
+  el.className="toast "+(type||"");
+  el.textContent=msg;
+  requestAnimationFrame(function(){el.classList.add("show")});
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){el.classList.remove("show")},2600);
+}
+
+document.addEventListener("keydown",function(e){
+  var tag=(e.target.tagName||"").toLowerCase();
+  var isInput=tag==="input"||tag==="textarea";
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!e.shiftKey){
+    if(isInput)return;
+    e.preventDefault();undo();
+  }else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==="y"||(e.shiftKey&&e.key.toLowerCase()==="z"))){
+    if(isInput)return;
+    e.preventDefault();redo();
+  }else if(e.key==="Escape"){
+    closeDiff();
+  }
+});
+
+/* ================ INIT ================ */
+applyTheme(state.settings.theme||"light");
+loadFromHash();
+pushHistory();
+renderAll();
+if(state.settings.tab==="scenarios")switchTab("scenarios");
+</script>
+</body>
+</html>
