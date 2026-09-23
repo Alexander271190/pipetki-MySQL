@@ -913,6 +913,17 @@ function updateUndoRedoBtns(){
 
 function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function escapeAttr(s){return escapeHtml(s)}
+  
+function getSectionStats(si){
+  const s = DATA[si];
+  let done = 0, fail = 0;
+  s.items.forEach((_, ii) => {
+    const st = getItem(itemKey(si, ii)).s;
+    if (st === "pass") done++;
+    if (st === "fail") fail++;
+  });
+  return { done: done, fail: fail, total: s.items.length };
+}
 
 /* ================ RENDER: ЧЕК-ЛИСТ ================ */
 function renderChecklist(){
