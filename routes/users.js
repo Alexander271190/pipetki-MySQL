@@ -96,6 +96,17 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
     const { login, fullName, position, department, role,
             onlyOwnDepartment, extraPermissions } = req.body;
     const id = req.params.id;
+    const missing = [];
+if (!login)    missing.push('Логин');
+if (!fullName) missing.push('ФИО');
+if (!position) missing.push('Должность');
+if (missing.length > 0) {
+  return res.status(400).json({
+    error: missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`
+  });
+}
 
     const [ex] = await db.query('SELECT id, role FROM users WHERE id = ?', [id]);
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
