@@ -1312,7 +1312,14 @@ async function savePipette(e) {
     return;
   }
 
-  if (data.result) data.lastResult = data.result;
+    if (data.result) {
+    data.lastResult = data.result;
+  } else if (editId) {
+    // Поле «Результат» скрыто в настройках вида —
+    // сохраняем прежнее значение, чтобы PUT его не сбросил
+    const original = pipettes.find(x => x.id === editId);
+    if (original) data.lastResult = original.last_result || 'pass';
+  }
   if (!editId) delete data.id;
 
   try {
