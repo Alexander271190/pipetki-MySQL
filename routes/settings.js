@@ -193,16 +193,21 @@ router.put('/system', authenticate, requireRole(['admin']), async (req, res) => 
 // ФИЛЬТРЫ
 // ============================================================
 router.get('/filters', authenticate, async (req, res) => {
-  const [rows] = await db.query('SELECT * FROM filter_config ORDER BY filter_order');
-  res.json(rows.map(f => ({
-    id: f.id,
-    label: f.label,
-    type: f.type,
-    fieldId: f.field_id,
-    enabled: !!f.enabled,
-    optionsSource: f.options_source,
-    order: f.filter_order
-  })));
+  try {
+    const [rows] = await db.query('SELECT * FROM filter_config ORDER BY filter_order');
+    res.json(rows.map(f => ({
+      id: f.id,
+      label: f.label,
+      type: f.type,
+      fieldId: f.field_id,
+      enabled: !!f.enabled,
+      optionsSource: f.options_source,
+      order: f.filter_order
+    })));
+  } catch (e) {
+    console.error('GET /filters:', e);
+    res.status(500).json({ error: 'Ошибка загрузки фильтров' });
+  }
 });
 
 router.put('/filters', authenticate, requireRole(['admin']), async (req, res) => {
