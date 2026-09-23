@@ -1733,7 +1733,9 @@ document.addEventListener('click', (e) => {
 // НАПОМИНАНИЯ
 // ============================================================
 function checkReminder() {
-  const lastShown = localStorage.getItem('pipette_last_reminder');
+  if (!currentUser) return;
+  const key = 'pipette_last_reminder_' + currentUser.id;
+  const lastShown = localStorage.getItem(key);
   const today = todayStr();
   if (lastShown === today) return;
 
@@ -1794,8 +1796,8 @@ function showReminder(dangerList, warnList) {
 
 function closeReminder(confirmed) {
   document.getElementById('reminder-overlay').classList.remove('active');
-  if (confirmed) {
-    localStorage.setItem('pipette_last_reminder', todayStr());
+  if (confirmed && currentUser) {
+    localStorage.setItem('pipette_last_reminder_' + currentUser.id, todayStr());
   }
 }
 
