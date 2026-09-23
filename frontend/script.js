@@ -374,8 +374,15 @@ async function impersonateUser(userId) {
   try {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
+
     myPrefs = { visibleFields: null, tableColumns: null };
     _dataLoadedForUser = null;
+
+    // 🆕 Очищаем данные предыдущего пользователя,
+    // чтобы не показывать чужие, пока не загрузились свои
+    pipettes = [];
+    selectedPipettes.clear();
+
     document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
     document.querySelectorAll('.reminder-overlay.active').forEach(m => m.classList.remove('active'));
     showToast('Вы вошли как ' + result.user.fullName, 'success');
@@ -384,7 +391,6 @@ async function impersonateUser(userId) {
     showToast(e.message, 'error');
   }
 }
-
 function stopImpersonate() {
   const originalUser = getOriginalUser();
   const originalToken = getOriginalToken();
@@ -400,9 +406,14 @@ function stopImpersonate() {
   }));
   myPrefs = { visibleFields: null, tableColumns: null };
   _dataLoadedForUser = null;
+
+  // 🆕 Очищаем данные impersonated пользователя
+  pipettes = [];
+  selectedPipettes.clear();
+
   showToast('Вернулись к своей учётной записи', 'success');
   renderAuthUI();
-  }
+}
 
 // ============================================================
 // ЗАГРУЗКА ДАННЫХ
@@ -1863,16 +1874,16 @@ function renderAuthUI() {
     document.body.classList.toggle('can-import', canImport);
     document.body.classList.toggle('can-export', canExport);
     document.body.classList.toggle('is-admin', admin);
-
-    if (_dataLoadedForUser !== currentUser.id) {
-      _dataLoadedForUser = currentUser.id;
-      loadPipetteData();
-    }
-
     if (currentUser.mustChangePassword) {
+      // Пока не сменит пароль — данные не грузим, показываем модалку
       openChangePasswordModal(true);
     } else {
       closeChangePasswordModal();
+
+      if (_dataLoadedForUser !== currentUser.id) {
+        _dataLoadedForUser = currentUser.id;
+        loadPipetteData();
+      }
     }
   } else {
     closeChangePasswordModal();
