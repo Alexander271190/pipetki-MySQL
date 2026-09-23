@@ -271,14 +271,14 @@ async function refreshCurrentUser() {
 
       currentUser = user;
 
-      let s = {};
-  try {
-     s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}') || {};
-     } catch {
-     s = {};
-     }
+           let s = {};
+      try {
+        s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}') || {};
+      } catch {
+        s = {};
+      }
       s.user = user;
-     if (!s.token && authToken) s.token = authToken;
+      if (!s.token && authToken) s.token = authToken;
       sessionStorage.setItem('pipette_session', JSON.stringify(s));
 
       if (permsChanged || mustChangeChanged) {
@@ -3697,12 +3697,17 @@ async function submitChangePassword(e) {
       authToken = res.token;
     }
 
-    // Сохраняем сессию целиком через setSession —
+        // Сохраняем сессию целиком через setSession —
     // так не теряются originalUser/originalToken (режим impersonate)
     setSession(currentUser, authToken, getOriginalUser(), getOriginalToken());
 
     showToast('Пароль успешно изменён', 'success');
     closeChangePasswordModal();
+
+    // 🆕 После смены пароля перестраиваем UI:
+    // renderAuthUI увидит mustChangePassword === false
+    // и вызовет loadPipetteData()
+    renderAuthUI();
   } catch (err) {
     errEl.textContent = err.message || 'Ошибка смены пароля';
   }
@@ -3951,4 +3956,4 @@ async function exportHistoryToPDF() {
 }
 
 console.log('🔬 Система учёта оборудования запущена');
-console.log('👤 admin/admin, senior/senior, user/user');
+console.log('👤 Логины по умолчанию: admin, senior, user (пароли — в логах сервера при первом запуске)');
