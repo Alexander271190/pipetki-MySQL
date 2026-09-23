@@ -913,7 +913,7 @@ function updateUndoRedoBtns(){
 
 function escapeHtml(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function escapeAttr(s){return escapeHtml(s)}
-  
+
 function getSectionStats(si){
   const s = DATA[si];
   let done = 0, fail = 0;
@@ -1492,7 +1492,6 @@ function exportJiraCSV(){
 function exportMarkdown(){
   const date=new Date().toISOString().slice(0,10);
   let md="# Чек-лист КДЛ v3.5\n\n**Дата:** "+date+"\n\n";
-  // Секция чек-листа
   const ckKeys=getAllItemsForTab("checklist");
   const ckStats={pass:0,fail:0,warn:0,skip:0};
   ckKeys.forEach(k=>{const s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
@@ -1519,7 +1518,6 @@ function exportMarkdown(){
     });
     md+="\n";
   });
-  // Секция сценариев
   const scKeys=getAllItemsForTab("scenarios");
   const scStats={pass:0,fail:0,warn:0,skip:0};
   scKeys.forEach(k=>{const s=getItem(k).s;if(s&&scStats[s]!==undefined)scStats[s]++});
