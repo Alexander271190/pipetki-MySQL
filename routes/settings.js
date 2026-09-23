@@ -8,8 +8,13 @@ const router = express.Router();
 // ОТДЕЛЫ
 // ============================================================
 router.get('/departments', authenticate, async (req, res) => {
-  const [rows] = await db.query('SELECT name FROM departments WHERE enabled = 1 ORDER BY name');
-  res.json(rows.map(r => r.name));
+  try {
+    const [rows] = await db.query('SELECT name FROM departments WHERE enabled = 1 ORDER BY name');
+    res.json(rows.map(r => r.name));
+  } catch (e) {
+    console.error('GET /departments:', e);
+    res.status(500).json({ error: 'Ошибка загрузки отделов' });
+  }
 });
 
 router.put('/departments', authenticate, requireRole(['admin']), async (req, res) => {
