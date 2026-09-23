@@ -3565,11 +3565,13 @@ function openChangePasswordModal(force) {
   const modal = document.getElementById('change-password-modal');
   const notice = document.getElementById('change-password-notice');
   const errEl = document.getElementById('cp-error');
+  const currentInput = document.getElementById('cp-current');
   const newInput = document.getElementById('cp-new');
   const confirmInput = document.getElementById('cp-confirm');
   const cancelBtn = document.getElementById('cp-cancel-btn');
 
   if (errEl) errEl.textContent = '';
+  if (currentInput) currentInput.value = '';
   if (newInput) newInput.value = '';
   if (confirmInput) confirmInput.value = '';
   if (notice) notice.style.display = force ? 'block' : 'none';
@@ -3606,12 +3608,14 @@ async function submitChangePassword(e) {
   e.preventDefault();
 
   const errEl = document.getElementById('cp-error');
-  const newPwd = document.getElementById('cp-new').value;
+  const currentPwd = document.getElementById('cp-current').value;
+  const newPwd     = document.getElementById('cp-new').value;
   const confirmPwd = document.getElementById('cp-confirm').value;
 
   errEl.textContent = '';
 
   const missing = [];
+  if (!currentPwd) missing.push('Текущий пароль');
   if (!newPwd)     missing.push('Новый пароль');
   if (!confirmPwd) missing.push('Подтверждение пароля');
   if (missing.length > 0) {
@@ -3634,10 +3638,11 @@ async function submitChangePassword(e) {
 
   try {
     await apiRequest('/auth/change-password', 'POST', {
+      currentPassword: currentPwd,
       newPassword: newPwd,
       confirmPassword: confirmPwd
     });
-
+    
     currentUser.mustChangePassword = false;
 
     const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
