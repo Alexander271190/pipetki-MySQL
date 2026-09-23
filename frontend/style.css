@@ -873,3 +873,13 @@ body.is-admin .admin-only,
 body.is-admin .senior-only,
 body.can-manage .admin-only,
 body.can-manage .senior-only { display: inline-flex; }
+
+/* ========== СТАТУС «НЕ ЗАДАНО» ========== */
+.status-unknown {
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 600;
+}
+.status-unknown .status-dot {
+  background: #94a3b8;
+}
