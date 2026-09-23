@@ -31,6 +31,19 @@ function esc(s) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
+function sanitizeCsvCell(value) {
+  let s = String(value == null ? '' : value);
+
+  // Гасим формулы: ведущий апостроф перед опасным первым символом
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+
+  // Стандартное CSV-экранирование
+  s = s.replace(/"/g, '""');
+  return /[";]/.test(s) ? '"' + s + '"' : s;
+}
 // Парсим 'YYYY-MM-DD' как локальную дату, без UTC-сдвига
 function parseLocalDate(s) {
   if (!s) return null;
@@ -1611,13 +1624,9 @@ async function exportToExcel() {
   const csvLines = [headers.join(';')];
   data.forEach(p => {
     const row = fields.map(f => EXPORT_FIELD_MAP[f].get(p));
-    const line = row.map(v => {
-      const s = String(v).replace(/"/g, '""');
-      return /[";]/.test(s) ? '"' + s + '"' : s;
-    }).join(';');
+    const line = row.map(v => sanitizeCsvCell(v)).join(';');
     csvLines.push(line);
   });
-
   const bom = '\uFEFF';
   const blob = new Blob([bom + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -3797,7 +3806,7 @@ async function exportHistoryToExcel() {
   const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
   const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
 
-  const csvLines = [headers.join(';')];
+   const csvLines = [headers.join(';')];
   history.forEach(h => {
     const row = [
       h.date || '',
@@ -3806,10 +3815,7 @@ async function exportHistoryToExcel() {
       h.org || '',
       h.note || ''
     ];
-    const line = row.map(v => {
-      const s = String(v).replace(/"/g, '""');
-      return /[";]/.test(s) ? '"' + s + '"' : s;
-    }).join(';');
+    const line = row.map(v => sanitizeCsvCell(v)).join(';');
     csvLines.push(line);
   });
 
