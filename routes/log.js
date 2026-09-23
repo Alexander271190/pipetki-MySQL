@@ -20,8 +20,13 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 router.delete('/', authenticate, requireRole(['admin']), async (req, res) => {
-  await db.query('DELETE FROM audit_log');
-  res.json({ message: 'Лог очищен' });
+  try {
+    await db.query('DELETE FROM audit_log');
+    res.json({ message: 'Лог очищен' });
+  } catch (e) {
+    console.error('DELETE /log:', e);
+    res.status(500).json({ error: 'Ошибка очистки журнала' });
+  }
 });
 
 module.exports = router;
