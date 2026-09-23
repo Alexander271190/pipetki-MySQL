@@ -63,7 +63,8 @@ function normalizeHeader(h) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ')
-    .replace(/[«»"'`]/g, '');
+    .replace(/[«»"'`]/g, '')
+    .replace(/[.:;]+$/g, '');   
 }
 
 function mapHeader(h) {
