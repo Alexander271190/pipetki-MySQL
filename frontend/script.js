@@ -271,9 +271,14 @@ async function refreshCurrentUser() {
 
       currentUser = user;
 
-      const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
+      let s = {};
+  try {
+     s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}') || {};
+     } catch {
+     s = {};
+     }
       s.user = user;
-      if (!s.token && authToken) s.token = authToken;
+     if (!s.token && authToken) s.token = authToken;
       sessionStorage.setItem('pipette_session', JSON.stringify(s));
 
       if (permsChanged || mustChangeChanged) {
