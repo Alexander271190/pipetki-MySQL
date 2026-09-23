@@ -155,12 +155,20 @@ router.post('/change-password', authenticate, async (req, res) => {
     [hash, req.user.id]
   );
 
-  await db.query(
+    await db.query(
     'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
     [req.user.id, req.user.full_name, 'Смена пароля', 'Пользователь сменил свой пароль']
   );
 
-  res.json({ message: 'Пароль изменён' });
+  // Перевыпускаем токен: password_changed_at стал новее старого iat,
+  // иначе следующий же запрос словит 401 в middleware/auth.js
+  const freshToken = jwt.sign(
+    { id: req.user.id, login: req.user.login, role: req.user.role },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  res.json({ message: 'Пароль изменён', token: freshToken });
 });
 
 
