@@ -1,0 +1,738 @@
+📊 Excel-файл для теста импорта (500–1000 записей)
+Файл генерируется через exceljs (уже в зависимостях проекта). Сохрани как gen-import-xlsx.js в корне проекта и запусти:
+
+bash
+node gen-import-xlsx.js 1000
+Создастся файл test-import-1000.xlsx — настоящий Excel-формат (не CSV), с шапкой, автошириной, зеброй, выравниванием.
+
+js
+// gen-import-xlsx.js — генератор тестового XLSX-файла для проверки импорта
+// Запуск: node gen-import-xlsx.js 1000
+// Результат: test-import-1000.xlsx
+
+const ExcelJS = require('exceljs');
+const path = require('path');
+
+const count = parseInt(process.argv[2], 10) || 500;
+const filename = `test-import-${count}.xlsx`;
+
+// ─── Справочники ─────────────────────────────────────────────
+const TYPES = [
+  { value: 'Пипетка',    brand: 'Eppendorf', models: ['Research Plus', 'Reference 2', 'Xplorer'], volumes: ['10', '20', '100', '200', '1000', '5000'] },
+  { value: 'Пипетка',    brand: 'Gilson',    models: ['Pipetman L', 'Pipetman P'],               volumes: ['20', '200', '1000'] },
+  { value: 'Пипетка',    brand: 'Biohit',    models: ['mLine', 'Proline'],                       volumes: ['50', '100', '500'] },
+  { value: 'Анализатор', brand: 'Mindray',   models: ['BC-5150', 'BS-240', 'BS-430'],            volumes: [] },
+  { value: 'Анализатор', brand: 'Roche',     models: ['Cobas c311', 'Cobas e411'],               volumes: [] },
+  { value: 'Термометр',  brand: 'ТермоЛаб',  models: ['ТЛ-100', 'ТЛ-200', 'ТЛ-500'],             volumes: [] },
+  { value: 'Термометр',  brand: 'Testo',     models: ['Testo 108', 'Testo 720'],                 volumes: [] },
+  { value: 'Весы',       brand: 'Mettler',   models: ['XS205', 'ML204', 'ME204'],                volumes: [] },
+  { value: 'Весы',       brand: 'Sartorius', models: ['Secura 224', 'Quintix 124'],              volumes: [] },
+  { value: 'Фотометр',   brand: 'Hach',      models: ['2100Q', 'DR3900', 'DR1900'],              volumes: [] },
+  { value: 'Микроскоп',  brand: 'Olympus',   models: ['CX23', 'CX43', 'BX43'],                   volumes: [] },
+  { value: 'Микроскоп',  brand: 'Микромед',  models: ['С-1', 'Р-1'],                            volumes: [] },
+];
+
+const DEPARTMENTS = [
+  'Гематологический отдел',
+  'Биохимический отдел',
+  'Коагулогический отдел',
+  'Экспресс отдел',
+  'Изосерологический отдел',
+  'Серологический отдел',
+  'ГИМИ',
+  'Бактериологический отдел',
+];
+
+const RESPONSIBLES = [
+  'Иванов И.И.', 'Петров П.П.', 'Сидоров С.С.', 'Иванова М.С.',
+  'Петров А.В.', 'Сидорова Е.К.', 'Кузнецов К.К.', 'Орлов О.О.',
+  'Тестов Т.Т.', 'Русский Р.Р.', 'Смирнова А.А.', 'Морозов Д.Д.',
+];
+
+const LOCATIONS = [
+  'Лаб. 201', 'Лаб. 202', 'Лаб. 105', 'Лаб. 302',
+  'Лаб. 101', 'Лаб. 401', 'Склад', 'Регистратура',
+];
+
+// Пропорции результатов (чтобы были и годные, и брак, и в процессе)
+const RESULTS = ['Годен','Годен','Годен','Годен','Годен','Годен','Годен','Брак','В процессе'];
+
+// Активность
+const ACTIVES = ['Да','Да','Да','Да','Нет'];
+
+// Случайные даты в разных форматах
+function randomDate() {
+  const start = new Date();
+  start.setFullYear(start.getFullYear() - 3);
+  const end = new Date();
+  const d = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+
+  // 30% ISO, 35% DD.MM.YYYY, 35% MM.DD.YYYY
+  const r = Math.random();
+  if (r < 0.30) return `${y}-${m}-${day}`;
+  if (r < 0.65) return `${day}.${m}.${y}`;
+  return `${m}.${day}.${y}`;
+}
+
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pad = (n, len) => String(n).padStart(len, '0');
+
+// ─── Генерация ───────────────────────────────────────────────
+async function generate() {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Pipette App Test';
+  wb.created = new Date();
+
+  const ws = wb.addWorksheet('Оборудование', {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+
+  // ─── Шапка ────────────────────────────────────────────────
+  ws.columns = [
+    { header: 'ID',                    key: 'id',         width: 14 },
+    { header: 'Серийный номер',        key: 'serial',     width: 16 },
+    { header: 'Производитель',         key: 'manufacturer', width: 16 },
+    { header: 'Модель',                key: 'model',      width: 20 },
+    { header: 'Тип оборудования',      key: 'equipmentType', width: 18 },
+    { header: 'Объём (мкл)',           key: 'volume',     width: 12 },
+    { header: 'Отдел',                 key: 'department', width: 24 },
+    { header: 'МПИ',                   key: 'interval',   width: 8 },
+    { header: 'Дата поверки',          key: 'lastCalibration', width: 14 },
+    { header: 'Свидетельство',         key: 'cert',       width: 18 },
+    { header: 'Результат',             key: 'result',     width: 14 },
+    { header: 'Статус',                key: 'active',     width: 10 },
+    { header: 'Ответственный',         key: 'responsible', width: 18 },
+    { header: 'Место хранения',        key: 'location',   width: 16 },
+    { header: 'Примечание',            key: 'notes',      width: 24 },
+  ];
+
+  // Стиль шапки
+  const headerRow = ws.getRow(1);
+  headerRow.height = 24;
+  headerRow.eachCell(cell => {
+    cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    cell.border    = {
+      top:    { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      left:   { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      right:  { style: 'thin', color: { argb: 'FFCBD5E1' } },
+    };
+  });
+
+  // ─── Данные ───────────────────────────────────────────────
+  for (let i = 1; i <= count; i++) {
+    const t = pick(TYPES);
+    const model = pick(t.models);
+    const vol = t.volumes.length ? pick(t.volumes) : '';
+
+    // 30% — с явным ID (TEST-0001), 70% — без ID (проверка автогенерации)
+    const useExplicitId = Math.random() < 0.30;
+    const id = useExplicitId ? `TEST-${pad(i, 4)}` : '';
+
+    const date = randomDate();
+    const yearForCert = date.match(/(\d{4})/g)?.pop() || new Date().getFullYear();
+    const cert = Math.random() < 0.85
+      ? `С-АБ-${pad(i, 6)}/${yearForCert}`
+      : '';
+
+    // Каждая 25-я строка — с примечанием
+    const notes = i % 25 === 0 ? 'Нагрузочный тест' : '';
+
+    // Каждая 50-я — с невалидным типом (проверим fallback)
+    let equipmentType = t.value;
+
+    ws.addRow({
+      id,
+      serial: `SN-${pad(i, 6)}`,
+      manufacturer: t.brand,
+      model,
+      equipmentType,
+      volume: vol,
+      department: pick(DEPARTMENTS),
+      interval: pick([6, 12, 12, 12, 24]),
+      lastCalibration: date,
+      cert,
+      result: pick(RESULTS),
+      active: pick(ACTIVES),
+      responsible: pick(RESPONSIBLES),
+      location: pick(LOCATIONS),
+      notes,
+    });
+  }
+
+  // ─── Стилизация данных ────────────────────────────────────
+  ws.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+
+    row.height = 18;
+
+    row.eachCell((cell, colNumber) => {
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      cell.border = {
+        top:    { style: 'hair', color: { argb: 'FFE2E8F0' } },
+        left:   { style: 'hair', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'hair', color: { argb: 'FFE2E8F0' } },
+        right:  { style: 'hair', color: { argb: 'FFE2E8F0' } },
+      };
+
+      // Зебра
+      if (rowNumber % 2 === 0) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      }
+
+      // Центрирование числовых/коротких столбцов
+      if ([1, 6, 8, 12].includes(colNumber)) {
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      }
+
+      // Подсветка «Брак»
+      if (colNumber === 11 && cell.value === 'Брак') {
+        cell.font = { bold: true, color: { argb: 'FF991B1B' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+      }
+      if (colNumber === 11 && cell.value === 'В процессе') {
+        cell.font = { color: { argb: 'FF854D0E' } };
+      }
+      if (colNumber === 11 && cell.value === 'Годен') {
+        cell.font = { color: { argb: 'FF166534' } };
+      }
+
+      // Подсветка «Нет» в статусе
+      if (colNumber === 12 && cell.value === 'Нет') {
+        cell.font = { color: { argb: 'FF94A3B8' } };
+      }
+    });
+  });
+
+  // ─── Автофильтр ───────────────────────────────────────────
+  ws.autoFilter = {
+    from: 'A1',
+    to:   `O${count + 1}`,
+  };
+
+  // ─── Дополнительный лист: сводка ──────────────────────────
+  const ws2 = wb.addWorksheet('Сводка');
+  ws2.columns = [
+    { header: 'Параметр', key: 'param', width: 30 },
+    { header: 'Значение', key: 'value', width: 20 },
+  ];
+  ws2.getRow(1).font = { bold: true };
+
+  ws2.addRow({ param: 'Всего записей',               value: count });
+  ws2.addRow({ param: 'С явным ID (TEST-XXXX)',      value: Math.round(count * 0.30) });
+  ws2.addRow({ param: 'Без ID (автогенерация)',      value: Math.round(count * 0.70) });
+  ws2.addRow({ param: 'Форматов даты',               value: '3 (ISO, DD.MM.YYYY, MM.DD.YYYY)' });
+  ws2.addRow({ param: 'Типов оборудования',          value: '6 (пипетка, анализатор, термометр, весы, фотометр, микроскоп)' });
+
+  // ─── Сохранение ───────────────────────────────────────────
+  await wb.xlsx.writeFile(filename);
+  console.log(`✅ Создан файл: ${filename}`);
+  console.log(`   Записей: ${count}`);
+  console.log(`   Колонок: 15`);
+  console.log(`   Формат: Excel (XLSX)`);
+}
+
+generate().catch(err => {
+  console.error('❌ Ошибка:', err);
+  process.exit(1);
+});
+Как использовать
+bash
+# Из корня проекта (там, где package.json)
+npm install          # exceljs уже в dependencies
+node gen-import-xlsx.js 500
+node gen-import-xlsx.js 1000
+Появятся два файла:
+
+test-import-500.xlsx
+
+test-import-1000.xlsx
+
+Что внутри
+Лист «Оборудование»:
+
+15 колонок с правильными заголовками (совпадают с HEADER_MAP в import.js)
+
+Шапка тёмно-синяя, закреплена при скролле (freeze panes)
+
+Автофильтр по всем колонкам
+
+Зебра (чётные строки светло-серые)
+
+«Брак» — красный жирный, «В процессе» — оранжевый, «Годен» — зелёный
+
+«Нет» в статусе — серый
+
+Смешивание форматов:
+
+Даты: 30% ISO (2024-10-21), 35% русский (21.10.2024), 35% US (10.21.2024)
+
+ID: 30% с явным ID (TEST-0001), 70% без ID → проверка автогенерации
+
+Свидетельства: 85% заполнены, 15% пустые
+
+Типы: случайно все 6 из справочника
+
+Результаты: 8 «Годен» : 1 «Брак» : 1 «В процессе»
+
+Активность: 4 «Да» : 1 «Нет»
+
+Лист «Сводка» — маленькая табличка, какие данные внутри (для отчёта).
+
+Как проверять
+Открыть приложение под admin
+
+«📥 Импорт» → выбрать test-import-1000.xlsx → «📥 Загрузить»
+
+Дождаться тоста «Импортировано: N, пропущено: M»
+
+Открыть F12 → Console:
+
+res.skippedDetails — какие строки пропущены (только те, что с TEST-XXXX и совпали с существующими — этого быть не должно, если БД чистая)
+
+res.errorDetails — если есть ошибки
+
+Проверить в БД:
+
+bash
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT equipment_type, COUNT(*) FROM pipettes GROUP BY equipment_type;"
+Должны быть все 6 типов
+
+Проверить даты:
+
+bash
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT id, last_calibration FROM pipettes WHERE last_calibration NOT REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' LIMIT 5;"
+Должно быть пусто — все даты нормализованы в ISO
+
+Проверить историю:
+
+bash
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT COUNT(*) FROM calibration_history;"
+Должно быть ≈ N (для строк с датой)
+
+Открыть таблицу — проверить производительность
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+📦 Дополнительные варианты файлов для теста импорта
+Сделаем 6 файлов — покрывают все сценарии импорта: чистый, смешанный, только ошибки, нестандартные заголовки, формулы и дубли ID.
+
+🎯 Единый скрипт — gen-import-files.js
+Сохрани в корне проекта (там, где package.json) и запусти:
+
+bash
+node gen-import-files.js
+Создаст все 6 файлов за один прогон.
+
+js
+// gen-import-files.js — генератор всех тестовых файлов для проверки импорта
+// Запуск: node gen-import-files.js
+// Результат: 6 файлов .xlsx в корне проекта
+
+const ExcelJS = require('exceljs');
+
+// ─── Справочники ─────────────────────────────────────────────
+const TYPES = [
+  { value: 'Пипетка',    brand: 'Eppendorf', models: ['Research Plus', 'Reference 2'], volumes: ['10','20','100','200','1000','5000'] },
+  { value: 'Анализатор', brand: 'Mindray',   models: ['BC-5150', 'BS-240'],            volumes: [] },
+  { value: 'Термометр',  brand: 'ТермоЛаб',  models: ['ТЛ-100', 'ТЛ-200'],             volumes: [] },
+  { value: 'Весы',       brand: 'Mettler',   models: ['XS205', 'ML204'],               volumes: [] },
+  { value: 'Фотометр',   brand: 'Hach',      models: ['2100Q', 'DR3900'],              volumes: [] },
+  { value: 'Микроскоп',  brand: 'Olympus',   models: ['CX23', 'CX43'],                 volumes: [] },
+];
+
+const DEPARTMENTS = [
+  'Гематологический отдел','Биохимический отдел','Коагулогический отдел',
+  'Экспресс отдел','Изосерологический отдел','Серологический отдел',
+  'ГИМИ','Бактериологический отдел',
+];
+
+const RESPONSIBLES = ['Иванов И.И.','Петров П.П.','Сидоров С.С.','Иванова М.С.','Петров А.В.','Сидорова Е.К.','Кузнецов К.К.'];
+const LOCATIONS = ['Лаб. 201','Лаб. 202','Лаб. 105','Лаб. 302','Лаб. 101','Склад'];
+const RESULTS = ['Годен','Годен','Годен','Годен','Годен','Годен','Брак','В процессе'];
+const ACTIVES = ['Да','Да','Да','Нет'];
+
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pad = (n, len) => String(n).padStart(len, '0');
+
+function randomDate(offsetYears = 3) {
+  const start = new Date();
+  start.setFullYear(start.getFullYear() - offsetYears);
+  const end = new Date();
+  const d = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const r = Math.random();
+  if (r < 0.30) return `${y}-${m}-${day}`;
+  if (r < 0.65) return `${day}.${m}.${y}`;
+  return `${m}.${day}.${y}`;
+}
+
+// ─── Утилиты для построения листов ───────────────────────────
+const DEFAULT_HEADERS = [
+  'ID','Серийный номер','Производитель','Модель','Тип оборудования',
+  'Объём (мкл)','Отдел','МПИ','Дата поверки','Свидетельство',
+  'Результат','Статус','Ответственный','Место хранения','Примечание'
+];
+
+function addSheet(wb, name, headers, rows) {
+  const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
+  ws.addRow(headers);
+
+  const headerRow = ws.getRow(1);
+  headerRow.height = 24;
+  headerRow.eachCell(cell => {
+    cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    cell.border    = {
+      top:{style:'thin',color:{argb:'FFCBD5E1'}}, left:{style:'thin',color:{argb:'FFCBD5E1'}},
+      bottom:{style:'thin',color:{argb:'FFCBD5E1'}}, right:{style:'thin',color:{argb:'FFCBD5E1'}},
+    };
+  });
+
+  for (const row of rows) ws.addRow(row);
+
+  // Автоширина
+  ws.columns.forEach((col, i) => {
+    let max = 10;
+    col.eachCell({ includeEmpty: true }, cell => {
+      const len = cell.value ? String(cell.value).length : 0;
+      if (len > max && len < 40) max = len;
+    });
+    col.width = max + 2;
+  });
+
+  ws.autoFilter = { from: 'A1', to: `${String.fromCharCode(64 + headers.length)}${rows.length + 1}` };
+  return ws;
+}
+
+// ─── Генерация «чистой» строки ───────────────────────────────
+function cleanRow(i, opts = {}) {
+  const t = pick(TYPES);
+  const date = randomDate();
+  const yearForCert = date.match(/(\d{4})/g)?.pop() || new Date().getFullYear();
+  return [
+    opts.useId ? `TEST-${pad(i, 4)}` : '',
+    `SN-${pad(i, 6)}`,
+    t.brand,
+    pick(t.models),
+    t.value,
+    t.volumes.length ? pick(t.volumes) : '',
+    pick(DEPARTMENTS),
+    pick([6, 12, 12, 12, 24]),
+    date,
+    Math.random() < 0.85 ? `С-АБ-${pad(i, 6)}/${yearForCert}` : '',
+    pick(RESULTS),
+    pick(ACTIVES),
+    pick(RESPONSIBLES),
+    pick(LOCATIONS),
+    i % 25 === 0 ? 'Нагрузочный тест' : '',
+  ];
+}
+
+// ─── Генерация «сломанной» строки ────────────────────────────
+// Возвращает [row, comment] — где comment описывает, что сломано
+function brokenRow(i) {
+  const seed = i % 16;
+  const base = () => [
+    '', `SN-${pad(i, 6)}`, 'TestBrand', 'TestModel', 'Пипетка', '100',
+    'Гематологический отдел', 12, '2024-01-01', 'С-АБ-0001/2024',
+    'Годен', 'Да', 'Тестов Т.Т.', 'Лаб. 101', ''
+  ];
+  const row = base();
+  const r = Math.random;
+
+  switch (seed) {
+    case 0: // Дубли ID (проверим на 3-х строках подряд)
+      row[0] = 'DUP-001'; return [row, 'DUP-ID: DUP-001'];
+    case 1:
+      row[0] = 'DUP-001'; return [row, 'DUP-ID повтор'];
+    case 2:
+      row[0] = 'DUP-001'; return [row, 'DUP-ID ещё раз'];
+
+    case 3: // Пустая модель
+      row[3] = ''; return [row, 'Пустая модель'];
+
+    case 4: // Битые даты
+      row[8] = '32.13.2024'; return [row, 'Невалидный день/месяц'];
+
+    case 5:
+      row[8] = 'не дата'; return [row, 'Дата текстом'];
+
+    case 6:
+      row[8] = '2024-13-45'; return [row, 'ISO с невалидным месяцем'];
+
+    case 7:
+      row[8] = '00.00.0000'; return [row, 'Нулевая дата'];
+
+    case 8: // XSS
+      row[3] = '<script>alert(1)</script>';
+      return [row, 'XSS в модели'];
+
+    case 9: // SQL-инъекция в ID
+      row[0] = "P-001'; DROP TABLE pipettes; --";
+      return [row, 'SQL-инъекция в ID'];
+
+    case 10: // Очень длинный текст
+      row[14] = 'A'.repeat(3000);
+      return [row, 'Очень длинный текст (3000 символов)'];
+
+    case 11: // Дата в будущем
+      row[8] = '2099-12-31';
+      return [row, 'Дата в будущем'];
+
+    case 12: // Невалидный интервал
+      row[7] = 'abc';
+      return [row, 'Интервал текстом'];
+
+    case 13: // Отрицательный интервал
+      row[7] = -12;
+      return [row, 'Отрицательный интервал'];
+
+    case 14: // Неизвестный тип оборудования
+      row[4] = 'Космический корабль';
+      return [row, 'Неизвестный тип'];
+
+    case 15: // Результат вне допустимых
+      row[10] = 'Абракадабра';
+      return [row, 'Невалидный результат'];
+  }
+  return [base(), ''];
+}
+
+// ─── Файл 1: чистый (1000 записей) ───────────────────────────
+async function makeClean() {
+  const wb = new ExcelJS.Workbook();
+  const rows = [];
+  for (let i = 1; i <= 1000; i++) rows.push(cleanRow(i, { useId: i % 3 === 0 }));
+  addSheet(wb, 'Оборудование', DEFAULT_HEADERS, rows);
+  await wb.xlsx.writeFile('test-import-clean-1000.xlsx');
+  console.log('✅ test-import-clean-1000.xlsx (1000 чистых)');
+}
+
+// ─── Файл 2: смешанный (700 чистых + 300 ошибок) ────────────
+async function makeMixed() {
+  const wb = new ExcelJS.Workbook();
+  const rows = [];
+
+  // Сначала 300 «плохих» (первая половина — с ошибками)
+  for (let i = 1; i <= 300; i++) {
+    const [row] = brokenRow(i);
+    rows.push(row);
+  }
+  // Потом 700 «чистых»
+  for (let i = 301; i <= 1000; i++) {
+    rows.push(cleanRow(i, { useId: false }));
+  }
+
+  // Перемешать
+  for (let i = rows.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rows[i], rows[j]] = [rows[j], rows[i]];
+  }
+
+  addSheet(wb, 'Оборудование', DEFAULT_HEADERS, rows);
+  await wb.xlsx.writeFile('test-import-mixed-1000.xlsx');
+  console.log('✅ test-import-mixed-1000.xlsx (300 ошибок + 700 чистых)');
+}
+
+// ─── Файл 3: только ошибки (30 строк) ────────────────────────
+async function makeErrorsOnly() {
+  const wb = new ExcelJS.Workbook();
+  const headers = [...DEFAULT_HEADERS, 'Комментарий (для теста)'];
+  const rows = [];
+
+  for (let i = 1; i <= 30; i++) {
+    const [row, comment] = brokenRow(i);
+    rows.push([...row, comment]);
+  }
+
+  addSheet(wb, 'Ошибки', headers, rows);
+  await wb.xlsx.writeFile('test-import-errors.xlsx');
+  console.log('✅ test-import-errors.xlsx (30 ошибок + комментарии)');
+}
+
+// ─── Файл 4: альтернативные заголовки ────────────────────────
+async function makeAltHeaders() {
+  const wb = new ExcelJS.Workbook();
+  const altHeaders = [
+    'Внутренний номер',      // id
+    'Заводской номер',       // serial
+    'Фирма',                 // manufacturer
+    'Наименование',          // model
+    'Категория',             // equipmentType
+    'Номинал',               // volume
+    'Лаборатория',           // department
+    'Периодичность',         // interval
+    'Дата последней проверки', // lastCalibration
+    'Сертификат',            // cert
+    'Итог',                  // result
+    'Состояние',             // active
+    'МОЛ',                   // responsible
+    'Расположение',          // location
+    'Комментарий',           // notes
+  ];
+
+  const rows = [];
+  for (let i = 1; i <= 50; i++) {
+    const r = cleanRow(i, { useId: false });
+    rows.push(r);
+  }
+
+  addSheet(wb, 'Оборудование', altHeaders, rows);
+  await wb.xlsx.writeFile('test-import-alt-headers.xlsx');
+  console.log('✅ test-import-alt-headers.xlsx (50 записей, альтернативные заголовки)');
+}
+
+// ─── Файл 5: с формулами Excel ───────────────────────────────
+async function makeFormulas() {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Формулы');
+  ws.addRow(DEFAULT_HEADERS);
+
+  const headerRow = ws.getRow(1);
+  headerRow.eachCell(cell => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+  });
+
+  for (let i = 1; i <= 20; i++) {
+    const row = cleanRow(i, { useId: false });
+    const wsRow = ws.addRow(row);
+    // Меняем некоторые ячейки на формулы
+    wsRow.getCell(1).value = { formula: `"FORMULA-${pad(i,3)}"`, result: `FORMULA-${pad(i,3)}` };
+    wsRow.getCell(4).value = { formula: `CONCATENATE("Model-", ${i})`, result: `Model-${i}` };
+    wsRow.getCell(15).value = { formula: `"Сумма: " & ${i*10}`, result: `Сумма: ${i*10}` };
+  }
+
+  await wb.xlsx.writeFile('test-import-formulas.xlsx');
+  console.log('✅ test-import-formulas.xlsx (20 строк с формулами)');
+}
+
+// ─── Файл 6: только дубли ID ─────────────────────────────────
+async function makeDuplicates() {
+  const wb = new ExcelJS.Workbook();
+  const rows = [];
+
+  for (let i = 1; i <= 10; i++) {
+    rows.push(['DUP-TEST-001', `SN-${pad(i,6)}`, 'Eppendorf', 'Research Plus', 'Пипетка', '100', 'Гематологический отдел', 12, '2024-01-01', 'С-АБ-0001/2024', 'Годен', 'Да', 'Иванов И.И.', 'Лаб. 201', `Попытка ${i}`]);
+  }
+
+  addSheet(wb, 'Дубли', DEFAULT_HEADERS, rows);
+  await wb.xlsx.writeFile('test-import-duplicates.xlsx');
+  console.log('✅ test-import-duplicates.xlsx (10 строк с одинаковым ID)');
+}
+
+// ─── Запуск всех ─────────────────────────────────────────────
+(async () => {
+  console.log('🔨 Генерация файлов для теста импорта...\n');
+  await makeClean();
+  await makeMixed();
+  await makeErrorsOnly();
+  await makeAltHeaders();
+  await makeFormulas();
+  await makeDuplicates();
+  console.log('\n✅ Готово. Все 6 файлов созданы в корне проекта.');
+})();
+📋 Что внутри каждого файла
+Файл	Записей	Назначение
+test-import-clean-1000.xlsx	1000	Все строки валидны. Проверка производительности и полного успеха
+test-import-mixed-1000.xlsx	1000	300 с ошибками + 700 чистых. Проверка «частичного успеха»
+test-import-errors.xlsx	30	Только ошибки + колонка с описанием. Проверка каждой ошибки отдельно
+test-import-alt-headers.xlsx	50	Альтернативные заголовки: «Внутренний номер», «Заводской номер», «Наименование», «Фирма», «Срок поверки» и т.д.
+test-import-formulas.xlsx	20	Ячейки-формулы (=CONCATENATE(...), ="text"&...). Проверка cellValue() в import.js
+test-import-duplicates.xlsx	10	Все строки с одним и тем же ID DUP-TEST-001
+📊 Таблица ожидаемых результатов (для test-import-errors.xlsx)
+№	Что в файле	Ожидаемое поведение
+1	Пустой ID + пустая модель	Пропущена (if (!id && !model) continue;)
+2	Пустая модель	Строка N: не указана модель
+3	Битый день 32.13.2024	parseDate вернёт '', поле last_calibration = ''
+4	Текст вместо даты	То же — ''
+5	2024-13-45 ISO	Не совпадёт ни с одним regex, вернёт ''
+6	00.00.0000	parseDate вернёт ''
+7	<script> в модели	Попадает в модель как есть, но во фронте экранируется (esc())
+8	P-001'; DROP TABLE в ID	Не пройдёт ни как ID (уникален), ни как авто — если сработает, БД в опасности. Но mysql2 с ? — безопасно
+9	Очень длинный текст 3000 символов	notes TEXT — до 65КБ, ок. Поле примет
+10	Дата 2099-12-31	В БД попадёт, но фронт может ругаться на «будущее» при редактировании. parseDate вернёт дату как есть
+11	Интервал abc	parseInterval вернёт 12 (дефолт)
+12	Интервал -12	parseInterval вернёт 12 (дефолт, т.к. n > 0 ? n : 12)
+13	Тип «Космический корабль»	normalizeEquipmentType вернёт pipette (fallback)
+14	Результат «Абракадабра»	normalizeResult вернёт pass (fallback)
+15	Пустой ряд (все поля)	Пропущен (isEmpty)
+16	Дубли ID	Первый — добавлен, остальные — ID уже существует
+🚀 Как тестировать
+bash
+# 1. Сгенерировать
+node gen-import-files.js
+
+# 2. Запустить приложение
+docker-compose up -d
+
+# 3. Открыть http://localhost:3000 → войти admin/admin
+
+# 4. Импортировать по очереди, начиная с test-import-clean-1000.xlsx
+Проверки в БД
+bash
+# Количество записей
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT COUNT(*) FROM pipettes;"
+
+# Проверка типов
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT equipment_type, COUNT(*) FROM pipettes GROUP BY equipment_type;"
+
+# Проверка, что все даты валидны
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT COUNT(*) FROM pipettes WHERE last_calibration NOT REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND last_calibration != '';"
+# Ожидание: 0
+
+# Проверка, что нет записей без модели
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT COUNT(*) FROM pipettes WHERE model = '' OR model IS NULL;"
+# Ожидание: 0
+
+# Проверка audit_log
+docker exec -it pipette_db mysql -upipette -ppipette_secret pipette \
+  -e "SELECT action, details FROM audit_log WHERE action LIKE '%Импорт%' ORDER BY id DESC LIMIT 5;"
+Проверки в UI
+F12 → Console — после импорта смотри skippedDetails и errorDetails (там список пропущенных/ошибочных).
+
+Тост — формат: Импортировано: N, пропущено: M, ошибок: K.
+
+Таблица — фильтр по «Модель» покажет XSS-строку как текст, а не как скрипт.
+
+История — у XSS-строки в поле «Модель» отображается <script>alert(1)</script> как текст, всплытия нет.
+
+📌 Что даёт каждая проверка
+Файл	Что именно тестирует
+clean-1000	производительность БД, корректность генерации ID, отображение 1000 строк
+mixed-1000	частичный успех (700 добавлено, 300 пропущено), сводка в audit_log
+errors	каждая ошибка по отдельности, понятность сообщения
+alt-headers	HEADER_MAP — расширенный, распознаёт альтернативные русские заголовки
+formulas	cellValue() — не падает на объектах с .result, .formula, .richText
+duplicates	уникальность ID — первая строка добавлена, 9 пропущены с пометкой
+После прогона всех 6 файлов импорт считается полностью протестированным.
+
