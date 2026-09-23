@@ -120,6 +120,11 @@ if (missing.length > 0) {
         return res.status(400).json({ error: 'Нельзя понизить последнего администратора' });
       }
     }
+    
+        // Нельзя понизить себя (иначе можно случайно остаться без прав)
+    if (ex[0].role === 'admin' && role !== 'admin' && id === req.user.id) {
+      return res.status(400).json({ error: 'Нельзя понизить собственную роль администратора' });
+    }
 
     const [dup] = await db.query(
       'SELECT id FROM users WHERE login = ? AND id <> ?',
