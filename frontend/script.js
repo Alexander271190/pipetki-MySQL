@@ -3643,19 +3643,30 @@ async function submitChangePassword(e) {
     return;
   }
 
-  try {
-    await apiRequest('/auth/change-password', 'POST', {
+    try {
+    const res = await apiRequest('/auth/change-password', 'POST', {
       currentPassword: currentPwd,
       newPassword: newPwd,
       confirmPassword: confirmPwd
     });
-    
+
     currentUser.mustChangePassword = false;
+
+    // Обновляем токен: сервер выдал свежий, т.к. старый уже невалиден
+    if (res.token) {
+      authToken = res.token;
+    }
 
     const s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}');
     if (s.user) {
       s.user.mustChangePassword = false;
+      s.token = authToken;
       sessionStorage.setItem('pipette_session', JSON.stringify(s));
+    } else {
+      sessionStorage.setItem('pipette_session', JSON.stringify({
+        user: currentUser,
+        token: authToken
+      }));
     }
 
     showToast('Пароль успешно изменён', 'success');
