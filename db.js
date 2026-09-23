@@ -211,7 +211,7 @@ async function seedInitialData() {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`;
 
     const users = [
-      ['admin1',  'admin',  adminPwd,  'Администратор', 'Главный метролог',   null,                     'admin',      '[]'],
+      ['admin1',  'admin',  adminPwd,  'Администратор', 'Администратор системы',   null,                     'admin',      '[]'],
       ['senior1', 'senior', seniorPwd, 'Петров Петр',   'Старший лаборант',   'Гематологический отдел', 'senior_lab', '["manage_pipettes","import_data","export_data"]'],
       ['user1',   'user',   userPwd,   'Иванов Иван',   'Лаборант',           'Биохимический отдел',    'user',       '[]']
     ];
