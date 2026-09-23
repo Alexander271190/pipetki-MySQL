@@ -28,13 +28,13 @@ const authenticate = async (req, res, next) => {
     // Пароль был изменён после выдачи токена → старый токен недействителен
     if (user.password_changed_at && decoded.iat) {
       const pwdTs = new Date(user.password_changed_at).getTime() / 1000;
-      if (pwdTs > decoded.iat) {
+      if (pwdTs > decoded.iat + 2) {
         return res.status(401).json({ error: 'Пароль был изменён, войдите заново' });
       }
     }
 
     // Обязательная смена пароля: блокируем всё, кроме смены/verify
-      if (user.must_change_password) {
+    if (user.must_change_password) {
       const routeKey = `${req.method} ${req.path}`;
       if (!PUBLIC_WHEN_FORCED.has(routeKey)) {
         return res.status(403).json({
