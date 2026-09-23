@@ -4,8 +4,8 @@ const db = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
 
 const PUBLIC_WHEN_FORCED = new Set([
-  'POST /api/auth/change-password',
-  'GET /api/auth/verify',
+  'POST /change-password',
+  'GET /verify',
 ]);
 
 const authenticate = async (req, res, next) => {
@@ -34,8 +34,8 @@ const authenticate = async (req, res, next) => {
     }
 
     // Обязательная смена пароля: блокируем всё, кроме смены/verify
-    if (user.must_change_password) {
-      const routeKey = `${req.method} ${req.baseUrl}${req.path}`;
+      if (user.must_change_password) {
+      const routeKey = `${req.method} ${req.path}`;
       if (!PUBLIC_WHEN_FORCED.has(routeKey)) {
         return res.status(403).json({
           error: 'Требуется смена пароля',
