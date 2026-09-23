@@ -848,7 +848,11 @@ var state = loadState();
 var activeFilter = "all";
 var searchQuery = "";
 var activeTab = "checklist";
-var history = [], historyIndex = -1;
+/* ВАЖНО: переменная называется undoStack, а не history —
+   потому что window.history в браузере non-configurable,
+   и `var history = []` молча игнорируется. */
+var undoStack = [];
+var historyIndex = -1;
 
 function defaultState(){return {version:5,items:{},settings:{theme:"light",tab:"checklist"}}}
 function loadState(){
@@ -886,29 +890,29 @@ function setItem(key,patch){
 
 function pushHistory(){
   var snap=JSON.stringify(state.items);
-  if(historyIndex>=0&&history[historyIndex]===snap)return;
-  history=history.slice(0,historyIndex+1);
-  history.push(snap);
-  if(history.length>MAX_HISTORY)history.shift();
-  historyIndex=history.length-1;
+  if(historyIndex>=0&&undoStack[historyIndex]===snap)return;
+  undoStack=undoStack.slice(0,historyIndex+1);
+  undoStack.push(snap);
+  if(undoStack.length>MAX_HISTORY)undoStack.shift();
+  historyIndex=undoStack.length-1;
   updateUndoRedoBtns();
 }
 function undo(){
   if(historyIndex<=0){toast("Нечего отменять","warn");return}
   historyIndex--;
-  state.items=JSON.parse(history[historyIndex]);
+  state.items=JSON.parse(undoStack[historyIndex]);
   saveState();renderAll();toast("Отменено","warn");
 }
 function redo(){
-  if(historyIndex>=history.length-1){toast("Нечего возвращать","warn");return}
+  if(historyIndex>=undoStack.length-1){toast("Нечего возвращать","warn");return}
   historyIndex++;
-  state.items=JSON.parse(history[historyIndex]);
+  state.items=JSON.parse(undoStack[historyIndex]);
   saveState();renderAll();toast("Возвращено","success");
 }
 function updateUndoRedoBtns(){
   var u=document.getElementById("btn-undo"),r=document.getElementById("btn-redo");
   if(u)u.disabled=historyIndex<=0;
-  if(r)r.disabled=historyIndex>=history.length-1;
+  if(r)r.disabled=historyIndex>=undoStack.length-1;
 }
 
 function escapeHtml(s){
@@ -1360,7 +1364,8 @@ function loadFromHash(){
       if(parsed.s&&parsed.s.theme)state.settings.theme=parsed.s.theme;
       if(parsed.s&&parsed.s.tab)state.settings.tab=parsed.s.tab;
       localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-      history.replaceState(null,"",location.pathname);
+      /* Используем встроенный window.history намеренно */
+      window.history.replaceState(null,"",location.pathname);
       toast("Прогресс загружен из ссылки","success");
     }
   }catch(e){}
