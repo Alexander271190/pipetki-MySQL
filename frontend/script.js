@@ -2040,15 +2040,22 @@ async function switchSettingsTab(tab) {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
   const c = document.getElementById('settings-content');
-  c.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px;">Загрузка…</p>';
 
-  if (tab === 'fields') await renderFieldsSettings();
-  else if (tab === 'departments') await renderDepartmentsSettings();
-  else if (tab === 'filters') await renderFiltersSettings();
-  else if (tab === 'export') await renderExportSettings();
-  else if (tab === 'users') await renderUsersSettings();
-  else if (tab === 'system') await renderSystemSettings();
-  else if (tab === 'log') await renderLogSettings();
+  // Плавно приглушаем старый контент, пока грузятся новые данные
+  c.classList.add('loading');
+
+  try {
+    if (tab === 'fields') await renderFieldsSettings();
+    else if (tab === 'departments') await renderDepartmentsSettings();
+    else if (tab === 'filters') await renderFiltersSettings();
+    else if (tab === 'export') await renderExportSettings();
+    else if (tab === 'users') await renderUsersSettings();
+    else if (tab === 'system') await renderSystemSettings();
+    else if (tab === 'log') await renderLogSettings();
+  } finally {
+    // Убираем приглушение — контент плавно проявляется
+    c.classList.remove('loading');
+  }
 }
 
 // ============================================================
