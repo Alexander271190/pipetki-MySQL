@@ -1529,7 +1529,7 @@ const statusLabels = {
       const itemClass = h.result === 'fail' ? 'danger' : (h.result === 'wip' ? 'warn' : '');
       histHtml += `<div class="timeline-item ${itemClass}" style="position:relative;padding-bottom:20px;border-left:2px solid #e2e8f0;padding-left:20px;">
         <div style="font-weight:600;font-size:.85rem;color:#475569;">${formatDate(h.date)}</div>
-        ${h.cert ? `<div style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;">📄 Свидетельство № ${esc(h.cert)}</div>` : ''}
+        ${h.cert ? `<div style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;"><i class="fa-solid fa-file-lines"></i> Свидетельство № ${esc(h.cert)}</div>` : ''}
         <span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;margin-left:6px;${h.result === 'pass' ? 'background:#dcfce7;color:#166534;' : h.result === 'fail' ? 'background:#fee2e2;color:#991b1b;' : 'background:#e0f2fe;color:#0369a1;'}">${resultLabels[h.result] || h.result}</span>
         ${h.org ? `<div style="font-size:.85rem;color:#64748b;margin-top:4px;">Организация: ${esc(h.org)}</div>` : ''}
         ${h.note ? `<div style="font-size:.85rem;color:#64748b;margin-top:4px;">${esc(h.note)}</div>` : ''}
@@ -2446,7 +2446,7 @@ async function renderExportSettings() {
     EXPORT_FIELDS.forEach(f => {
       html += `<label><input type="checkbox" value="${f.id}" ${selected.includes(f.id) ? 'checked' : ''} class="exp-field-cb"> ${f.label}</label>`;
     });
-    html += `</div><button class="btn btn-success" onclick="saveExportSettings()">💾 Сохранить</button>`;
+    html += `</div><button class="btn btn-success" onclick="saveExportSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
@@ -2488,17 +2488,17 @@ async function renderUsersSettings() {
         <td>${esc(u.department || '—')}</td>
         <td>${roleLabels[u.role] || u.role}</td>
           <td class="actions">
-          <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">✏️</button>
-         <button class="btn btn-primary btn-sm" onclick="openUserViewModal(this.dataset.userId, this.dataset.userName)"  data-user-id="${esc(u.id)}" data-user-name="${esc(u.fullName || u.full_name)}" title="Настроить вид">⚙️ Вид</button>
-          ${u.id !== curId ? `<button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти под ним">🔍 Войти как</button>` : ''}
-          ${u.id !== curId ? `<button class="btn btn-warning btn-sm" onclick="resetUserPassword('${u.id}', '${esc(u.login)}')" title="Сбросить пароль">🔑</button>` : ''}
-          ${u.id !== curId ? `<button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')" title="Удалить">🗑️</button>` : ''}
+          <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn btn-primary btn-sm" onclick="openUserViewModal(this.dataset.userId, this.dataset.userName)"  data-user-id="${esc(u.id)}" data-user-name="${esc(u.fullName || u.full_name)}" title="Настроить вид"><i class="fa-solid fa-gear"></i> Вид</button>
+          ${u.id !== curId ? `<button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти под ним"><i class="fa-solid fa-magnifying-glass"></i> Войти как</button>` : ''}
+          ${u.id !== curId ? `<button class="btn btn-warning btn-sm" onclick="resetUserPassword('${u.id}', '${esc(u.login)}')" title="Сбросить пароль"><i class="fa-solid fa-key"></i></button>` : ''}
+          ${u.id !== curId ? `<button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>` : ''}
         </td>
       </tr>`;
     });
     html += `</tbody></table>
       <div class="settings-form">
-        <h4 id="user-form-title">➕ Добавить пользователя</h4>
+        <h4 id="user-form-title"><i class="fa-solid fa-plus"></i> Добавить пользователя</h4>
         <input type="hidden" id="usr-edit-id">
       <div class="form-row">
           <div class="form-group"><label>Логин *</label><input id="usr-login"></div>
@@ -2542,7 +2542,7 @@ async function renderUsersSettings() {
           </small>
         </div>
         <div class="form-actions" style="justify-content:flex-start;">
-          <button class="btn btn-success" onclick="saveUserSetting()">💾 Сохранить</button>
+          <button class="btn btn-success" onclick="saveUserSetting()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
           <button class="btn btn-secondary" onclick="resetUserSettingForm()">Отмена</button>
         </div>
       </div>`;
@@ -2717,11 +2717,11 @@ async function renderSystemSettings() {
           <label>Порог предупреждения о поверке (дней)</label>
           <input type="number" id="sys-warn-days" value="${esc(s.warn_days || '30')}" min="1" max="365">
         </div>
-        <button class="btn btn-success" onclick="saveSystemSetting()">💾 Сохранить</button>
+        <button class="btn btn-success" onclick="saveSystemSetting()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
 
       <div class="settings-form" style="margin-top:24px;">
-        <h4>🔧 Типы оборудования</h4>
+        <h4><i class="fa-solid fa-wrench"></i> Типы оборудования</h4>
         <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
           Управление списком типов. <strong>value</strong> — служебный ключ (латиница),
           <strong>label</strong> — отображаемое название,
@@ -2743,10 +2743,10 @@ async function renderSystemSettings() {
 
         <div style="margin-top:12px;display:flex;gap:10px;">
           <button class="btn btn-primary" onclick="addEquipmentType()">
-            ➕ Добавить тип
+            <i class="fa-solid fa-plus"></i> Добавить тип
           </button>
           <button class="btn btn-success" onclick="saveEquipmentTypes()">
-            💾 Сохранить типы
+             <i class="fa-solid fa-floppy-disk"></i> Сохранить типы
           </button>
         </div>
 
@@ -2757,15 +2757,15 @@ async function renderSystemSettings() {
       </div>
 
       <div class="settings-form" style="margin-top:24px;border-left:3px solid #dc2626;">
-        <h4 style="color:#991b1b;">⚠️ Опасная зона</h4>
+        <h4 style="color:#991b1b;"><i class="fa-solid fa-triangle-exclamation"></i> Опасная зона</h4>
         <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
           Удаление <strong>всех данных</strong> об оборудовании и истории поверок.
           Пользователи, отделы, поля и настройки останутся.
           <strong>Действие необратимо.</strong>
         </p>
         <button class="btn btn-danger" onclick="resetAllDataSetting()">
-          🗑️ Сбросить все данные
-        </button>
+            <i class="fa-solid fa-trash"></i> Сбросить все данные
+         </button>
       </div>
     `;
 
@@ -2797,7 +2797,7 @@ async function renderLogSettings() {
     const logs = await apiRequest('/log?limit=200');
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <h3>Журнал действий (${logs.length})</h3>
-      <button class="btn btn-danger btn-sm" onclick="clearLogSetting()">🗑️ Очистить</button>
+      <button class="btn btn-danger btn-sm" onclick="clearLogSetting()"><i class="fa-solid fa-trash"></i> Очистить</button>
     </div>
     <div class="log-container"><table class="log-table">
       <thead><tr><th>Время</th><th>Пользователь</th><th>Действие</th><th>Детали</th></tr></thead><tbody>`;
