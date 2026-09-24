@@ -169,7 +169,7 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-  // Совместимость: добавить password_changed_at, если база уже была создана
+   // Совместимость: добавить password_changed_at, если база уже была создана
     const [cols] = await conn.query(`
       SELECT COLUMN_NAME FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE()
@@ -182,12 +182,34 @@ async function initSchema() {
         ADD COLUMN password_changed_at TIMESTAMP NULL DEFAULT NULL
       `);
     }
+
+    // Индексы для часто используемых колонок
+    const indexes = [
+      { table: 'pipettes',  name: 'idx_pipettes_department',     sql: 'CREATE INDEX idx_pipettes_department ON pipettes(department)' },
+      { table: 'pipettes',  name: 'idx_pipettes_equipment_type', sql: 'CREATE INDEX idx_pipettes_equipment_type ON pipettes(equipment_type)' },
+      { table: 'audit_log', name: 'idx_audit_log_timestamp',     sql: 'CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC)' }
+    ];
+
+    for (const idx of indexes) {
+      const [exists] = await conn.query(`
+        SELECT INDEX_NAME FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ?
+          AND INDEX_NAME = ?
+      `, [idx.table, idx.name]);
+
+      if (exists.length === 0) {
+        await conn.query(idx.sql);
+        console.log(`➕ Индекс ${idx.name} создан`);
+      }
+    }
   } finally {
     conn.release();
   }
 
   return await seedInitialData();
 }
+
 // ============================================================
 // НАЧАЛЬНЫЕ ДАННЫЕ
 // ============================================================
@@ -199,34 +221,27 @@ async function seedInitialData() {
   if (uc[0].c === 0) {
     seededAny = true;
 
-    const crypto = require('crypto');
-    const envPwd = (name) => process.env[name] || crypto.randomBytes(12).toString('base64url');
+        const crypto = require('crypto');
 
-    const adminPwd  = envPwd('SEED_ADMIN_PASSWORD');
-    const seniorPwd = envPwd('SEED_SENIOR_PASSWORD');
-    const userPwd   = envPwd('SEED_USER_PASSWORD');
+    const adminPwd = process.env.SEED_ADMIN_PASSWORD
+      || crypto.randomBytes(12).toString('base64url');
 
     const sql = `INSERT INTO users
       (id, login, password, full_name, position, department, role, extra_permissions, must_change_password)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`;
 
-    const users = [
-      ['admin1',  'admin',  adminPwd,  'Администратор', 'Администратор системы',   null,                     'admin',      '[]'],
-      ['senior1', 'senior', seniorPwd, 'Петров Петр',   'Старший лаборант',   'Гематологический отдел', 'senior_lab', '["manage_pipettes","import_data","export_data"]'],
-      ['user1',   'user',   userPwd,   'Иванов Иван',   'Лаборант',           'Биохимический отдел',    'user',       '[]']
-    ];
+    const adminHash = await bcrypt.hash(adminPwd, 10);
 
-    for (const [id, login, plain, fullName, position, department, role, extra] of users) {
-      const hash = await bcrypt.hash(plain, 10);
-      await pool.query(sql, [id, login, hash, fullName, position, department, role, extra]);
-    }
+    await pool.query(sql, [
+      'admin1', 'admin', adminHash,
+      'Администратор', 'Администратор системы',
+      null, 'admin', '[]'
+    ]);
 
     if (!process.env.SEED_ADMIN_PASSWORD) {
-      console.log('🔑 Разовые пароли пользователей (сохраните и сообщите пользователям):');
-      console.log(`   admin  / ${adminPwd}`);
-      console.log(`   senior / ${seniorPwd}`);
-      console.log(`   user   / ${userPwd}`);
-      console.log('   После входа каждый пользователь обязан сменить пароль.');
+      console.log('🔑 Разовый пароль администратора (сохраните и смените после первого входа):');
+      console.log(`   admin / ${adminPwd}`);
+      console.log('   Остальных пользователей создайте через «Настройки → Пользователи».');
     }
   }
 
