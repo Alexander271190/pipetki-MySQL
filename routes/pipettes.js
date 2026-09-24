@@ -29,35 +29,32 @@ router.get('/', authenticate, async (req, res) => {
     const [pipettes] = await db.query(sql, params);
 
     // Пустой список — нечего обогащать историей
-    if (!pipettes.length) return res.json([]);
+        if (!pipettes.length) return res.json([]);
 
-    // Один запрос на всю историю
+    // История не нужна в списке — только счётчик для тултипа кнопки.
+    // Тянем одним GROUP BY, без выгрузки записей.
     const ids = pipettes.map(p => p.id);
     const placeholders = ids.map(() => '?').join(',');
-    const [history] = await db.query(
-      `SELECT * FROM calibration_history
+    const [counts] = await db.query(
+      `SELECT pipette_id, COUNT(*) AS cnt
+       FROM calibration_history
        WHERE pipette_id IN (${placeholders})
-       ORDER BY \`date\` DESC`,
+       GROUP BY pipette_id`,
       ids
     );
 
-    // Раскладываем по пипеткам
     const byId = {};
-    for (const h of history) {
-      (byId[h.pipette_id] ||= []).push(h);
-    }
-
-    // Явная сортировка на случай, если кто-то изменит ORDER BY в SQL
-    for (const id in byId) {
-      byId[id].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    for (const row of counts) {
+      byId[row.pipette_id] = row.cnt;
     }
 
     for (const p of pipettes) {
       p.active = !!p.active;
-      p.history = byId[p.id] || [];
+      p.history_count = byId[p.id] || 0;
     }
 
     res.json(pipettes);
+    
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Ошибка загрузки данных' });
