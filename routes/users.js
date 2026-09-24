@@ -61,10 +61,10 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
       return res.status(400).json({ error: msg });
     }
 
-    // ← ДОБАВЛЕНО: галка «только свой отдел» требует заполненного отдела
-    if (onlyOwnDepartment && !department) {
+        if (onlyOwnDepartment && !department) {
       return res.status(400).json({
-        error: 'Укажите отдел или снимите галку «Только свой отдел»'
+        error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
+               'Заполните поле «Отдел» или снимите галку.'
       });
     }
 
@@ -124,10 +124,10 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
       });
     }
 
-    // ← ДОБАВЛЕНО: галка «только свой отдел» требует заполненного отдела
-    if (onlyOwnDepartment && !department) {
+        if (onlyOwnDepartment && !department) {
       return res.status(400).json({
-        error: 'Укажите отдел или снимите галку «Только свой отдел»'
+        error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
+               'Заполните поле «Отдел» или снимите галку.'
       });
     }
 
