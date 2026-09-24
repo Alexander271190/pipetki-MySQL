@@ -14,7 +14,8 @@ function validatePassword(password) {
   if (!/[A-Z]/.test(password))        errors.push('Хотя бы одна заглавная буква (A-Z)');
   if (!/[0-9]/.test(password))        errors.push('Хотя бы одна цифра (0-9)');
   if (!/[^A-Za-z0-9]/.test(password)) errors.push('Хотя бы один спецсимвол (!@#$%^&* и т.п.)');
-
+  if (/\s/.test(password))            errors.push('Пробелы в пароле недопустимы');
+  
   return { ok: errors.length === 0, errors };
 }
 
