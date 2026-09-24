@@ -7,6 +7,12 @@ const { validatePassword } = require('../middleware/passwordPolicy');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
 
+// Помечает роут как доступный, даже если требуется смена пароля
+const allowWhenPasswordMustChange = (req, res, next) => {
+  req.allowWhenPasswordMustChange = true;
+  next();
+};
+
 // ============================================================
 // ВХОД
 // ============================================================
@@ -65,7 +71,7 @@ router.post('/login', async (req, res) => {
 // ============================================================
 // ПРОВЕРКА СЕССИИ
 // ============================================================
-router.get('/verify', authenticate, (req, res) => {
+router.get('/verify', allowWhenPasswordMustChange, authenticate, (req, res) => {
   res.json({ user: userPublic(req.user) });
 });
 // ============================================================
@@ -107,7 +113,7 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
 // ============================================================
 // СМЕНА ПАРОЛЯ (свой аккаунт)
 // ============================================================
-router.post('/change-password', authenticate, async (req, res) => {
+router.post('/change-password', allowWhenPasswordMustChange, authenticate, async (req, res) => {
   const { currentPassword, newPassword, confirmPassword } = req.body;
 
   const missing = [];
