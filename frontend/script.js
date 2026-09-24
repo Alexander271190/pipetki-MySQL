@@ -683,10 +683,12 @@ pipettes.forEach(p => {
   table.style.display = '';
   empty.style.display = 'none';
 
-    const labels = {
+const labels = {
   ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',
-  wip: '⏳ В процессе',
+  inactive: 'Неактивна',
+  sent: '<i class="fa-solid fa-box"></i> На поверке',
+  fail: '<i class="fa-solid fa-xmark"></i> Брак',
+  wip: '<i class="fa-solid fa-hourglass-half"></i> В процессе',
   unknown: '<i class="fa-solid fa-circle-question"></i> Не задано'
 };
 
@@ -698,29 +700,29 @@ pipettes.forEach(p => {
   status === 'fail' ? ' (брак)' :
   status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
   ` (${dl} дн.)`;
-    const histCount = (p.history || []).length;
+    const histCount = p.history_count || 0;
     const isChecked = selectedPipettes.has(p.id) ? 'checked' : '';
 
-    let actionsHtml = '';
+        let actionsHtml = '';
     if (canManage) {
       if (status === 'sent') {
         actionsHtml = `<div class="action-btns">
-          <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать">✏️</button>
-          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})">📋</button>
-          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Вернулась">📥</button>
-          <button class="btn btn-warning btn-sm" onclick="cancelSend('${p.id}')" title="Отменить">↩️</button>
-          <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить">🗑️</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})"><i class="fa-solid fa-clipboard-list"></i></button>
+          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Вернулась"><i class="fa-solid fa-box-open"></i></button>
+          <button class="btn btn-warning btn-sm" onclick="cancelSend('${p.id}')" title="Отменить"><i class="fa-solid fa-rotate-left"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>
         </div>`;
       } else {
         actionsHtml = `<div class="action-btns">
-          <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать">✏️</button>
-          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})">📋</button>
-          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Быстрая поверка">✔️</button>
-          <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить">🗑️</button>
+          <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать"><i class="fa-solid fa-pen"></i></button>
+          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})"><i class="fa-solid fa-clipboard-list"></i></button>
+          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Быстрая поверка"><i class="fa-solid fa-check"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>
         </div>`;
       }
     } else {
-      actionsHtml = `<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История">📋</button>`;
+      actionsHtml = `<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История"><i class="fa-solid fa-clipboard-list"></i></button>`;
     }
 
     const cellsHtml = columns.map(colId => {
@@ -1479,10 +1481,12 @@ async function renderHistoryContent(p) {
   const content = document.getElementById('history-content');
   const next = getNextDate(p);
   const status = calcStatus(p);
-  const statusLabels = {
+const statusLabels = {
   ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-  inactive: 'Неактивна', sent: '📦 На поверке', fail: '❌ Брак',
-  wip: '⏳ В процессе',
+  inactive: 'Неактивна',
+  sent: '<i class="fa-solid fa-box"></i> На поверке',
+  fail: '<i class="fa-solid fa-xmark"></i> Брак',
+  wip: '<i class="fa-solid fa-hourglass-half"></i> В процессе',
   unknown: '<i class="fa-solid fa-circle-question"></i> Не задано'
 };
 
@@ -1681,10 +1685,10 @@ async function exportToPDF() {
       if (f === 'responsible' && p.location) {
         return `<td>${esc(p.responsible || '—')}<br><small>${esc(p.location)}</small></td>`;
       }
-      if (f === 'nextCalibration') {
+         if (f === 'nextCalibration') {
         const st = calcStatus(p);
         if (st === 'sent') {
-          return `<td>📦 ${formatDate(p.sent_for_calibration)}</td>`;
+          return `<td>На поверке<br><small>с ${formatDate(p.sent_for_calibration)}</small></td>`;
         }
         if (st === 'unknown') {
           return `<td>—<br><small>дата не задана</small></td>`;
@@ -1726,7 +1730,7 @@ async function exportToPDF() {
       .status-sent     { color: #0ea5e9; font-weight: 600; }
       .footer { margin-top: 15px; font-size: 8pt; color: #000; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 8px; }
     </style></head><body>
-      <h1>🔬 Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
+      <h1>Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
       <div class="meta">Дата: <b>${today}</b> · Записей: <b>${data.length}</b> · Сформировал: <b>${esc(user)}</b></div>
       <table>
         <thead><tr>${headerCells}</tr></thead>
@@ -1785,13 +1789,13 @@ function showReminder(dangerList, warnList) {
   const subtitle = document.getElementById('reminder-subtitle');
   const body = document.getElementById('reminder-body');
 
-  if (dangerList.length > 0) {
-    icon.textContent = '🚨';
+    if (dangerList.length > 0) {
+    icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
     title.textContent = 'Просрочены поверки!';
     title.style.color = '#dc2626';
     subtitle.textContent = `${dangerList.length} ${dangerList.length === 1 ? 'пипетка требует' : 'пипеток требуют'} срочной поверки`;
   } else {
-    icon.textContent = '🔔';
+    icon.innerHTML = '<i class="fa-solid fa-bell"></i>';
     title.textContent = 'Приближаются сроки поверки';
     title.style.color = '#eab308';
     subtitle.textContent = `${warnList.length} ${warnList.length === 1 ? 'пипетка подходит' : 'пипеток подходят'} к сроку поверки в течение ${settings.warnDays} дн.`;
@@ -1899,14 +1903,18 @@ function renderAuthUI() {
 // ============================================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================================
+let _searchTimeout = null;
 document.getElementById('search').addEventListener('input', () => {
-  render();
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-  for (const id of [...selectedPipettes]) {
-    if (!visibleIds.includes(id)) selectedPipettes.delete(id);
-  }
-  updateSelectAllCheckbox();
-  updateBulkCalButton();
+  clearTimeout(_searchTimeout);
+  _searchTimeout = setTimeout(() => {
+    render();
+    const visibleIds = getFilteredPipettes().map(p => p.id);
+    for (const id of [...selectedPipettes]) {
+      if (!visibleIds.includes(id)) selectedPipettes.delete(id);
+    }
+    updateSelectAllCheckbox();
+    updateBulkCalButton();
+  }, 150);
 });
 document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 document.getElementById('quick-cal-modal').addEventListener('click', e => { if (e.target.id === 'quick-cal-modal') closeQuickCalModal(); });
@@ -3956,4 +3964,4 @@ async function exportHistoryToPDF() {
 }
 
 console.log('🔬 Система учёта оборудования запущена');
-console.log('👤 Логины по умолчанию: admin, senior, user (пароли — в логах сервера при первом запуске)');
+console.log('👤 Начальный пользователь: admin (пароль — в логах сервера при первом запуске)');
