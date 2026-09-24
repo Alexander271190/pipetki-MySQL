@@ -744,11 +744,11 @@ const labels = {
           return `<td>${esc(p.department || '—')}</td>`;
         case 'lastCalibration':
           return `<td>${formatDate(p.last_calibration)}</td>`;
-        case 'nextCalibration':
+       case 'nextCalibration':
           return `<td>${status === 'sent'
-            ? `<small style="color:#0ea5e9;font-weight:600;">📦 ${formatDate(p.sent_for_calibration)}</small>`
+            ? `<small style="color:#0ea5e9;font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
             : status === 'wip'
-            ? `<small style="color:#ca8a04;font-weight:600;">⏳ В процессе поверки</small>`
+            ? `<small style="color:#ca8a04;font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
             : status === 'unknown'
             ? `<small style="color:#94a3b8;">Дата не задана</small>`
             : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? '#dc2626' : status === 'warn' ? '#eab308' : '#16a34a'}">${daysText}</small>` : ''}`}</td>`;
@@ -1248,7 +1248,7 @@ async function openModal(id) {
     const p = pipettes.find(x => x.id === id);
     if (!p) { showToast('Оборудование не найдено', 'error'); return; }
 
-    title.textContent = '✏️ Редактировать оборудование';
+    title.innerHTML = '<i class="fa-solid fa-pen"></i> Редактировать оборудование';
     document.getElementById('edit-id').value = p.id;
     modal.classList.add('active');
 
@@ -1269,7 +1269,7 @@ async function openModal(id) {
     await generateFormFields(editData);
   } else {
       
-    title.textContent = '➕ Добавить оборудование';
+    title.innerHTML = '<i class="fa-solid fa-plus"></i> Добавить оборудование';
     const defaultData = {
       lastCalibration: todayStr(),
       interval: 12,
@@ -1803,7 +1803,7 @@ function showReminder(dangerList, warnList) {
 
   let html = '';
   if (dangerList.length > 0) {
-    html += `<div class="reminder-section"><div class="reminder-section-title danger">🚨 Просрочены (${dangerList.length})</div><ul class="reminder-list">`;
+    html += `<div class="reminder-section"><div class="reminder-section-title danger"><i class="fa-solid fa-triangle-exclamation"></i> Просрочены (${dangerList.length})</div><ul class="reminder-list">`;
     dangerList.sort((a, b) => daysLeft(a) - daysLeft(b)).forEach(p => {
   const dl = daysLeft(p);
   const isFail = calcStatus(p) === 'fail';
@@ -1816,7 +1816,7 @@ function showReminder(dangerList, warnList) {
     html += '</ul></div>';
   }
   if (warnList.length > 0) {
-    html += `<div class="reminder-section"><div class="reminder-section-title warn">⚠️ Скоро поверка (${warnList.length})</div><ul class="reminder-list">`;
+    html += `<div class="reminder-section"><div class="reminder-section-title warn"><i class="fa-solid fa-triangle-exclamation"></i> Скоро поверка (${warnList.length})</div><ul class="reminder-list">`;
     warnList.sort((a, b) => daysLeft(a) - daysLeft(b)).forEach(p => {
       const dl = daysLeft(p);
       html += `<li class="warn">
@@ -2570,7 +2570,7 @@ function resetUserSettingForm() {
     if (el) el.value = '';
   });
   document.getElementById('usr-role').value = 'user';
-  document.getElementById('user-form-title').textContent = '➕ Добавить пользователя';
+  document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Добавить пользователя';
   const onlyOwnCb = document.getElementById('usr-only-own-dept');
   if (onlyOwnCb) onlyOwnCb.checked = false;
   document.querySelectorAll('#usr-permissions input[type="checkbox"]').forEach(cb => {
@@ -2591,7 +2591,7 @@ async function editUserSetting(id) {
     document.getElementById('usr-position').value = u.position;
     document.getElementById('usr-department').value = u.department || '';
     document.getElementById('usr-role').value = u.role;
-    document.getElementById('user-form-title').textContent = '✏️ Редактирование: ' + u.login;
+    document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Редактирование: ' + esc(u.login);
 
     const onlyOwnCb = document.getElementById('usr-only-own-dept');
     if (onlyOwnCb) onlyOwnCb.checked = !!u.onlyOwnDepartment;
