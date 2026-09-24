@@ -322,7 +322,7 @@ function isSeniorLab() { return currentUser && currentUser.role === 'senior_lab'
 async function loginUser(e) {
   e.preventDefault();
   const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value.trim();
+  const password = document.getElementById('login-password').value;
   const errorEl = document.getElementById('login-error');
   errorEl.textContent = '';
 
@@ -1833,8 +1833,14 @@ function showReminder(dangerList, warnList) {
 
 function closeReminder(confirmed) {
   document.getElementById('reminder-overlay').classList.remove('active');
-  if (confirmed && currentUser) {
+  if (!currentUser) return;
+
+  if (confirmed) {
+    // «Понятно» — больше не показывать сегодня
     localStorage.setItem('pipette_last_reminder_' + currentUser.id, todayStr());
+  } else {
+    // «Позже» — показать снова при следующей перезагрузке страницы
+    localStorage.removeItem('pipette_last_reminder_' + currentUser.id);
   }
 }
 
