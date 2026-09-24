@@ -2086,12 +2086,12 @@ async function renderFieldsSettings(skipFetch = false) {
         <td style="text-align:center;"><input type="checkbox" ${f.required ? 'checked' : ''} onchange="_cachedFields[${i}].required=this.checked"></td>
         <td style="text-align:center;"><input type="checkbox" ${f.enabled ? 'checked' : ''} onchange="_cachedFields[${i}].enabled=this.checked"></td>
        <td>${renderFieldOptionsCell(i, f.type)}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteFieldSetting(${i})">🗑️</button></td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteFieldSetting(${i})"><i class="fa-solid fa-trash"></i></button></td>
       </tr>`;
     });
-    html += `</tbody></table>
-      <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-top:12px;">➕ Добавить поле</button>
-      <button class="btn btn-success" onclick="saveFieldsSettings()" style="margin-top:12px;margin-left:10px;">💾 Сохранить изменения</button>`;
+   html += `</tbody></table>
+  <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> Добавить поле</button>
+  <button class="btn btn-success" onclick="saveFieldsSettings()" style="margin-top:12px;margin-left:10px;"><i class="fa-solid fa-floppy-disk"></i> Сохранить изменения</button>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
