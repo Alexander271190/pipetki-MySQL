@@ -42,7 +42,7 @@ function sanitizeCsvCell(value) {
 
   // Стандартное CSV-экранирование
   s = s.replace(/"/g, '""');
-  return /[";]/.test(s) ? '"' + s + '"' : s;
+  return /[";\n\r]/.test(s) ? '"' + s + '"' : s;
 }
 // Парсим 'YYYY-MM-DD' как локальную дату, без UTC-сдвига
 function parseLocalDate(s) {
@@ -1648,7 +1648,7 @@ async function exportToExcel() {
     csvLines.push(line);
   });
   const bom = '\uFEFF';
-  const blob = new Blob([bom + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([bom + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -3849,7 +3849,7 @@ async function exportHistoryToExcel() {
   });
 
   const bom = '\uFEFF';
-  const blob = new Blob([bom + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([bom + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
