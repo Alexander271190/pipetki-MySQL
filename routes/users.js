@@ -13,7 +13,7 @@ function generateTempPassword() {
   const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const digits = '23456789';
   const spec   = '!@#$%^&*';
-  
+
   const pick = (s) => s[crypto.randomInt(0, s.length)];
 
   const chars = [
@@ -29,16 +29,22 @@ function generateTempPassword() {
   return chars.join('');
 }
 
+// ============================================================
+// СПИСОК ПОЛЬЗОВАТЕЛЕЙ
+// ============================================================
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   const [users] = await db.query(
     'SELECT id, login, full_name, position, department, role, only_own_department, extra_permissions FROM users');
-    res.json(users.map(u => ({
+  res.json(users.map(u => ({
     ...u,
     onlyOwnDepartment: !!u.only_own_department,
     extraPermissions: db.safeParse(u.extra_permissions, [])
   })));
 });
 
+// ============================================================
+// СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
 router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const { login, fullName, position, department, role,
@@ -53,6 +59,13 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
         ? `Заполните поле «${missing[0]}»`
         : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
       return res.status(400).json({ error: msg });
+    }
+
+    // ← ДОБАВЛЕНО: галка «только свой отдел» требует заполненного отдела
+    if (onlyOwnDepartment && !department) {
+      return res.status(400).json({
+        error: 'Укажите отдел или снимите галку «Только свой отдел»'
+      });
     }
 
     const [ex] = await db.query('SELECT id FROM users WHERE login = ?', [login]);
@@ -90,22 +103,33 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
   }
 });
 
+// ============================================================
+// ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
 router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const { login, fullName, position, department, role,
             onlyOwnDepartment, extraPermissions } = req.body;
     const id = req.params.id;
+
     const missing = [];
-if (!login)    missing.push('Логин');
-if (!fullName) missing.push('ФИО');
-if (!position) missing.push('Должность');
-if (missing.length > 0) {
-  return res.status(400).json({
-    error: missing.length === 1
-      ? `Заполните поле «${missing[0]}»`
-      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`
-  });
-}
+    if (!login)    missing.push('Логин');
+    if (!fullName) missing.push('ФИО');
+    if (!position) missing.push('Должность');
+    if (missing.length > 0) {
+      return res.status(400).json({
+        error: missing.length === 1
+          ? `Заполните поле «${missing[0]}»`
+          : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`
+      });
+    }
+
+    // ← ДОБАВЛЕНО: галка «только свой отдел» требует заполненного отдела
+    if (onlyOwnDepartment && !department) {
+      return res.status(400).json({
+        error: 'Укажите отдел или снимите галку «Только свой отдел»'
+      });
+    }
 
     const [ex] = await db.query('SELECT id, role FROM users WHERE id = ?', [id]);
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
@@ -119,8 +143,8 @@ if (missing.length > 0) {
         return res.status(400).json({ error: 'Нельзя понизить последнего администратора' });
       }
     }
-    
-        // Нельзя понизить себя (иначе можно случайно остаться без прав)
+
+    // Нельзя понизить себя (иначе можно случайно остаться без прав)
     if (ex[0].role === 'admin' && role !== 'admin' && id === req.user.id) {
       return res.status(400).json({ error: 'Нельзя понизить собственную роль администратора' });
     }
@@ -148,7 +172,10 @@ if (missing.length > 0) {
   }
 });
 
-  router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+// ============================================================
+// УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
     if (!users.length) return res.status(404).json({ error: 'Не найден' });
@@ -168,6 +195,9 @@ if (missing.length > 0) {
   }
 });
 
+// ============================================================
+// СБРОС ПАРОЛЯ (админом)
+// ============================================================
 router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const userId = req.params.id;
