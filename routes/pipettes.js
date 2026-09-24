@@ -11,17 +11,23 @@ function canAccessDepartment(user, department) {
   if (!user) return false;
   if (user.role === 'admin') return true;
   if (!user.only_own_department) return true;
-  if (!user.department) return true;        // нет отдела — нет ограничения
+  if (!user.department) return false;       // галка есть, отдела нет — не пускаем
   return department === user.department;
 }
 
 // Список пипеток
 router.get('/', authenticate, async (req, res) => {
   try {
+       if (req.user.role !== 'admin'
+        && req.user.only_own_department
+        && !req.user.department) {
+      return res.json([]);
+    }
+
     let sql = 'SELECT * FROM pipettes';
     const params = [];
 
-    if (req.user.role !== 'admin' && req.user.only_own_department && req.user.department) {
+    if (req.user.role !== 'admin' && req.user.only_own_department) {
       sql += ' WHERE department = ?';
       params.push(req.user.department);
     }
