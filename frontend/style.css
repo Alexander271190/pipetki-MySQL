@@ -883,3 +883,11 @@ body.can-manage .senior-only { display: inline-flex; }
 .status-unknown .status-dot {
   background: #94a3b8;
 }
+/* Плавная смена вкладок настроек */
+#settings-content {
+  transition: opacity 0.25s ease-in-out;
+}
+
+#settings-content.loading {
+  opacity: 0.3;
+}
