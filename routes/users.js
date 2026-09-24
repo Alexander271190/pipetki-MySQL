@@ -13,8 +13,7 @@ function generateTempPassword() {
   const upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const digits = '23456789';
   const spec   = '!@#$%^&*';
-  const all    = lower + upper + digits + spec;
-
+  
   const pick = (s) => s[crypto.randomInt(0, s.length)];
 
   const chars = [
