@@ -319,46 +319,63 @@ if (ssc[0].c === 0) {
     await pool.query('INSERT INTO export_settings (id, fields) VALUES (1, ?)', [JSON.stringify(defaultExport)]);
   }
 
-  // --- Демо-пипетки ---
-  const [pc] = await pool.query('SELECT COUNT(*) AS c FROM pipettes');
-  if (pc[0].c === 0) {
-    const today = new Date();
-    const ago = (m) => {
-      const d = new Date(today);
-      d.setMonth(d.getMonth() - m);
-      return d.toISOString().slice(0, 10);
-    };
+    // --- Демо-пипетки (только один раз за всю жизнь БД) ---
+  // Флаг demo_seeded ставится после первой раздачи демо-данных.
+  // Переживает «Сбросить все данные» (там чистится только pipettes/history/audit_log,
+  // но НЕ system_settings), поэтому после сброса демо-данные не вернутся.
+  const [demoFlag] = await pool.query(
+    "SELECT setting_value FROM system_settings WHERE setting_key = 'demo_seeded'"
+  );
+  const demoAlreadySeeded = demoFlag.length > 0 && demoFlag[0].setting_value === '1';
 
-        const insPip = `INSERT INTO pipettes
-      (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
-       last_calibration, cert, last_result, active, responsible, location, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  if (!demoAlreadySeeded) {
+    const [pc] = await pool.query('SELECT COUNT(*) AS c FROM pipettes');
+    if (pc[0].c === 0) {
+      const today = new Date();
+      const ago = (m) => {
+        const d = new Date(today);
+        d.setMonth(d.getMonth() - m);
+        return d.toISOString().slice(0, 10);
+      };
 
-    await pool.query(insPip, ['P-001', 'EP2024001', 'Eppendorf', 'Research Plus', 'pipette', '1000', 'Гематологический отдел',
-       12, ago(11), 'С-АБ-1234567/2025', 'pass', 1,
-      'Иванова М.С.', 'Лаб. 201, шкаф 3', '']);
+      const insPip = `INSERT INTO pipettes
+        (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
+         last_calibration, cert, last_result, active, responsible, location, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    await pool.query(insPip, ['P-002', 'EP2024002', 'Eppendorf', 'Research Plus', 'pipette', '100', 'Биохимический отдел',
-       12, ago(10), 'С-АБ-1234568/2025', 'pass', 1,
-      'Петров А.В.', 'Лаб. 201, шкаф 3', '']);
+      await pool.query(insPip, ['P-001', 'EP2024001', 'Eppendorf', 'Research Plus', 'pipette', '1000', 'Гематологический отдел',
+         12, ago(11), 'С-АБ-1234567/2025', 'pass', 1,
+        'Иванова М.С.', 'Лаб. 201, шкаф 3', '']);
 
-  await pool.query(insPip, ['P-003', 'GT2023005', 'Gilson', 'Pipetman L', 'pipette', '5000', 'Коагулогический отдел',
-      6, ago(7), 'С-АБ-1234569/2025', 'pass', 1,
-      'Иванова М.С.', 'Лаб. 105', 'Требует внеочередной проверки']);
+      await pool.query(insPip, ['P-002', 'EP2024002', 'Eppendorf', 'Research Plus', 'pipette', '100', 'Биохимический отдел',
+         12, ago(10), 'С-АБ-1234568/2025', 'pass', 1,
+        'Петров А.В.', 'Лаб. 201, шкаф 3', '']);
 
-  await pool.query(insPip, ['A-001', 'AN2022001', 'Mindray', 'BC-5150', 'analyzer', '', 'Гематологический отдел',
-   12, ago(14), 'С-АБ-9876546/2024', 'pass', 1,
-  'Сидорова Е.К.', 'Лаб. 302', 'Гематологический анализатор']);
+      await pool.query(insPip, ['P-003', 'GT2023005', 'Gilson', 'Pipetman L', 'pipette', '5000', 'Коагулогический отдел',
+        6, ago(7), 'С-АБ-1234569/2025', 'pass', 1,
+        'Иванова М.С.', 'Лаб. 105', 'Требует внеочередной проверки']);
 
-  await pool.query(insPip, ['M-001', 'MI2023010', 'Olympus', 'CX23', 'microscope', '', 'Биохимический отдел',
-  12, ago(2), 'С-АБ-1234570/2025', 'pass', 0,
-  'Петров А.В.', 'Склад', 'Микроскоп в резерве']);
+      await pool.query(insPip, ['A-001', 'AN2022001', 'Mindray', 'BC-5150', 'analyzer', '', 'Гематологический отдел',
+        12, ago(14), 'С-АБ-9876546/2024', 'pass', 1,
+        'Сидорова Е.К.', 'Лаб. 302', 'Гематологический анализатор']);
 
-    const insHist = `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
-                     VALUES (?, ?, ?, ?, ?, ?)`;
-    await pool.query(insHist, ['P-001', ago(23), 'С-АБ-9876543/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
-    await pool.query(insHist, ['P-001', ago(11), 'С-АБ-1234567/2025', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
-    await pool.query(insHist, ['A-001', ago(14), 'С-АБ-9876546/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годен']);
+      await pool.query(insPip, ['M-001', 'MI2023010', 'Olympus', 'CX23', 'microscope', '', 'Биохимический отдел',
+        12, ago(2), 'С-АБ-1234570/2025', 'pass', 0,
+        'Петров А.В.', 'Склад', 'Микроскоп в резерве']);
+
+      const insHist = `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
+                       VALUES (?, ?, ?, ?, ?, ?)`;
+      await pool.query(insHist, ['P-001', ago(23), 'С-АБ-9876543/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
+      await pool.query(insHist, ['P-001', ago(11), 'С-АБ-1234567/2025', 'pass', 'ФБУ Красноярский ЦСМ', 'Годна']);
+      await pool.query(insHist, ['A-001', ago(14), 'С-АБ-9876546/2024', 'pass', 'ФБУ Красноярский ЦСМ', 'Годен']);
+    }
+
+    // Помечаем факт раздачи — вне зависимости от того, создавали ли что-то сейчас.
+    // Если pipettes уже были (например, восстановили дамп), демо не сеем, но флаг ставим.
+    await pool.query(
+      `INSERT INTO system_settings (setting_key, setting_value) VALUES ('demo_seeded', '1')
+       ON DUPLICATE KEY UPDATE setting_value = '1'`
+    );
   }
   
   // --- Фильтры по умолчанию ---
