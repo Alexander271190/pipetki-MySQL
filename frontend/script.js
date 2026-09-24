@@ -3662,6 +3662,7 @@ function validatePasswordClient(pwd) {
   if (!/[A-Z]/.test(pwd))         errors.push('Хотя бы одна заглавная буква');
   if (!/[0-9]/.test(pwd))         errors.push('Хотя бы одна цифра');
   if (!/[^A-Za-z0-9]/.test(pwd))  errors.push('Хотя бы один спецсимвол');
+  if (/\s/.test(pwd))             errors.push('Пробелы в пароле недопустимы');
   return { ok: errors.length === 0, errors };
 }
 
