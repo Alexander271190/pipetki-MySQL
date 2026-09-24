@@ -2217,7 +2217,7 @@ function onDepartmentNameChange(idx, value) {
   if (warn) {
     if (duplicates.length > 0 && trimmed !== '') {
       warn.style.display = 'block';
-      warn.innerHTML = `⚠️ Отдел «${esc(trimmed)}» уже существует. При сохранении дубликат будет автоматически удалён.`;
+      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Отдел «${esc(trimmed)}» уже существует. При сохранении дубликат будет автоматически удалён.`;
     } else {
       warn.style.display = 'none';
     }
@@ -3327,7 +3327,7 @@ function renderUserViewContent() {
         `).join('')}
       </div>
       <div class="prefs-hint">
-        ℹ️ Отключённые поля не будут видны пользователю в форме добавления и редактирования.
+      <i class="fa-solid fa-circle-info"></i> Отключённые поля не будут видны пользователю в форме добавления и редактирования.
       </div>
     `;
   } else if (_userViewActiveTab === 'table') {
@@ -3351,7 +3351,7 @@ function renderUserViewContent() {
       </div>
       <details style="margin-top:16px;">
         <summary style="cursor:pointer;color:#475569;font-weight:600;padding:8px 0;">
-          ➕ Добавить скрытые колонки
+          <i class="fa-solid fa-plus"></i> Добавить скрытые колонки
         </summary>
         <div class="prefs-list" style="margin-top:10px;">
           ${TABLE_COLUMNS.filter(c => !_userViewEditing.tableColumns.includes(c.id)).map(col => `
@@ -3363,7 +3363,7 @@ function renderUserViewContent() {
         </div>
       </details>
       <div class="prefs-hint">
-        ℹ️ Колонки отображаются в таблице в указанном порядке.
+      <i class="fa-solid fa-circle-info"></i> Колонки отображаются в таблице в указанном порядке.
       </div>
     `;
   }
@@ -3564,7 +3564,7 @@ function updateEquipmentTypesWarning() {
 
   if (problems.length > 0) {
     warn.style.display = 'block';
-    warn.innerHTML = '⚠️ ' + problems.join('<br>⚠️ ');
+    warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + problems.join('<br><i class="fa-solid fa-triangle-exclamation"></i> ');
   } else {
     warn.style.display = 'none';
   }
