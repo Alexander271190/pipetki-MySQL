@@ -38,7 +38,7 @@
 <!-- ОСНОВНОЙ КОНТЕНТ -->
 <div class="main-content" id="main-content">
   <div class="header">
-    <h1><span class="logo">🔬</span> Клинико-диагностическая лаборатория учёт оборудования и его поверок </h1>
+    <h1><span class="logo"><i class="fa-solid fa-flask-vial"></i></span> Клинико-диагностическая лаборатория учёт оборудования и его поверок </h1>
     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
       <div class="header-stats">
         <div class="stat-card ok"><div class="num" id="stat-ok">0</div><div class="label">В норме</div></div>
@@ -49,24 +49,24 @@
       <div class="user-info" id="user-info">
         <span class="name" id="user-fullname">Имя</span>
         <span class="position" id="user-position">Должность</span>
-        <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()">⬅️ Вернуться</button>
-        <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль">🔒 Пароль</button>
+        <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()"><i class="fa-solid fa-arrow-left"></i> Вернуться</button>
+        <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль"><i class="fa-solid fa-lock"></i> Пароль</button>
         <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
       </div>
     </div>
   </div>
 
   <div class="container">
-    <div class="alert-banner" id="alert-banner">
-      <span class="icon">⚠️</span>
-      <span id="alert-text"></span>
-    </div>
+ <div class="alert-banner" id="alert-banner">
+  <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+  <span id="alert-text"></span>
+</div>
 
     <div class="toolbar" id="toolbar">
   <input type="text" id="search" placeholder="🔍 Поиск по номеру, модели, отделу, ответственному…" style="flex:1;min-width:200px">
 
   <div style="position:relative;display:inline-block;">
-    <button class="btn btn-secondary" onclick="toggleFilterPanel()">🔍 Фильтр</button>
+    <button class="btn btn-secondary" onclick="toggleFilterPanel()"><i class="fa-solid fa-filter"></i> Фильтр</button>
 
     <div class="filter-panel" id="filter-panel">
       <div id="filter-fields-container"></div>
@@ -82,29 +82,29 @@
     </div>
   </div>
 
-  <button class="btn btn-primary btn-add-pipette" onclick="openModal()">➕ Добавить оборудование</button>
-  <button class="btn btn-info btn-bulk-cal" 
-        id="btn-bulk-cal" 
-        style="display:none;" 
-        onclick="openBulkSendModal()">
-  📦 Отправить на поверку (<span id="bulk-counter">0</span>)
+  <button class="btn btn-primary btn-add-pipette" onclick="openModal()"><i class="fa-solid fa-plus"></i> Добавить оборудование</button>
+<button class="btn btn-info btn-bulk-cal" 
+      id="btn-bulk-cal" 
+      style="display:none;" 
+      onclick="openBulkSendModal()">
+<i class="fa-solid fa-box"></i> Отправить на поверку (<span id="bulk-counter">0</span>)
 </button>
 <button class="btn btn-success btn-bulk-return" 
-        id="btn-bulk-return" 
-        style="display:none;" 
-        onclick="openBulkReturnModal()">
-  📥 Вернулись с поверки (<span id="bulk-return-counter">0</span>)
+      id="btn-bulk-return" 
+      style="display:none;" 
+      onclick="openBulkReturnModal()">
+<i class="fa-solid fa-box-open"></i> Вернулись с поверки (<span id="bulk-return-counter">0</span>)
 </button>  
-  <button class="btn btn-warning btn-import" onclick="openImportModal()">📥 Импорт</button>
-  <button class="btn btn-warning btn-settings" onclick="openSettingsModal()">⚙️ Настройки</button>
+<button class="btn btn-warning btn-import" onclick="openImportModal()"><i class="fa-solid fa-download"></i> Импорт</button>
+<button class="btn btn-warning btn-settings" onclick="openSettingsModal()"><i class="fa-solid fa-gear"></i> Настройки</button>
 
-  <div class="dropdown btn-export" id="export-dropdown" style="position:relative;display:inline-block;">
-    <button class="btn btn-secondary" onclick="toggleExportMenu(event)">📤 Экспорт ▾</button>
-    <div id="export-menu" class="dropdown-menu">
-      <button class="dropdown-item" onclick="exportToExcel(); closeExportMenu();">📊 Excel (CSV)</button>
-      <button class="dropdown-item" onclick="exportToPDF(); closeExportMenu();">🖨️ PDF</button>
-    </div>
+<div class="dropdown btn-export" id="export-dropdown" style="position:relative;display:inline-block;">
+  <button class="btn btn-secondary" onclick="toggleExportMenu(event)"><i class="fa-solid fa-upload"></i> Экспорт <i class="fa-solid fa-caret-down"></i></button>
+  <div id="export-menu" class="dropdown-menu">
+    <button class="dropdown-item" onclick="exportToExcel(); closeExportMenu();"><i class="fa-solid fa-file-excel"></i> Excel (CSV)</button>
+    <button class="dropdown-item" onclick="exportToPDF(); closeExportMenu();"><i class="fa-solid fa-print"></i> PDF</button>
   </div>
+</div>
 </div>
 
     <div class="table-wrapper">
@@ -133,7 +133,7 @@
     </div>
 
     <div class="empty-state" id="empty-state" style="display:none">
-      <div class="icon">🔬</div>
+  <div class="icon"><i class="fa-solid fa-flask-vial"></i></div>
       <p>Оборудования пока нет. Нажмите «Добавить оборудование», чтобы начать.</p>
     </div>
   </div>
@@ -148,7 +148,7 @@
       <div id="form-fields-container"></div>
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
-        <button type="submit" class="btn btn-success">💾 Сохранить</button>
+        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
     </form>
   </div>
@@ -156,7 +156,7 @@
 
 <div class="modal-overlay" id="quick-cal-modal">
   <div class="modal">
-    <h2>📋 Быстрая поверка</h2>
+    <h2><i class="fa-solid fa-clipboard-list"></i> Быстрая поверка</h2>
     <div id="quick-cal-pipette-info" style="margin-bottom:15px;padding:10px;background:#f8fafc;border-radius:8px;"></div>
     <form id="quick-cal-form" novalidate>
       <input type="hidden" id="quick-cal-id">
@@ -190,7 +190,7 @@
       </div>
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeQuickCalModal()">Отмена</button>
-        <button type="button" class="btn btn-success" onclick="saveQuickCalibration()">💾 Записать</button>
+        <button type="button" class="btn btn-success" onclick="saveQuickCalibration()"><i class="fa-solid fa-floppy-disk"></i> Записать</button>
       </div>
     </form>
   </div>
@@ -199,7 +199,7 @@
  <!-- МОДАЛКА МАССОВОЙ ОТПРАВКИ -->
 <div class="modal-overlay" id="bulk-send-modal">
   <div class="modal modal-lg">
-    <h2>📦 Отправить на поверку</h2>
+    <h2><i class="fa-solid fa-box"></i> Отправить на поверку</h2>
 
     <div id="bulk-send-info" 
          style="margin-bottom:15px;padding:12px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;font-size:.9rem;">
@@ -235,12 +235,8 @@
         <button type="button" class="btn btn-secondary" onclick="closeBulkSendModal()">
           Отмена
         </button>
-        <button type="button" class="btn btn-info" onclick="printSendAct()">
-          🖨️ Распечатать акт
-        </button>
-        <button type="submit" class="btn btn-warning">
-          📦 Отправить на поверку
-        </button>
+        <button type="button" class="btn btn-info" onclick="printSendAct()"><i class="fa-solid fa-print"></i> Распечатать акт</button>
+        <button type="submit" class="btn btn-warning"><i class="fa-solid fa-box"></i> Отправить на поверку</button>
       </div>
     </form>
   </div>
@@ -249,7 +245,7 @@
   <!-- МОДАЛКА МАССОВОГО ВОЗВРАТА -->
 <div class="modal-overlay" id="bulk-return-modal">
   <div class="modal modal-lg">
-    <h2>📥 Возврат с поверки</h2>
+    <h2><i class="fa-solid fa-box-open"></i> Возврат с поверки</h2>
 
     <div style="margin-bottom:15px;padding:12px;background:#ecfdf5;border-left:3px solid #16a34a;border-radius:8px;font-size:.9rem;">
       <strong>Возвращается единиц:</strong> <span id="bulk-return-count">0</span>
@@ -305,9 +301,7 @@
         <button type="button" class="btn btn-secondary" onclick="closeBulkReturnModal()">
           Отмена
         </button>
-        <button type="submit" class="btn btn-success">
-          💾 Применить ко всем
-        </button>
+        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Применить ко всем</button>
       </div>
     </form>
   </div>
@@ -318,10 +312,10 @@
     <h2 id="history-title">История поверок</h2>
     <div id="history-content"></div>
         <div class="form-actions" style="justify-content:space-between;">
-      <button type="button" class="btn btn-warning" onclick="openHistoryExportModal()">📤 Экспорт истории</button>
+      <button type="button" class="btn btn-warning" onclick="openHistoryExportModal()"><i class="fa-solid fa-upload"></i> Экспорт истории</button>
       <div style="display:flex;gap:10px;">
         <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Закрыть</button>
-        <button class="btn btn-info admin-only senior-only" onclick="openCalibrationForm()">➕ Добавить поверку</button>
+        <button class="btn btn-info admin-only senior-only" onclick="openCalibrationForm()"><i class="fa-solid fa-plus"></i> Добавить поверку</button>
       </div>
     </div>
     <div id="calibration-form-wrap" style="display:none;margin-top:20px;padding-top:20px;border-top:2px solid #e2e8f0">
@@ -356,7 +350,7 @@
       </div>
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeCalibrationForm()">Отмена</button>
-        <button type="button" class="btn btn-success" onclick="addCalibrationRecord()">💾 Записать</button>
+        <button type="button" class="btn btn-success" onclick="addCalibrationRecord()"><i class="fa-solid fa-floppy-disk"></i> Записать</button>
       </div>
     </div>
   </div>
@@ -372,7 +366,7 @@
     <div id="reminder-body"></div>
     <div class="reminder-actions">
       <button class="btn btn-secondary" onclick="closeReminder(false)">Позже</button>
-      <button class="btn btn-success" onclick="closeReminder(true)">✅ Понятно</button>
+      <button class="btn btn-success" onclick="closeReminder(true)"><i class="fa-solid fa-check"></i> Понятно</button>
     </div>
   </div>
 </div>
@@ -380,7 +374,7 @@
    <!-- Модалка импорта -->
 <div class="modal-overlay" id="import-modal">
   <div class="modal">
-    <h2>📥 Импорт данных</h2>
+    <h2><i class="fa-solid fa-download"></i> Импорт данных</h2>
     <div class="form-group">
       <label>Файл (.xlsx, .xls, .csv, .json)</label>
       <input type="file" id="import-file" accept=".json,.csv,.xlsx,.xls,.txt">
@@ -395,14 +389,14 @@
     </div>
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" onclick="closeImportModal()">Отмена</button>
-      <button type="button" class="btn btn-success" onclick="handleImport()">📥 Загрузить</button>
+      <button type="button" class="btn btn-success" onclick="handleImport()"><i class="fa-solid fa-download"></i> Загрузить</button>
     </div>
   </div>
 </div>
 <!-- МОДАЛКА НАСТРОЕК -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal modal-lg">
-    <h2>⚙️ Настройки системы</h2>
+    <h2><i class="fa-solid fa-gear"></i> Настройки системы</h2>
 
     <div class="settings-tabs">
       <button class="tab-btn active" data-tab="fields" onclick="switchSettingsTab('fields')">
@@ -450,20 +444,20 @@
 
   <div class="modal-overlay" id="user-view-modal">
   <div class="modal modal-lg">
-    <h2>⚙️ Настройки пользователя</h2>
+    <h2><i class="fa-solid fa-gear"></i> Настройки пользователя</h2>
     <p id="user-view-target" style="color:#64748b;margin-bottom:16px;font-size:.9rem;"></p>
 
-    <div class="prefs-tabs">
-      <button class="prefs-tab active" data-prefs-tab="form" onclick="switchUserViewTab('form')">📋 Поля формы</button>
-      <button class="prefs-tab" data-prefs-tab="table" onclick="switchUserViewTab('table')">📊 Колонки таблицы</button>
-    </div>
+<div class="prefs-tabs">
+  <button class="prefs-tab active" data-prefs-tab="form" onclick="switchUserViewTab('form')"><i class="fa-solid fa-clipboard-list"></i> Поля формы</button>
+  <button class="prefs-tab" data-prefs-tab="table" onclick="switchUserViewTab('table')"><i class="fa-solid fa-table-columns"></i> Колонки таблицы</button>
+</div>
 
     <div id="user-view-content"></div>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-secondary" onclick="resetUserView()">↩️ Сбросить к стандартным</button>
+      <button type="button" class="btn btn-secondary" onclick="resetUserView()"><i class="fa-solid fa-rotate-left"></i> Сбросить к стандартным</button>
       <button type="button" class="btn btn-secondary" onclick="closeUserViewModal()">Закрыть</button>
-      <button type="button" class="btn btn-success" onclick="saveUserView()">💾 Сохранить</button>
+      <button type="button" class="btn btn-success" onclick="saveUserView()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
     </div>
   </div>
 </div>
@@ -471,7 +465,7 @@
   <!-- МОДАЛКА СМЕНЫ ПАРОЛЯ -->
 <div class="modal-overlay" id="change-password-modal">
   <div class="modal">
-    <h2>🔒 Смена пароля</h2>
+    <h2><i class="fa-solid fa-lock"></i> Смена пароля</h2>
 
     <div id="change-password-notice" style="margin-bottom:16px;padding:12px;background:#fef9c3;border-left:3px solid #eab308;border-radius:8px;font-size:.9rem;color:#854d0e;">
       Администратор выдал вам разовый пароль. Для продолжения работы задайте новый пароль.
@@ -505,7 +499,7 @@
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" id="cp-cancel-btn" onclick="closeChangePasswordModal()">Отмена</button>
-        <button type="submit" class="btn btn-success">💾 Сохранить пароль</button>
+        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Сохранить пароль</button>
       </div>
     </form>
   </div>
@@ -513,7 +507,7 @@
     <!-- МОДАЛКА РАЗОВОГО ПАРОЛЯ -->
 <div class="modal-overlay" id="temp-password-modal">
   <div class="modal">
-    <h2>🔑 Разовый пароль</h2>
+    <h2><i class="fa-solid fa-key"></i> Разовый пароль</h2>
 
     <div style="background:#fef9c3;padding:12px;border-left:3px solid #eab308;border-radius:8px;font-size:.9rem;color:#854d0e;margin-bottom:16px;">
       Сообщите пароль пользователю. После первого входа система попросит его сменить.
@@ -536,9 +530,7 @@
       <div style="display:flex;gap:8px;">
         <input type="text" id="tp-password" readonly
                style="background:#f1f5f9;font-family:monospace;font-size:1rem;letter-spacing:1px;cursor:not-allowed;">
-        <button type="button" class="btn btn-primary" onclick="copyTempPassword()" style="flex-shrink:0;">
-          📋 Скопировать
-        </button>
+        <button type="button" class="btn btn-primary" onclick="copyTempPassword()" style="flex-shrink:0;"><i class="fa-solid fa-copy"></i> Скопировать</button>
       </div>
     </div>
 
@@ -550,7 +542,7 @@
   <!-- МОДАЛКА ЭКСПОРТА ИСТОРИИ ПОВЕРОК -->
 <div class="modal-overlay" id="history-export-modal">
   <div class="modal">
-    <h2>📤 Экспорт истории поверок</h2>
+    <h2><i class="fa-solid fa-upload"></i> Экспорт истории поверок</h2>
     <p id="history-export-target" style="color:#64748b;margin-bottom:16px;font-size:.9rem;"></p>
 
     <form id="history-export-form" onsubmit="event.preventDefault();" novalidate>
@@ -573,8 +565,8 @@
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeHistoryExportModal()">Отмена</button>
-        <button type="button" class="btn btn-success" onclick="exportHistoryToExcel()">📊 Excel (CSV)</button>
-        <button type="button" class="btn btn-info" onclick="exportHistoryToPDF()">🖨️ PDF</button>
+        <button type="button" class="btn btn-success" onclick="exportHistoryToExcel()"><i class="fa-solid fa-file-excel"></i> Excel (CSV)</button>
+        <button type="button" class="btn btn-info" onclick="exportHistoryToPDF()"><i class="fa-solid fa-print"></i> PDF</button>
       </div>
     </form>
   </div>
