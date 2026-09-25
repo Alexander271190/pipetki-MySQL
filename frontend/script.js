@@ -105,6 +105,16 @@ function pluralizeType(label) {
   return s;
 }
 
+function getCalibrationPlace(equipmentType) {
+  const t = _equipmentTypes.find(x => x.value === equipmentType);
+  if (!t) return 'external';
+  return t.calibrationPlace || 'internal';
+}
+
+function isExternalCalibration(equipmentType) {
+  return getCalibrationPlace(equipmentType) === 'external';
+}
+
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -422,6 +432,8 @@ let pipettes = [];
 let settings = { warnDays: 30 };
 let sortField = 'nextCalibration';
 let sortDir = 1;
+let currentPage = 1;
+let pageSize = 100;
 let currentHistoryId = null;
 let departmentsList = [];
 
@@ -619,6 +631,30 @@ function render() {
     if (va > vb) return 1 * sortDir;
     return 0;
   });
+  
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
+  const startIdx = (currentPage - 1) * pageSize;
+  const pageItems = filtered.slice(startIdx, startIdx + pageSize);
+
+  const pageCurrentEl = document.getElementById('page-current');
+  const pageTotalEl = document.getElementById('page-total');
+  const pageCountEl = document.getElementById('page-count');
+  const pagePrevEl = document.getElementById('page-prev');
+  const pageNextEl = document.getElementById('page-next');
+
+  if (pageCurrentEl) pageCurrentEl.textContent = currentPage;
+  if (pageTotalEl)   pageTotalEl.textContent = totalPages;
+  if (pageCountEl)   pageCountEl.textContent = filtered.length;
+  if (pagePrevEl)    pagePrevEl.disabled = currentPage <= 1;
+  if (pageNextEl)    pageNextEl.disabled = currentPage >= totalPages;
+
+  const paginationEl = document.getElementById('pagination');
+  if (paginationEl) {
+    paginationEl.style.display = filtered.length > pageSize ? 'flex' : 'none';
+  }
 
  let ok = 0, warn = 0, danger = 0, sent = 0, wip = 0;
 pipettes.forEach(p => {
@@ -692,7 +728,7 @@ const labels = {
   unknown: '<i class="fa-solid fa-circle-question"></i> Не задано'
 };
 
-  tbody.innerHTML = filtered.map(p => {
+  tbody.innerHTML = pageItems.map(p => {
     const status = calcStatus(p);
     const next = getNextDate(p);
     const dl = daysLeft(p);
@@ -727,8 +763,18 @@ const labels = {
 
     const cellsHtml = columns.map(colId => {
       switch (colId) {
-        case 'id':
-          return `<td><strong>${esc(p.id)}</strong>${p.serial ? `<br><small style="color:#94a3b8">S/N: ${esc(p.serial)}</small>` : ''}</td>`;
+        case 'id': {
+          let replLine = '';
+          if (p.replaced_by && p.replacement) {
+            replLine = `<br><small style="color:#0ea5e9;">↔ замена: ${esc(p.replaced_by)}</small>`;
+          } else if (p.replaced_by) {
+            replLine = `<br><small style="color:#dc2626;">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
+          }
+          if (p.replacing && p.replacedFor) {
+            replLine = `<br><small style="color:#f59e0b;">↔ заменяет: ${esc(p.replacing)}</small>`;
+          }
+          return `<td><strong>${esc(p.id)}</strong>${p.serial ? `<br><small style="color:#94a3b8">S/N: ${esc(p.serial)}</small>` : ''}${replLine}</td>`;
+        }
       
   case 'type': {
   const t = _equipmentTypes.find(x => x.value === p.equipment_type);
@@ -769,11 +815,18 @@ const labels = {
       }
     }).join('');
 
-    return `<tr>
+    const rowClass =
+      status === 'danger' ? 'row-danger' :
+      status === 'fail' ? 'row-fail' :
+      status === 'warn' ? 'row-warn' :
+      '';
+
+    return `<tr class="${rowClass}">
       <td class="col-checkbox">
         <input type="checkbox" class="row-checkbox" data-id="${esc(p.id)}" ${isChecked}
                onchange="togglePipetteSelection('${esc(p.id)}', this.checked)">
       </td>
+      
       ${cellsHtml}
       <td ${!canManage ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
@@ -795,6 +848,17 @@ function updateSortArrows() {
 function sortBy(field) {
   if (sortField === field) sortDir *= -1;
   else { sortField = field; sortDir = 1; }
+  currentPage = 1;
+  render();
+}
+
+function changePage(delta) {
+  const filtered = getFilteredPipettes();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const newPage = currentPage + delta;
+
+  if (newPage < 1 || newPage > totalPages) return;
+  currentPage = newPage;
   render();
 }
 
@@ -808,12 +872,21 @@ function togglePipetteSelection(id, checked) {
   updateBulkCalButton();
 }
 
+// 🛡️ Возвращает ID только ТЕКУЩЕЙ страницы (с учётом пагинации)
+function getVisiblePageIds() {
+  const filtered = getFilteredPipettes();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const page = Math.min(Math.max(1, currentPage), totalPages);
+  const startIdx = (page - 1) * pageSize;
+  return filtered.slice(startIdx, startIdx + pageSize).map(p => p.id);
+}
+
 function toggleSelectAll(checked) {
-  const visibleIds = getFilteredPipettes().map(p => p.id);
+  const pageIds = getVisiblePageIds();
   if (checked) {
-    visibleIds.forEach(id => selectedPipettes.add(id));
+    pageIds.forEach(id => selectedPipettes.add(id));
   } else {
-    visibleIds.forEach(id => selectedPipettes.delete(id));
+    pageIds.forEach(id => selectedPipettes.delete(id));
   }
   document.querySelectorAll('.row-checkbox').forEach(cb => {
     cb.checked = checked;
@@ -822,24 +895,24 @@ function toggleSelectAll(checked) {
 }
 
 function updateSelectAllCheckbox() {
-  const visibleIds = getFilteredPipettes().map(p => p.id);
+  const pageIds = getVisiblePageIds();
   const master = document.getElementById('select-all-checkbox');
   if (!master) return;
 
-  if (visibleIds.length === 0) {
+  if (pageIds.length === 0) {
     master.checked = false;
     master.indeterminate = false;
     master.disabled = true;
     return;
   }
 
-  const selectedVisible = visibleIds.filter(id => selectedPipettes.has(id));
+  const selectedOnPage = pageIds.filter(id => selectedPipettes.has(id));
   master.disabled = false;
 
-  if (selectedVisible.length === 0) {
+  if (selectedOnPage.length === 0) {
     master.checked = false;
     master.indeterminate = false;
-  } else if (selectedVisible.length === visibleIds.length) {
+  } else if (selectedOnPage.length === pageIds.length) {
     master.checked = true;
     master.indeterminate = false;
   } else {
@@ -857,16 +930,20 @@ function updateBulkCalButton() {
   if (!btnSend && !btnReturn) return;
 
   const visibleIds = getFilteredPipettes().map(p => p.id);
-  const visibleSelected = [...selectedPipettes].filter(id => visibleIds.includes(id));
-
+   // 🛡️ Фильтруем только реально существующие
+  const visibleSelected = [...selectedPipettes].filter(id => {
+    if (!visibleIds.includes(id)) return false;
+    return pipettes.some(p => p.id === id);
+  });
+  
     const toSend = visibleSelected.filter(id => {
     const p = pipettes.find(x => x.id === id);
-    return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
+    return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
   const toReturn = visibleSelected.filter(id => {
     const p = pipettes.find(x => x.id === id);
-    return p && p.sent_for_calibration && p.equipment_type === 'pipette';
+    return p && p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
   if (btnSend) {
@@ -995,7 +1072,7 @@ function applyFilters() {
     }
   }
   document.getElementById('filter-panel').classList.remove('show');
-
+  currentPage = 1;
   const visibleIds = getFilteredPipettes().map(p => p.id);
   for (const id of [...selectedPipettes]) {
     if (!visibleIds.includes(id)) selectedPipettes.delete(id);
@@ -1025,7 +1102,39 @@ function resetFilters() {
     }
   }
   document.getElementById('filter-panel').classList.remove('show');
+  currentPage = 1; 
   render();
+}
+
+function applyFilterStateToPanel() {
+  // 🛡️ Если панель ещё не отрисована — отрисовать
+  if (!_filterRendered && _activeFilters.length > 0) {
+    renderFilterFields();
+  }
+
+  for (const f of _activeFilters) {
+    const fid = `filter-${f.id}`;
+    const state = filterState[f.id];
+
+    if (f.type === 'date-period') {
+      const typeEl = document.getElementById(`${fid}-type`);
+      const periodEl = document.getElementById(`${fid}-period`);
+      const fromEl = document.getElementById(`${fid}-from`);
+      const toEl = document.getElementById(`${fid}-to`);
+      const customEl = document.getElementById(`${fid}-custom`);
+
+      if (typeEl) typeEl.value = (state && state.type) || 'last_calibration';
+      if (periodEl) periodEl.value = (state && state.period) || '';
+      if (fromEl) fromEl.value = (state && state.from) || '';
+      if (toEl) toEl.value = (state && state.to) || '';
+      if (customEl) {
+        customEl.style.display = (state && state.period === 'custom') ? 'flex' : 'none';
+      }
+    } else {
+      const el = document.getElementById(fid);
+      if (el) el.value = state || '';
+    }
+  }
 }
 
 function getFilteredPipettes() {
@@ -1913,6 +2022,7 @@ let _searchTimeout = null;
 document.getElementById('search').addEventListener('input', () => {
   clearTimeout(_searchTimeout);
   _searchTimeout = setTimeout(() => {
+    currentPage = 1; 
     render();
     const visibleIds = getFilteredPipettes().map(p => p.id);
     for (const id of [...selectedPipettes]) {
@@ -2011,6 +2121,7 @@ async function handleImport() {
       }
 
       closeImportModal();
+      currentPage = 1;
       await loadPipetteData();
     } catch (err) {
       if (progress) progress.textContent = '❌ ' + (err.message || 'Ошибка импорта');
@@ -2748,6 +2859,7 @@ async function renderSystemSettings() {
               <th style="width:140px;">value</th>
               <th>label</th>
               <th style="width:80px;">prefix</th>
+              <th style="width:200px;">Место поверки</th>
               <th style="width:60px;"></th>
            </tr>
           </thead>
@@ -2880,11 +2992,11 @@ async function openBulkSendModal() {
   const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
     const toSend = selected.filter(id => {
     const p = pipettes.find(x => x.id === id);
-    return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
+    return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
   if (toSend.length === 0) {
-    showToast('Не выбрано ни одной пипетки. На внешнюю поверку отправляются только пипетки (дозаторы).', 'error');
+    showToast('Не выбрано ни одной единицы для внешней поверки.', 'error');
     return;
   }
   
@@ -2902,10 +3014,69 @@ async function openBulkSendModal() {
   }).join('');
   document.getElementById('bulk-send-list').innerHTML = listHtml;
 
-  document.getElementById('bulk-send-date').value = todayStr();
+    document.getElementById('bulk-send-date').value = todayStr();
   document.getElementById('bulk-send-note').value = '';
 
+  await loadReplacementOptions(toSend);
+
   document.getElementById('bulk-send-modal').classList.add('active');
+}
+
+// 🆕 Загрузка складских для замены
+async function loadReplacementOptions(ids) {
+  const container = document.getElementById('replacement-options');
+  if (!container) return;
+
+  container.innerHTML = '<p style="color:#94a3b8;font-size:.85rem;">Загрузка складских…</p>';
+
+  const blocks = [];
+
+  for (const id of ids) {
+    const p = pipettes.find(x => x.id === id);
+    if (!p) continue;
+
+    try {
+      const url = `/pipettes/available-for-replacement?type=${encodeURIComponent(p.equipment_type)}&department=${encodeURIComponent(p.department || '')}&exclude=${encodeURIComponent(id)}`;
+      const options = await apiRequest(url);
+
+      if (options.length === 0) continue;
+
+      const safeName = id.replace(/[^a-zA-Z0-9_-]/g, '_');
+      let html = `<div style="margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;">
+        <div style="font-weight:600;font-size:.85rem;color:#475569;margin-bottom:6px;">
+          ${esc(id)} — ${esc(p.model)} (${esc(p.department || 'без отдела')})
+        </div>
+        <div style="font-size:.78rem;color:#64748b;margin-bottom:6px;">Складские того же типа:</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">`;
+
+      for (const opt of options) {
+        html += `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px;background:#fff;border-radius:6px;cursor:pointer;font-size:.82rem;">
+            <input type="radio" name="repl-${safeName}" value="${esc(opt.id)}" data-for="${esc(id)}">
+            <span><strong>${esc(opt.id)}</strong> — ${esc(opt.model)}
+            ${opt.manufacturer ? `<span style="color:#94a3b8;">(${esc(opt.manufacturer)})</span>` : ''}
+            ${opt.last_calibration ? `<span style="color:#94a3b8;margin-left:8px;">поверка: ${formatDate(opt.last_calibration)}</span>` : ''}
+            </span>
+          </label>`;
+      }
+
+      html += `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px;cursor:pointer;font-size:.82rem;color:#94a3b8;">
+            <input type="radio" name="repl-${safeName}" value="" data-for="${esc(id)}" checked>
+            <span>Без замены</span>
+          </label>
+        </div>
+      </div>`;
+
+      blocks.push(html);
+    } catch (e) {
+      console.error('Ошибка загрузки замен:', e);
+    }
+  }
+
+  container.innerHTML = blocks.length === 0
+    ? '<p style="color:#94a3b8;font-size:.85rem;">Нет доступных складских единиц того же типа.</p>'
+    : blocks.join('');
 }
 
 function closeBulkSendModal() {
@@ -2920,11 +3091,11 @@ async function saveBulkSend(e) {
         
   const toSend = _bulkSendIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
-  return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
+  return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
   if (toSend.length === 0) {
-    showToast('Не выбрано ни одной пипетки', 'error');
+    showToast('Не выбрано ни одной единицы для внешней поверки', 'error');
     return;
   }
 
@@ -2945,19 +3116,31 @@ async function saveBulkSend(e) {
     if (!ok) return;
   }
 
+    // 🛡️ Собираем карту замен
+  const replacements = {};
+  document.querySelectorAll('#replacement-options input[type="radio"]:checked').forEach(rb => {
+    const forId = rb.dataset.for;
+    if (rb.value) replacements[forId] = rb.value;
+  });
+
   try {
     const res = await apiRequest('/pipettes/bulk-send', 'POST', {
-      ids: toSend, sentDate, note
+      ids: toSend, sentDate, note, replacements
     });
 
     let msg = `Отправлено на поверку: ${res.successful}`;
     if (res.skipped > 0) msg += `. Пропущено: ${res.skipped}`;
+    if (res.skippedReplacements && res.skippedReplacements.length > 0) {
+      msg += `. Замены не применены: ${res.skippedReplacements.length}`;
+      console.warn('⚠️ Пропущенные замены:', res.skippedReplacements);
+    }
     showToast(msg, res.successful > 0 ? 'success' : 'error');
 
     clearSelection();
     closeBulkSendModal();
     filterState = {};
     _filterRendered = false;
+    currentPage = 1;
     await loadPipetteData();
   } catch (error) {
     showToast(error.message || 'Ошибка отправки', 'error');
@@ -2972,11 +3155,11 @@ async function printSendAct() {
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const sendItems = _bulkSendIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
-  return p && !p.sent_for_calibration && p.equipment_type === 'pipette';
+  return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
   if (sendItems.length === 0) {
-    showToast('Нет пипеток для печати', 'error');
+    showToast('Нет единиц для печати', 'error');
     return;
   }
 
@@ -3095,10 +3278,9 @@ async function openBulkReturnModal() {
   const visibleIds = getFilteredPipettes().map(p => p.id);
   const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
 
-    const sentItems = selected
+     const sentItems = selected
     .map(id => pipettes.find(x => x.id === id))
-    .filter(p => p && p.sent_for_calibration && p.equipment_type === 'pipette');
-
+    .filter(p => p && p.sent_for_calibration && isExternalCalibration(p.equipment_type));
   if (sentItems.length === 0) {
     showToast('Не выбрано ни одной единицы со статусом «На поверке»', 'error');
     return;
@@ -3155,7 +3337,45 @@ async function openBulkReturnModal() {
   document.getElementById('bulk-return-single-cert').checked = false;
   toggleSingleCert(false);
 
+  renderReturnReplacements(sentItems);
+
   document.getElementById('bulk-return-modal').classList.add('active');
+}
+
+// 🆕 Блок возврата замен
+function renderReturnReplacements(sentItems) {
+  const container = document.getElementById('return-replacements');
+  if (!container) return;
+
+  const withRepl = sentItems.filter(p => p.replaced_by);
+  if (withRepl.length === 0) {
+    container.innerHTML = '';
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+
+  let html = `<div style="margin:15px 0;padding:12px;background:#eff6ff;border-left:3px solid #3b82f6;border-radius:8px;font-size:.85rem;">
+    <div style="font-weight:600;color:#1e40af;margin-bottom:8px;">
+      <i class="fa-solid fa-arrows-rotate"></i> На время поверки было выдано со склада:
+    </div>`;
+
+  withRepl.forEach(p => {
+    html += `
+      <label style="display:flex;align-items:flex-start;gap:8px;padding:6px;background:#fff;border-radius:6px;margin-bottom:4px;cursor:pointer;">
+        <input type="checkbox" class="return-repl-cb" value="${esc(p.id)}" checked style="margin-top:3px;">
+        <span>
+          <strong>${esc(p.id)}</strong> → было заменено на
+          <strong>${esc(p.replaced_by)}</strong>
+          <br><small style="color:#64748b;">Вернуть замену на склад (Склад, не активна)</small>
+          <br><small style="color:#f59e0b;">Снятие галочки оставит замену в работе</small>
+        </span>
+      </label>`;
+  });
+
+  html += `</div>`;
+  container.innerHTML = html;
 }
 
 function closeBulkReturnModal() {
@@ -3203,7 +3423,7 @@ async function saveBulkReturn(e) {
 
   const sentIds = _bulkReturnIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
-  return p && p.sent_for_calibration && p.equipment_type === 'pipette';
+  return p && p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
   const items = sentIds.map(id => {
@@ -3235,17 +3455,42 @@ async function saveBulkReturn(e) {
     if (!ok) return;
   }
 
+    const returnReplacements = [];
+  document.querySelectorAll('.return-repl-cb:checked').forEach(cb => {
+    returnReplacements.push(cb.value);
+  });
+
   try {
     const res = await apiRequest('/pipettes/bulk-return', 'POST', {
-      items, date, org, note
+      items, date, org, note, returnReplacements
     });
 
-    showToast(res.message || `Возврат оформлен для ${items.length} единиц`, 'success');
+    let msg = res.message || `Возврат оформлен для ${items.length} единиц`;
+    if (res.missingReplacements && res.missingReplacements.length > 0) {
+      msg += `. Не найдено замен: ${res.missingReplacements.length}`;
+      console.warn('⚠️ Пропущенные замены:', res.missingReplacements);
+    }
+    showToast(msg, 'success');
+
     clearSelection();
     closeBulkReturnModal();
+
     filterState = {};
+    currentPage = 1;
+
+    const calFilter = _activeFilters.find(f => f.type === 'date-period');
+    if (calFilter && date) {
+      filterState[calFilter.id] = {
+        type: 'last_calibration',
+        period: 'custom',
+        from: date,
+        to: date
+      };
+    }
+
     _filterRendered = false;
     await loadPipetteData();
+    applyFilterStateToPanel();
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
@@ -3461,7 +3706,7 @@ function renderEquipmentTypesTable() {
   if (!tbody) return;
 
   if (_cachedEquipmentTypes.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
 
@@ -3482,10 +3727,16 @@ function renderEquipmentTypesTable() {
         <input type="text" value="${esc(t.label)}"
                oninput="updateEquipmentType(${i}, 'label', this.value)">
       </td>
-      <td>
+            <td>
         <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
                style="text-align:center;text-transform:uppercase;"
                oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
+      </td>
+      <td>
+        <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
+          <option value="external" ${t.calibrationPlace === 'external' ? 'selected' : ''}>📦 Внешняя (с отправкой)</option>
+          <option value="internal" ${(!t.calibrationPlace || t.calibrationPlace === 'internal') ? 'selected' : ''}>🏠 На месте</option>
+        </select>
       </td>
       <td>
         <button class="btn btn-danger btn-sm btn-icon-only"
@@ -3527,10 +3778,11 @@ function addEquipmentType() {
     return;
   }
 
-  _cachedEquipmentTypes.push({
+   _cachedEquipmentTypes.push({
     value: trimmed,
     label: trimmed,
-    prefix: 'EQ'
+    prefix: 'EQ',
+    calibrationPlace: 'internal'
   });
   renderEquipmentTypesTable();
   showToast('Тип добавлен. Не забудьте нажать «Сохранить типы».', 'success');
@@ -3574,6 +3826,10 @@ function updateEquipmentTypesWarning() {
   const prefixes = _cachedEquipmentTypes.map(t => t.prefix).filter(Boolean);
   const dupPrefixes = prefixes.filter((v, i) => prefixes.indexOf(v) !== i);
   if (dupPrefixes.length > 0) problems.push(`Дубли prefix: ${[...new Set(dupPrefixes)].join(', ')}`);
+  const noPlace = _cachedEquipmentTypes.filter(t => !t.calibrationPlace);
+  if (noPlace.length > 0) {
+    problems.push(`Не указано место поверки у: ${noPlace.map(t => t.value).join(', ')}`);
+  }
 
   if (problems.length > 0) {
     warn.style.display = 'block';
@@ -3604,6 +3860,9 @@ async function saveEquipmentTypes() {
     );
     if (!ok) return;
   }
+    _cachedEquipmentTypes.forEach(t => {
+    if (!t.calibrationPlace) t.calibrationPlace = 'internal';
+  });
 
   try {
     await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
