@@ -219,17 +219,17 @@ router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (
       });
     }
 
-    const tempPassword = generateTempPassword();
+        const tempPassword = generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, 10);
 
     await db.query(
       `UPDATE users
        SET password = ?,
            must_change_password = 1,
-           password_changed_at = CURRENT_TIMESTAMP,
+           password_changed_at = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [hash, userId]
+      [hash, new Date(), userId]
     );
 
     await db.query(
