@@ -21,12 +21,14 @@ const authenticate = async (req, res, next) => {
     const user = rows[0];
 
     // Пароль был изменён после выдачи токена → старый токен недействителен
-    if (user.password_changed_at && decoded.iat) {
-      const pwdTs = new Date(user.password_changed_at).getTime() / 1000;
-      if (pwdTs > decoded.iat + 2) {
-        return res.status(401).json({ error: 'Пароль был изменён, войдите заново' });
-      }
-    }
+  if (user.password_changed_at) {
+  const pwdTs = new Date(user.password_changed_at).getTime() / 1000;
+  // decoded.iat может отсутствовать (noTimestamp) — тогда считаем токен устаревшим
+  const iat = decoded.iat || 0;
+  if (pwdTs > iat + 2) {
+    return res.status(401).json({ error: 'Пароль был изменён, войдите заново' });
+  }
+}
 
   // Обязательная смена пароля: блокируем всё, кроме помеченных роутов
     if (user.must_change_password && !req.allowWhenPasswordMustChange) {
