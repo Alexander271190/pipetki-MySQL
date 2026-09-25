@@ -195,7 +195,21 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     lastCalibration, cert, result, active, responsible, location, notes
   } = req.body;
 
-  if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
+    if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
+
+  // 🛡️ Пользователь с "только свой отдел" не может создавать в чужом отделе
+  if (req.user.only_own_department && req.user.role !== 'admin') {
+    if (!req.user.department) {
+      return res.status(403).json({
+        error: 'У вас не указан отдел, создание оборудования недоступно'
+      });
+    }
+    if (department && department !== req.user.department) {
+      return res.status(403).json({
+        error: 'Можно создавать оборудование только в своём отделе'
+      });
+    }
+  }
 
   const conn = await db.getConnection();
   try {
@@ -318,8 +332,11 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
  for (const [k, col] of Object.entries(map)) {
    if (updates[k] !== undefined) {
      fields.push(`${col} = ?`);
-     if (k === 'active') {
-      values.push(updates[k] ? 1 : 0);
+   if (k === 'active') {
+      values.push(
+        (updates[k] === false || updates[k] === 0 ||
+         updates[k] === 'false' || updates[k] === '0') ? 0 : 1
+      );
     } else if (NUMERIC_FIELDS.has(k) && updates[k] === '') {
       values.push(null);
     } else {
@@ -455,9 +472,9 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
       return (found.calibrationPlace || 'internal') === 'external';
     };
 
-    for (const id of ids) {
+        for (const id of ids) {
       const [rows] = await conn.query(
-        'SELECT id, model, sent_for_calibration, equipment_type, department FROM pipettes WHERE id = ?',
+        'SELECT id, model, sent_for_calibration, equipment_type, department FROM pipettes WHERE id = ? FOR UPDATE',
         [id]
       );
 
@@ -608,7 +625,7 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
       if (!item.id) { skipped.push('?'); continue; }
 
       const [rows] = await conn.query(
-        'SELECT id, equipment_type, department, sent_for_calibration, replaced_by FROM pipettes WHERE id = ?',
+        'SELECT id, equipment_type, department, sent_for_calibration, replaced_by FROM pipettes WHERE id = ? FOR UPDATE',
         [item.id]
       );
       if (!rows.length) { skipped.push(item.id); continue; }
@@ -707,10 +724,13 @@ router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes
   return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
 }
 
+    const ALLOWED = ['pass', 'fail', 'wip'];
+    const safeResult = ALLOWED.includes(result) ? result : 'pass';
+
     await conn.query(
       `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [req.params.id, date, cert, result || 'pass', org, note]
+      [req.params.id, date, cert, safeResult, org, note]
     );
 
     await conn.query(
@@ -722,7 +742,7 @@ router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes
        sent_note = NULL,
        updated_at = CURRENT_TIMESTAMP
    WHERE id = ?`,
-  [date, cert, result || 'pass', req.params.id]
+  [date, cert, safeResult, req.params.id]
 );
 
     await conn.query(
