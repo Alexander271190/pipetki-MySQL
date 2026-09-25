@@ -76,6 +76,8 @@ async function initSchema() {
         notes TEXT,
         sent_for_calibration VARCHAR(20),
         sent_note TEXT,
+        replaced_by VARCHAR(255) DEFAULT NULL,
+        replacing VARCHAR(255) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -269,13 +271,13 @@ if (ssc[0].c === 0) {
   await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`);
 
   // Дефолтные типы оборудования
-  const defaultTypes = [
-    { value: 'pipette',     label: 'Пипетка',     prefix: 'P'  },
-    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A'  },
-    { value: 'thermometer', label: 'Термометр',   prefix: 'T'  },
-    { value: 'scales',      label: 'Весы',        prefix: 'S'  },
-    { value: 'photometer',  label: 'Фотометр',    prefix: 'F'  },
-    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M'  },
+   const defaultTypes = [
+    { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external' },
+    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external' },
+    { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal' },
+    { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal' },
+    { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal' },
+    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal' },
   ];
   await pool.query(
     `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)`,
