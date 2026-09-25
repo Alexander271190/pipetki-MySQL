@@ -39,3 +39,30 @@ text
 Микроскоп → 🏠 На месте
 
 Всё. После этого можно тестировать полный сценарий.
+
+
+
+
+
+Правка 1.5 (опционально) — удалить мёртвый код
+Найти (в начале файла, сразу после canAccessDepartment):
+
+js
+// 🛡️ Серверный аналог isExternalCalibration из script.js
+async function isExternalCalibrationServer(equipmentType) {
+  try {
+    const [rows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    if (!rows.length || !rows[0].setting_value) return true;
+    const types = db.safeParse(rows[0].setting_value, []);
+    const t = types.find(x => x.value === equipmentType);
+    if (!t) return true;
+    return (t.calibrationPlace || 'internal') === 'external';
+  } catch (e) {
+    return true;
+  }
+}
+Удалить этот блок целиком.
+
+Проверьте: grep -rn "isExternalCalibrationServer" routes/ middleware/ — должно вернуть пусто. Если где-то вызывается — не удаляйте.
