@@ -487,6 +487,7 @@ async function loadPipetteData() {
     checkReminder();
   } catch (error) {
     console.error('Error loading data:', error);
+    if (error.message === 'Неавторизован') return;
     showToast('Ошибка загрузки данных', 'error');
   }
 }
