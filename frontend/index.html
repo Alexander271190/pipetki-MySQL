@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,6 +50,7 @@
         <span class="name" id="user-fullname">Имя</span>
         <span class="position" id="user-position">Должность</span>
         <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()"><i class="fa-solid fa-arrow-left"></i> Вернуться</button>
+        <button class="btn btn-sm" id="theme-btn" onclick="toggleTheme()" title="Переключить тему">🌙</button>
         <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль"><i class="fa-solid fa-lock"></i> Пароль</button>
         <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
       </div>
