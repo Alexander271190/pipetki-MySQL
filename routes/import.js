@@ -154,6 +154,24 @@ async function normalizeEquipmentType(val) {
   return 'pipette';
 }
 
+// 🛡️ Синхронная версия — работает с уже загруженным кэшем типов
+function normalizeEquipmentTypeCached(val, typesCache) {
+  if (!val) return 'pipette';
+  const s = String(val).trim().toLowerCase();
+
+  const found = (typesCache || []).find(t =>
+    (t.value || '').toLowerCase() === s || (t.label || '').toLowerCase() === s
+  );
+  if (found) return found.value;
+
+  if (/пипет|дозатор|pipette|pipet/.test(s)) return 'pipette';
+  if (/анализатор|analyzer/.test(s)) return 'analyzer';
+  if (/термометр|thermometer/.test(s)) return 'thermometer';
+  if (/весы|scales|balance/.test(s)) return 'scales';
+  if (/фотометр|photometer/.test(s)) return 'photometer';
+  return 'pipette';
+}
+
 function normalizeActive(val) {
   if (val === undefined || val === null || val === '') return 1;
   if (val === true || val === 1) return 1;
@@ -325,7 +343,18 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
       });
     }
 
-        const added = [], skipped = [], errors = [];
+    const added = [], skipped = [], errors = [];
+
+    // 🛡️ Один раз читаем типы, чтобы не дёргать БД в цикле
+    let typesCache = [];
+    try {
+      const [typeRows] = await db.query(
+        "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+      );
+      if (typeRows.length && typeRows[0].setting_value) {
+        typesCache = db.safeParse(typeRows[0].setting_value, []);
+      }
+    } catch (e) { /* fallback ниже */ }
 
     for (let i = 0; i < objects.length; i++) {
       const raw = objects[i];
@@ -359,8 +388,8 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
       try {
         await conn.beginTransaction();
 
-        // Нормализуем тип один раз и переиспользуем
-        const eqType = await normalizeEquipmentType(obj.equipmentType);
+       // Нормализуем тип один раз и переиспользуем
+      const eqType = normalizeEquipmentTypeCached(obj.equipmentType, typesCache);
 
         // ─── Автогенерация ID внутри транзакции ───
         if (!id) {
