@@ -11,6 +11,7 @@ const pool = mysql.createPool({
   user:     process.env.DB_USER || 'pipette',
   password: process.env.DB_PASSWORD || 'pipette_secret',
   charset:  'utf8mb4',
+  timezone: 'Z', 
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
