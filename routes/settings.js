@@ -241,13 +241,13 @@ router.put('/filters', authenticate, requireRole(['admin']), async (req, res) =>
 
 // GET /api/settings/equipment-types
 router.get('/equipment-types', authenticate, async (req, res) => {
-  const fallback = [
-    { value: 'pipette',     label: 'Пипетка',     prefix: 'P' },
-    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A' },
-    { value: 'thermometer', label: 'Термометр',   prefix: 'T' },
-    { value: 'scales',      label: 'Весы',        prefix: 'S' },
-    { value: 'photometer',  label: 'Фотометр',    prefix: 'F' },
-    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M' },
+   const fallback = [
+    { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external' },
+    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external' },
+    { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal' },
+    { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal' },
+    { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal' },
+    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal' },
   ];
 
   try {
@@ -286,8 +286,13 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
       } else {
         t.prefix = t.prefix.trim().toUpperCase();
       }
-      if (t.prefix.length > 10) {
+       if (t.prefix.length > 10) {
         return res.status(400).json({ error: `Слишком длинный prefix у ${t.value}` });
+      }
+
+      // 🛡️ Место поверки: external | internal
+      if (!t.calibrationPlace || !['external', 'internal'].includes(t.calibrationPlace)) {
+        t.calibrationPlace = 'internal';
       }
     }
 
