@@ -150,15 +150,15 @@ router.post('/change-password', allowWhenPasswordMustChange, authenticate, async
     return res.status(400).json({ error: 'Новый пароль должен отличаться от текущего' });
   }
 
-  const hash = await bcrypt.hash(newPassword, 10);
+    const hash = await bcrypt.hash(newPassword, 10);
   await db.query(
     `UPDATE users
      SET password = ?,
          must_change_password = 0,
-         password_changed_at = CURRENT_TIMESTAMP,
+         password_changed_at = ?,
          updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
-    [hash, req.user.id]
+    [hash, new Date(), req.user.id]
   );
 
     await db.query(
