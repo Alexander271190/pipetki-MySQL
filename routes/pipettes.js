@@ -109,6 +109,44 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// ============================================================
+// ДОСТУПНЫЕ ДЛЯ ЗАМЕНЫ (складские того же типа)
+// ============================================================
+router.get('/available-for-replacement', authenticate, async (req, res) => {
+  try {
+    const { type, department, exclude } = req.query;
+    if (!type) return res.status(400).json({ error: 'Параметр type обязателен' });
+
+    let sql = `
+      SELECT id, serial, manufacturer, model, equipment_type, volume,
+             department, last_calibration, \`interval\`, last_result,
+             active, responsible, location
+      FROM pipettes
+      WHERE equipment_type = ?
+        AND active = 0
+        AND sent_for_calibration IS NULL
+        AND (replacing IS NULL OR replacing = '')
+    `;
+    const params = [type];
+
+    if (department) {
+      sql += ' AND (department = ? OR department IS NULL OR department = \'\')';
+      params.push(department);
+    }
+    if (exclude) {
+      sql += ' AND id <> ?';
+      params.push(exclude);
+    }
+    sql += ' ORDER BY last_calibration DESC';
+
+    const [rows] = await db.query(sql, params);
+    res.json(rows);
+  } catch (e) {
+    console.error('GET /available-for-replacement:', e);
+    res.status(500).json({ error: 'Ошибка поиска замены' });
+  }
+});
+
 // Одна пипетка
 router.get('/:id', authenticate, async (req, res) => {
   try {
@@ -708,42 +746,5 @@ router.get('/:id/calibration', authenticate, async (req, res) => {
   }
 });
 
-// ============================================================
-// ДОСТУПНЫЕ ДЛЯ ЗАМЕНЫ (складские того же типа)
-// ============================================================
-router.get('/available-for-replacement', authenticate, async (req, res) => {
-  try {
-    const { type, department, exclude } = req.query;
-    if (!type) return res.status(400).json({ error: 'Параметр type обязателен' });
-
-    let sql = `
-      SELECT id, serial, manufacturer, model, equipment_type, volume,
-             department, last_calibration, \`interval\`, last_result,
-             active, responsible, location
-      FROM pipettes
-      WHERE equipment_type = ?
-        AND active = 0
-        AND sent_for_calibration IS NULL
-        AND (replacing IS NULL OR replacing = '')
-    `;
-    const params = [type];
-
-    if (department) {
-      sql += ' AND (department = ? OR department IS NULL OR department = \'\')';
-      params.push(department);
-    }
-    if (exclude) {
-      sql += ' AND id <> ?';
-      params.push(exclude);
-    }
-    sql += ' ORDER BY last_calibration DESC';
-
-    const [rows] = await db.query(sql, params);
-    res.json(rows);
-  } catch (e) {
-    console.error('GET /available-for-replacement:', e);
-    res.status(500).json({ error: 'Ошибка поиска замены' });
-  }
-});
 
 module.exports = router;
