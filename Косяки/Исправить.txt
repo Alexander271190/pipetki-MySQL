@@ -66,3 +66,253 @@ async function isExternalCalibrationServer(equipmentType) {
 Удалить этот блок целиком.
 
 Проверьте: grep -rn "isExternalCalibrationServer" routes/ middleware/ — должно вернуть пусто. Если где-то вызывается — не удаляйте.
+
+
+
+
+
+
+
+
+
+
+Шаг 1. Остановить приложение
+Чтобы оно не держало соединения с БД и не мешало:
+
+powershell
+pm2 stop pipette
+Проверить, что остановлено:
+
+powershell
+pm2 list
+Процесс pipette должен быть stopped.
+
+Шаг 2. Подключиться к MariaDB как root
+powershell
+& "C:\Program Files\MariaDB 11.8\bin\mysql.exe" -uroot -p
+Введите пароль root (тот, что задавали при установке MariaDB).
+
+Должны увидеть приглашение:
+
+text
+MariaDB [(none)]>
+Шаг 3. Удалить старую базу и создать новую
+По одной строке, каждая с ; в конце:
+
+sql
+DROP DATABASE IF EXISTS pipette;
+Ответ:
+
+text
+Query OK, 0 rows affected
+Создать заново с правильной кодировкой:
+
+sql
+CREATE DATABASE pipette
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+Ответ:
+
+text
+Query OK, 1 row affected
+Проверить:
+
+sql
+SHOW DATABASES;
+В списке должна быть pipette.
+
+Шаг 4. Дать права пользователю pipette
+На случай, если прав не хватает:
+
+sql
+GRANT ALL PRIVILEGES ON pipette.* TO 'pipette'@'%';
+Ответ:
+
+text
+Query OK, 0 rows affected
+Применить:
+
+sql
+FLUSH PRIVILEGES;
+Ответ:
+
+text
+Query OK, 0 rows affected
+Если пользователя pipette@'%' нет — создайте:
+
+sql
+CREATE USER 'pipette'@'%' IDENTIFIED BY 'StrongPass123!';
+GRANT ALL PRIVILEGES ON pipette.* TO 'pipette'@'%';
+FLUSH PRIVILEGES;
+Шаг 5. Выйти из MariaDB
+sql
+exit
+Без ; — это клиентская команда.
+
+Шаг 6. Запустить приложение
+powershell
+pm2 start pipette
+Смотреть логи в реальном времени:
+
+powershell
+pm2 logs pipette
+Что должно быть в логах:
+
+text
+⏳ Ожидание MySQL... (X попыток осталось)
+✅ MySQL подключён
+➕ Индекс idx_pipettes_department создан
+➕ Индекс idx_pipettes_equipment_type создан
+➕ Индекс idx_audit_log_timestamp создан
+✅ Схема БД готова
+👤 Начальные пользователи и данные созданы
+🔑 Разовый пароль администратора (сохраните и смените после первого входа):
+   admin / XyZ1234abcd
+   Остальных пользователей создайте через «Настройки → Пользователи».
+🚀 Server on http://0.0.0.0:3000
+Скопируйте пароль админа — из строки admin / XyZ1234abcd.
+
+Выйти из режима просмотра логов: Ctrl + C (сам сервер продолжит работать, только логи перестанут листаться в реальном времени).
+
+Шаг 7. Проверить, что схема создана правильно
+Подключиться к MariaDB:
+
+powershell
+& "C:\Program Files\MariaDB 11.8\bin\mysql.exe" -uroot -p
+Посмотреть таблицы:
+
+sql
+USE pipette;
+SHOW TABLES;
+Ожидаемо 10 таблиц:
+
+text
++----------------------+
+| Tables_in_pipette    |
++----------------------+
+| audit_log            |
+| calibration_history  |
+| departments          |
+| export_settings      |
+| field_config         |
+| filter_config        |
+| pipettes             |
+| system_settings      |
+| user_preferences     |
+| users                |
++----------------------+
+Проверить колонки в pipettes:
+
+sql
+DESCRIBE pipettes;
+В списке должны быть replaced_by и replacing:
+
+text
++----------------------+--------------+------+-----+
+| Field                | Type         | Null | Key |
++----------------------+--------------+------+-----+
+| id                   | varchar(255) | NO   | PRI |
+| ...
+| sent_for_calibration | varchar(20)  | YES  |     |
+| sent_note            | text         | YES  |     |
+| replaced_by          | varchar(255) | YES  |     |   ← ✅
+| replacing            | varchar(255) | YES  |     |   ← ✅
+| created_at           | timestamp    | NO   |     |
+| updated_at           | timestamp    | NO   |     |
++----------------------+--------------+------+-----+
+Если обе колонки есть — схема правильная.
+
+Проверить наполнение:
+
+sql
+SELECT COUNT(*) FROM users;         -- 1 (admin)
+SELECT COUNT(*) FROM departments;   -- 8
+SELECT COUNT(*) FROM pipettes;      -- 5 (демо)
+SELECT COUNT(*) FROM field_config;  -- 15
+Выйти:
+
+sql
+exit
+Шаг 8. Войти в приложение
+Откройте в браузере:
+
+text
+http://localhost:3000
+Логин: admin
+
+Пароль: тот, что в логах из шага 6.
+
+При первом входе система потребует сменить пароль. Новый пароль должен соответствовать политике:
+
+≥ 8 символов
+
+строчная + заглавная буква
+
+цифра
+
+спецсимвол
+
+без пробелов
+
+Например: Test1234!
+
+Если что-то пошло не так
+Логи показывают ❌ Ошибка инициализации схемы
+В логах будет стек ошибки. Наиболее частые причины:
+
+Что видно в логах	Причина
+Access denied for user 'pipette'	Пароль пользователя в .env не совпадает
+Unknown database 'pipette'	БД не создана (повторите шаг 3)
+ER_TABLE_EXISTS_ERROR	БД не удалилась (повторите шаг 3)
+ECONNREFUSED	MariaDB не запущена
+Для просмотра последних 50 строк:
+
+powershell
+pm2 logs pipette --lines 50
+Пароль админа не выводится в логах
+Значит пользователи уже есть. Проверьте:
+
+sql
+USE pipette;
+SELECT id, login FROM users;
+Если есть строки — удалите всех:
+
+sql
+DELETE FROM users;
+Перезапустите:
+
+powershell
+pm2 restart pipette
+Пароль появится в логах.
+
+Хочу задать пароль админа вручную
+В docker-compose.yaml (если используете Docker) или в .env (если запускаете напрямую) добавьте:
+
+env
+SEED_ADMIN_PASSWORD=MyStrongPass123!
+Тогда при первом запуске админ создастся с этим паролем. Пароль должен соответствовать политике (≥8, строчная+заглавная+цифра+спецсимвол, без пробелов).
+
+Быстрая шпаргалка
+powershell
+# 1. Остановить
+pm2 stop pipette
+
+# 2. Удалить и создать БД
+& "C:\Program Files\MariaDB 11.8\bin\mysql.exe" -uroot -p
+# в MariaDB:
+DROP DATABASE IF EXISTS pipette;
+CREATE DATABASE pipette CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON pipette.* TO 'pipette'@'%';
+FLUSH PRIVILEGES;
+exit
+
+# 3. Запустить
+pm2 start pipette
+pm2 logs pipette
+
+# 4. Открыть http://localhost:3000
+Важно: старые данные будут удалены безвозвратно. Если есть что-то ценное — сначала сделайте экспорт из приложения (Экспорт → Excel) или сделайте дамп базы:
+
+powershell
+& "C:\Program Files\MariaDB 11.8\bin\mysqldump.exe" -uroot -p pipette > backup.sql
+
