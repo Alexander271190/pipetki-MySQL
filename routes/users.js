@@ -177,6 +177,12 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 // ============================================================
 router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
   try {
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({
+        error: 'Нельзя удалить собственную учётную запись'
+      });
+    }
+
     const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
     if (!users.length) return res.status(404).json({ error: 'Не найден' });
 
