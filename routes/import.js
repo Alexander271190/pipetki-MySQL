@@ -395,18 +395,10 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         if (!id) {
           let prefix = null;
 
-          try {
-            const [rows] = await conn.query(
-              "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-            );
-            if (rows.length && rows[0].setting_value) {
-              const types = db.safeParse(rows[0].setting_value, []);
-              const found = types.find(t => t.value === eqType);
-              if (found && found.prefix && found.prefix.trim()) {
-                prefix = found.prefix.trim().toUpperCase();
-              }
-            }
-          } catch (e) { /* fallback ниже */ }
+          const found = (typesCache || []).find(t => t.value === eqType);
+          if (found && found.prefix && found.prefix.trim()) {
+            prefix = found.prefix.trim().toUpperCase();
+          }
 
           if (!prefix) {
             const fallback = {
