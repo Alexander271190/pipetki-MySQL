@@ -132,7 +132,16 @@
       </table>
     </div>
 
-    <div class="empty-state" id="empty-state" style="display:none">
+        <div class="pagination" id="pagination">
+      <button class="pagination-btn" id="page-prev" onclick="changePage(-1)">← Назад</button>
+      <span class="pagination-info">
+        Стр. <strong id="page-current">1</strong> из <strong id="page-total">1</strong>
+        · <span id="page-count">0</span> записей
+      </span>
+      <button class="pagination-btn" id="page-next" onclick="changePage(1)">Вперёд →</button>
+    </div>
+
+  <div class="empty-state" id="empty-state" style="display:none">
   <div class="icon"><i class="fa-solid fa-flask-vial"></i></div>
       <p>Оборудования пока нет. Нажмите «Добавить оборудование», чтобы начать.</p>
     </div>
@@ -216,9 +225,10 @@
     </div>
 
     <div style="margin-bottom:15px;padding:10px 12px;background:#fef9c3;border-left:3px solid #eab308;border-radius:8px;font-size:.82rem;color:#854d0e;">
-      ℹ️ На внешнюю поверку отправляются только <strong>пипетки (дозаторы)</strong>. Для прочего оборудования используйте <strong>✔️ Быстрая поверка</strong>.
+     ℹ️ На внешнюю поверку отправляются типы оборудования, у которых в настройках указано <strong>«📦 Внешняя (с отправкой)»</strong>. Для оборудования с поверкой на месте используйте <strong>✔️ Быстрая поверка</strong>.
     </div>
 
+    <div id="replacement-options" style="margin-bottom:15px;"></div>
     <form id="bulk-send-form" onsubmit="saveBulkSend(event)" novalidate>
       <div class="form-row">
         <div class="form-group">
@@ -290,6 +300,7 @@
       </div>
 
       <div id="bulk-return-items-container" style="margin:15px 0;"></div>
+      <div id="return-replacements" style="display:none;"></div>
 
       <div class="form-group">
         <label>Примечание (общее для всех)</label>
