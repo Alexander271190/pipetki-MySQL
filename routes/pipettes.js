@@ -245,7 +245,8 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
         id, serial, manufacturer, model,
         equipmentType || 'pipette', volume, department,
         interval || 12, lastCalibration, cert,
-        result || 'pass', active !== false ? 1 : 0,
+        result || 'pass',
+        (active === false || active === 0 || active === 'false' || active === '0') ? 0 : 1,
         responsible, location, notes
       ]
     );
@@ -438,10 +439,21 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
   try {
     await conn.beginTransaction();
 
-    const successful = [];
+        const successful = [];
     const skipped = [];
     const notFound = [];
     let skippedReplacements = [];
+
+    // 🛡️ Один раз читаем типы, чтобы не дёргать БД в цикле
+    const [typeRows] = await conn.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    const typesCache = db.safeParse(typeRows[0] ? typeRows[0].setting_value : null, []);
+    const isExternalType = (t) => {
+      const found = typesCache.find(x => x.value === t);
+      if (!found) return true;
+      return (found.calibrationPlace || 'internal') === 'external';
+    };
 
     for (const id of ids) {
       const [rows] = await conn.query(
@@ -453,8 +465,7 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
       if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
 
       // 🛡️ Только external-типы
-      const externalOk = await isExternalCalibrationServer(rows[0].equipment_type);
-      if (!externalOk) { skipped.push(id); continue; }
+      if (!isExternalType(rows[0].equipment_type)) { skipped.push(id); continue; }
 
       if (rows[0].sent_for_calibration) { skipped.push(id); continue; }
 
@@ -582,6 +593,17 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
     const skipped = [];
     let missingReplacements = [];
 
+    // 🛡️ Один раз читаем типы, чтобы не дёргать БД в цикле
+    const [typeRows] = await conn.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    const typesCache = db.safeParse(typeRows[0] ? typeRows[0].setting_value : null, []);
+    const isExternalType = (t) => {
+      const found = typesCache.find(x => x.value === t);
+      if (!found) return true;
+      return (found.calibrationPlace || 'internal') === 'external';
+    };
+
     for (const item of items) {
       if (!item.id) { skipped.push('?'); continue; }
 
@@ -592,9 +614,8 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
       if (!rows.length) { skipped.push(item.id); continue; }
       if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
 
-      // 🛡️ Только external-типы
-      const externalOk = await isExternalCalibrationServer(rows[0].equipment_type);
-      if (!externalOk) { skipped.push(item.id); continue; }
+       // 🛡️ Только external-типы
+      if (!isExternalType(rows[0].equipment_type)) { skipped.push(item.id); continue; }
 
       if (!rows[0].sent_for_calibration) { skipped.push(item.id); continue; }
 
