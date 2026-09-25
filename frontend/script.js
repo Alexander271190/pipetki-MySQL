@@ -4236,5 +4236,27 @@ async function exportHistoryToPDF() {
   showToast(`PDF: ${history.length} записей`, 'success');
 }
 
-console.log('🔬 Система учёта оборудования запущена');
-console.log('👤 Начальный пользователь: admin (пароль — в логах сервера при первом запуске)');
+// ============================================================
+// ТЁМНАЯ ТЕМА
+// ============================================================
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('pipette_theme', theme); } catch (e) {}
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// Применяем сохранённую тему сразу (без мигания)
+(function initTheme() {
+  let saved = 'light';
+  try { saved = localStorage.getItem('pipette_theme') || 'light'; } catch (e) {}
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+})();
+
