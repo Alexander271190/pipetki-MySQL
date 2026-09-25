@@ -1024,3 +1024,490 @@ tbody tr.row-fail:has(.row-checkbox:checked),
 tbody tr.row-warn:has(.row-checkbox:checked) {
   background: #eef2ff;
 }
+
+/* ============================================================
+   ТЁМНАЯ ТЕМА
+   ============================================================ */
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* ── Основной фон и текст ── */
+html[data-theme="dark"] body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .container {
+  color: #e2e8f0;
+}
+
+/* ── Шапка ── */
+html[data-theme="dark"] .header {
+  background: linear-gradient(135deg, #0a0f1f, #0f172a);
+}
+
+html[data-theme="dark"] .user-info {
+  background: rgba(255, 255, 255, .08);
+}
+
+/* ── Баннер ── */
+html[data-theme="dark"] .alert-banner {
+  background: #422006;
+  border-color: #78350f;
+  color: #fcd34d;
+}
+
+/* ── Тулбар ── */
+html[data-theme="dark"] .toolbar {
+  background: #1e293b;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .4);
+}
+
+html[data-theme="dark"] .toolbar input,
+html[data-theme="dark"] .toolbar select {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .toolbar input:focus,
+html[data-theme="dark"] .toolbar select:focus {
+  border-color: #818cf8;
+}
+
+/* ── Кнопка secondary ── */
+html[data-theme="dark"] .btn-secondary {
+  background: linear-gradient(135deg, #334155 0%, #273449 100%);
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+html[data-theme="dark"] .btn-secondary:hover {
+  background: linear-gradient(135deg, #3e4e68 0%, #334155 100%);
+  border-color: #64748b;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .btn-outline {
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .btn-outline:hover {
+  background: #273449;
+  border-color: #64748b;
+}
+
+/* ── Таблица ── */
+html[data-theme="dark"] .table-wrapper {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
+}
+
+html[data-theme="dark"] table {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] thead {
+  background: #0f172a;
+}
+
+html[data-theme="dark"] th {
+  color: #e2e8f0;
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] th:hover {
+  background: #1e293b;
+}
+
+html[data-theme="dark"] td {
+  border-top-color: #334155;
+  color: #e2e8f0;
+  background: transparent;
+}
+
+html[data-theme="dark"] tbody tr:nth-child(even),
+html[data-theme="dark"] tbody tr:nth-child(even) td {
+  background: #1e293b;
+}
+
+html[data-theme="dark"] tbody tr:hover,
+html[data-theme="dark"] tbody tr:hover td {
+  background: #273449;
+}
+
+html[data-theme="dark"] td strong {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] td small {
+  color: #94a3b8;
+}
+
+/* ── Подсветка строк в тёмной теме ── */
+html[data-theme="dark"] tbody tr.row-danger,
+html[data-theme="dark"] tbody tr.row-danger td {
+  background: rgba(220, 38, 38, .1);
+}
+html[data-theme="dark"] tbody tr.row-danger:hover,
+html[data-theme="dark"] tbody tr.row-danger:hover td {
+  background: rgba(220, 38, 38, .2);
+}
+
+html[data-theme="dark"] tbody tr.row-fail,
+html[data-theme="dark"] tbody tr.row-fail td {
+  background: rgba(220, 38, 38, .1);
+}
+html[data-theme="dark"] tbody tr.row-fail:hover,
+html[data-theme="dark"] tbody tr.row-fail:hover td {
+  background: rgba(220, 38, 38, .2);
+}
+
+html[data-theme="dark"] tbody tr.row-warn,
+html[data-theme="dark"] tbody tr.row-warn td {
+  background: rgba(234, 179, 8, .08);
+}
+html[data-theme="dark"] tbody tr.row-warn:hover,
+html[data-theme="dark"] tbody tr.row-warn:hover td {
+  background: rgba(234, 179, 8, .18);
+}
+
+html[data-theme="dark"] tbody tr.row-danger:nth-child(even),
+html[data-theme="dark"] tbody tr.row-danger:nth-child(even) td,
+html[data-theme="dark"] tbody tr.row-fail:nth-child(even),
+html[data-theme="dark"] tbody tr.row-fail:nth-child(even) td {
+  background: rgba(220, 38, 38, .12);
+}
+html[data-theme="dark"] tbody tr.row-warn:nth-child(even),
+html[data-theme="dark"] tbody tr.row-warn:nth-child(even) td {
+  background: rgba(234, 179, 8, .1);
+}
+
+html[data-theme="dark"] tbody tr:has(.row-checkbox:checked),
+html[data-theme="dark"] tbody tr:has(.row-checkbox:checked) td {
+  background: rgba(99, 102, 241, .15);
+}
+html[data-theme="dark"] tbody tr:has(.row-checkbox:checked):hover,
+html[data-theme="dark"] tbody tr:has(.row-checkbox:checked):hover td {
+  background: rgba(99, 102, 241, .25);
+}
+
+/* ── Пагинация ── */
+html[data-theme="dark"] .pagination {
+  background: #273449;
+}
+
+html[data-theme="dark"] .pagination-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .pagination-btn:hover:not(:disabled) {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .pagination-info {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .pagination-info strong {
+  color: #e2e8f0;
+}
+
+/* ── Модальные окна ── */
+html[data-theme="dark"] .modal {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .modal h2,
+html[data-theme="dark"] .modal h3 {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .modal p {
+  color: #94a3b8;
+}
+
+/* ── Формы ── */
+html[data-theme="dark"] .form-group label {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .form-group input,
+html[data-theme="dark"] .form-group select,
+html[data-theme="dark"] .form-group textarea {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .form-group input:focus,
+html[data-theme="dark"] .form-group select:focus,
+html[data-theme="dark"] .form-group textarea:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, .2);
+}
+
+html[data-theme="dark"] .form-group input::placeholder,
+html[data-theme="dark"] .form-group textarea::placeholder {
+  color: #64748b;
+}
+
+/* ── Панель фильтра ── */
+html[data-theme="dark"] .filter-panel {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .filter-panel .form-group label {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .filter-panel .form-group input,
+html[data-theme="dark"] .filter-panel .form-group select {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+/* ── Меню экспорта ── */
+html[data-theme="dark"] .dropdown-menu {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .dropdown-item {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .dropdown-item:hover {
+  background: #273449;
+  color: #ffffff;
+}
+
+/* ── Настройки ── */
+html[data-theme="dark"] .settings-tabs {
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] .settings-tabs .tab-btn {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .settings-tabs .tab-btn:hover {
+  background: #273449;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .field-settings-table th {
+  background: #273449;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .field-settings-table td {
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] .field-settings-table input,
+html[data-theme="dark"] .field-settings-table select,
+html[data-theme="dark"] .field-settings-table textarea {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .settings-form {
+  background: #273449;
+}
+
+html[data-theme="dark"] .settings-form h4 {
+  color: #e2e8f0;
+}
+
+/* ── Лог ── */
+html[data-theme="dark"] .log-container {
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .log-table th {
+  background: #273449;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .log-table td {
+  border-bottom-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .log-table .timestamp {
+  color: #94a3b8;
+}
+
+/* ── История ── */
+html[data-theme="dark"] .info-grid {
+  background: #273449;
+}
+
+html[data-theme="dark"] .info-grid span {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .timeline::before {
+  background: #334155;
+}
+
+html[data-theme="dark"] .timeline-item {
+  border-left-color: #334155 !important;
+}
+
+html[data-theme="dark"] .timeline-item > div[style*="border-left"] {
+  border-left-color: #334155 !important;
+}
+
+html[data-theme="dark"] .history-header h3 {
+  color: #e2e8f0;
+}
+
+/* ── Подтверждение ── */
+html[data-theme="dark"] .confirm-modal h3 {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .confirm-message {
+  color: #94a3b8;
+}
+
+/* ── Напоминания ── */
+html[data-theme="dark"] .reminder-box {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .reminder-title {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .reminder-subtitle {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .reminder-list li.danger {
+  background: rgba(220, 38, 38, .15);
+}
+
+html[data-theme="dark"] .reminder-list li.warn {
+  background: rgba(234, 179, 8, .15);
+}
+
+html[data-theme="dark"] .reminder-list li .pip-id {
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .reminder-list li .pip-detail {
+  color: #94a3b8;
+}
+
+/* ── Пустое состояние ── */
+html[data-theme="dark"] .empty-state {
+  color: #94a3b8;
+}
+
+/* ── Настройки вида пользователя ── */
+html[data-theme="dark"] .prefs-item:hover {
+  background: #273449;
+}
+
+html[data-theme="dark"] .prefs-item .prefs-move button {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] .prefs-hint {
+  background: #273449;
+  color: #94a3b8;
+  border-left-color: #475569;
+}
+
+html[data-theme="dark"] .prefs-tabs {
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] .prefs-tab {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .prefs-tab:hover {
+  background: #273449;
+  color: #e2e8f0;
+}
+
+/* ── Инпут свидетельства в модалке возврата ── */
+html[data-theme="dark"] .bulk-return-cert-input {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+/* ── Модалка подтверждения ── */
+html[data-theme="dark"] .modal-overlay {
+  background: rgba(0, 0, 0, .7);
+}
+
+/* ── Кнопка переключения темы в шапке ── */
+#theme-btn {
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px 10px;
+}
+
+/* ── Бейджи типов ── */
+html[data-theme="dark"] .badge-pipette {
+  background: #0c4a6e;
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .badge-other {
+  background: #4c1d95;
+  color: #c4b5fd;
+}
+
+/* ── Статусы ── */
+html[data-theme="dark"] .status-ok {
+  background: #14532d;
+  color: #86efac;
+}
+
+html[data-theme="dark"] .status-warn {
+  background: #422006;
+  color: #fcd34d;
+}
+
+html[data-theme="dark"] .status-danger,
+html[data-theme="dark"] .status-fail {
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+html[data-theme="dark"] .status-inactive,
+html[data-theme="dark"] .status-unknown {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .status-sent {
+  background: #0c4a6e;
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .status-wip {
+  background: #422006;
+  color: #fcd34d;
+}
