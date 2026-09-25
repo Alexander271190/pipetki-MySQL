@@ -36,7 +36,7 @@ function sanitizeCsvCell(value) {
   let s = String(value == null ? '' : value);
 
   // Гасим формулы: ведущий апостроф перед опасным первым символом
-  if (/^[=+\-@\t\r]/.test(s)) {
+  if (/^[=+\-@\t\r\n|]/.test(s)) {
     s = "'" + s;
   }
 
@@ -126,7 +126,14 @@ function showToast(msg, type) {
 let _confirmResolver = null;
 
 function showConfirm(message, options = {}) {
-    return new Promise(resolve => {
+  // 🛡️ Если уже открыт confirm — сначала закрываем предыдущий
+  if (_confirmResolver) {
+    const prev = _confirmResolver;
+    _confirmResolver = null;
+    try { prev(false); } catch (e) {}
+  }
+
+  return new Promise(resolve => {
     _confirmResolver = resolve;
     const modal = document.getElementById('confirm-modal');
     const icon  = document.getElementById('confirm-icon');
@@ -385,8 +392,9 @@ async function impersonateUser(userId) {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
 
-    myPrefs = { visibleFields: null, tableColumns: null };
+     myPrefs = { visibleFields: null, tableColumns: null };
     _dataLoadedForUser = null;
+    _lastPermsCheck = 0;   // 🛡️ сброс — при следующем запросе права обновятся
 
     // 🆕 Очищаем данные предыдущего пользователя,
     // чтобы не показывать чужие, пока не загрузились свои
@@ -414,8 +422,9 @@ function stopImpersonate() {
     user: originalUser,
     token: originalToken
   }));
-  myPrefs = { visibleFields: null, tableColumns: null };
+    myPrefs = { visibleFields: null, tableColumns: null };
   _dataLoadedForUser = null;
+  _lastPermsCheck = 0;   // 🛡️ сброс — права перечитаются сразу
 
   // 🆕 Очищаем данные impersonated пользователя
   pipettes = [];
@@ -3466,11 +3475,13 @@ async function saveBulkReturn(e) {
     });
 
     let msg = res.message || `Возврат оформлен для ${items.length} единиц`;
+    let toastType = 'success';
     if (res.missingReplacements && res.missingReplacements.length > 0) {
-      msg += `. Не найдено замен: ${res.missingReplacements.length}`;
+      msg += `. ⚠️ Замены не возвращены на склад: ${res.missingReplacements.length}`;
+      toastType = 'error';
       console.warn('⚠️ Пропущенные замены:', res.missingReplacements);
     }
-    showToast(msg, 'success');
+    showToast(msg, toastType);
 
     clearSelection();
     closeBulkReturnModal();
