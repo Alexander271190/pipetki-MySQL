@@ -348,9 +348,9 @@ router.get('/user-preferences/:userId', authenticate, requireRole(['admin']), as
     );
     if (!rows.length) return res.json({});
     res.json(db.safeParse(rows[0].preferences, {}));
-  } catch (e) {
+    } catch (e) {
     console.error('user-preferences GET error:', e);
-    res.json({});
+    res.status(500).json({ error: 'Ошибка загрузки настроек пользователя' });
   }
 });
 
@@ -397,9 +397,9 @@ router.get('/my-preferences', authenticate, async (req, res) => {
     );
     if (!rows.length) return res.json({});
     res.json(db.safeParse(rows[0].preferences, {}));
-  } catch (e) {
+    } catch (e) {
     console.error('my-preferences GET error:', e);
-    res.json({});
+    res.status(500).json({ error: 'Ошибка загрузки настроек' });
   }
 });
 
