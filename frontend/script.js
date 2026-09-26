@@ -1290,8 +1290,23 @@ async function generateFormFields(data = null) {
             { value: 'true', label: '✅ В работе' },
             { value: 'false', label: '⛔ Не используется' }
           ];
-        } else {
+                } else {
           opts = f.options || [];
+        }
+
+        // 🛡️ Пустая опция для необязательных полей —
+        // чтобы при создании не подставлялся первый по списку
+        const valStr = (val == null) ? '' : String(val);
+        const hasEmpty = opts.some(o => String(typeof o === 'object' ? o.value : o) === '');
+        if (!f.required && !hasEmpty && opts.length > 0) {
+          opts = [{ value: '', label: '— не указан —' }, ...opts];
+        }
+
+        // 🛡️ Если сохранённое значение не найдено среди опций —
+        // показываем его как «битую» опцию, чтобы не затереть молча
+        const hasVal = opts.some(o => String(typeof o === 'object' ? o.value : o) === valStr);
+        if (valStr && !hasVal) {
+          opts = [...opts, { value: valStr, label: `${valStr}  ⚠ (нет в списке)` }];
         }
 
         if (opts.length === 0) opts = [{ value: '', label: '—' }];
@@ -2210,13 +2225,7 @@ async function renderFieldsSettings(skipFetch = false) {
           <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},1)">▼</button>
         </div></td>
         <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
-        <td><select onchange="onFieldTypeChange(${i}, this.value)">
-          <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
-          <option value="number" ${f.type === 'number' ? 'selected' : ''}>Число</option>
-          <option value="date" ${f.type === 'date' ? 'selected' : ''}>Дата</option>
-          <option value="select" ${f.type === 'select' ? 'selected' : ''}>Список</option>
-          <option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>Текст. область</option>
-        </select></td>
+        <td>${renderFieldTypeSelect(i, f)}</td>
         <td style="text-align:center;"><input type="checkbox" ${f.required ? 'checked' : ''} onchange="_cachedFields[${i}].required=this.checked"></td>
         <td style="text-align:center;"><input type="checkbox" ${f.enabled ? 'checked' : ''} onchange="_cachedFields[${i}].enabled=this.checked"></td>
        <td>${renderFieldOptionsCell(i, f.type)}</td>
@@ -2238,6 +2247,31 @@ function renderFieldOptionsCell(idx, type) {
   }
   return '—';
 }
+
+// Системные поля — их тип зафиксирован логикой приложения
+const SYSTEM_FIELD_IDS = ['id', 'department', 'equipmentType', 'result', 'active'];
+
+function renderFieldTypeSelect(idx, f) {
+  const typeLabels = {
+    text: 'Текст', number: 'Число', date: 'Дата',
+    select: 'Список', textarea: 'Текст. область'
+  };
+
+  if (SYSTEM_FIELD_IDS.includes(f.id)) {
+    return `<select disabled title="Системное поле — тип фиксирован">
+      <option>${typeLabels[f.type] || f.type}</option>
+    </select>`;
+  }
+
+  return `<select onchange="onFieldTypeChange(${idx}, this.value)">
+    <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
+    <option value="number" ${f.type === 'number' ? 'selected' : ''}>Число</option>
+    <option value="date" ${f.type === 'date' ? 'selected' : ''}>Дата</option>
+    <option value="select" ${f.type === 'select' ? 'selected' : ''}>Список</option>
+    <option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>Текст. область</option>
+  </select>`;
+}
+
 function onFieldTypeChange(idx, type) {
   _cachedFields[idx].type = type;
   const row = document.querySelector('.field-settings-table tbody').children[idx];
@@ -2698,6 +2732,9 @@ function onUserRoleChange(role) {
       cb.checked = true;
       cb.disabled = true;
     } else {
+      // Переход admin → user: сбрасываем «унаследованные» галочки,
+      // чтобы случайно не выдать новому пользователю полные права
+      if (cb.disabled) cb.checked = false;
       cb.disabled = false;
     }
   });
@@ -2728,7 +2765,23 @@ async function editUserSetting(id) {
     document.getElementById('usr-login').value = u.login;
     document.getElementById('usr-fullname').value = u.fullName || u.full_name;
     document.getElementById('usr-position').value = u.position;
-    document.getElementById('usr-department').value = u.department || '';
+        // 🛡️ Отдел: безопасная установка с защитой от «битого» значения
+    const deptSel = document.getElementById('usr-department');
+    // Чистим «битые» опции, оставшиеся от предыдущего редактирования
+    Array.from(deptSel.options).forEach(o => {
+      if (o.dataset.broken === '1') o.remove();
+    });
+    deptSel.value = u.department || '';
+    if (u.department && deptSel.value !== u.department) {
+      const opt = document.createElement('option');
+      opt.value = u.department;
+      opt.textContent = u.department + '  ⚠ (нет в списке)';
+      opt.style.color = '#dc2626';
+      opt.dataset.broken = '1';
+      deptSel.appendChild(opt);
+      deptSel.value = u.department;
+      showToast(`Отдел «${u.department}» отсутствует в справочнике`, 'error');
+    }
     document.getElementById('usr-role').value = u.role;
     document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Редактирование: ' + esc(u.login);
 
