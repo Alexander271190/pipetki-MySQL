@@ -5,6 +5,64 @@ const { authenticate, requirePermission } = require('../middleware/auth');
 const router = express.Router();
 
 // ============================================================
+// 🆕 Автоперегенерация ID при смене типа оборудования
+// ============================================================
+async function maybeRegenerateId(oldId, oldType, newType, conn) {
+  if (!newType || newType === oldType) return null;
+
+  // 1. Парсим старый ID: PREFIX-DIGITS
+  const m = String(oldId).match(/^([A-Za-z]+)-(\d+)$/);
+  if (!m) return null;
+
+  const oldPrefix = m[1].toUpperCase();
+  const numWidth  = m[2].length;
+  const num       = parseInt(m[2], 10);
+  if (!Number.isFinite(num)) return null;
+
+  // 2. Достаём префикс нового типа
+  const [rows] = await conn.query(
+    "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+  );
+  if (!rows.length || !rows[0].setting_value) return null;
+
+  const types = db.safeParse(rows[0].setting_value, []);
+  const type  = types.find(t => t.value === newType);
+  if (!type || !type.prefix) return null;
+
+  const newPrefix = String(type.prefix).trim().toUpperCase();
+  if (!newPrefix || newPrefix === oldPrefix) return null;
+
+  // 3. Ищем первый свободный: NEW-XXX, NEW-XXX+1, ...
+  for (let i = 0; i < 9999; i++) {
+    const candidate = `${newPrefix}-${String(num + i).padStart(numWidth, '0')}`;
+    const [ex] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [candidate]);
+    if (!ex.length) return candidate;
+  }
+  return null;
+}
+
+async function applyIdChange(oldId, newId, conn) {
+  await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+  try {
+    await conn.query(
+      'UPDATE calibration_history SET pipette_id = ? WHERE pipette_id = ?',
+      [newId, oldId]
+    );
+    await conn.query(
+      'UPDATE pipettes SET replaced_by = ? WHERE replaced_by = ?',
+      [newId, oldId]
+    );
+    await conn.query(
+      'UPDATE pipettes SET replacing = ? WHERE replacing = ?',
+      [newId, oldId]
+    );
+    await conn.query('UPDATE pipettes SET id = ? WHERE id = ?', [newId, oldId]);
+  } finally {
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+  }
+}
+
+// ============================================================
 // ПРОВЕРКА ДОСТУПА ПО ОТДЕЛУ
 // ============================================================
 function canAccessDepartment(user, department) {
@@ -297,8 +355,8 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
   const updates = req.body;
 
   const [pipRows] = await db.query(
-    'SELECT department FROM pipettes WHERE id = ?', [req.params.id]
-  );
+  'SELECT department, equipment_type FROM pipettes WHERE id = ?', [req.params.id]
+);
   if (!pipRows.length) {
     return res.status(404).json({ error: 'Оборудование не найдено' });
   }
@@ -349,16 +407,45 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
   fields.push('updated_at = CURRENT_TIMESTAMP');
   values.push(req.params.id);
 
-  const conn = await db.getConnection();
+    const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+
+    // 🆕 Проверяем, нужна ли смена ID
+    const oldType = pipRows[0].equipment_type;
+    const newType = updates.equipmentType;
+    let regeneratedId = null;
+
+    if (newType !== undefined && newType !== oldType) {
+      regeneratedId = await maybeRegenerateId(req.params.id, oldType, newType, conn);
+    }
+
+    // Обычное обновление полей
     await conn.query(`UPDATE pipettes SET ${fields.join(', ')} WHERE id = ?`, values);
+
+    // 🆕 Если нужно — меняем ID и все связи
+    if (regeneratedId) {
+      await applyIdChange(req.params.id, regeneratedId, conn);
+    }
+
+    // Аудит
+    const auditDetails = regeneratedId
+      ? `${req.params.id} → ${regeneratedId} (смена типа ${oldType} → ${newType})`
+      : req.params.id;
+
     await conn.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Редактирование оборудования', req.params.id]
+      [req.user.id, req.user.full_name, 'Редактирование оборудования', auditDetails]
     );
+
     await conn.commit();
-    res.json({ message: 'Оборудование обновлено' });
+
+    res.json({
+      message: 'Оборудование обновлено',
+      idChanged: !!regeneratedId,
+      newId: regeneratedId || undefined,
+      oldId: regeneratedId ? req.params.id : undefined
+    });
   } catch (e) {
     await conn.rollback();
     console.error(e);
