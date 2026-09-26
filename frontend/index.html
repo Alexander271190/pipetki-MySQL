@@ -20,11 +20,11 @@
       <form class="auth-form" id="login-form" onsubmit="loginUser(event)">
         <div class="form-group">
           <label>Логин</label>
-          <input type="text" id="login-username" placeholder="Введите логин" required>
+          <input type="text" id="login-username" placeholder="Введите логин" autocomplete="username">
         </div>
         <div class="form-group">
           <label>Пароль</label>
-          <input type="password" id="login-password" placeholder="Введите пароль" required>
+          <input type="password" id="login-password" placeholder="Введите пароль" autocomplete="current-password">
         </div>
         <div id="login-error" class="auth-error"></div>
         <button type="submit" class="btn btn-primary">
