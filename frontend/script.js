@@ -488,9 +488,7 @@ async function loadPipetteData() {
       _responsibles = [];
       console.warn('Не удалось загрузить список ответственных:', e.message);
     }
-
-    await loadDepartments();
-
+    
     await loadDepartments();
     await loadFilterConfig();
     render();
