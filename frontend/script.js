@@ -3983,7 +3983,7 @@ function openChangePasswordModal(force) {
   }
 
   if (modal) modal.classList.add('active');
-  if (newInput) setTimeout(() => newInput.focus(), 100);
+  if (currentInput) setTimeout(() => currentInput.focus(), 100);
 }
 
 function closeChangePasswordModal() {
