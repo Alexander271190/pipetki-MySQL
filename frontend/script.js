@@ -482,11 +482,16 @@ async function loadPipetteData() {
       exportFields = null;
     }
 
-    try {
-      _responsibles = await apiRequest('/users/responsibles');
-    } catch (e) {
+    // 🛡️ Список ответственных нужен только тем, кто может редактировать
+    if (currentUser.role === 'admin' || isSeniorLab()) {
+      try {
+        _responsibles = await apiRequest('/users/responsibles');
+      } catch (e) {
+        _responsibles = [];
+        console.warn('Не удалось загрузить список ответственных:', e.message);
+      }
+    } else {
       _responsibles = [];
-      console.warn('Не удалось загрузить список ответственных:', e.message);
     }
     
     await loadDepartments();
