@@ -6,6 +6,27 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 // ============================================================
+// СПИСОК ОТВЕТСТВЕННЫХ (для поля «Ответственный»)
+// Доступно всем авторизованным пользователям
+// ============================================================
+router.get('/responsibles', authenticate, async (req, res) => {
+  try {
+    const [users] = await db.query(
+      'SELECT id, full_name, login, department FROM users ORDER BY full_name'
+    );
+    res.json(users.map(u => ({
+      id: u.id,
+      fullName: u.full_name,
+      login: u.login,
+      department: u.department
+    })));
+  } catch (e) {
+    console.error('GET /users/responsibles:', e);
+    res.status(500).json({ error: 'Ошибка загрузки списка ответственных' });
+  }
+});
+
+// ============================================================
 // Генератор разового пароля (12 символов, соответствует политике)
 // ============================================================
 function generateTempPassword() {
