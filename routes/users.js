@@ -9,7 +9,7 @@ const router = express.Router();
 // СПИСОК ОТВЕТСТВЕННЫХ (для поля «Ответственный»)
 // Доступно всем авторизованным пользователям
 // ============================================================
-router.get('/responsibles', authenticate, async (req, res) => {
+router.get('/responsibles', authenticate, requireRole(['admin', 'senior_lab']), async (req, res) => {
   try {
     const [users] = await db.query(
       'SELECT id, full_name, login, department FROM users ORDER BY full_name'
