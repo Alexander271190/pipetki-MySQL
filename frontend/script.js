@@ -14,6 +14,7 @@ let selectedPipettes = new Set();
 let myPrefs = { visibleFields: null, tableColumns: null };
 let _equipmentTypes = [];            
 let _cachedEquipmentTypes = []; 
+let _responsibles = [];                
 let _bulkSendIds = [];    
 let _bulkReturnIds = [];
 let _dataLoadedForUser = null;
@@ -480,6 +481,15 @@ async function loadPipetteData() {
     } catch (e) {
       exportFields = null;
     }
+
+    try {
+      _responsibles = await apiRequest('/users/responsibles');
+    } catch (e) {
+      _responsibles = [];
+      console.warn('Не удалось загрузить список ответственных:', e.message);
+    }
+
+    await loadDepartments();
 
     await loadDepartments();
     await loadFilterConfig();
@@ -1272,7 +1282,14 @@ async function generateFormFields(data = null) {
         let opts = [];
 
         if (f.id === 'department') {
-          opts = departmentsList.length ? departmentsList : (f.options || []);
+          // 🛡️ User с «только свой отдел» — только свой
+          let deps = departmentsList;
+          if (currentUser.role !== 'admin'
+              && currentUser.onlyOwnDepartment
+              && currentUser.department) {
+            deps = [currentUser.department];
+          }
+          opts = deps.length ? deps : (f.options || []);
 
       } else if (f.id === 'equipmentType') {
       opts = _equipmentTypes.length > 0
@@ -1285,12 +1302,25 @@ async function generateFormFields(data = null) {
             { value: 'fail', label: '❌ Брак' },
             { value: 'wip', label: '⏳ В процессе' }
           ];
-        } else if (f.id === 'active') {
+                } else if (f.id === 'active') {
           opts = [
             { value: 'true', label: '✅ В работе' },
             { value: 'false', label: '⛔ Не используется' }
           ];
-                } else {
+        } else if (f.id === 'responsible') {
+          // 🛡️ Admin — любой из списка, senior/user — только он сам
+          if (currentUser.role === 'admin') {
+            opts = _responsibles.map(u => ({ value: u.fullName, label: u.fullName }));
+            if (!f.required) {
+              opts = [{ value: '', label: '— не указан —' }, ...opts];
+            }
+          } else {
+            const self = currentUser.fullName || '';
+            opts = self
+              ? [{ value: self, label: self }]
+              : [{ value: '', label: '— не указан —' }];
+          }
+        } else {
           opts = f.options || [];
         }
 
@@ -1349,6 +1379,13 @@ async function generateFormFields(data = null) {
         input.style.background = '#f1f5f9';
         input.style.cursor = 'not-allowed';
       }
+            // 🛡️ Ответственный — только админ может менять
+      if (f.id === 'responsible' && currentUser.role !== 'admin') {
+        input.disabled = true;
+        input.style.background = '#f1f5f9';
+        input.style.cursor = 'not-allowed';
+        input.title = 'Только администратор может изменить ответственного';
+      }
 
       div.appendChild(input);
       container.appendChild(div);
@@ -1403,13 +1440,25 @@ async function openModal(id) {
     await generateFormFields(editData);
   } else {
       
-    title.innerHTML = '<i class="fa-solid fa-plus"></i> Добавить оборудование';
+   title.innerHTML = '<i class="fa-solid fa-plus"></i> Добавить оборудование';
     const defaultData = {
       lastCalibration: todayStr(),
       interval: 12,
       result: 'pass',
       active: 'true'
     };
+
+    // 🛡️ Не-админ — ответственный уже предзаполнен им же
+    if (currentUser.role !== 'admin') {
+      defaultData.responsible = currentUser.fullName || '';
+    }
+    // 🛡️ User с onlyOwnDepartment — отдел предзаполнен его отделом
+    if (currentUser.role !== 'admin'
+        && currentUser.onlyOwnDepartment
+        && currentUser.department) {
+      defaultData.department = currentUser.department;
+    }
+
     modal.classList.add('active');
     await generateFormFields(defaultData);
   }
