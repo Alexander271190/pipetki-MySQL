@@ -2644,16 +2644,21 @@ async function renderUsersSettings() {
           <div class="form-group"><label>ФИО *</label><input id="usr-fullname"></div>
           <div class="form-group"><label>Должность *</label><input id="usr-position"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label>Отдел</label><input id="usr-department"></div>
-          <div class="form-group"><label>Роль</label>
-            <select id="usr-role" onchange="onUserRoleChange(this.value)">
-              <option value="user">Пользователь</option>
-              <option value="senior_lab">Старший лаборант</option>
-              <option value="admin">Администратор</option>
-            </select>
-          </div>
-        </div>
+       <div class="form-row">
+  <div class="form-group"><label>Отдел</label>
+    <select id="usr-department">
+      <option value="">— не указан —</option>
+      ${departmentsList.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+    </select>
+  </div>
+  <div class="form-group"><label>Роль</label>
+    <select id="usr-role" onchange="onUserRoleChange(this.value)">
+      <option value="user">Пользователь</option>
+      <option value="senior_lab">Старший лаборант</option>
+      <option value="admin">Администратор</option>
+    </select>
+  </div>
+</div>
         <div class="form-group">
           <label>Права доступа (влияют на видимость кнопок)</label>
           <div class="permissions-group" id="usr-permissions">
