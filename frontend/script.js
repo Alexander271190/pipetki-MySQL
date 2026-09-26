@@ -1536,9 +1536,13 @@ async function savePipette(e) {
   if (!editId) delete data.id;
 
   try {
-    if (editId) {
-      await apiRequest(`/pipettes/${editId}`, 'PUT', data);
-      showToast('Оборудование обновлено', 'success');
+   if (editId) {
+      const res = await apiRequest(`/pipettes/${editId}`, 'PUT', data);
+      if (res.idChanged && res.newId) {
+        showToast(`ID изменён: ${res.oldId} → ${res.newId} (смена типа)`, 'success');
+      } else {
+        showToast('Оборудование обновлено', 'success');
+      }
     } else {
       await apiRequest('/pipettes', 'POST', data);
       showToast('Оборудование добавлено', 'success');
