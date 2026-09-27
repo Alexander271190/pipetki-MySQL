@@ -68,8 +68,15 @@ async function applyIdChange(oldId, newId, conn) {
 function canAccessDepartment(user, department) {
   if (!user) return false;
   if (user.role === 'admin') return true;
+
+  // 🛡️ И.о. — работает в отделе основного
+  if (user.is_acting) {
+    if (!user.acting_department) return false;
+    return department === user.acting_department;
+  }
+
   if (!user.only_own_department) return true;
-  if (!user.department) return false;       // галка есть, отдела нет — не пускаем
+  if (!user.department) return false;
   return department === user.department;
 }
 // 🛡️ Серверный аналог isExternalCalibration из script.js
@@ -91,7 +98,46 @@ async function isExternalCalibrationServer(equipmentType) {
 // Список пипеток
 router.get('/', authenticate, async (req, res) => {
   try {
-       if (req.user.role !== 'admin'
+    // 🛡️ И.о. — только оборудование отдела основного
+    if (req.user.is_acting) {
+      if (!req.user.acting_department) return res.json([]);
+      const [pipettes] = await db.query(
+        `SELECT * FROM pipettes WHERE department = ?`,
+        [req.user.acting_department]
+      );
+      if (!pipettes.length) return res.json([]);
+      // обогащение — как в общем блоке ниже
+      const ids = pipettes.map(p => p.id);
+      const ph  = ids.map(() => '?').join(',');
+      const [counts] = await db.query(
+        `SELECT pipette_id, COUNT(*) AS cnt FROM calibration_history
+         WHERE pipette_id IN (${ph}) GROUP BY pipette_id`,
+        ids
+      );
+      const byId = {};
+      for (const row of counts) byId[row.pipette_id] = row.cnt;
+      for (const p of pipettes) {
+        p.active = !!p.active;
+        p.history_count = byId[p.id] || 0;
+      }
+      const replIds = pipettes.flatMap(p => [p.replaced_by, p.replacing]).filter(Boolean);
+      if (replIds.length) {
+        const uniq = [...new Set(replIds)];
+        const ph2  = uniq.map(() => '?').join(',');
+        const [replRows] = await db.query(
+          `SELECT id, model, manufacturer, location, active, department
+           FROM pipettes WHERE id IN (${ph2})`, uniq);
+        const replById = {};
+        for (const r of replRows) replById[r.id] = r;
+        for (const p of pipettes) {
+          if (p.replaced_by && replById[p.replaced_by]) p.replacement = replById[p.replaced_by];
+          if (p.replacing   && replById[p.replacing])   p.replacedFor = replById[p.replacing];
+        }
+      }
+      return res.json(pipettes);
+    }
+
+    if (req.user.role !== 'admin'
         && req.user.only_own_department
         && !req.user.department) {
       return res.json([]);
@@ -248,12 +294,26 @@ router.get('/:id', authenticate, async (req, res) => {
 
 // Создание
 router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
-  const {
-    id: rawId, serial, manufacturer, model, equipmentType, volume, department, interval,
-    lastCalibration, cert, result, active, responsible, location, notes
+    const {
+    id: rawId, serial, manufacturer, model, equipmentType,
+    interval, lastCalibration, cert, result, active, location, notes
   } = req.body;
 
-    if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
+  let volume      = req.body.volume;
+  let department  = req.body.department;
+  let responsible = req.body.responsible;
+
+  // 🛡️ И.о. — принудительно ответственный и отдел основного
+  if (req.user.is_acting) {
+    responsible = req.user.acting_full_name  || '';
+    department  = req.user.acting_department || '';
+  }
+
+  if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
+
+  if (!responsible) {
+    return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
+  }
 
   // 🛡️ Пользователь с "только свой отдел" не может создавать в чужом отделе
   if (req.user.only_own_department && req.user.role !== 'admin') {
@@ -353,6 +413,12 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 // Обновление
   router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
   const updates = req.body;
+
+  // 🛡️ И.о. — принудительно ответственный и отдел основного
+  if (req.user.is_acting) {
+    updates.responsible = req.user.acting_full_name  || '';
+    updates.department  = req.user.acting_department || '';
+  }
 
   const [pipRows] = await db.query(
   'SELECT department, equipment_type FROM pipettes WHERE id = ?', [req.params.id]
