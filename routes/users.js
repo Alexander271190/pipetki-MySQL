@@ -178,24 +178,30 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
 router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const { login, fullName, position, department, role,
-            onlyOwnDepartment, extraPermissions } = req.body;
+            onlyOwnDepartment, extraPermissions, isActing, actingForId } = req.body;
     const id = req.params.id;
 
-    const missing = [];
+        const missing = [];
     if (!login)    missing.push('Логин');
     if (!fullName) missing.push('ФИО');
     if (!position) missing.push('Должность');
     if (missing.length > 0) {
+      const msg = missing.length === 1
+        ? `Заполните поле «${missing[0]}»`
+        : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+      return res.status(400).json({ error: msg });
+    }
+
+    // 🆕 Проверка и.о. — вставлено СЮДА
+    if (isActing && !actingForId) {
       return res.status(400).json({
-        error: missing.length === 1
-          ? `Заполните поле «${missing[0]}»`
-          : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`
+        error: 'Для и.о. нужно указать, за кого он исполняет обязанности'
       });
     }
 
         if (onlyOwnDepartment && !department) {
       return res.status(400).json({
-        error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
+      error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
                'Заполните поле «Отдел» или снимите галку.'
       });
     }
@@ -226,12 +232,15 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 
     const onlyOwn = onlyOwnDepartment ? 1 : 0;
 
-    await db.query(
+     await db.query(
       `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
-         only_own_department=?, extra_permissions=?, updated_at=CURRENT_TIMESTAMP
+         only_own_department=?, extra_permissions=?,
+         is_acting=?, acting_for_id=?,
+         updated_at=CURRENT_TIMESTAMP
        WHERE id=?`,
       [login, fullName, position, department || '', role || 'user',
-       onlyOwn, JSON.stringify(extraPermissions || []), id]
+       onlyOwn, JSON.stringify(extraPermissions || []),
+       isActing ? 1 : 0, isActing && actingForId ? actingForId : null, id]
     );
 
     res.json({ message: 'Пользователь обновлён' });
