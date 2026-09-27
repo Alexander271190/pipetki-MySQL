@@ -476,10 +476,17 @@ async function loadPipetteData() {
       ];
     }
 
-    try {
+   try {
       exportFields = await apiRequest('/settings/export');
     } catch (e) {
       exportFields = null;
+    }
+
+    // 🆕 Обновляем кэш полей — иначе кастомные колонки/экспорт не подхватятся
+    try {
+      _cachedFields = await apiRequest('/settings/fields');
+    } catch (e) {
+      _cachedFields = _cachedFields || [];
     }
 
     // 🛡️ Список ответственных нужен только тем, кто может редактировать
@@ -593,7 +600,8 @@ function daysLeft(p) {
 // ============================================================
 // ОПРЕДЕЛЕНИЯ КОЛОНОК ТАБЛИЦЫ
 // ============================================================
-const TABLE_COLUMNS = [
+// Системные колонки
+const SYSTEM_TABLE_COLUMNS = [
   { id: 'id',              label: 'ID',            sortable: true,  field: 'id' },
   { id: 'type',            label: 'Тип',           sortable: true,  field: 'equipmentType' },
   { id: 'model',           label: 'Модель',        sortable: true,  field: 'model' },
@@ -614,11 +622,37 @@ const DEFAULT_TABLE_COLUMNS = [
   'lastCalibration', 'nextCalibration', 'responsible', 'status'
 ];
 
+// 🆕 Все колонки: системные + кастомные
+function getAllTableColumns() {
+  const cols = [...SYSTEM_TABLE_COLUMNS];
+  const custom = (_cachedFields || []).filter(f =>
+    f.enabled && !SYSTEM_TABLE_COLUMNS.some(sc => sc.id === f.id)
+  );
+  for (const f of custom) {
+    cols.push({ id: f.id, label: f.label, sortable: true, field: f.id });
+  }
+  return cols;
+}
+
+// 🆕 Дефолтный набор — с кастомными
+function getDefaultTableColumns() {
+  const cols = [...DEFAULT_TABLE_COLUMNS];
+  const custom = (_cachedFields || []).filter(f =>
+    f.enabled && !SYSTEM_TABLE_COLUMNS.some(sc => sc.id === f.id)
+  );
+  for (const f of custom) cols.push(f.id);
+  return cols;
+}
+
+function findColumn(id) {
+  return getAllTableColumns().find(c => c.id === id);
+}
+
 function getActiveTableColumns() {
   if (myPrefs.tableColumns && Array.isArray(myPrefs.tableColumns) && myPrefs.tableColumns.length > 0) {
-    return myPrefs.tableColumns.filter(id => TABLE_COLUMNS.some(c => c.id === id));
+    return myPrefs.tableColumns.filter(id => !!findColumn(id));
   }
-  return DEFAULT_TABLE_COLUMNS;
+  return getDefaultTableColumns();
 }
 
 function getActiveFormFields(allFields) {
@@ -718,13 +752,13 @@ pipettes.forEach(p => {
     <th class="col-checkbox">
       <input type="checkbox" id="select-all-checkbox" onclick="toggleSelectAll(this.checked)" title="Выбрать все">
     </th>
-    ${columns.map(col => {
-      const def = TABLE_COLUMNS.find(c => c.id === col);
+     ${columns.map(col => {
+      const def = findColumn(col);
       if (!def) return '';
       if (def.sortable) {
-        return `<th onclick="sortBy('${def.field}')">${def.label} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
+        return `<th onclick="sortBy('${def.field}')">${esc(def.label)} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
       }
-      return `<th>${def.label}</th>`;
+      return `<th>${esc(def.label)}</th>`;
     }).join('')}
     <th id="actions-header" ${!canManage ? 'style="display:none"' : ''}>Действия</th>
   `;
@@ -833,8 +867,11 @@ const labels = {
           return `<td>${esc(p.cert || '—')}</td>`;
         case 'status':
           return `<td><span class="status-badge status-${status}"><span class="status-dot"></span>${labels[status]}</span></td>`;
-        default:
-          return '<td>—</td>';
+        default: {
+          const raw = p[colId];
+          const val = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
+          return `<td>${val}</td>`;
+        }
       }
     }).join('');
 
@@ -1805,54 +1842,67 @@ async function addCalibrationRecord() {
 // ============================================================
 // ЭКСПОРТ
 // ============================================================
-const EXPORT_FIELD_MAP = {
+const SYSTEM_EXPORT_FIELD_MAP = {
   id: { label: 'ID', get: p => p.id },
   serial: { label: 'Серийный', get: p => p.serial || '' },
   manufacturer: { label: 'Производитель', get: p => p.manufacturer || '' },
-   model: { label: 'Модель', get: p => p.model },
+  model: { label: 'Модель', get: p => p.model },
   equipmentType: {
-  label: 'Тип',
-  get: p => {
-    const t = _equipmentTypes.find(x => x.value === p.equipment_type);
-    return t ? t.label : 'Прочее';
-  }
-},
+    label: 'Тип',
+    get: p => {
+      const t = _equipmentTypes.find(x => x.value === p.equipment_type);
+      return t ? t.label : 'Прочее';
+    }
+  },
   volume: { label: 'Объём', get: p => p.volume || '' },
   department: { label: 'Отдел', get: p => p.department || '' },
   lastCalibration: { label: 'Дата поверки', get: p => formatDate(p.last_calibration) },
   nextCalibration: { label: 'Следующая', get: p => formatDate(getNextDate(p)) },
   interval: { label: 'МПИ', get: p => p.interval || '' },
-daysLeft: {
-  label: 'Дней', get: p => {
-    const s = calcStatus(p); const dl = daysLeft(p);
-    return (s === 'inactive' || s === 'unknown') ? '—'
-      : (s === 'sent' ? 'на поверке'
-      : (s === 'wip' ? 'в процессе'
-      : (s === 'fail' ? 'брак'
-      : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.'))));
-  }
-},
+  daysLeft: {
+    label: 'Дней', get: p => {
+      const s = calcStatus(p); const dl = daysLeft(p);
+      return (s === 'inactive' || s === 'unknown') ? '—'
+        : (s === 'sent' ? 'на поверке'
+        : (s === 'wip' ? 'в процессе'
+        : (s === 'fail' ? 'брак'
+        : (dl < 0 ? 'просрочка ' + Math.abs(dl) + ' дн.' : dl + ' дн.'))));
+    }
+  },
   responsible: { label: 'Ответственный', get: p => p.responsible || '' },
   location: { label: 'Место', get: p => p.location || '' },
   status: {
-  label: 'Статус', get: p => {
-    const L = {
-      ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-      inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак',
-      wip: 'В процессе', unknown: 'Не задано'
-    };
-    return L[calcStatus(p)] || calcStatus(p);
-  }
-},
+    label: 'Статус', get: p => {
+      const L = {
+        ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
+        inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак',
+        wip: 'В процессе', unknown: 'Не задано'
+      };
+      return L[calcStatus(p)] || calcStatus(p);
+    }
+  },
   cert: { label: 'Свидетельство', get: p => p.cert || '' },
   notes: { label: 'Примечание', get: p => p.notes || '' }
 };
 
+// 🆕 Доступ к любому полю экспорта — системному или кастомному
+function getExportField(id) {
+  if (SYSTEM_EXPORT_FIELD_MAP[id]) return SYSTEM_EXPORT_FIELD_MAP[id];
+  const custom = (_cachedFields || []).find(f => f.id === id);
+  if (!custom) return null;
+  return {
+    label: custom.label,
+    get: p => {
+      const v = p[id];
+      return (v === undefined || v === null) ? '' : String(v);
+    }
+  };
+}
 function getActiveExportFields() {
   if (exportFields && Array.isArray(exportFields) && exportFields.length > 0) {
-    return exportFields.filter(f => EXPORT_FIELD_MAP[f]);
+    return exportFields.filter(f => !!getExportField(f));
   }
-  return Object.keys(EXPORT_FIELD_MAP);
+  return getExportFields().map(f => f.id);
 }
 
 async function exportToExcel() {
@@ -1861,12 +1911,19 @@ async function exportToExcel() {
   const data = getFilteredPipettes();
   if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
-  const fields = getActiveExportFields();
-  const headers = fields.map(f => EXPORT_FIELD_MAP[f].label);
+    const fields = getActiveExportFields();
+  const headers = fields.map(f => {
+    const def = getExportField(f);
+    return def ? def.label : f;
+  });
 
   const csvLines = [headers.join(';')];
   data.forEach(p => {
-    const row = fields.map(f => EXPORT_FIELD_MAP[f].get(p));
+    const row = fields.map(f => {
+      const def = getExportField(f);
+      return def ? def.get(p) : '';
+    });
+    
     const line = row.map(v => sanitizeCsvCell(v)).join(';');
     csvLines.push(line);
   });
@@ -1891,13 +1948,17 @@ async function exportToPDF() {
   const today = new Date().toLocaleDateString('ru-RU');
   const user = currentUser ? currentUser.fullName : '';
 
-  const headerCells = fields
-    .map(f => `<th>${esc(EXPORT_FIELD_MAP[f].label)}</th>`)
+    const headerCells = fields
+    .map(f => {
+      const def = getExportField(f);
+      return `<th>${esc(def ? def.label : f)}</th>`;
+    })
     .join('');
 
   const rows = data.map(p => {
     const cells = fields.map(f => {
-      const val = EXPORT_FIELD_MAP[f].get(p);
+      const def = getExportField(f);
+      const val = def ? def.get(p) : '';
       if (f === 'status') {
         const st = calcStatus(p);
         return `<td><span class="status-${st}">${esc(val)}</span></td>`;
@@ -2679,7 +2740,7 @@ async function saveFilters() {
 // ============================================================
 // ВКЛАДКА: ЭКСПОРТ
 // ============================================================
-const EXPORT_FIELDS = [
+const SYSTEM_EXPORT_FIELDS = [
   { id: 'id', label: 'Внутренний номер' },
   { id: 'serial', label: 'Серийный номер' },
   { id: 'manufacturer', label: 'Производитель' },
@@ -2698,16 +2759,34 @@ const EXPORT_FIELDS = [
   { id: 'notes', label: 'Примечание' }
 ];
 
+function getExportFields() {
+  const list = [...SYSTEM_EXPORT_FIELDS];
+  const custom = (_cachedFields || []).filter(f =>
+    f.enabled && !SYSTEM_EXPORT_FIELDS.some(sf => sf.id === f.id)
+  );
+  for (const f of custom) {
+    list.push({ id: f.id, label: f.label });
+  }
+  return list;
+}
+
+// алиас для обратной совместимости
+const EXPORT_FIELDS = SYSTEM_EXPORT_FIELDS;
+
 async function renderExportSettings() {
   const c = document.getElementById('settings-content');
   try {
+    
+    // 🆕 Подтягиваем актуальные поля
+    _cachedFields = await apiRequest('/settings/fields');
     const selected = await apiRequest('/settings/export');
     let html = `<h3>Настройки экспорта</h3>
       <p style="color:#64748b;margin-bottom:12px;">Выберите поля для PDF/Excel</p>
       <div class="export-fields-grid">`;
-    EXPORT_FIELDS.forEach(f => {
-      html += `<label><input type="checkbox" value="${f.id}" ${selected.includes(f.id) ? 'checked' : ''} class="exp-field-cb"> ${f.label}</label>`;
+    getExportFields().forEach(f => {
+      html += `<label><input type="checkbox" value="${esc(f.id)}" ${selected.includes(f.id) ? 'checked' : ''} class="exp-field-cb"> ${esc(f.label)}</label>`;
     });
+    
     html += `</div><button class="btn btn-success" onclick="saveExportSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>`;
     c.innerHTML = html;
   } catch (e) {
@@ -3819,11 +3898,11 @@ function renderUserViewContent() {
       <i class="fa-solid fa-circle-info"></i> Отключённые поля не будут видны пользователю в форме добавления и редактирования.
       </div>
     `;
-  } else if (_userViewActiveTab === 'table') {
+    
+    } else if (_userViewActiveTab === 'table') {
     const orderedColumns = _userViewEditing.tableColumns
-      .map(id => TABLE_COLUMNS.find(c => c.id === id))
+      .map(id => findColumn(id))
       .filter(Boolean);
-
     c.innerHTML = `
       <div class="prefs-list">
         ${orderedColumns.map((col, idx) => `
@@ -3843,7 +3922,7 @@ function renderUserViewContent() {
           <i class="fa-solid fa-plus"></i> Добавить скрытые колонки
         </summary>
         <div class="prefs-list" style="margin-top:10px;">
-          ${TABLE_COLUMNS.filter(c => !_userViewEditing.tableColumns.includes(c.id)).map(col => `
+          ${getAllTableColumns().filter(c => !_userViewEditing.tableColumns.includes(c.id)).map(col => `
             <label class="prefs-item">
               <input type="checkbox" onchange="toggleUserViewColumn('${col.id}', this.checked)">
               <span class="prefs-label">${col.label}</span>
