@@ -565,6 +565,40 @@ async function loadFilterConfig() {
 }
 
 // ============================================================
+// Синхронизирует filterState с актуальными _activeFilters
+// Делает две вещи:
+//   1) убирает ключи фильтров, которых больше нет в _activeFilters
+//      (удалены или выключены в настройках)
+//   2) у оставшихся select-фильтров сбрасывает значение,
+//      если его больше нет среди опций (переименование отдела,
+//      удаление типа оборудования и т.п.)
+// ============================================================
+function syncFilterState() {
+  // 1) ключи удалённых/выключенных фильтров
+  const activeIds = new Set(_activeFilters.map(f => f.id));
+  for (const id of Object.keys(filterState)) {
+    if (!activeIds.has(id)) {
+      delete filterState[id];
+    }
+  }
+
+  // 2) невалидные значения у оставшихся select-фильтров
+  for (const f of _activeFilters) {
+    if (f.type !== 'select' || !Array.isArray(f.options) || f.options.length === 0) {
+      continue;
+    }
+    const current = filterState[f.id];
+    if (current === undefined || current === null || current === '') continue;
+
+    const validValues = new Set(f.options.map(o => String(o.value)));
+    if (!validValues.has(String(current))) {
+      delete filterState[f.id];
+    }
+  }
+}
+
+
+// ============================================================
 // СТАТУСЫ
 // ============================================================
 function calcStatus(p) {
@@ -2609,12 +2643,15 @@ async function saveDepartmentsFull() {
     showToast(`Удалены дубликаты: было ${_cachedDepartmentsFull.length}, стало ${cleaned.length}`, 'success');
   }
 
-  try {
+    try {
     await apiRequest('/settings/departments', 'PUT', cleaned);
     _cachedDepartmentsFull = cleaned;
     showToast(`Отделы сохранены (${cleaned.length})`, 'success');
     await loadDepartments();
     await loadFilterConfig();
+
+    syncFilterState();
+    currentPage = 1;
     render();
     closeSettingsModal();
   } catch (e) { showToast(e.message, 'error'); }
@@ -2735,6 +2772,10 @@ async function saveFilters() {
     showToast('Фильтры сохранены', 'success');
     await loadFilterConfig();
     _filterRendered = false;
+
+    syncFilterState();
+    currentPage = 1;
+    render();
     closeSettingsModal();
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -4176,16 +4217,20 @@ async function saveEquipmentTypes() {
     if (!t.calibrationPlace) t.calibrationPlace = 'internal';
   });
 
-  try {
+    try {
     await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
     showToast('Типы оборудования сохранены', 'success');
     _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
     await loadFilterConfig();
+
+    syncFilterState();
+    currentPage = 1;
     render();
   } catch (e) {
     showToast(e.message || 'Ошибка сохранения', 'error');
   }
 }
+
 // Проверка прав при возврате в окно/вкладку
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isAuthenticated()) {
