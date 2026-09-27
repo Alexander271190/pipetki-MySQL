@@ -1636,10 +1636,14 @@ async function cancelSend(id) {
   );   
   if (!ok) return;
 
+  // 🆕 Если замены нет — возвращаем в работу
+  const restoreActive = !p.replaced_by;
+
   try {
-    await apiRequest(`/pipettes/${id}`, 'PUT', {
+await apiRequest(`/pipettes/${id}`, 'PUT', {
       sentForCalibration: null,
-      sentNote: null
+      sentNote: null,
+      ...(restoreActive ? { active: true } : {})
     });
     showToast('Отправка отменена', 'success');
     await loadPipetteData();
