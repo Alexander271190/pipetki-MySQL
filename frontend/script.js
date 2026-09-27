@@ -656,11 +656,19 @@ const DEFAULT_TABLE_COLUMNS = [
   'lastCalibration', 'nextCalibration', 'responsible', 'status'
 ];
 
-// 🆕 Все колонки: системные + кастомные
+// 🆕 Список системных id из field_config — они НЕ должны попадать
+// в кастомные колонки, даже если id не совпадает с SYSTEM_TABLE_COLUMNS
+const SYSTEM_FIELD_IDS_IN_CONFIG = new Set([
+  'id', 'serial', 'manufacturer', 'model', 'equipmentType',
+  'volume', 'department', 'interval', 'lastCalibration', 'cert',
+  'result', 'active', 'responsible', 'location', 'notes'
+]);
+
+// 🆕 Все доступные колонки: системные + кастомные (для настроек вида)
 function getAllTableColumns() {
   const cols = [...SYSTEM_TABLE_COLUMNS];
   const custom = (_cachedFields || []).filter(f =>
-    f.enabled && !SYSTEM_TABLE_COLUMNS.some(sc => sc.id === f.id)
+    f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)
   );
   for (const f of custom) {
     cols.push({ id: f.id, label: f.label, sortable: true, field: f.id });
@@ -668,14 +676,9 @@ function getAllTableColumns() {
   return cols;
 }
 
-// 🆕 Дефолтный набор — с кастомными
+// 🆕 Дефолтный набор — ТОЛЬКО системные 9 колонок (как в исходнике)
 function getDefaultTableColumns() {
-  const cols = [...DEFAULT_TABLE_COLUMNS];
-  const custom = (_cachedFields || []).filter(f =>
-    f.enabled && !SYSTEM_TABLE_COLUMNS.some(sc => sc.id === f.id)
-  );
-  for (const f of custom) cols.push(f.id);
-  return cols;
+  return [...DEFAULT_TABLE_COLUMNS];
 }
 
 function findColumn(id) {
@@ -2805,7 +2808,7 @@ const SYSTEM_EXPORT_FIELDS = [
 function getExportFields() {
   const list = [...SYSTEM_EXPORT_FIELDS];
   const custom = (_cachedFields || []).filter(f =>
-    f.enabled && !SYSTEM_EXPORT_FIELDS.some(sf => sf.id === f.id)
+    f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)
   );
   for (const f of custom) {
     list.push({ id: f.id, label: f.label });
