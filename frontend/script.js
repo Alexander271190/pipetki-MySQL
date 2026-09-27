@@ -1162,7 +1162,15 @@ function applyFilterStateToPanel() {
 
 function getFilteredPipettes() {
   const search = normalizeSearch(document.getElementById('search').value);
-  const userDept = currentUser && currentUser.onlyOwnDepartment ? currentUser.department : null;
+
+  let userDept = null;
+  if (currentUser) {
+    if (currentUser.isActing && currentUser.actingDepartment) {
+      userDept = currentUser.actingDepartment;
+    } else if (currentUser.onlyOwnDepartment) {
+      userDept = currentUser.department;
+    }
+  }
 
   return pipettes.filter(p => {
     const s = normalizeSearch(`${p.id} ${p.serial || ''} ${p.model} ${p.manufacturer || ''} ${p.department || ''} ${p.responsible || ''}`);
@@ -1285,9 +1293,12 @@ async function generateFormFields(data = null) {
         let opts = [];
 
         if (f.id === 'department') {
-          // 🛡️ User с «только свой отдел» — только свой
           let deps = departmentsList;
-          if (currentUser.role !== 'admin'
+
+          // 🛡️ И.о. — только отдел основного
+          if (currentUser.isActing && currentUser.actingDepartment) {
+            deps = [currentUser.actingDepartment];
+          } else if (currentUser.role !== 'admin'
               && currentUser.onlyOwnDepartment
               && currentUser.department) {
             deps = [currentUser.department];
@@ -1310,13 +1321,17 @@ async function generateFormFields(data = null) {
             { value: 'true', label: '✅ В работе' },
             { value: 'false', label: '⛔ Не используется' }
           ];
-        } else if (f.id === 'responsible') {
-          // 🛡️ Admin — любой из списка, senior/user — только он сам
+         } else if (f.id === 'responsible') {
           if (currentUser.role === 'admin') {
             opts = _responsibles.map(u => ({ value: u.fullName, label: u.fullName }));
             if (!f.required) {
               opts = [{ value: '', label: '— не указан —' }, ...opts];
             }
+          } else if (currentUser.isActing && currentUser.actingForName) {
+            opts = [{
+              value: currentUser.actingForName,
+              label: currentUser.actingForName + ' (основной)'
+            }];
           } else {
             const self = currentUser.fullName || '';
             opts = self
@@ -1381,6 +1396,13 @@ async function generateFormFields(data = null) {
         input.readOnly = true;
         input.style.background = '#f1f5f9';
         input.style.cursor = 'not-allowed';
+      }
+            // 🛡️ И.о. — отдел заблокирован
+      if (f.id === 'department' && currentUser.isActing) {
+        input.disabled = true;
+        input.style.background = '#f1f5f9';
+        input.style.cursor = 'not-allowed';
+        input.title = 'И.о. работает в отделе основного';
       }
             // 🛡️ Ответственный — только админ может менять
       if (f.id === 'responsible' && currentUser.role !== 'admin') {
@@ -1451,10 +1473,17 @@ async function openModal(id) {
       active: 'true'
     };
 
-    // 🛡️ Не-админ — ответственный уже предзаполнен им же
-    if (currentUser.role !== 'admin') {
+       if (currentUser.role === 'admin') {
+      // admin — ничего
+    } else if (currentUser.isActing && currentUser.actingForName) {
+      defaultData.responsible = currentUser.actingForName;
+      if (currentUser.actingDepartment) {
+        defaultData.department = currentUser.actingDepartment;
+      }
+    } else {
       defaultData.responsible = currentUser.fullName || '';
     }
+          
     // 🛡️ User с onlyOwnDepartment — отдел предзаполнен его отделом
     if (currentUser.role !== 'admin'
         && currentUser.onlyOwnDepartment
@@ -2053,6 +2082,11 @@ function renderAuthUI() {
     let posText = currentUser.position +
       (currentUser.role === 'admin' ? ' (админ)'
         : currentUser.role === 'senior_lab' ? ' (ст. лаборант)' : '');
+    if (currentUser.isActing) {
+      posText += currentUser.actingForName
+        ? ` · и.о. за ${currentUser.actingForName}`
+        : ' · и.о.';
+    }
     if (currentUser.department) posText += ' · ' + currentUser.department;
     document.getElementById('user-position').textContent = posText;
 
@@ -2712,7 +2746,7 @@ async function renderUsersSettings() {
       html += `<tr>
         <td>${esc(u.login)}</td>
         <td>${esc(u.fullName || u.full_name)}</td>
-        <td>${esc(u.position)}</td>
+        <td>${esc(u.position)}${u.isActing ? ` <span style="color:#eab308;font-weight:600;">(и.о.${u.actingForName ? ' за ' + esc(u.actingForName) : ''})</span>` : ''}</td>
         <td>${esc(u.department || '—')}</td>
         <td>${roleLabels[u.role] || u.role}</td>
           <td class="actions">
@@ -2774,6 +2808,25 @@ async function renderUsersSettings() {
             Если включено — пользователь увидит <strong>только пипетки своего отдела</strong>.
           </small>
         </div>
+          <div class="form-group" style="background:#f0f9ff;padding:12px;border-radius:8px;border-left:3px solid #0ea5e9;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#0369a1;">
+            <input type="checkbox" id="usr-is-acting" style="width:18px;height:18px;cursor:pointer;"
+                   onchange="onActingChange(this.checked)">
+            <i class="fa-solid fa-user-clock"></i>
+            Исполняющий обязанности (и.о.)
+          </label>
+          <small style="color:#0c4a6e;display:block;margin-top:6px;margin-left:26px;">
+            И.о. видит только оборудование отдела основного и работает под его ФИО.
+          </small>
+          <div id="usr-acting-for-wrap" style="display:none;margin-top:10px;">
+            <label style="font-size:.85rem;font-weight:600;color:#0369a1;margin-bottom:4px;display:block;">
+              За кого исполняет *
+            </label>
+            <select id="usr-acting-for" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+              <option value="">— выберите —</option>
+            </select>
+          </div>
+        </div>
         <div class="form-actions" style="justify-content:flex-start;">
           <button class="btn btn-success" onclick="saveUserSetting()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
           <button class="btn btn-secondary" onclick="resetUserSettingForm()">Отмена</button>
@@ -2809,10 +2862,43 @@ function resetUserSettingForm() {
   document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Добавить пользователя';
   const onlyOwnCb = document.getElementById('usr-only-own-dept');
   if (onlyOwnCb) onlyOwnCb.checked = false;
+  const isActingCb = document.getElementById('usr-is-acting');
+  if (isActingCb) {
+    isActingCb.checked = false;
+    onActingChange(false);
+  }
+  const actingForSel = document.getElementById('usr-acting-for');
+  if (actingForSel) actingForSel.value = '';
   document.querySelectorAll('#usr-permissions input[type="checkbox"]').forEach(cb => {
     cb.checked = false;
     cb.disabled = false;
   });
+}
+
+async function onActingChange(checked) {
+  const wrap = document.getElementById('usr-acting-for-wrap');
+  const sel  = document.getElementById('usr-acting-for');
+  if (!wrap || !sel) return;
+
+  wrap.style.display = checked ? 'block' : 'none';
+
+  if (!checked) {
+    sel.value = '';
+    return;
+  }
+
+  if (sel.dataset.loaded !== '1') {
+    try {
+      const users = await apiRequest('/users/acting-targets');
+      sel.innerHTML = '<option value="">— выберите —</option>' +
+        users.map(u =>
+          `<option value="${esc(u.id)}">${esc(u.fullName)} — ${esc(u.department || 'без отдела')}</option>`
+        ).join('');
+      sel.dataset.loaded = '1';
+    } catch (e) {
+      showToast('Не удалось загрузить список для и.о.', 'error');
+    }
+  }
 }
 
 async function editUserSetting(id) {
@@ -2845,8 +2931,13 @@ async function editUserSetting(id) {
     document.getElementById('usr-role').value = u.role;
     document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Редактирование: ' + esc(u.login);
 
-    const onlyOwnCb = document.getElementById('usr-only-own-dept');
-    if (onlyOwnCb) onlyOwnCb.checked = !!u.onlyOwnDepartment;
+  const isActingCb = document.getElementById('usr-is-acting');
+    if (isActingCb) {
+      isActingCb.checked = !!u.isActing;
+      await onActingChange(isActingCb.checked);
+      const sel = document.getElementById('usr-acting-for');
+      if (sel) sel.value = u.actingForId || '';
+    }
 
     const extra = u.extraPermissions || [];
 
@@ -2888,6 +2979,15 @@ async function saveUserSetting() {
   const onlyOwnCb = document.getElementById('usr-only-own-dept');
   const onlyOwnDepartment = onlyOwnCb ? onlyOwnCb.checked : false;
   const extraPermissions = [];
+  const isActingCb   = document.getElementById('usr-is-acting');
+  const isActing     = isActingCb ? isActingCb.checked : false;
+  const actingForSel = document.getElementById('usr-acting-for');
+  const actingForId  = isActing && actingForSel ? actingForSel.value.trim() : null;
+
+  if (isActing && !actingForId) {
+    showToast('Для и.о. нужно указать, за кого он исполняет', 'error');
+    return;
+  }
   if (role !== 'admin') {
     document.querySelectorAll('#usr-permissions input[type="checkbox"]:checked').forEach(cb => {
       extraPermissions.push(cb.value);
@@ -2895,7 +2995,8 @@ async function saveUserSetting() {
   }
 
   try {
-  const payload = { login, fullName, position, department, role, onlyOwnDepartment, extraPermissions };
+  const payload = { login, fullName, position, department, role,                     
+                   onlyOwnDepartment, extraPermissions, isActing, actingForId };
 
     if (id) {
       await apiRequest('/users/' + id, 'PUT', payload);
