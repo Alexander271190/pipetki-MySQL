@@ -10,7 +10,12 @@ const router = express.Router();
 const STANDARD_FIELDS = new Set([
   'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume',
   'department', 'interval', 'lastCalibration', 'cert', 'result', 'active',
-  'responsible', 'location', 'notes'
+  'responsible', 'location', 'notes',
+  // 🆕 Поля из фронтенда — маппятся на существующие колонки,
+  // не должны попадать в custom_data
+  'lastResult',            // → last_result
+  'sentForCalibration',    // → sent_for_calibration
+  'sentNote'               // → sent_note
 ]);
 
 function parseCustomData(raw) {
