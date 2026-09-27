@@ -67,11 +67,22 @@ function normalizeHeader(h) {
     .replace(/[.:;]+$/g, '');   
 }
 
+let _importCustomFields = [];
+
 function mapHeader(h) {
   const n = normalizeHeader(h);
   if (HEADER_MAP[n]) return HEADER_MAP[n];
   const n2 = n.replace(/\(.*?\)/g, '').trim();
-  return HEADER_MAP[n2] || null;
+  if (HEADER_MAP[n2]) return HEADER_MAP[n2];
+
+  // 🆕 Фоллбэк — кастомные поля из field_config
+  if (Array.isArray(_importCustomFields)) {
+    const found = _importCustomFields.find(f =>
+      normalizeHeader(f.label) === n || f.id === n
+    );
+    if (found) return `custom:${found.id}`;
+  }
+  return null;
 }
 
 // ============================================================
@@ -344,6 +355,21 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
     }
 
     const added = [], skipped = [], errors = [];
+    
+        // 🆕 Загружаем кастомные поля
+    try {
+      const [fRows] = await db.query(
+        'SELECT id, label FROM field_config WHERE enabled = 1'
+      );
+      const standardIds = new Set([
+        'id','serial','manufacturer','model','equipmentType','volume',
+        'department','interval','lastCalibration','cert','result','active',
+        'responsible','location','notes'
+      ]);
+      _importCustomFields = fRows.filter(f => !standardIds.has(f.id));
+    } catch (e) {
+      _importCustomFields = [];
+    }
 
     // 🛡️ Один раз читаем типы, чтобы не дёргать БД в цикле
     let typesCache = [];
@@ -359,11 +385,16 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
     for (let i = 0; i < objects.length; i++) {
       const raw = objects[i];
       const obj = {};
+      const customObj = {};
       for (let j = 0; j < headers.length; j++) {
         const key = colMap[j];
-        if (key) {
-          const v = raw[headers[j]];
-          if (v !== undefined && v !== null && v !== '') obj[key] = v;
+        if (!key) continue;
+        const v = raw[headers[j]];
+        if (v === undefined || v === null || v === '') continue;
+        if (key.startsWith('custom:')) {
+          customObj[key.slice(7)] = v;
+        } else {
+          obj[key] = v;
         }
       }
 
@@ -422,17 +453,17 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         const lastCal = parseDate(obj.lastCalibration);
         const result  = normalizeResult(obj.result);
 
-        await conn.query(
+      await conn.query(
           `INSERT INTO pipettes
             (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
-             last_calibration, cert, last_result, active, responsible, location, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             last_calibration, cert, last_result, active, responsible, location, notes, custom_data)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             String(obj.serial || '').trim(),
             String(obj.manufacturer || '').trim(),
             model,
-            eqType,                                    // ← используем уже посчитанный
+            eqType,
             String(obj.volume || '').trim(),
             String(obj.department || '').trim(),
             parseInterval(obj.interval),
@@ -442,7 +473,8 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
             normalizeActive(obj.active),
             String(obj.responsible || '').trim(),
             String(obj.location || '').trim(),
-            String(obj.notes || '').trim()
+            String(obj.notes || '').trim(),
+            Object.keys(customObj).length ? JSON.stringify(customObj) : null
           ]
         );
 
