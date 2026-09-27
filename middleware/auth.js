@@ -38,6 +38,21 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+        // 🛡️ Если и.о. — подтягиваем данные основного
+    if (user.is_acting && user.acting_for_id) {
+      const [actingRows] = await db.query(
+        'SELECT id, full_name, department FROM users WHERE id = ? LIMIT 1',
+        [user.acting_for_id]
+      );
+      if (actingRows.length) {
+        user.acting_full_name  = actingRows[0].full_name  || null;
+        user.acting_department = actingRows[0].department || null;
+      } else {
+        user.acting_full_name  = null;
+        user.acting_department = null;
+      }
+    }
+
     req.user = user;
     next();
   } catch (e) {
