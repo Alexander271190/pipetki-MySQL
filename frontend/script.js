@@ -3943,10 +3943,10 @@ async function openUserViewModal(userId, userName) {
   if (_userViewEditing.visibleFields.length === 0) {
     _userViewEditing.visibleFields = allFields.map(f => f.id);
   }
-  if (_userViewEditing.tableColumns.length === 0) {
-    _userViewEditing.tableColumns = [...DEFAULT_TABLE_COLUMNS];
+    if (_userViewEditing.tableColumns.length === 0) {
+    // 🆕 Единый источник дефолта — совпадает с тем, что рисует таблица
+    _userViewEditing.tableColumns = getDefaultTableColumns();
   }
-
   _userViewActiveTab = 'form';
   document.querySelectorAll('#user-view-modal .prefs-tab').forEach(b => {
     b.classList.toggle('active', b.dataset.prefsTab === 'form');
