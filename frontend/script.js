@@ -666,14 +666,56 @@ const SYSTEM_FIELD_IDS_IN_CONFIG = new Set([
 
 // 🆕 Все доступные колонки: системные + кастомные (для настроек вида)
 function getAllTableColumns() {
-  const cols = [...SYSTEM_TABLE_COLUMNS];
-  const custom = (_cachedFields || []).filter(f =>
-    f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)
+  // 🆕 Все доступные колонки — в порядке field_config.
+  // Системные, которых нет в field_config (nextCalibration, status),
+  // вставляются по смыслу: «Следующая» — после «Поверка», «Статус» — в конец.
+  // Системные, которые не входят в whitelist (interval, result, active,
+  // notes, cert, location, manufacturer, serial) — добавляются в конце,
+  // чтобы их можно было включить через настройки вида.
+  const result = [];
+  const added = new Set();
+
+  const fields = [...(_cachedFields || [])].sort(
+    (a, b) => (a.order || 0) - (b.order || 0)
   );
-  for (const f of custom) {
-    cols.push({ id: f.id, label: f.label, sortable: true, field: f.id });
+
+  for (const f of fields) {
+    if (!f.enabled) continue;
+
+    const tableId = (f.id === 'equipmentType') ? 'type' : f.id;
+
+    const sysDef = SYSTEM_TABLE_COLUMNS.find(c => c.id === tableId);
+    if (sysDef) {
+      result.push(sysDef);
+      added.add(tableId);
+    } else if (!SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)) {
+      result.push({ id: f.id, label: f.label, sortable: true, field: f.id });
+      added.add(f.id);
+    }
   }
-  return cols;
+
+  // Виртуальные
+  if (!added.has('nextCalibration')) {
+    const def = SYSTEM_TABLE_COLUMNS.find(c => c.id === 'nextCalibration');
+    const idx = result.findIndex(c => c.id === 'lastCalibration');
+    if (idx !== -1) result.splice(idx + 1, 0, def);
+    else result.push(def);
+    added.add('nextCalibration');
+  }
+  if (!added.has('status')) {
+    result.push(SYSTEM_TABLE_COLUMNS.find(c => c.id === 'status'));
+    added.add('status');
+  }
+
+  // Остальные системные — в конец
+  for (const sys of SYSTEM_TABLE_COLUMNS) {
+    if (!added.has(sys.id)) {
+      result.push(sys);
+      added.add(sys.id);
+    }
+  }
+
+  return result;
 }
 
 // 🆕 Дефолтный набор колонок таблицы.
@@ -739,9 +781,15 @@ function findColumn(id) {
 }
 
 function getActiveTableColumns() {
+  // Если у пользователя есть настройки — берём порядок из getAllTableColumns()
+  // (там есть ВСЕ колонки — системные и кастомные), фильтруем по его выбору.
+  // Если настроек нет — берём дефолт (whitelist + кастомные в порядке field_config).
   if (myPrefs.tableColumns && Array.isArray(myPrefs.tableColumns) && myPrefs.tableColumns.length > 0) {
-    return myPrefs.tableColumns.filter(id => !!findColumn(id));
+    const allOrdered = getAllTableColumns().map(c => c.id);
+    const visible = new Set(myPrefs.tableColumns);
+    return allOrdered.filter(id => visible.has(id));
   }
+
   return getDefaultTableColumns();
 }
 
@@ -3930,14 +3978,14 @@ async function openUserViewModal(userId, userName) {
     }
   } catch (e) { /* новых настроек нет */ }
 
-    if (_cachedFields.length === 0) {
+    // 🆕 Всегда перечитываем — иначе после правки порядка в «Поля формы»
+    // модалка покажет старый порядок
     try {
       _cachedFields = await apiRequest('/settings/fields');
     } catch (e) {
-      _cachedFields = [];
+      _cachedFields = _cachedFields || [];
       showToast('Ошибка загрузки полей: ' + e.message, 'error');
     }
-  }
 
   const allFields = _cachedFields.filter(f => f.enabled);
   if (_userViewEditing.visibleFields.length === 0) {
@@ -3999,38 +4047,32 @@ function renderUserViewContent() {
     `;
     
     } else if (_userViewActiveTab === 'table') {
-    const orderedColumns = _userViewEditing.tableColumns
-      .map(id => findColumn(id))
-      .filter(Boolean);
+    // 🆕 Все доступные колонки — в порядке field_config.
+    // Порядок задаётся в «Настройки → Поля формы → столбец Порядок».
+    // Здесь пользователь только включает/выключает — переставлять нельзя.
+    const allCols = getAllTableColumns();
+
+    const visibleSet = new Set(
+      (_userViewEditing.tableColumns && _userViewEditing.tableColumns.length > 0)
+        ? _userViewEditing.tableColumns
+        : allCols.map(c => c.id)
+    );
+
     c.innerHTML = `
       <div class="prefs-list">
-        ${orderedColumns.map((col, idx) => `
-          <div class="prefs-item">
-            <input type="checkbox" checked
+        ${allCols.map(col => `
+          <label class="prefs-item">
+            <input type="checkbox"
+                   ${visibleSet.has(col.id) ? 'checked' : ''}
                    onchange="toggleUserViewColumn('${col.id}', this.checked)">
-            <span class="prefs-label">${col.label}</span>
-            <div class="prefs-move">
-              <button type="button" onclick="moveUserViewColumn(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
-              <button type="button" onclick="moveUserViewColumn(${idx}, 1)" ${idx === orderedColumns.length - 1 ? 'disabled' : ''}>▼</button>
-            </div>
-          </div>
+            <span class="prefs-label">${esc(col.label)}</span>
+          </label>
         `).join('')}
       </div>
-      <details style="margin-top:16px;">
-        <summary style="cursor:pointer;color:#475569;font-weight:600;padding:8px 0;">
-          <i class="fa-solid fa-plus"></i> Добавить скрытые колонки
-        </summary>
-        <div class="prefs-list" style="margin-top:10px;">
-          ${getAllTableColumns().filter(c => !_userViewEditing.tableColumns.includes(c.id)).map(col => `
-            <label class="prefs-item">
-              <input type="checkbox" onchange="toggleUserViewColumn('${col.id}', this.checked)">
-              <span class="prefs-label">${col.label}</span>
-            </label>
-          `).join('') || '<p style="color:#94a3b8;grid-column:1/-1;">Все колонки уже добавлены</p>'}
-        </div>
-      </details>
       <div class="prefs-hint">
-      <i class="fa-solid fa-circle-info"></i> Колонки отображаются в таблице в указанном порядке.
+        <i class="fa-solid fa-circle-info"></i>
+        Порядок колонок задаётся в «Настройки → Поля формы → столбец Порядок».
+        Здесь можно только включать и выключать.
       </div>
     `;
   }
@@ -4053,13 +4095,6 @@ function toggleUserViewColumn(id, checked) {
   renderUserViewContent();
 }
 
-function moveUserViewColumn(idx, dir) {
-  const to = idx + dir;
-  if (to < 0 || to >= _userViewEditing.tableColumns.length) return;
-  const arr = _userViewEditing.tableColumns;
-  [arr[idx], arr[to]] = [arr[to], arr[idx]];
-  renderUserViewContent();
-}
 
 async function saveUserView() {
   if (!_userViewUserId) return;
