@@ -51,6 +51,8 @@ async function initSchema() {
         role VARCHAR(50) DEFAULT 'user',
         extra_permissions TEXT,
         only_own_department TINYINT DEFAULT 0,
+        is_acting TINYINT DEFAULT 0,
+        acting_for_id VARCHAR(255) DEFAULT NULL,
         must_change_password TINYINT DEFAULT 0,
         password_changed_at TIMESTAMP NULL DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -80,7 +82,9 @@ async function initSchema() {
         replaced_by VARCHAR(255) DEFAULT NULL,
         replacing VARCHAR(255) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_pipettes_department     (department),
+        INDEX idx_pipettes_equipment_type (equipment_type)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -105,7 +109,8 @@ async function initSchema() {
         user_full_name VARCHAR(255) NOT NULL,
         action VARCHAR(255) NOT NULL,
         details TEXT,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_audit_log_timestamp (timestamp DESC)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -186,26 +191,6 @@ async function initSchema() {
       `);
     }
 
-    // Индексы для часто используемых колонок
-    const indexes = [
-      { table: 'pipettes',  name: 'idx_pipettes_department',     sql: 'CREATE INDEX idx_pipettes_department ON pipettes(department)' },
-      { table: 'pipettes',  name: 'idx_pipettes_equipment_type', sql: 'CREATE INDEX idx_pipettes_equipment_type ON pipettes(equipment_type)' },
-      { table: 'audit_log', name: 'idx_audit_log_timestamp',     sql: 'CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC)' }
-    ];
-
-    for (const idx of indexes) {
-      const [exists] = await conn.query(`
-        SELECT INDEX_NAME FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = ?
-          AND INDEX_NAME = ?
-      `, [idx.table, idx.name]);
-
-      if (exists.length === 0) {
-        await conn.query(idx.sql);
-        console.log(`➕ Индекс ${idx.name} создан`);
-      }
-    }
   } finally {
     conn.release();
   }
