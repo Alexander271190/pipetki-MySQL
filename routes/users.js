@@ -270,6 +270,13 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
         return res.status(400).json({ error: 'Нельзя удалить последнего админа' });
       }
     }
+    // 🆕 Сбрасываем ссылки у и.о.
+  await db.query(
+  `UPDATE users SET is_acting = 0, acting_for_id = NULL,
+   updated_at = CURRENT_TIMESTAMP
+   WHERE acting_for_id = ?`,
+  [req.params.id]
+);
 
     await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
     res.json({ message: 'Пользователь удалён' });
