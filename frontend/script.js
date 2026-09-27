@@ -676,18 +676,59 @@ function getAllTableColumns() {
   return cols;
 }
 
-// 🆕 Дефолтный набор — 9 системных + ВСЕ кастомные поля,
-// которые админ создал через «Настройки → Поля формы».
-// Пользователь потом может скрыть ненужные в «Настройках вида».
+// 🆕 Дефолтный набор колонок таблицы.
+// Порядок берётся из field_config (тот, что админ задал в
+// «Управление полями формы»), но с фильтром:
+//   • системные — только те, что в белом списке (иначе
+//     в таблицу попадут МПИ, Результат, Активность и т.п.)
+//   • кастомные — все, что админ создал, на своих местах
+// Виртуальные колонки (nextCalibration, status) вставляются
+// по смыслу: «Следующая» — после «Поверка», «Статус» — в конец.
 function getDefaultTableColumns() {
-  const cols = [...DEFAULT_TABLE_COLUMNS];
+  // Системные поля, разрешённые в таблице.
+  // Остальные (interval, result, active, notes, cert, location,
+  // manufacturer, serial) — доступны только через настройки вида.
+  const SYSTEM_ALLOWED_IN_TABLE = new Set([
+    'id', 'equipmentType', 'model', 'volume', 'department',
+    'lastCalibration', 'responsible'
+  ]);
 
-  // Добавляем все кастомные поля (не системные), активные
-  const custom = (_cachedFields || []).filter(f =>
-    f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)
-  );
-  for (const f of custom) {
-    cols.push(f.id);
+  const cols = [];
+
+  // Идём по field_config в его порядке
+  for (const f of (_cachedFields || [])) {
+    if (!f.enabled) continue;
+
+    if (SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)) {
+      // Системное — только из белого списка
+      if (SYSTEM_ALLOWED_IN_TABLE.has(f.id)) {
+        // Маппинг: id в field_config → id колонки в таблице
+        const tableId = (f.id === 'equipmentType') ? 'type' : f.id;
+        cols.push(tableId);
+      }
+    } else {
+      // Кастомное — всегда
+      cols.push(f.id);
+    }
+  }
+
+  // Виртуальные колонки — их нет в field_config
+  // «Следующая» — сразу после «Поверка»
+  const lastCalIdx = cols.indexOf('lastCalibration');
+  if (lastCalIdx !== -1) {
+    cols.splice(lastCalIdx + 1, 0, 'nextCalibration');
+  } else {
+    cols.push('nextCalibration');
+  }
+
+  // «Статус» — в конец
+  if (!cols.includes('status')) {
+    cols.push('status');
+  }
+
+  // Страховка: если field_config пустой — fallback на классический набор
+  if (cols.length <= 2) {
+    return [...DEFAULT_TABLE_COLUMNS];
   }
 
   return cols;
