@@ -5,6 +5,31 @@ const { authenticate, requirePermission } = require('../middleware/auth');
 const router = express.Router();
 
 // ============================================================
+// СТАНДАРТНЫЕ ПОЛЯ (есть колонка в pipettes)
+// ============================================================
+const STANDARD_FIELDS = new Set([
+  'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume',
+  'department', 'interval', 'lastCalibration', 'cert', 'result', 'active',
+  'responsible', 'location', 'notes'
+]);
+
+function parseCustomData(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw) || {}; } catch { return {}; }
+}
+
+function mergeCustom(p) {
+  if (!p) return p;
+  const custom = parseCustomData(p.custom_data);
+  return { ...p, ...custom };
+}
+
+function mergeCustomList(list) {
+  return list.map(mergeCustom);
+}
+
+// ============================================================
 // 🆕 Автоперегенерация ID при смене типа оборудования
 // ============================================================
 async function maybeRegenerateId(oldId, oldType, newType, conn) {
@@ -134,6 +159,8 @@ router.get('/', authenticate, async (req, res) => {
           if (p.replacing   && replById[p.replacing])   p.replacedFor = replById[p.replacing];
         }
       }
+      mergeCustomList(pipettes);
+
       return res.json(pipettes);
     }
 
@@ -205,6 +232,9 @@ router.get('/', authenticate, async (req, res) => {
       }
     }
 
+    // 🆕 Раскрываем custom_data в каждую пипетку
+    mergeCustomList(pipettes);
+
     res.json(pipettes);
     
   } catch (e) {
@@ -269,6 +299,7 @@ router.get('/:id', authenticate, async (req, res) => {
 
     p.active = !!p.active;
     p.history = h;
+    mergeCustom(p);
 
     // 🆕 Связки замен
     if (p.replaced_by) {
@@ -368,18 +399,27 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
       return res.status(409).json({ error: 'ID уже существует' });
     }
 
+        // 🆕 Собираем кастомные поля
+    const customData = {};
+    for (const [k, v] of Object.entries(req.body)) {
+      if (!STANDARD_FIELDS.has(k) && k !== 'id') {
+        customData[k] = v;
+      }
+    }
+
     await conn.query(
       `INSERT INTO pipettes
         (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
-         last_calibration, cert, last_result, active, responsible, location, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         last_calibration, cert, last_result, active, responsible, location, notes, custom_data)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, serial, manufacturer, model,
         equipmentType || 'pipette', volume, department,
         interval || 12, lastCalibration, cert,
         result || 'pass',
         (active === false || active === 0 || active === 'false' || active === '0') ? 0 : 1,
-        responsible, location, notes
+        responsible, location, notes,
+        Object.keys(customData).length ? JSON.stringify(customData) : null
       ]
     );
 
@@ -451,6 +491,12 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 
  const NUMERIC_FIELDS = new Set(['interval']);
 
+  // 🆕 Разделяем входящие поля на стандартные и кастомные
+ const customUpdates = {};
+ for (const [k, v] of Object.entries(updates)) {
+   if (!STANDARD_FIELDS.has(k)) customUpdates[k] = v;
+ }
+
  const fields = [];
  const values = [];
  for (const [k, col] of Object.entries(map)) {
@@ -469,10 +515,20 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
   }
 }
 
+ // 🆕 Мёржим custom_data
+ if (Object.keys(customUpdates).length > 0) {
+   const [curRows] = await db.query(
+     'SELECT custom_data FROM pipettes WHERE id = ?', [req.params.id]
+   );
+   const current = curRows.length ? parseCustomData(curRows[0].custom_data) : {};
+   const merged  = { ...current, ...customUpdates };
+   fields.push('custom_data = ?');
+   values.push(JSON.stringify(merged));
+ }
+
   if (!fields.length) return res.status(400).json({ error: 'Нет полей для обновления' });
   fields.push('updated_at = CURRENT_TIMESTAMP');
   values.push(req.params.id);
-
     const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
