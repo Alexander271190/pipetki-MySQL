@@ -33,6 +33,63 @@ async function getConnection() {
     release:          () => conn.release(),
   };
 }
+// ============================================================
+// Универсальный догон колонок
+// ============================================================
+async function ensureColumns(conn, table, columns) {
+  const [tableExists] = await conn.query(`
+    SELECT COUNT(*) AS c FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+  `, [table]);
+  if (tableExists[0].c === 0) return;
+
+  const [existing] = await conn.query(`
+    SELECT COLUMN_NAME FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+  `, [table]);
+  const existingNames = new Set(existing.map(r => r.COLUMN_NAME));
+
+  for (const { name, ddl } of columns) {
+    if (existingNames.has(name)) continue;
+    try {
+      await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${name}\` ${ddl}`);
+      console.log(`➕ ${table}.${name} добавлена`);
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') {
+        console.error(`❌ Не удалось добавить ${table}.${name}:`, e.message);
+      }
+    }
+  }
+}
+
+// ============================================================
+// Универсальный догон индексов
+// ============================================================
+async function ensureIndexes(conn, table, indexes) {
+  const [tableExists] = await conn.query(`
+    SELECT COUNT(*) AS c FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+  `, [table]);
+  if (tableExists[0].c === 0) return;
+
+  const [existing] = await conn.query(`
+    SELECT INDEX_NAME FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+  `, [table]);
+  const existingNames = new Set(existing.map(r => r.INDEX_NAME));
+
+  for (const { name, ddl } of indexes) {
+    if (existingNames.has(name)) continue;
+    try {
+      await conn.query(ddl);
+      console.log(`➕ Индекс ${table}.${name} создан`);
+    } catch (e) {
+      if (e.code !== 'ER_DUP_KEYNAME') {
+        console.error(`❌ Не удалось создать индекс ${table}.${name}:`, e.message);
+      }
+    }
+  }
+}
 
 // ============================================================
 // СХЕМА
@@ -83,9 +140,7 @@ async function initSchema() {
         replacing VARCHAR(255) DEFAULT NULL,
         custom_data JSON DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_pipettes_department     (department),
-        INDEX idx_pipettes_equipment_type (equipment_type)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -110,8 +165,7 @@ async function initSchema() {
         user_full_name VARCHAR(255) NOT NULL,
         action VARCHAR(255) NOT NULL,
         details TEXT,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_audit_log_timestamp (timestamp DESC)
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
@@ -178,19 +232,31 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-   // Совместимость: добавить password_changed_at, если база уже была создана
-    const [cols] = await conn.query(`
-      SELECT COLUMN_NAME FROM information_schema.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'users'
-        AND COLUMN_NAME = 'password_changed_at'
-    `);
-    if (cols.length === 0) {
-      await conn.query(`
-        ALTER TABLE users
-        ADD COLUMN password_changed_at TIMESTAMP NULL DEFAULT NULL
-      `);
-    }
+    // 🆕 Догон колонок
+    await ensureColumns(conn, 'users', [
+      { name: 'is_acting',           ddl: 'TINYINT DEFAULT 0' },
+      { name: 'acting_for_id',       ddl: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'password_changed_at', ddl: 'TIMESTAMP NULL DEFAULT NULL' },
+      { name: 'only_own_department', ddl: 'TINYINT DEFAULT 0' },
+    ]);
+
+    await ensureColumns(conn, 'pipettes', [
+      { name: 'custom_data',          ddl: 'JSON DEFAULT NULL' },
+      { name: 'replaced_by',          ddl: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'replacing',            ddl: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'sent_for_calibration', ddl: 'VARCHAR(20)' },
+      { name: 'sent_note',            ddl: 'TEXT' },
+    ]);
+
+    // 🆕 Догон индексов
+    await ensureIndexes(conn, 'pipettes', [
+      { name: 'idx_pipettes_department',     ddl: 'CREATE INDEX idx_pipettes_department ON pipettes(department)' },
+      { name: 'idx_pipettes_equipment_type', ddl: 'CREATE INDEX idx_pipettes_equipment_type ON pipettes(equipment_type)' },
+    ]);
+
+    await ensureIndexes(conn, 'audit_log', [
+      { name: 'idx_audit_log_timestamp', ddl: 'CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC)' },
+    ]);
 
   } finally {
     conn.release();
@@ -198,6 +264,7 @@ async function initSchema() {
 
   return await seedInitialData();
 }
+
 
 // ============================================================
 // НАЧАЛЬНЫЕ ДАННЫЕ
