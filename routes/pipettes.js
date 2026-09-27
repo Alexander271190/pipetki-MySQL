@@ -575,7 +575,9 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
 
       await conn.query(
         `UPDATE pipettes
-         SET sent_for_calibration = ?, sent_note = ?, updated_at = CURRENT_TIMESTAMP
+         SET sent_for_calibration = ?, sent_note = ?,
+             active = 0,
+             updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [sentDate, note || null, id]
       );
@@ -733,41 +735,58 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
         [item.id, date, itemCert, itemResult, org || null, note || null]
       );
 
+      const backToWork = itemResult === 'pass' ? 1 : 0;
+
       await conn.query(
         `UPDATE pipettes
          SET last_calibration = ?, cert = ?, last_result = ?,
              sent_for_calibration = NULL, sent_note = NULL,
+             active = ?,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [date, itemCert, itemResult, item.id]
+        [date, itemCert, itemResult, backToWork, item.id]
       );
 
       // 🛡️ Возврат замены
-      const returnRepl = returnReplacements.includes(item.id);
-      if (returnRepl) {
-        const replId = rows[0].replaced_by;
-        if (replId) {
-          const [replExists] = await conn.query(
-            'SELECT id FROM pipettes WHERE id = ?', [replId]
-          );
-          if (replExists.length > 0) {
-            await conn.query(
-              `UPDATE pipettes
-               SET active = 0, location = 'Склад', replacing = NULL,
-                   updated_at = CURRENT_TIMESTAMP
-               WHERE id = ?`,
-              [replId]
-            );
-          } else {
-            missingReplacements.push({ id: item.id, replacementId: replId });
-          }
-        }
-        await conn.query(
-          `UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-          [item.id]
-        );
-      }
+           const returnRepl = returnReplacements.includes(item.id);
+      const replId     = rows[0].replaced_by;
 
+      if (replId) {
+        const [replExists] = await conn.query(
+          'SELECT id FROM pipettes WHERE id = ? FOR UPDATE', [replId]
+        );
+
+        if (replExists.length === 0) {
+          // Замена физически удалена — просто чистим ссылку
+          await conn.query(
+            `UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [item.id]
+          );
+          missingReplacements.push({ id: item.id, replacementId: replId });
+
+        } else if (returnRepl) {
+          // Возврат замены на склад: Y → неактивна, X → уже active=1 (см. 1.2)
+          await conn.query(
+            `UPDATE pipettes
+             SET active = 0, location = 'Склад', replacing = NULL,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [replId]
+          );
+          await conn.query(
+            `UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [item.id]
+          );
+
+        } else {
+          // Пользователь оставил Y в работе — снимаем только связь
+          await conn.query(
+            `UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [item.id]
+          );
+        }
+      }
+      
       successful.push(item.id);
     }
 
