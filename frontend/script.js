@@ -676,9 +676,21 @@ function getAllTableColumns() {
   return cols;
 }
 
-// 🆕 Дефолтный набор — ТОЛЬКО системные 9 колонок (как в исходнике)
+// 🆕 Дефолтный набор — 9 системных + ВСЕ кастомные поля,
+// которые админ создал через «Настройки → Поля формы».
+// Пользователь потом может скрыть ненужные в «Настройках вида».
 function getDefaultTableColumns() {
-  return [...DEFAULT_TABLE_COLUMNS];
+  const cols = [...DEFAULT_TABLE_COLUMNS];
+
+  // Добавляем все кастомные поля (не системные), активные
+  const custom = (_cachedFields || []).filter(f =>
+    f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)
+  );
+  for (const f of custom) {
+    cols.push(f.id);
+  }
+
+  return cols;
 }
 
 function findColumn(id) {
