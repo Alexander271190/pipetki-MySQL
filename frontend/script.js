@@ -2463,9 +2463,11 @@ async function deleteFieldSetting(idx) {
 async function saveFieldsSettings() {
   try {
     await apiRequest('/settings/fields', 'PUT', _cachedFields);
-    _cachedFields = [];                           
+    // 🆕 Перечитываем актуальные поля и перестраиваем таблицу
+    _cachedFields = await apiRequest('/settings/fields');
     showToast('Поля сохранены', 'success');
     closeSettingsModal();
+    await loadPipetteData();
   } catch (e) {
     showToast(e.message, 'error');
   }
