@@ -1,0 +1,157 @@
+ФАЗА 2. Снести всё старое
+
+2.1. Остановить PM2:
+powershell
+pm2 stop all
+pm2 delete all
+pm2 save
+
+2.2. Убить висящие node-процессы:
+
+powershell
+Stop-Process -Name node -Force -ErrorAction SilentlyContinue
+
+2.3. Обнулить базу (данные сносятся):
+
+powershell
+& "C:\Program Files\MariaDB 11.8\bin\mysql.exe" -u root -p -e "DROP DATABASE IF EXISTS pipette; CREATE DATABASE pipette CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON pipette.* TO 'pipette'@'localhost' IDENTIFIED BY 'pipette_secret'; GRANT ALL PRIVILEGES ON pipette.* TO 'pipette'@'127.0.0.1' IDENTIFIED BY 'pipette_secret'; FLUSH PRIVILEGES;"
+Спросит пароль root — тот, что ставил при установке MariaDB.
+
+Проверка:
+
+powershell
+& "C:\Program Files\MariaDB 11.8\bin\mysql.exe" -u pipette -ppipette_secret pipette -e "SHOW TABLES;"
+Пустой вывод — база чистая.
+
+Если mysql.exe не по этому пути:
+
+powershell
+Get-ChildItem "C:\Program Files\" -Filter "mysql.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName
+
+2.4. Удалить старую папку проекта:
+
+powershell
+Remove-Item -Path "C:\localwp\Downloads\pipetki-MySQL-main" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "C:\localwp\Downloads\pipetki-MySQL-main" -Recurse -Force -ErrorAction SilentlyContinue
+Проверка:
+
+powershell
+Test-Path "C:\localwp\Downloads\pipetki-MySQL-main"
+False.
+
+ФАЗА 3. Переместить подготовленную папку
+powershell
+cd C:\localwp\Downloads
+Move-Item -Path "_temp_pipetki" -Destination "pipetki-MySQL-main" -Force
+cd pipetki-MySQL-main
+dir
+Проверь, что в корне видишь: server.js, package.json, db.js, routes\, frontend\.
+
+Если видишь вложенную папку pipetki-MySQL-main — перемести её содержимое на уровень выше:
+
+powershell
+Move-Item -Path "pipetki-MySQL-main\*" -Destination "." -Force
+Remove-Item -Path "pipetki-MySQL-main" -Force
+dir
+Финальная проверка:
+
+powershell
+Test-Path server.js, package.json, db.js, routes, frontend
+Все пять — True.
+
+ФАЗА 4. Установить зависимости
+powershell
+npm install
+Ждём 1–3 минуты. В конце: added N packages...
+
+Проверка:
+
+powershell
+Test-Path node_modules
+True.
+
+ФАЗА 5. Настроить .env
+powershell
+copy .env.example .env
+notepad .env
+Заполни точно так:
+
+text
+PORT=3000
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=pipette
+DB_USER=pipette
+DB_PASSWORD=pipette_secret
+JWT_SECRET=сюда_длинную_случайную_строку_минимум_32_символа
+DB_HOST=127.0.0.1, не db. db — для Docker.
+
+Сгенерировать JWT_SECRET:
+
+powershell
+-join ((48..57) + (65..90) + (97..122) | Get-Random -Count 48 | ForEach-Object {[char]$_})
+Скопируй результат в JWT_SECRET.
+
+Сохрани (Ctrl+S), закрой Notepad.
+
+ФАЗА 6. Запуск
+6.1. MariaDB работает?
+
+powershell
+Get-Service MariaDB
+Должно быть Running. Если Stopped — Start-Service MariaDB.
+
+6.2. Запустить:
+
+powershell
+pm2 start server.js --name pipette-app
+6.3. Дождаться инициализации:
+
+powershell
+Start-Sleep 10
+pm2 logs pipette-app --lines 60 --nostream
+Ожидаемый вывод при чистой базе:
+
+text
+✅ MySQL подключён
+✅ Схема БД готова
+👤 Начальные пользователи и данные созданы
+🔑 Разовый пароль администратора (сохраните и смените после первого входа):
+   admin / XXXXXXXXXXXXXXXXX
+🚀 Server on http://0.0.0.0:3000
+Скопируй пароль admin — запиши куда-нибудь. Больше не покажется.
+
+Если увидишь ➕ users.xxx добавлена — база была не пустая, код сам догнал. Тоже нормально.
+
+6.4. Проверить, что порт слушается:
+
+powershell
+netstat -ano | findstr :3000
+Должно быть LISTENING. Адрес — 0.0.0.0:3000 или [::]:3000.
+
+6.5. Сохранить конфиг PM2:
+
+powershell
+pm2 save
+ФАЗА 7. Автозапуск
+powershell
+pm2-startup install
+pm2 save
+Проверить, что startup установлен:
+
+powershell
+Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" | Select-Object PM2
+Должна быть строка с wscript.exe ... invisible.vbs ....
+
+MariaDB — автозапуск:
+
+powershell
+Set-Service -Name MariaDB -StartupType Automatic
+Проверка:
+
+powershell
+Get-Service MariaDB | Select-Object Name, StartType, Status
+StartType = Automatic, Status = Running.
+
+
+
