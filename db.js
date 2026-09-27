@@ -81,6 +81,7 @@ async function initSchema() {
         sent_note TEXT,
         replaced_by VARCHAR(255) DEFAULT NULL,
         replacing VARCHAR(255) DEFAULT NULL,
+        custom_data JSON DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_pipettes_department     (department),
