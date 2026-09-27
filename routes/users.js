@@ -51,26 +51,67 @@ function generateTempPassword() {
 }
 
 // ============================================================
+// СПИСОК ОСНОВНЫХ СОТРУДНИКОВ (для селекта «за кого»)
+// ============================================================
+router.get('/acting-targets', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const [users] = await db.query(
+      `SELECT id, full_name, department, position
+       FROM users
+       WHERE (is_acting = 0 OR is_acting IS NULL)
+       ORDER BY full_name`
+    );
+    res.json(users.map(u => ({
+      id: u.id,
+      fullName: u.full_name,
+      department: u.department,
+      position: u.position
+    })));
+  } catch (e) {
+    console.error('GET /users/acting-targets:', e);
+    res.status(500).json({ error: 'Ошибка загрузки списка' });
+  }
+});
+
+// ============================================================
 // СПИСОК ПОЛЬЗОВАТЕЛЕЙ
 // ============================================================
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   const [users] = await db.query(
-    'SELECT id, login, full_name, position, department, role, only_own_department, extra_permissions FROM users');
+    `SELECT id, login, full_name, position, department, role,
+            only_own_department, extra_permissions, is_acting, acting_for_id
+     FROM users`);
+
+  const actingIds = users.filter(u => u.acting_for_id).map(u => u.acting_for_id);
+  const actingById = {};
+  if (actingIds.length > 0) {
+    const ph = actingIds.map(() => '?').join(',');
+    const [actingRows] = await db.query(
+      `SELECT id, full_name, department FROM users WHERE id IN (${ph})`,
+      actingIds
+    );
+    for (const r of actingRows) {
+      actingById[r.id] = { fullName: r.full_name, department: r.department };
+    }
+  }
+
   res.json(users.map(u => ({
     ...u,
     onlyOwnDepartment: !!u.only_own_department,
+    isActing: !!u.is_acting,
+    actingForId: u.acting_for_id || null,
+    actingForName: u.acting_for_id && actingById[u.acting_for_id]
+      ? actingById[u.acting_for_id].fullName : null,
     extraPermissions: db.safeParse(u.extra_permissions, [])
   })));
 });
-
 // ============================================================
 // СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
 router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const { login, fullName, position, department, role,
-            onlyOwnDepartment, extraPermissions } = req.body;
-
+       nlyOwnDepartment, extraPermissions, isActing, actingForId } = req.body;
     const missing = [];
     if (!login)    missing.push('Логин');
     if (!fullName) missing.push('ФИО');
@@ -81,9 +122,15 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
         : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
       return res.status(400).json({ error: msg });
     }
-
-        if (onlyOwnDepartment && !department) {
+    
+        if (isActing && !actingForId) {
       return res.status(400).json({
+        error: 'Для и.о. нужно указать, за кого он исполняет обязанности'
+      });
+    }
+
+      if (onlyOwnDepartment && !department) {
+       return res.status(400).json({
         error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
                'Заполните поле «Отдел» или снимите галку.'
       });
@@ -97,13 +144,14 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    await db.query(
+     await db.query(
       `INSERT INTO users
        (id, login, password, full_name, position, department, role,
-        only_own_department, extra_permissions, must_change_password)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        only_own_department, extra_permissions, is_acting, acting_for_id, must_change_password)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [id, login, passwordHash, fullName, position, department || '', role || 'user',
-       onlyOwnDepartment ? 1 : 0, JSON.stringify(extraPermissions || [])]
+       onlyOwnDepartment ? 1 : 0, JSON.stringify(extraPermissions || []),
+       isActing ? 1 : 0, isActing && actingForId ? actingForId : null]
     );
 
     await db.query(
