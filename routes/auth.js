@@ -25,6 +25,10 @@ function userPublic(u) {
     department: u.department,
     role: u.role,
     onlyOwnDepartment: !!u.only_own_department,
+    isActing: !!u.is_acting,
+    actingForId: u.acting_for_id || null,
+    actingForName: u.acting_full_name || null,
+    actingDepartment: u.acting_department || null,
     extraPermissions: db.safeParse(u.extra_permissions, []),
     mustChangePassword: !!u.must_change_password,
     passwordChangedAt: u.password_changed_at || null
@@ -53,7 +57,20 @@ router.post('/login', async (req, res) => {
     if (!passwordOk)
       return res.status(401).json({ error: 'Неверный логин или пароль' });
 
-    const u = rows[0];
+        const u = rows[0];
+
+    // 🛡️ Если и.о. — подтягиваем данные основного
+    if (u.is_acting && u.acting_for_id) {
+      const [actingRows] = await db.query(
+        'SELECT full_name, department FROM users WHERE id = ? LIMIT 1',
+        [u.acting_for_id]
+      );
+      if (actingRows.length) {
+        u.acting_full_name  = actingRows[0].full_name  || null;
+        u.acting_department = actingRows[0].department || null;
+      }
+    }
+
     const token = jwt.sign({ id: u.id, login: u.login, role: u.role }, JWT_SECRET, { expiresIn: '24h' });
 
     await db.query(
@@ -61,7 +78,7 @@ router.post('/login', async (req, res) => {
       [u.id, u.full_name, 'Вход в систему']
     );
 
-        res.json({ token, user: userPublic(u) });
+    res.json({ token, user: userPublic(u) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -101,6 +118,17 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
       [req.user.id, req.user.full_name, 'Вход под пользователем', target.full_name]
     );
+
+        if (target.is_acting && target.acting_for_id) {
+      const [actingRows] = await db.query(
+        'SELECT full_name, department FROM users WHERE id = ? LIMIT 1',
+        [target.acting_for_id]
+      );
+      if (actingRows.length) {
+        target.acting_full_name  = actingRows[0].full_name  || null;
+        target.acting_department = actingRows[0].department || null;
+      }
+    }
 
     res.json({ token, user: userPublic(target) });
     
