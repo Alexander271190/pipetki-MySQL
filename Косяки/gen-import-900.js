@@ -161,7 +161,7 @@ async function generate() {
       }
 
       // ID — 30% с явным, 70% без (проверка автогенерации)
-      const expId = Math.random() < 0.30 ? `TEST-${pad(i, 4)}` : '';
+      const expId = Math.random() < 0.30 ? `TEST-${dept.prefix}-${pad(i, 4)}` : '';
       const inv   = `${dept.prefix}-${pad(i, 4)}`;
       const sn    = `SN-${pad(globalSn, 6)}`;
       const notes = i % 25 === 0 ? 'Нагрузочный тест' : '';
