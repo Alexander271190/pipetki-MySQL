@@ -2133,26 +2133,101 @@ async function exportToPDF() {
     <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
     <title>Реестр пипеток — ${today}</title>
     <style>
-      @page { size: A4 landscape; margin: 15mm 10mm; }
+            @page { size: A4 landscape; margin: 12mm 8mm; }
       * { box-sizing: border-box; }
-      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; }
+
+      body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 9pt;
+        color: #1a1a2e;
+        margin: 0;
+      }
+
       h1 { font-size: 14pt; margin: 0 0 4px; color: #1e293b; }
-      .meta { font-size: 9pt; color: #64748b; margin-bottom: 12px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+
+      .meta {
+        font-size: 9pt;
+        color: #64748b;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #cbd5e1;
+        padding-bottom: 6px;
+      }
       .meta b { color: #1e293b; }
-      table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-      th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 8pt; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      td { padding: 5px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-      tr:nth-child(even) td { background: #f8fafc; }
-      small { color: #94a3b8; font-size: 7.5pt; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8pt;
+        border: 1.5px solid #1e293b;
+      }
+
+      th {
+        background: #1e293b;
+        color: #fff;
+        padding: 6px 5px;
+        text-align: left;
+        font-size: 7.5pt;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        border: 1px solid #1e293b;
+        vertical-align: middle;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      td {
+        padding: 5px 5px;
+        border: 0.5px solid #94a3b8;
+        vertical-align: top;
+        word-wrap: break-word;
+      }
+
+      tbody tr:nth-child(even) td {
+        background: #f8fafc;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      tbody td:first-child,
+      thead th:first-child {
+        border-left: 1.5px solid #1e293b;
+      }
+      tbody td:last-child,
+      thead th:last-child {
+        border-right: 1.5px solid #1e293b;
+      }
+
+      small {
+        color: #94a3b8;
+        font-size: 7pt;
+        line-height: 1.2;
+        display: block;
+      }
+
       .status-ok       { color: #16a34a; font-weight: 600; }
       .status-warn     { color: #ca8a04; font-weight: 600; }
       .status-danger   { color: #dc2626; font-weight: 700; }
       .status-fail     { color: #991b1b; font-weight: 700; }
       .status-inactive { color: #94a3b8; }
       .status-sent     { color: #0ea5e9; font-weight: 600; }
-      .footer { margin-top: 15px; font-size: 8pt; color: #000; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+      .status-wip      { color: #ca8a04; font-weight: 600; }
+
+      .footer {
+        margin-top: 12px;
+        font-size: 8pt;
+        color: #000;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #cbd5e1;
+        padding-top: 6px;
+      }
+
+      tr { page-break-inside: avoid; }
+      thead { display: table-header-group; }
     </style></head><body>
-      <h1>Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
+    
+          <h1>Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
       <div class="meta">Дата: <b>${today}</b> · Записей: <b>${data.length}</b> · Сформировал: <b>${esc(user)}</b></div>
       <table>
         <thead><tr>${headerCells}</tr></thead>
@@ -4620,21 +4695,89 @@ async function exportHistoryToPDF() {
     <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
     <title>История поверок — ${esc(p.id)}</title>
     <style>
-      @page { size: A4 portrait; margin: 15mm 12mm; }
+            @page { size: A4 portrait; margin: 12mm 10mm; }
       * { box-sizing: border-box; }
-      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; }
+
+      body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 10pt;
+        color: #1a1a2e;
+        margin: 0;
+      }
+
       h1 { font-size: 14pt; margin: 0 0 4px; }
-      .meta { font-size: 9pt; color: #64748b; margin-bottom: 14px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+
+      .meta {
+        font-size: 9pt;
+        color: #64748b;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #cbd5e1;
+        padding-bottom: 6px;
+      }
       .meta b { color: #1e293b; }
-      .info { padding: 10px 12px; background: #f8fafc; border-radius: 6px; font-size: 9pt; margin-bottom: 12px; }
+
+      .info {
+        padding: 10px 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 9pt;
+        margin-bottom: 12px;
+      }
       .info div { margin-bottom: 3px; }
-      table { width: 100%; border-collapse: collapse; font-size: 9pt; }
-      th { background: #1e293b; color: #fff; padding: 7px 6px; text-align: left; font-size: 8pt;
-           text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      td { padding: 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-      tr:nth-child(even) td { background: #f8fafc; }
-      .footer { margin-top: 20px; font-size: 8pt; display: flex; justify-content: flex-end; }
+      .info b { color: #1e293b; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+        border: 1.5px solid #1e293b;
+      }
+
+      th {
+        background: #1e293b;
+        color: #fff;
+        padding: 7px 6px;
+        text-align: left;
+        font-size: 8pt;
+        text-transform: uppercase;
+        border: 1px solid #1e293b;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      td {
+        padding: 6px;
+        border: 0.5px solid #94a3b8;
+        vertical-align: top;
+      }
+
+      tbody tr:nth-child(even) td {
+        background: #f8fafc;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      tbody td:first-child,
+      thead th:first-child {
+        border-left: 1.5px solid #1e293b;
+      }
+      tbody td:last-child,
+      thead th:last-child {
+        border-right: 1.5px solid #1e293b;
+      }
+
+      .footer {
+        margin-top: 20px;
+        font-size: 8pt;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      tr { page-break-inside: avoid; }
+      thead { display: table-header-group; }
     </style></head><body>
+    
       <h1>История поверок оборудования</h1>
       <div class="meta">Дата формирования: <b>${today}</b> · Сформировал: <b>${esc(user)}</b></div>
 
