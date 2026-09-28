@@ -37,7 +37,14 @@ html {
 .stat-card.danger .num { color: #f87171; }
 
 /* ========== КОНТЕЙНЕР ========== */
-.container {   max-width: 1400px;   margin: 20px auto;   padding: 0 16px;   width: 100%;   box-sizing: border-box;   overflow-x: hidden; }
+.container {
+  max-width: 1800px;
+  margin: 20px auto;
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
 
 /* ========== БАННЕР ========== */
 .alert-banner { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; display: none; align-items: center; gap: 10px; font-size: .9rem; color: #92400e; }
