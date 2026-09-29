@@ -1,0 +1,1034 @@
+Полный список правок по файлам
+Один прогон — все правки. Ниже — пофайлово, в порядке применения.
+
+📄 Файл 1: server.js
+
+Правка 1.1 — error-handler для невалидного JSON
+Найти:
+
+js
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+Заменить на:
+
+js
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// 🆕 Ловим SyntaxError от express.json() — возвращаем 400, не 500
+
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Некорректный JSON в теле запроса' });
+  }
+  next(err);
+});
+
+
+
+
+📄 Файл 2: routes/pipettes.js
+
+Правка 2.1 — STANDARD_FIELDS: добавить replacedBy и replacing
+Найти:
+
+js
+const STANDARD_FIELDS = new Set([
+  'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume',
+  'department', 'interval', 'lastCalibration', 'cert', 'result', 'active',
+  'responsible', 'location', 'notes',
+  // 🆕 Поля из фронтенда — маппятся на существующие колонки,
+  // не должны попадать в custom_data
+  'lastResult',            // → last_result
+  'sentForCalibration',    // → sent_for_calibration
+  'sentNote'               // → sent_note
+]);
+Заменить на:
+
+js
+const STANDARD_FIELDS = new Set([
+  'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume',
+  'department', 'interval', 'lastCalibration', 'cert', 'result', 'active',
+  'responsible', 'location', 'notes',
+  'lastResult',
+  'sentForCalibration',
+  'sentNote',
+  'replacedBy',    // 🆕 для отмены отправки с заменой
+  'replacing'      // 🆕
+]);
+
+
+Правка 2.2 — POST / : проверка тела + защита от null
+Найти:
+
+js
+router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+    const {
+    id: rawId, serial, manufacturer, model, equipmentType,
+    interval, lastCalibration, cert, result, active, location, notes
+  } = req.body;
+Заменить на:
+
+js
+router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  // 🆕 Защита от null / массива в теле
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+
+  const {
+    id: rawId, serial, manufacturer, model, equipmentType,
+    interval, lastCalibration, cert, result, active, location, notes
+  } = req.body;
+
+
+  Правка 2.3 — PUT /:id : проверка тела + не обнулять lastCalibration + маппинг replacedBy/replacing
+Найти (начало PUT):
+
+js
+  router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  const updates = req.body;
+
+  Заменить на:
+
+js
+  router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  // 🆕 Защита от null / массива в теле
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+
+  const updates = req.body;
+
+  Найти (маппинг полей):
+
+js
+    const map = {
+    serial: 'serial', manufacturer: 'manufacturer', model: 'model',
+    equipmentType: 'equipment_type',
+    volume: 'volume',
+    department: 'department',
+    interval: '`interval`', lastCalibration: 'last_calibration',
+    cert: 'cert', lastResult: 'last_result', active: 'active',
+    responsible: 'responsible', location: 'location', notes: 'notes',
+    sentForCalibration: 'sent_for_calibration',
+    sentNote: 'sent_note'
+  };
+
+  Заменить на:
+
+js
+  const map = {
+    serial: 'serial', manufacturer: 'manufacturer', model: 'model',
+    equipmentType: 'equipment_type',
+    volume: 'volume',
+    department: 'department',
+    interval: '`interval`', lastCalibration: 'last_calibration',
+    cert: 'cert', lastResult: 'last_result', active: 'active',
+    responsible: 'responsible', location: 'location', notes: 'notes',
+    sentForCalibration: 'sent_for_calibration',
+    sentNote: 'sent_note',
+    replacedBy: 'replaced_by',   // 🆕
+    replacing: 'replacing'       // 🆕
+  };
+
+  Найти (цикл формирования fields):
+
+js
+ const fields = [];
+ const values = [];
+ for (const [k, col] of Object.entries(map)) {
+   if (updates[k] !== undefined) {
+     fields.push(`${col} = ?`);
+   if (k === 'active') {
+      values.push(
+        (updates[k] === false || updates[k] === 0 ||
+         updates[k] === 'false' || updates[k] === '0') ? 0 : 1
+      );
+    } else if (NUMERIC_FIELDS.has(k) && updates[k] === '') {
+      values.push(null);
+    } else {
+      values.push(updates[k]);
+    }
+  }
+}
+
+Заменить на:
+
+js
+ const fields = [];
+ const values = [];
+ for (const [k, col] of Object.entries(map)) {
+   if (updates[k] === undefined) continue;
+
+   // 🆕 Не обнулять last_calibration при пустой строке / null
+   if (k === 'lastCalibration' && (updates[k] === '' || updates[k] === null)) {
+     continue;
+   }
+
+   fields.push(`${col} = ?`);
+   if (k === 'active') {
+     values.push(
+       (updates[k] === false || updates[k] === 0 ||
+        updates[k] === 'false' || updates[k] === '0') ? 0 : 1
+     );
+   } else if (NUMERIC_FIELDS.has(k) && updates[k] === '') {
+     values.push(null);
+   } else {
+     values.push(updates[k]);
+   }
+}
+
+
+Правка 2.4 — DELETE /:id : блокировка удаления при активных связях
+
+Найти:
+
+js
+router.delete('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [exist] = await conn.query(
+      'SELECT model, department FROM pipettes WHERE id = ?', [req.params.id]
+    );
+    if (!exist.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Не найдена' });
+    }
+
+    // ← проверка доступа по отделу
+    if (!canAccessDepartment(req.user, exist[0].department)) {
+      await conn.rollback();
+      return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+    }
+
+        // 🛡️ Обнуляем связки у связанного оборудования
+    await conn.query(
+      `UPDATE pipettes SET replaced_by = NULL WHERE replaced_by = ?`,
+      [req.params.id]
+    );
+    await conn.query(
+      `UPDATE pipettes SET replacing = NULL WHERE replacing = ?`,
+      [req.params.id]
+    );
+
+    await conn.query('DELETE FROM pipettes WHERE id = ?', [req.params.id]);
+
+    Заменить на:
+
+js
+router.delete('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [exist] = await conn.query(
+      'SELECT id, model, department, replaced_by, replacing FROM pipettes WHERE id = ?',
+      [req.params.id]
+    );
+    if (!exist.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Не найдена' });
+    }
+
+    if (!canAccessDepartment(req.user, exist[0].department)) {
+      await conn.rollback();
+      return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 🛡️ Блокировка удаления при активных связях замены
+    // ──────────────────────────────────────────────────────────
+    const row = exist[0];
+    const id = req.params.id;
+
+    // 1. Сама пипетка имеет связь
+    if (row.replaced_by || row.replacing) {
+      await conn.rollback();
+      const linkInfo = row.replaced_by
+        ? `она отправлена на поверку, замена: ${row.replaced_by}`
+        : `она заменяет ${row.replacing}`;
+      return res.status(400).json({
+        error: `Нельзя удалить ${id}: ${linkInfo}. ` +
+               `Сначала отмените отправку или оформите возврат с поверки.`
+      });
+    }
+
+    // 2. Кто-то использует удаляемую как замену
+    const [usedAsReplacement] = await conn.query(
+      'SELECT id FROM pipettes WHERE replaced_by = ? LIMIT 1',
+      [id]
+    );
+    if (usedAsReplacement.length) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: `Нельзя удалить ${id}: она используется как замена для ` +
+               `${usedAsReplacement[0].id}. Сначала оформите возврат с поверки.`
+      });
+    }
+
+    // 3. Кто-то ссылается на удаляемую через replacing
+    const [usedAsOriginal] = await conn.query(
+      'SELECT id FROM pipettes WHERE replacing = ? LIMIT 1',
+      [id]
+    );
+    if (usedAsOriginal.length) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: `Нельзя удалить ${id}: она заменена на ` +
+               `${usedAsOriginal[0].id}. Сначала оформите возврат с поверки.`
+      });
+    }
+
+    await conn.query('DELETE FROM pipettes WHERE id = ?', [id]);
+Дальше по тексту (audit_log, commit, release) — оставить как есть.
+
+
+
+Правка 2.5 — POST /:id/calibration : проверка тела
+
+Найти:
+
+js
+router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  const { date, cert, result, org, note } = req.body;
+  if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
+Заменить на:
+
+js
+router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+  const { date, cert, result, org, note } = req.body;
+  if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
+
+
+Правка 2.6 — POST /bulk-send : проверка тела
+
+Найти:
+
+js
+router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  const { ids, sentDate, note } = req.body;
+Заменить на:
+
+js
+router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+  const { ids, sentDate, note } = req.body;
+Правка 2.7 — POST /bulk-return : проверка тела + active=1 всегда
+Найти (начало):
+
+js
+router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  const { items, date, org, note } = req.body;
+
+  Заменить на:
+
+js
+router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+  const { items, date, org, note } = req.body;
+Найти (внутри цикла):
+
+js
+      const backToWork = itemResult === 'pass' ? 1 : 0;
+
+      await conn.query(
+        `UPDATE pipettes
+         SET last_calibration = ?, cert = ?, last_result = ?,
+             sent_for_calibration = NULL, sent_note = NULL,
+             active = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [date, itemCert, itemResult, backToWork, item.id]
+      );
+
+Заменить на:
+
+js
+      // 🆕 Возврат с поверки всегда восстанавливает активность —
+      // пипетка физически вернулась на рабочее место.
+      // Результат поверки (pass/fail/wip) сохраняется в last_result отдельно.
+      await conn.query(
+        `UPDATE pipettes
+         SET last_calibration = ?, cert = ?, last_result = ?,
+             sent_for_calibration = NULL, sent_note = NULL,
+             active = 1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [date, itemCert, itemResult, item.id]
+      );
+
+📄 Файл 3: index.html
+
+Правка 3.1 — кнопка «Войти» с id и спиннером
+
+Найти:
+
+html
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-right-to-bracket"></i> Войти
+        </button>
+Заменить на:
+
+html
+        <button type="submit" class="btn btn-primary" id="login-btn">
+          <i class="fa-solid fa-right-to-bracket" id="login-btn-icon"></i>
+          <span id="login-btn-text">Войти</span>
+        </button>
+
+
+Правка 3.2 — кнопка «Сохранить пароль» с id и спиннером
+Найти:
+
+html
+        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Сохранить пароль</button>
+Заменить на:
+
+html
+        <button type="submit" class="btn btn-success" id="cp-btn">
+          <i class="fa-solid fa-floppy-disk" id="cp-btn-icon"></i>
+          <span id="cp-btn-text">Сохранить пароль</span>
+        </button>
+
+📄 Файл 4: script.js
+
+Правка 4.1 — loginUser со спиннером и блокировкой полей
+
+Найти функцию loginUser целиком:
+
+js
+async function loginUser(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorEl = document.getElementById('login-error');
+  errorEl.textContent = '';
+
+   if (!username || !password) {
+    const missing = [];
+    if (!username) missing.push('Логин');
+    if (!password) missing.push('Пароль');
+
+    errorEl.textContent = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    return;
+  }
+
+  try {
+    const result = await apiRequest('/auth/login', 'POST', { login: username, password });
+    setSession(result.user, result.token);
+    showToast(`Добро пожаловать, ${result.user.fullName}!`, 'success');
+    renderAuthUI();
+  } catch (error) {
+    errorEl.textContent = error.message || 'Ошибка входа';
+  }
+}
+
+Заменить на:
+
+js
+async function loginUser(e) {
+  e.preventDefault();
+
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  const btnIcon = document.getElementById('login-btn-icon');
+  const btnText = document.getElementById('login-btn-text');
+  const usernameInput = document.getElementById('login-username');
+  const passwordInput = document.getElementById('login-password');
+
+  errorEl.textContent = '';
+
+  if (!username || !password) {
+    const missing = [];
+    if (!username) missing.push('Логин');
+    if (!password) missing.push('Пароль');
+
+    errorEl.textContent = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    return;
+  }
+
+  // 🆕 Блокируем форму и показываем спиннер
+  if (btn) btn.disabled = true;
+  if (usernameInput) usernameInput.disabled = true;
+  if (passwordInput) passwordInput.disabled = true;
+  if (btnIcon) btnIcon.className = 'fa-solid fa-spinner fa-spin';
+  if (btnText) btnText.textContent = 'Вход…';
+
+  try {
+    const result = await apiRequest('/auth/login', 'POST', { login: username, password });
+    setSession(result.user, result.token);
+    showToast(`Добро пожаловать, ${result.user.fullName}!`, 'success');
+    renderAuthUI();
+  } catch (error) {
+    errorEl.textContent = error.message || 'Ошибка входа';
+
+    // 🆕 Разблокируем форму при ошибке
+    if (btn) btn.disabled = false;
+    if (usernameInput) usernameInput.disabled = false;
+    if (passwordInput) passwordInput.disabled = false;
+    if (btnIcon) btnIcon.className = 'fa-solid fa-right-to-bracket';
+    if (btnText) btnText.textContent = 'Войти';
+
+    if (passwordInput) {
+      passwordInput.focus();
+      passwordInput.select();
+    }
+  }
+}
+
+
+Правка 4.2 — cancelSend разрывает связь и всегда активирует
+
+Найти функцию cancelSend целиком:
+
+js
+async function cancelSend(id) {
+  await refreshCurrentUser();
+  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+  const p = pipettes.find(x => x.id === id);
+  if (!p) return;
+  const ok = await showConfirm(
+    `Отменить отправку «${id}» на поверку?`,
+    { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+
+  // 🆕 Если замены нет — возвращаем в работу
+  const restoreActive = !p.replaced_by;
+
+  try {
+await apiRequest(`/pipettes/${id}`, 'PUT', {
+      sentForCalibration: null,
+      sentNote: null,
+      ...(restoreActive ? { active: true } : {})
+    });
+    showToast('Отправка отменена', 'success');
+    await loadPipetteData();
+  } catch (e) {
+    showToast(e.message || 'Ошибка отмены', 'error');
+  }
+}
+
+Заменить на:
+
+js
+async function cancelSend(id) {
+  await refreshCurrentUser();
+  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+
+  const p = pipettes.find(x => x.id === id);
+  if (!p) return;
+
+  const hasReplacement = !!p.replaced_by;
+  const confirmMsg = hasReplacement
+    ? `Отменить отправку «${id}» на поверку?\n\n` +
+      `Замена «${p.replaced_by}» вернётся на склад и станет неактивной.`
+    : `Отменить отправку «${id}» на поверку?`;
+
+  const ok = await showConfirm(
+    confirmMsg,
+    { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+
+  try {
+    // 🆕 Если была замена — сначала разрываем связь:
+    // возвращаем складскую на склад
+    if (hasReplacement) {
+      try {
+        await apiRequest(`/pipettes/${p.replaced_by}`, 'PUT', {
+          replacing: null,
+          active: false,
+          location: 'Склад'
+        });
+      } catch (e) {
+        console.warn('Не удалось разорвать связь с заменой:', e.message);
+      }
+    }
+
+    // Отменяем отправку + снимаем связь
+    await apiRequest(`/pipettes/${id}`, 'PUT', {
+      sentForCalibration: null,
+      sentNote: null,
+      active: true,
+      replacedBy: null
+    });
+
+    showToast('Отправка отменена', 'success');
+    await loadPipetteData();
+  } catch (e) {
+    showToast(e.message || 'Ошибка отмены', 'error');
+  }
+}
+
+
+Правка 4.3 — getActiveTableColumns автоматически включает новые кастомные поля
+
+Найти функцию целиком:
+
+js
+function getActiveTableColumns() {
+  // Если у пользователя есть настройки — берём порядок из getAllTableColumns()
+  // (там есть ВСЕ колонки — системные и кастомные), фильтруем по его выбору.
+  // Если настроек нет — берём дефолт (whitelist + кастомные в порядке field_config).
+  if (myPrefs.tableColumns && Array.isArray(myPrefs.tableColumns) && myPrefs.tableColumns.length > 0) {
+    const allOrdered = getAllTableColumns().map(c => c.id);
+    const visible = new Set(myPrefs.tableColumns);
+    return allOrdered.filter(id => visible.has(id));
+  }
+
+  return getDefaultTableColumns();
+}
+
+Заменить на:
+
+js
+function getActiveTableColumns() {
+  // Если настроек нет — дефолтный набор
+  if (!myPrefs.tableColumns || !Array.isArray(myPrefs.tableColumns) || myPrefs.tableColumns.length === 0) {
+    return getDefaultTableColumns();
+  }
+
+  const allOrdered = getAllTableColumns();
+  const saved = new Set(myPrefs.tableColumns);
+  const SYSTEM_COL_IDS = new Set(SYSTEM_TABLE_COLUMNS.map(c => c.id));
+
+  // 🆕 Автоматически показываем кастомные поля, созданные ПОСЛЕ
+  // сохранения prefs (иначе новые поля не появляются у пользователей).
+  const KNOWN_CUSTOM_KEY = 'pipette_known_custom_fields_' + (currentUser?.id || 'anon');
+  let knownCustom = [];
+  try {
+    knownCustom = JSON.parse(localStorage.getItem(KNOWN_CUSTOM_KEY) || '[]');
+  } catch { knownCustom = []; }
+
+  const currentCustom = allOrdered
+    .map(c => c.id)
+    .filter(id => !SYSTEM_COL_IDS.has(id));
+
+  const newCustom = currentCustom.filter(id => !knownCustom.includes(id));
+  const visible = new Set([...saved, ...newCustom]);
+
+  // Запоминаем актуальный список кастомных
+  try {
+    localStorage.setItem(KNOWN_CUSTOM_KEY, JSON.stringify(currentCustom));
+  } catch {}
+
+  return allOrdered.filter(c => visible.has(c.id));
+}
+
+
+
+Правка 4.4 — copyTempPassword с fallback через execCommand
+
+
+Найти функцию целиком:
+
+js
+async function copyTempPassword() {
+  if (!_tempPasswordValue) return;
+  try {
+    await navigator.clipboard.writeText(_tempPasswordValue);
+    showToast('Пароль скопирован в буфер обмена', 'success');
+  } catch (e) {
+    showToast('Не удалось скопировать. Скопируйте вручную.', 'error');
+  }
+}
+
+
+Заменить на:
+
+js
+async function copyTempPassword() {
+  if (!_tempPasswordValue) return;
+
+  // Способ 1: navigator.clipboard (требует HTTPS или localhost)
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(_tempPasswordValue);
+      showToast('Пароль скопирован в буфер обмена', 'success');
+      return;
+    }
+  } catch (e) { /* fallback ниже */ }
+
+  // 🆕 Способ 2: execCommand — работает и по HTTP
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = _tempPasswordValue;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(
+      ok ? 'Пароль скопирован в буфер обмена'
+         : 'Не удалось скопировать. Скопируйте вручную.',
+      ok ? 'success' : 'error'
+    );
+  } catch (e) {
+    showToast('Не удалось скопировать. Скопируйте вручную.', 'error');
+  }
+}
+
+
+
+Правка 4.5 — CSV-экспорт истории с шапкой оборудования
+
+Найти (внутри exportHistoryToExcel):
+
+
+js
+  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
+  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+
+   const csvLines = [headers.join(';')];
+  history.forEach(h => {
+    const row = [
+      h.date || '',
+      h.cert || '',
+      resultLabels[h.result] || h.result || '',
+      h.org || '',
+      h.note || ''
+    ];
+    const line = row.map(v => sanitizeCsvCell(v)).join(';');
+    csvLines.push(line);
+  });
+
+
+  Заменить на:
+
+js
+  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+
+  const csvLines = [];
+
+  // 🆕 Шапка с данными об оборудовании (как в PDF)
+  csvLines.push(['Оборудование', `${p.id} — ${p.model}`].map(sanitizeCsvCell).join(';'));
+  if (p.serial)       csvLines.push(['Серийный номер',  p.serial].map(sanitizeCsvCell).join(';'));
+  if (p.manufacturer) csvLines.push(['Производитель',   p.manufacturer].map(sanitizeCsvCell).join(';'));
+  csvLines.push(['Отдел', p.department || '—'].map(sanitizeCsvCell).join(';'));
+  if (from || to) {
+    csvLines.push(['Период', `${from || '…'} — ${to || '…'}`].map(sanitizeCsvCell).join(';'));
+  }
+  csvLines.push(['Записей', String(history.length)].map(sanitizeCsvCell).join(';'));
+  csvLines.push('');
+
+  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
+  csvLines.push(headers.map(sanitizeCsvCell).join(';'));
+
+  history.forEach(h => {
+    const row = [
+      h.date || '',
+      h.cert || '',
+      resultLabels[h.result] || h.result || '',
+      h.org || '',
+      h.note || ''
+    ];
+    const line = row.map(v => sanitizeCsvCell(v)).join(';');
+    csvLines.push(line);
+  });
+Правка 4.6 — submitChangePassword со спиннером (бонус)
+
+Найти (в начале submitChangePassword):
+
+js
+async function submitChangePassword(e) {
+  e.preventDefault();
+
+  const errEl = document.getElementById('cp-error');
+  const currentPwd = document.getElementById('cp-current').value;
+  const newPwd     = document.getElementById('cp-new').value;
+  const confirmPwd = document.getElementById('cp-confirm').value;
+
+  errEl.textContent = '';
+
+
+
+Заменить на:
+
+js
+async function submitChangePassword(e) {
+  e.preventDefault();
+
+  const errEl = document.getElementById('cp-error');
+  const currentPwd = document.getElementById('cp-current').value;
+  const newPwd     = document.getElementById('cp-new').value;
+  const confirmPwd = document.getElementById('cp-confirm').value;
+
+  const cpBtn = document.getElementById('cp-btn');
+  const cpBtnIcon = document.getElementById('cp-btn-icon');
+  const cpBtnText = document.getElementById('cp-btn-text');
+
+  const resetCpBtn = () => {
+    if (cpBtn) cpBtn.disabled = false;
+    if (cpBtnIcon) cpBtnIcon.className = 'fa-solid fa-floppy-disk';
+    if (cpBtnText) cpBtnText.textContent = 'Сохранить пароль';
+  };
+
+  errEl.textContent = '';
+
+
+
+  Найти (перед try { в submitChangePassword):
+
+js
+    try {
+    const res = await apiRequest('/auth/change-password', 'POST', {
+
+
+    Заменить на:
+
+js
+  // 🆕 Спиннер
+  if (cpBtn) cpBtn.disabled = true;
+  if (cpBtnIcon) cpBtnIcon.className = 'fa-solid fa-spinner fa-spin';
+  if (cpBtnText) cpBtnText.textContent = 'Сохранение…';
+
+  try {
+    const res = await apiRequest('/auth/change-password', 'POST', {
+
+
+
+    Найти (после showToast('Пароль успешно изменён' в submitChangePassword):
+
+js
+    showToast('Пароль успешно изменён', 'success');
+    closeChangePasswordModal();
+
+    // 🆕 После смены пароля перестраиваем UI:
+    // renderAuthUI увидит mustChangePassword === false
+    // и вызовет loadPipetteData()
+    renderAuthUI();
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка смены пароля';
+  }
+}
+
+
+Заменить на:
+
+js
+    showToast('Пароль успешно изменён', 'success');
+    resetCpBtn();
+    closeChangePasswordModal();
+    renderAuthUI();
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка смены пароля';
+    resetCpBtn();
+  }
+}
+
+
+Правка 4.7 — renderAuthUI сбрасывает состояние кнопки входа при логауте
+Найти (в блоке else функции renderAuthUI):
+
+js
+  } else {
+    closeChangePasswordModal();
+    authContainer.classList.remove('hidden');
+    mainContent.classList.remove('visible');
+    document.body.classList.remove('can-manage', 'can-import', 'can-export', 'is-admin');
+    const btnStop = document.getElementById('btn-impersonate-stop');
+    if (btnStop) btnStop.style.display = 'none';
+    _dataLoadedForUser = null;
+  }
+}
+
+
+Заменить на:
+
+js
+  } else {
+    closeChangePasswordModal();
+    authContainer.classList.remove('hidden');
+    mainContent.classList.remove('visible');
+    document.body.classList.remove('can-manage', 'can-import', 'can-export', 'is-admin');
+    const btnStop = document.getElementById('btn-impersonate-stop');
+    if (btnStop) btnStop.style.display = 'none';
+
+    // 🆕 Сбрасываем состояние кнопки входа (после логаута)
+    const loginBtn = document.getElementById('login-btn');
+    const loginBtnIcon = document.getElementById('login-btn-icon');
+    const loginBtnText = document.getElementById('login-btn-text');
+    if (loginBtn) loginBtn.disabled = false;
+    if (loginBtnIcon) loginBtnIcon.className = 'fa-solid fa-right-to-bracket';
+    if (loginBtnText) loginBtnText.textContent = 'Войти';
+    const uInput = document.getElementById('login-username');
+    const pInput = document.getElementById('login-password');
+    if (uInput) uInput.disabled = false;
+    if (pInput) { pInput.disabled = false; pInput.value = ''; }
+
+    _dataLoadedForUser = null;
+  }
+}
+
+
+Правка 4.8 — deletePipette — показывать предупреждение при блокировке
+Найти:
+
+js
+  try {
+    await apiRequest(`/pipettes/${id}`, 'DELETE');
+    showToast('Оборудование удалено', 'success');
+    selectedPipettes.delete(id);
+    await loadPipetteData();
+  } catch (error) {
+    showToast(error.message || 'Ошибка удаления', 'error');
+  }
+
+
+Заменить на:
+
+js
+  try {
+    await apiRequest(`/pipettes/${id}`, 'DELETE');
+    showToast('Оборудование удалено', 'success');
+    selectedPipettes.delete(id);
+    await loadPipetteData();
+  } catch (error) {
+    // 🆕 Блокировки удаления показываем как предупреждение
+    const isBlock = /Нельзя удалить/.test(error.message || '');
+    showToast(error.message || 'Ошибка удаления', isBlock ? 'warn' : 'error');
+  }
+
+
+📄 Файл 5: style.css
+
+
+Правка 5.1 — фиксируем размер кнопки логина + стили :disabled
+Найти:
+
+css
+.auth-form .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 13px 20px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+Заменить на:
+
+css
+.auth-form .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 13px 20px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-height: 50px;
+  box-sizing: border-box;
+}
+
+/* 🆕 Отключённая кнопка — приглушённая, курсор ожидания */
+.auth-form .btn:disabled {
+  opacity: .7;
+  cursor: wait;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* 🆕 Отключённые поля ввода */
+.auth-box .form-group input:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
+
+Правка 5.2 — стиль .toast.warn (если отсутствует)
+Проверить в файле блок стилей .toast:
+
+css
+.toast { ... }
+.toast.show { ... }
+.toast.success { background: #16a34a; }
+.toast.error { background: #dc2626; }
+Если строки .toast.warn нет — добавить:
+
+css
+.toast.warn { background: #d97706; }
+
+
+
+
+
+
+
+
+
+
+📋 Итоговая сводка правок
+#	Файл	Правка
+1.1	server.js	error-handler для невалидного JSON
+2.1	routes/pipettes.js	STANDARD_FIELDS + replacedBy, replacing
+2.2	routes/pipettes.js	POST / — проверка тела
+2.3	routes/pipettes.js	PUT /:id — проверка тела + не обнулять lastCalibration + маппинг replacedBy/replacing
+2.4	routes/pipettes.js	DELETE /:id — блокировка при связях
+2.5	routes/pipettes.js	POST /:id/calibration — проверка тела
+2.6	routes/pipettes.js	POST /bulk-send — проверка тела
+2.7	routes/pipettes.js	POST /bulk-return — проверка тела + active=1
+3.1	index.html	кнопка «Войти» — id + спиннер
+3.2	index.html	кнопка «Сохранить пароль» — id + спиннер
+4.1	script.js	loginUser — спиннер + блокировка
+4.2	script.js	cancelSend — разрыв связи + active:true
+4.3	script.js	getActiveTableColumns — новые кастомные поля
+4.4	script.js	copyTempPassword — fallback через execCommand
+4.5	script.js	CSV-экспорт истории — шапка оборудования
+4.6	script.js	submitChangePassword — спиннер
+4.7	script.js	renderAuthUI — сброс кнопки входа
+4.8	script.js	deletePipette — warn-стиль для блокировок
+5.1	style.css	размер кнопки + :disabled
+5.2	style.css	.toast.warn (если нет)
+
+
+
+Файлы, которые не менялись: db.js, passwordPolicy.js, middleware/auth.js, routes/auth.js, routes/settings.js, routes/users.js, routes/log.js, routes/import.js, docker-compose.yaml, package.json, .env.example.
+
+Порядок применения
+
+
+
+Сервер: правки в server.js и routes/pipettes.js → перезапустить docker compose restart app.
+
+
+
+
+Фронт: правки в index.html, script.js, style.css → Ctrl+Shift+R в браузере (файлы в volume).
+
+Проверка.
+
+Что проверяем одним прогоном
+POST невалидного JSON (null, not-json, <html>) → 400, не 500.
+
+Возврат с поверки → active=true.
+
+Дёргание окна логина → нет, есть спиннер.
+
+CSV-экспорт → есть шапка с ID/моделью/отделом.
+
+Копирование пароля → работает по HTTP.
+
+PUT lastCalibration: '' → не обнуляет.
+
+Удаление пипетки со связью → 400 с понятным сообщением.
+
+Отмена отправки → связь разорвана, замена на складе.
+
+inventorynumber → появляется в таблице после создания.
+
+Готово к применению.
+
