@@ -103,9 +103,10 @@
 <div class="dropdown btn-export" id="export-dropdown" style="position:relative;display:inline-block;">
   <button class="btn btn-secondary" onclick="toggleExportMenu(event)"><i class="fa-solid fa-upload"></i> Экспорт <i class="fa-solid fa-caret-down"></i></button>
   <div id="export-menu" class="dropdown-menu">
-    <button class="dropdown-item" onclick="exportToExcel(); closeExportMenu();"><i class="fa-solid fa-file-excel"></i> Excel (CSV)</button>
-    <button class="dropdown-item" onclick="exportToPDF(); closeExportMenu();"><i class="fa-solid fa-print"></i> PDF</button>
-  </div>
+  <button class="dropdown-item" onclick="exportToXlsx(); closeExportMenu();"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>
+  <button class="dropdown-item" onclick="exportToExcel(); closeExportMenu();"><i class="fa-solid fa-file-csv"></i> CSV</button>
+  <button class="dropdown-item" onclick="exportToPDF(); closeExportMenu();"><i class="fa-solid fa-print"></i> PDF</button>
+</div>
 </div>
 </div>
 
@@ -581,7 +582,8 @@
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeHistoryExportModal()">Отмена</button>
-        <button type="button" class="btn btn-success" onclick="exportHistoryToExcel()"><i class="fa-solid fa-file-excel"></i> Excel (CSV)</button>
+        <button type="button" class="btn btn-success" onclick="exportHistoryToXlsx()"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>
+        <button type="button" class="btn btn-secondary" onclick="exportHistoryToExcel()"><i class="fa-solid fa-file-csv"></i> CSV</button>
         <button type="button" class="btn btn-info" onclick="exportHistoryToPDF()"><i class="fa-solid fa-print"></i> PDF</button>
       </div>
     </form>
