@@ -863,7 +863,9 @@ function getActiveTableColumns() {
 
   const visible = new Set([...saved, ...currentCustom]);
 
-  return allOrdered.filter(c => visible.has(c.id));
+   return allOrdered
+    .map(c => c.id)
+    .filter(id => visible.has(id));
 }
 
 function getActiveFormFields(allFields) {
