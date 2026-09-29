@@ -402,13 +402,17 @@ function logoutUser() {
   clearSession();
   myPrefs = { visibleFields: null, tableColumns: null };
 
-  // 🆕 Сброс состояния сессии
+     // 🆕 Сброс состояния сессии
   filterState = {};
   selectedPipettes.clear();
   _reminderScheduled = false;
   _reminderDismissed = false;
   _lastPermsCheck = 0;
   _dataLoadedForUser = null;
+  currentPage = 1;
+  const searchEl = document.getElementById('search');
+  if (searchEl) searchEl.value = '';
+  
 
   const u = document.getElementById('login-username');
   const p = document.getElementById('login-password');
@@ -441,8 +445,11 @@ async function impersonateUser(userId) {
     _reminderScheduled = false;
     _reminderDismissed = false;
 
-    // 🆕 Сброс фильтров
+    // 🆕 Сброс фильтров, поиска, страницы
     filterState = {};
+    currentPage = 1;
+    const searchEl = document.getElementById('search');
+    if (searchEl) searchEl.value = '';
 
     // Очищаем данные предыдущего пользователя
     pipettes = [];
@@ -477,8 +484,11 @@ function stopImpersonate() {
   _reminderScheduled = false;
   _reminderDismissed = false;
 
-  // 🆕 Сброс фильтров
+   // 🆕 Сброс фильтров, поиска, страницы
   filterState = {};
+  currentPage = 1;
+  const searchEl = document.getElementById('search');
+  if (searchEl) searchEl.value = '';
 
   // Очищаем данные impersonated пользователя
   pipettes = [];
@@ -834,7 +844,7 @@ function findColumn(id) {
 }
 
 function getActiveTableColumns() {
-  // Если настроек нет — дефолтный набор
+  // Если настроек нет — дефолтный набор (он уже включает все кастомные)
   if (!myPrefs.tableColumns || !Array.isArray(myPrefs.tableColumns) || myPrefs.tableColumns.length === 0) {
     return getDefaultTableColumns();
   }
@@ -843,25 +853,15 @@ function getActiveTableColumns() {
   const saved = new Set(myPrefs.tableColumns);
   const SYSTEM_COL_IDS = new Set(SYSTEM_TABLE_COLUMNS.map(c => c.id));
 
-  // 🆕 Автоматически показываем кастомные поля, созданные ПОСЛЕ
-  // сохранения prefs (иначе новые поля не появляются у пользователей).
-  const KNOWN_CUSTOM_KEY = 'pipette_known_custom_fields_' + (currentUser?.id || 'anon');
-  let knownCustom = [];
-  try {
-    knownCustom = JSON.parse(localStorage.getItem(KNOWN_CUSTOM_KEY) || '[]');
-  } catch { knownCustom = []; }
-
+  // Кастомные поля показываем ВСЕГДА — даже если в prefs их нет.
+  // Причина: prefs сохранялись до того, как админ создал поле,
+  // и отличить «ещё не видел» от «выключил» невозможно.
+  // Скрыть кастомное поле можно только глобально — в «Настройки → Поля формы».
   const currentCustom = allOrdered
     .map(c => c.id)
     .filter(id => !SYSTEM_COL_IDS.has(id));
 
-  const newCustom = currentCustom.filter(id => !knownCustom.includes(id));
-  const visible = new Set([...saved, ...newCustom]);
-
-  // Запоминаем актуальный список кастомных
-  try {
-    localStorage.setItem(KNOWN_CUSTOM_KEY, JSON.stringify(currentCustom));
-  } catch {}
+  const visible = new Set([...saved, ...currentCustom]);
 
   return allOrdered.filter(c => visible.has(c.id));
 }
@@ -869,19 +869,12 @@ function getActiveTableColumns() {
 function getActiveFormFields(allFields) {
   const enabled = allFields.filter(f => f.enabled);
 
+  // Если настроек нет — показываем всё
   if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
     return enabled;
   }
 
   const visible = new Set(myPrefs.visibleFields);
-
-  // 🆕 Автоматически показываем НОВЫЕ кастомные поля,
-  // которые пользователь никогда не отключал
-  const KNOWN_KEY = 'pipette_known_form_fields_' + (currentUser?.id || 'anon');
-  let knownForm = [];
-  try {
-    knownForm = JSON.parse(localStorage.getItem(KNOWN_KEY) || '[]');
-  } catch { knownForm = []; }
 
   const SYSTEM_IDS = new Set([
     'id', 'serial', 'manufacturer', 'model', 'equipmentType',
@@ -893,13 +886,8 @@ function getActiveFormFields(allFields) {
     .map(f => f.id)
     .filter(id => !SYSTEM_IDS.has(id));
 
-  const newCustom = currentCustom.filter(id => !knownForm.includes(id));
-
-  try {
-    localStorage.setItem(KNOWN_KEY, JSON.stringify(currentCustom));
-  } catch {}
-
-  const allowedIds = new Set([...visible, ...newCustom]);
+  // Кастомные поля показываем ВСЕГДА — независимо от prefs
+  const allowedIds = new Set([...visible, ...currentCustom]);
 
   return enabled.filter(f => {
     if (SYSTEM_IDS.has(f.id)) return visible.has(f.id);
@@ -4229,7 +4217,7 @@ async function saveBulkReturn(e) {
       toastType = 'error';
       console.warn('⚠️ Пропущенные замены:', res.missingReplacements);
     }
-    showToast(msg, toastType);
+        showToast(msg, toastType);
 
     clearSelection();
     closeBulkReturnModal();
@@ -4249,11 +4237,18 @@ async function saveBulkReturn(e) {
 
     _filterRendered = false;
     await loadPipetteData();
+
+    // 🆕 Подсказка, что таблица теперь отфильтрована
+    if (calFilter && date) {
+      showToast(`Таблица отфильтрована по дате ${date}. Сбросьте фильтр, чтобы увидеть всё.`, 'warn');
+    }
+
     applyFilterStateToPanel();
   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
+
 // ============================================================
 // НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ (АДМИН)
 // ============================================================
