@@ -339,12 +339,19 @@ function isSeniorLab() { return currentUser && currentUser.role === 'senior_lab'
 // ============================================================
 async function loginUser(e) {
   e.preventDefault();
+
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
   const errorEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  const btnIcon = document.getElementById('login-btn-icon');
+  const btnText = document.getElementById('login-btn-text');
+  const usernameInput = document.getElementById('login-username');
+  const passwordInput = document.getElementById('login-password');
+
   errorEl.textContent = '';
 
-   if (!username || !password) {
+  if (!username || !password) {
     const missing = [];
     if (!username) missing.push('Логин');
     if (!password) missing.push('Пароль');
@@ -355,6 +362,13 @@ async function loginUser(e) {
     return;
   }
 
+  // 🆕 Блокируем форму и показываем спиннер
+  if (btn) btn.disabled = true;
+  if (usernameInput) usernameInput.disabled = true;
+  if (passwordInput) passwordInput.disabled = true;
+  if (btnIcon) btnIcon.className = 'fa-solid fa-spinner fa-spin';
+  if (btnText) btnText.textContent = 'Вход…';
+
   try {
     const result = await apiRequest('/auth/login', 'POST', { login: username, password });
     setSession(result.user, result.token);
@@ -362,6 +376,18 @@ async function loginUser(e) {
     renderAuthUI();
   } catch (error) {
     errorEl.textContent = error.message || 'Ошибка входа';
+
+    // 🆕 Разблокируем форму при ошибке
+    if (btn) btn.disabled = false;
+    if (usernameInput) usernameInput.disabled = false;
+    if (passwordInput) passwordInput.disabled = false;
+    if (btnIcon) btnIcon.className = 'fa-solid fa-right-to-bracket';
+    if (btnText) btnText.textContent = 'Войти';
+
+    if (passwordInput) {
+      passwordInput.focus();
+      passwordInput.select();
+    }
   }
 }
 
@@ -781,16 +807,36 @@ function findColumn(id) {
 }
 
 function getActiveTableColumns() {
-  // Если у пользователя есть настройки — берём порядок из getAllTableColumns()
-  // (там есть ВСЕ колонки — системные и кастомные), фильтруем по его выбору.
-  // Если настроек нет — берём дефолт (whitelist + кастомные в порядке field_config).
-  if (myPrefs.tableColumns && Array.isArray(myPrefs.tableColumns) && myPrefs.tableColumns.length > 0) {
-    const allOrdered = getAllTableColumns().map(c => c.id);
-    const visible = new Set(myPrefs.tableColumns);
-    return allOrdered.filter(id => visible.has(id));
+  // Если настроек нет — дефолтный набор
+  if (!myPrefs.tableColumns || !Array.isArray(myPrefs.tableColumns) || myPrefs.tableColumns.length === 0) {
+    return getDefaultTableColumns();
   }
 
-  return getDefaultTableColumns();
+  const allOrdered = getAllTableColumns();
+  const saved = new Set(myPrefs.tableColumns);
+  const SYSTEM_COL_IDS = new Set(SYSTEM_TABLE_COLUMNS.map(c => c.id));
+
+  // 🆕 Автоматически показываем кастомные поля, созданные ПОСЛЕ
+  // сохранения prefs (иначе новые поля не появляются у пользователей).
+  const KNOWN_CUSTOM_KEY = 'pipette_known_custom_fields_' + (currentUser?.id || 'anon');
+  let knownCustom = [];
+  try {
+    knownCustom = JSON.parse(localStorage.getItem(KNOWN_CUSTOM_KEY) || '[]');
+  } catch { knownCustom = []; }
+
+  const currentCustom = allOrdered
+    .map(c => c.id)
+    .filter(id => !SYSTEM_COL_IDS.has(id));
+
+  const newCustom = currentCustom.filter(id => !knownCustom.includes(id));
+  const visible = new Set([...saved, ...newCustom]);
+
+  // Запоминаем актуальный список кастомных
+  try {
+    localStorage.setItem(KNOWN_CUSTOM_KEY, JSON.stringify(currentCustom));
+  } catch {}
+
+  return allOrdered.filter(c => visible.has(c.id));
 }
 
 function getActiveFormFields(allFields) {
@@ -1771,13 +1817,15 @@ async function deletePipette(id) {
     { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }   
   );   
   if (!ok) return;
-  try {
+    try {
     await apiRequest(`/pipettes/${id}`, 'DELETE');
     showToast('Оборудование удалено', 'success');
     selectedPipettes.delete(id);
     await loadPipetteData();
   } catch (error) {
-    showToast(error.message || 'Ошибка удаления', 'error');
+    // 🆕 Блокировки удаления показываем как предупреждение
+    const isBlock = /Нельзя удалить/.test(error.message || '');
+    showToast(error.message || 'Ошибка удаления', isBlock ? 'warn' : 'error');
   }
 }
 
@@ -1832,23 +1880,45 @@ async function saveQuickCalibration() {
 async function cancelSend(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
-  const ok = await showConfirm(    
-    `Отменить отправку «${id}» на поверку?`,    
-    { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' }  
-  );   
+
+  const hasReplacement = !!p.replaced_by;
+  const confirmMsg = hasReplacement
+    ? `Отменить отправку «${id}» на поверку?\n\n` +
+      `Замена «${p.replaced_by}» вернётся на склад и станет неактивной.`
+    : `Отменить отправку «${id}» на поверку?`;
+
+  const ok = await showConfirm(
+    confirmMsg,
+    { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' }
+  );
   if (!ok) return;
 
-  // 🆕 Если замены нет — возвращаем в работу
-  const restoreActive = !p.replaced_by;
-
   try {
-await apiRequest(`/pipettes/${id}`, 'PUT', {
+    // 🆕 Если была замена — сначала разрываем связь:
+    // возвращаем складскую на склад
+    if (hasReplacement) {
+      try {
+        await apiRequest(`/pipettes/${p.replaced_by}`, 'PUT', {
+          replacing: null,
+          active: false,
+          location: 'Склад'
+        });
+      } catch (e) {
+        console.warn('Не удалось разорвать связь с заменой:', e.message);
+      }
+    }
+
+    // Отменяем отправку + снимаем связь
+    await apiRequest(`/pipettes/${id}`, 'PUT', {
       sentForCalibration: null,
       sentNote: null,
-      ...(restoreActive ? { active: true } : {})
+      active: true,
+      replacedBy: null
     });
+
     showToast('Отправка отменена', 'success');
     await loadPipetteData();
   } catch (e) {
@@ -2397,13 +2467,27 @@ function renderAuthUI() {
         loadPipetteData();
       }
     }
-  } else {
+    
+    } else {
     closeChangePasswordModal();
     authContainer.classList.remove('hidden');
     mainContent.classList.remove('visible');
     document.body.classList.remove('can-manage', 'can-import', 'can-export', 'is-admin');
     const btnStop = document.getElementById('btn-impersonate-stop');
     if (btnStop) btnStop.style.display = 'none';
+
+    // 🆕 Сбрасываем состояние кнопки входа (после логаута)
+    const loginBtn = document.getElementById('login-btn');
+    const loginBtnIcon = document.getElementById('login-btn-icon');
+    const loginBtnText = document.getElementById('login-btn-text');
+    if (loginBtn) loginBtn.disabled = false;
+    if (loginBtnIcon) loginBtnIcon.className = 'fa-solid fa-right-to-bracket';
+    if (loginBtnText) loginBtnText.textContent = 'Войти';
+    const uInput = document.getElementById('login-username');
+    const pInput = document.getElementById('login-password');
+    if (uInput) uInput.disabled = false;
+    if (pInput) { pInput.disabled = false; pInput.value = ''; }
+
     _dataLoadedForUser = null;
   }
 }
@@ -4463,6 +4547,16 @@ async function submitChangePassword(e) {
   const newPwd     = document.getElementById('cp-new').value;
   const confirmPwd = document.getElementById('cp-confirm').value;
 
+  const cpBtn = document.getElementById('cp-btn');
+  const cpBtnIcon = document.getElementById('cp-btn-icon');
+  const cpBtnText = document.getElementById('cp-btn-text');
+
+  const resetCpBtn = () => {
+    if (cpBtn) cpBtn.disabled = false;
+    if (cpBtnIcon) cpBtnIcon.className = 'fa-solid fa-floppy-disk';
+    if (cpBtnText) cpBtnText.textContent = 'Сохранить пароль';
+  };
+
   errEl.textContent = '';
 
   const missing = [];
@@ -4487,7 +4581,12 @@ async function submitChangePassword(e) {
     return;
   }
 
-    try {
+     
+  if (cpBtn) cpBtn.disabled = true;
+  if (cpBtnIcon) cpBtnIcon.className = 'fa-solid fa-spinner fa-spin';
+  if (cpBtnText) cpBtnText.textContent = 'Сохранение…';
+
+  try {
     const res = await apiRequest('/auth/change-password', 'POST', {
       currentPassword: currentPwd,
       newPassword: newPwd,
@@ -4501,19 +4600,14 @@ async function submitChangePassword(e) {
       authToken = res.token;
     }
 
-        // Сохраняем сессию целиком через setSession —
-    // так не теряются originalUser/originalToken (режим impersonate)
     setSession(currentUser, authToken, getOriginalUser(), getOriginalToken());
-
     showToast('Пароль успешно изменён', 'success');
+    resetCpBtn();
     closeChangePasswordModal();
-
-    // 🆕 После смены пароля перестраиваем UI:
-    // renderAuthUI увидит mustChangePassword === false
-    // и вызовет loadPipetteData()
     renderAuthUI();
   } catch (err) {
     errEl.textContent = err.message || 'Ошибка смены пароля';
+    resetCpBtn();
   }
 }
 
@@ -4555,9 +4649,31 @@ function closeTempPasswordModal() {
 
 async function copyTempPassword() {
   if (!_tempPasswordValue) return;
+
+  // Способ 1: navigator.clipboard (требует HTTPS или localhost)
   try {
-    await navigator.clipboard.writeText(_tempPasswordValue);
-    showToast('Пароль скопирован в буфер обмена', 'success');
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(_tempPasswordValue);
+      showToast('Пароль скопирован в буфер обмена', 'success');
+      return;
+    }
+  } catch (e) { /* fallback ниже */ }
+
+  // 🆕 Способ 2: execCommand — работает и по HTTP
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = _tempPasswordValue;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(
+      ok ? 'Пароль скопирован в буфер обмена'
+         : 'Не удалось скопировать. Скопируйте вручную.',
+      ok ? 'success' : 'error'
+    );
   } catch (e) {
     showToast('Не удалось скопировать. Скопируйте вручную.', 'error');
   }
@@ -4628,10 +4744,24 @@ async function exportHistoryToExcel() {
     return;
   }
 
-  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
-  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+    const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
 
-   const csvLines = [headers.join(';')];
+  const csvLines = [];
+
+  // 🆕 Шапка с данными об оборудовании (как в PDF)
+  csvLines.push(['Оборудование', `${p.id} — ${p.model}`].map(sanitizeCsvCell).join(';'));
+  if (p.serial)       csvLines.push(['Серийный номер',  p.serial].map(sanitizeCsvCell).join(';'));
+  if (p.manufacturer) csvLines.push(['Производитель',   p.manufacturer].map(sanitizeCsvCell).join(';'));
+  csvLines.push(['Отдел', p.department || '—'].map(sanitizeCsvCell).join(';'));
+  if (from || to) {
+    csvLines.push(['Период', `${from || '…'} — ${to || '…'}`].map(sanitizeCsvCell).join(';'));
+  }
+  csvLines.push(['Записей', String(history.length)].map(sanitizeCsvCell).join(';'));
+  csvLines.push('');
+
+  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
+  csvLines.push(headers.map(sanitizeCsvCell).join(';'));
+
   history.forEach(h => {
     const row = [
       h.date || '',
