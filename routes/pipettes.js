@@ -11,11 +11,11 @@ const STANDARD_FIELDS = new Set([
   'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume',
   'department', 'interval', 'lastCalibration', 'cert', 'result', 'active',
   'responsible', 'location', 'notes',
-  // 🆕 Поля из фронтенда — маппятся на существующие колонки,
-  // не должны попадать в custom_data
-  'lastResult',            // → last_result
-  'sentForCalibration',    // → sent_for_calibration
-  'sentNote'               // → sent_note
+  'lastResult',
+  'sentForCalibration',
+  'sentNote',
+  'replacedBy',    // 🆕 для отмены отправки с заменой
+  'replacing'      // 🆕
 ]);
 
 function parseCustomData(raw) {
@@ -330,7 +330,12 @@ router.get('/:id', authenticate, async (req, res) => {
 
 // Создание
 router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
-    const {
+  
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+
+  const {
     id: rawId, serial, manufacturer, model, equipmentType,
     interval, lastCalibration, cert, result, active, location, notes
   } = req.body;
@@ -456,7 +461,11 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
 });
 
 // Обновление
-  router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+    router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+
   const updates = req.body;
 
   // 🛡️ И.о. — принудительно ответственный и отдел основного
@@ -482,7 +491,7 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     return res.status(403).json({ error: 'Смена отдела доступна только администратору' });
   }
     
-    const map = {
+      const map = {
     serial: 'serial', manufacturer: 'manufacturer', model: 'model',
     equipmentType: 'equipment_type',
     volume: 'volume',
@@ -491,7 +500,9 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     cert: 'cert', lastResult: 'last_result', active: 'active',
     responsible: 'responsible', location: 'location', notes: 'notes',
     sentForCalibration: 'sent_for_calibration',
-    sentNote: 'sent_note'
+    sentNote: 'sent_note',
+    replacedBy: 'replaced_by',   
+    replacing: 'replacing'       
   };
 
  const NUMERIC_FIELDS = new Set(['interval']);
@@ -505,19 +516,22 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
  const fields = [];
  const values = [];
  for (const [k, col] of Object.entries(map)) {
-   if (updates[k] !== undefined) {
-     fields.push(`${col} = ?`);
+   if (updates[k] === undefined) continue;
+   if (k === 'lastCalibration' && (updates[k] === '' || updates[k] === null)) {
+     continue;
+   }
+
+   fields.push(`${col} = ?`);
    if (k === 'active') {
-      values.push(
-        (updates[k] === false || updates[k] === 0 ||
-         updates[k] === 'false' || updates[k] === '0') ? 0 : 1
-      );
-    } else if (NUMERIC_FIELDS.has(k) && updates[k] === '') {
-      values.push(null);
-    } else {
-      values.push(updates[k]);
-    }
-  }
+     values.push(
+       (updates[k] === false || updates[k] === 0 ||
+        updates[k] === 'false' || updates[k] === '0') ? 0 : 1
+     );
+   } else if (NUMERIC_FIELDS.has(k) && updates[k] === '') {
+     values.push(null);
+   } else {
+     values.push(updates[k]);
+   }
 }
 
  // 🆕 Мёржим custom_data
@@ -588,30 +602,59 @@ router.delete('/:id', authenticate, requirePermission('manage_pipettes'), async 
   try {
     await conn.beginTransaction();
     const [exist] = await conn.query(
-      'SELECT model, department FROM pipettes WHERE id = ?', [req.params.id]
+      'SELECT id, model, department, replaced_by, replacing FROM pipettes WHERE id = ?',
+      [req.params.id]
     );
     if (!exist.length) {
       await conn.rollback();
       return res.status(404).json({ error: 'Не найдена' });
     }
 
-    // ← проверка доступа по отделу
     if (!canAccessDepartment(req.user, exist[0].department)) {
       await conn.rollback();
       return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
     }
 
-        // 🛡️ Обнуляем связки у связанного оборудования
-    await conn.query(
-      `UPDATE pipettes SET replaced_by = NULL WHERE replaced_by = ?`,
-      [req.params.id]
+    // ──────────────────────────────────────────────────────────
+    // 🛡️ Блокировка удаления при активных связях замены
+    // ──────────────────────────────────────────────────────────
+    const row = exist[0];
+    const id = req.params.id;
+      if (row.replaced_by || row.replacing) {
+      await conn.rollback();
+      const linkInfo = row.replaced_by
+        ? `она отправлена на поверку, замена: ${row.replaced_by}`
+        : `она заменяет ${row.replacing}`;
+      return res.status(400).json({
+        error: `Нельзя удалить ${id}: ${linkInfo}. ` +
+               `Сначала отмените отправку или оформите возврат с поверки.`
+      });
+    }       
+    const [usedAsReplacement] = await conn.query(
+      'SELECT id FROM pipettes WHERE replaced_by = ? LIMIT 1',
+      [id]
     );
-    await conn.query(
-      `UPDATE pipettes SET replacing = NULL WHERE replacing = ?`,
-      [req.params.id]
-    );
+    if (usedAsReplacement.length) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: `Нельзя удалить ${id}: она используется как замена для ` +
+               `${usedAsReplacement[0].id}. Сначала оформите возврат с поверки.`
+      });
+    }
 
-    await conn.query('DELETE FROM pipettes WHERE id = ?', [req.params.id]);
+    const [usedAsOriginal] = await conn.query(
+      'SELECT id FROM pipettes WHERE replacing = ? LIMIT 1',
+      [id]
+    );
+    if (usedAsOriginal.length) {
+      await conn.rollback();
+      return res.status(400).json({
+        error: `Нельзя удалить ${id}: она заменена на ` +
+               `${usedAsOriginal[0].id}. Сначала оформите возврат с поверки.`
+      });
+    }
+
+    await conn.query('DELETE FROM pipettes WHERE id = ?', [id]);
     await conn.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
       [req.user.id, req.user.full_name, 'Удаление оборудования', `${req.params.id} (${exist[0].model})`]
@@ -629,9 +672,11 @@ router.delete('/:id', authenticate, requirePermission('manage_pipettes'), async 
 // МАССОВАЯ ОТПРАВКА НА ПОВЕРКУ
 // ============================================================
 router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
   const { ids, sentDate, note } = req.body;
 
-  // 🛡️ Нормализация replacements
   const replacements =
     (req.body.replacements
       && typeof req.body.replacements === 'object'
@@ -649,7 +694,6 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
     return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 100)' });
   }
 
-  // 🛡️ Проверка: одна складская не может заменить несколько + не на себя
   const usedReplacements = new Set();
   for (const [origId, replId] of Object.entries(replacements)) {
     if (!replId) continue;
@@ -674,8 +718,7 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
     const skipped = [];
     const notFound = [];
     let skippedReplacements = [];
-
-    // 🛡️ Один раз читаем типы, чтобы не дёргать БД в цикле
+    
     const [typeRows] = await conn.query(
       "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
     );
@@ -694,8 +737,7 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
 
       if (!rows.length) { notFound.push(id); continue; }
       if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
-
-      // 🛡️ Только external-типы
+    
       if (!isExternalType(rows[0].equipment_type)) { skipped.push(id); continue; }
 
       if (rows[0].sent_for_calibration) { skipped.push(id); continue; }
@@ -708,8 +750,6 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
          WHERE id = ?`,
         [sentDate, note || null, id]
       );
-
-      // 🛡️ Замена
       const replacementId = replacements[id];
       if (replacementId) {
         const [repRows] = await conn.query(
@@ -801,6 +841,9 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
 // МАССОВЫЙ ВОЗВРАТ С ПОВЕРКИ
 // ============================================================
 router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
   const { items, date, org, note } = req.body;
 
   // 🛡️ Нормализация
@@ -862,16 +905,14 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
         [item.id, date, itemCert, itemResult, org || null, note || null]
       );
 
-      const backToWork = itemResult === 'pass' ? 1 : 0;
-
       await conn.query(
         `UPDATE pipettes
          SET last_calibration = ?, cert = ?, last_result = ?,
              sent_for_calibration = NULL, sent_note = NULL,
-             active = ?,
+             active = 1,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [date, itemCert, itemResult, backToWork, item.id]
+        [date, itemCert, itemResult, item.id]
       );
 
       // 🛡️ Возврат замены
@@ -944,6 +985,9 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
 
 // Добавление поверки
 router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
   const { date, cert, result, org, note } = req.body;
   if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
   const conn = await db.getConnection();
