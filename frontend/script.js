@@ -208,7 +208,14 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     refreshCurrentUser();   // fire-and-forget
   }
 
-  const result = await response.json();
+    let result;
+  try {
+    result = await response.json();
+  } catch (e) {
+    // 🆕 Сервер вернул не JSON (502 от прокси, пустой ответ, HTML)
+    result = { error: `Ошибка ${response.status}: сервер вернул некорректный ответ` };
+  }
+
   if (!response.ok) throw new Error(result.error || 'Ошибка запроса');
   return result;
 }
@@ -395,14 +402,21 @@ function logoutUser() {
   clearSession();
   myPrefs = { visibleFields: null, tableColumns: null };
 
+  // 🆕 Сброс состояния сессии
+  filterState = {};
+  selectedPipettes.clear();
+  _reminderScheduled = false;
+  _reminderDismissed = false;
+  _lastPermsCheck = 0;
+  _dataLoadedForUser = null;
+
   const u = document.getElementById('login-username');
   const p = document.getElementById('login-password');
 
-  // Логин сохраняем в localStorage, чтобы подставить при следующем входе
   if (u && u.value.trim()) {
     localStorage.setItem('pipette_last_login', u.value.trim());
   }
-  if (p) p.value = '';   // пароль всегда очищаем
+  if (p) p.value = '';
 
   renderAuthUI();
   showToast('Вы вышли из системы', 'success');
@@ -419,12 +433,18 @@ async function impersonateUser(userId) {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
 
-     myPrefs = { visibleFields: null, tableColumns: null };
+       myPrefs = { visibleFields: null, tableColumns: null };
     _dataLoadedForUser = null;
-    _lastPermsCheck = 0;   // 🛡️ сброс — при следующем запросе права обновятся
+    _lastPermsCheck = 0;
 
-    // 🆕 Очищаем данные предыдущего пользователя,
-    // чтобы не показывать чужие, пока не загрузились свои
+    // 🆕 Сброс напоминаний — у impersonated свой набор
+    _reminderScheduled = false;
+    _reminderDismissed = false;
+
+    // 🆕 Сброс фильтров
+    filterState = {};
+
+    // Очищаем данные предыдущего пользователя
     pipettes = [];
     selectedPipettes.clear();
 
@@ -449,11 +469,18 @@ function stopImpersonate() {
     user: originalUser,
     token: originalToken
   }));
-    myPrefs = { visibleFields: null, tableColumns: null };
+   myPrefs = { visibleFields: null, tableColumns: null };
   _dataLoadedForUser = null;
-  _lastPermsCheck = 0;   // 🛡️ сброс — права перечитаются сразу
+  _lastPermsCheck = 0;
 
-  // 🆕 Очищаем данные impersonated пользователя
+  // 🆕 Сброс напоминаний — возвращаемся к своим
+  _reminderScheduled = false;
+  _reminderDismissed = false;
+
+  // 🆕 Сброс фильтров
+  filterState = {};
+
+  // Очищаем данные impersonated пользователя
   pipettes = [];
   selectedPipettes.clear();
 
@@ -840,11 +867,44 @@ function getActiveTableColumns() {
 }
 
 function getActiveFormFields(allFields) {
-  if (myPrefs.visibleFields && Array.isArray(myPrefs.visibleFields) && myPrefs.visibleFields.length > 0) {
-    const visible = new Set(myPrefs.visibleFields);
-    return allFields.filter(f => f.enabled && visible.has(f.id));
+  const enabled = allFields.filter(f => f.enabled);
+
+  if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
+    return enabled;
   }
-  return allFields.filter(f => f.enabled);
+
+  const visible = new Set(myPrefs.visibleFields);
+
+  // 🆕 Автоматически показываем НОВЫЕ кастомные поля,
+  // которые пользователь никогда не отключал
+  const KNOWN_KEY = 'pipette_known_form_fields_' + (currentUser?.id || 'anon');
+  let knownForm = [];
+  try {
+    knownForm = JSON.parse(localStorage.getItem(KNOWN_KEY) || '[]');
+  } catch { knownForm = []; }
+
+  const SYSTEM_IDS = new Set([
+    'id', 'serial', 'manufacturer', 'model', 'equipmentType',
+    'volume', 'department', 'interval', 'lastCalibration', 'cert',
+    'result', 'active', 'responsible', 'location', 'notes'
+  ]);
+
+  const currentCustom = enabled
+    .map(f => f.id)
+    .filter(id => !SYSTEM_IDS.has(id));
+
+  const newCustom = currentCustom.filter(id => !knownForm.includes(id));
+
+  try {
+    localStorage.setItem(KNOWN_KEY, JSON.stringify(currentCustom));
+  } catch {}
+
+  const allowedIds = new Set([...visible, ...newCustom]);
+
+  return enabled.filter(f => {
+    if (SYSTEM_IDS.has(f.id)) return visible.has(f.id);
+    return allowedIds.has(f.id);
+  });
 }
 
 // ============================================================
@@ -2170,8 +2230,14 @@ async function exportToXlsx() {
 
   showToast('Формирование Excel…', 'success');
 
-  try {
-    const token = JSON.parse(sessionStorage.getItem('pipette_session')).token;
+    try {
+    const sess = sessionStorage.getItem('pipette_session');
+    if (!sess) {
+      showToast('Сессия истекла, войдите заново', 'error');
+      return;
+    }
+    const token = JSON.parse(sess).token;
+
     const res = await fetch('/api/export/xlsx', {
       method: 'POST',
       headers: {
@@ -2394,17 +2460,30 @@ document.addEventListener('click', (e) => {
 // ============================================================
 // НАПОМИНАНИЯ
 // ============================================================
+// 🆕 Состояние напоминаний в текущей сессии
+let _reminderScheduled = false;   // таймер уже поставлен
+let _reminderDismissed = false;   // пользователь нажал «Позже» — не показывать до перезахода
+
 function checkReminder() {
   if (!currentUser) return;
+
+  // Уже запланировано или пользователь отложил
+  if (_reminderScheduled || _reminderDismissed) return;
+
+  // Модалка уже открыта — не дублировать
+  const overlay = document.getElementById('reminder-overlay');
+  if (overlay && overlay.classList.contains('active')) return;
+
   const key = 'pipette_last_reminder_' + currentUser.id;
   const lastShown = localStorage.getItem(key);
   const today = todayStr();
-  if (lastShown === today) return;
+  if (lastShown === today) return;   // уже нажимали «Понятно» сегодня
 
   const dangerList = pipettes.filter(p => ['danger', 'fail'].includes(calcStatus(p)));
   const warnList = pipettes.filter(p => calcStatus(p) === 'warn');
   if (dangerList.length === 0 && warnList.length === 0) return;
 
+  _reminderScheduled = true;
   setTimeout(() => showReminder(dangerList, warnList), 600);
 }
 
@@ -2458,14 +2537,20 @@ function showReminder(dangerList, warnList) {
 
 function closeReminder(confirmed) {
   document.getElementById('reminder-overlay').classList.remove('active');
+
+  // Сбрасываем флаг «таймер поставлен», чтобы при новом входе
+  // в этом же сеансе (impersonate → вернуться) можно было снова показать
+  _reminderScheduled = false;
+
   if (!currentUser) return;
 
   if (confirmed) {
-    // «Понятно» — больше не показывать сегодня
+    // «Понятно» — не показывать до завтра, даже после F5
     localStorage.setItem('pipette_last_reminder_' + currentUser.id, todayStr());
   } else {
-    // «Позже» — показать снова при следующей перезагрузке страницы
-    localStorage.removeItem('pipette_last_reminder_' + currentUser.id);
+    // «Позже» — не показывать в этой сессии.
+    // После выхода и повторного входа — снова покажется.
+    _reminderDismissed = true;
   }
 }
 
@@ -4888,8 +4973,14 @@ async function exportHistoryToXlsx() {
     recordCount: history.length
   };
 
-  try {
-    const token = JSON.parse(sessionStorage.getItem('pipette_session')).token;
+    try {
+    const sess = sessionStorage.getItem('pipette_session');
+    if (!sess) {
+      errEl.textContent = 'Сессия истекла, войдите заново';
+      return;
+    }
+    const token = JSON.parse(sess).token;
+
     const res = await fetch('/api/export/xlsx', {
       method: 'POST',
       headers: {
