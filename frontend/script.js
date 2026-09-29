@@ -2203,16 +2203,20 @@ async function exportToXlsx() {
   const data = getFilteredPipettes();
   if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
-  const fields = getActiveExportFields();
+ const fields = getActiveExportFields();
+  const headers = fields.map(f => {
+    const def = getExportField(f);
+    return def ? def.label : f;
+  });
+  // 🆕 Ключи строк = метки (совпадают с headers)
   const rows = data.map(p => {
     const obj = {};
-    fields.forEach(f => {
+    fields.forEach((f, i) => {
       const def = getExportField(f);
-      obj[f] = def ? def.get(p) : '';
+      obj[headers[i]] = def ? def.get(p) : '';
     });
     return obj;
   });
-
   const headers = fields.map(f => {
     const def = getExportField(f);
     return def ? def.label : f;
