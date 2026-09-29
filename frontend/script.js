@@ -2146,6 +2146,64 @@ async function exportToExcel() {
   showToast(`Экспорт: ${fields.length} полей, ${data.length} записей`, 'success');
 }
 
+async function exportToXlsx() {
+  await refreshCurrentUser();
+  if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
+
+  const data = getFilteredPipettes();
+  if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
+
+  const fields = getActiveExportFields();
+  const rows = data.map(p => {
+    const obj = {};
+    fields.forEach(f => {
+      const def = getExportField(f);
+      obj[f] = def ? def.get(p) : '';
+    });
+    return obj;
+  });
+
+  const headers = fields.map(f => {
+    const def = getExportField(f);
+    return def ? def.label : f;
+  });
+
+  showToast('Формирование Excel…', 'success');
+
+  try {
+    const token = JSON.parse(sessionStorage.getItem('pipette_session')).token;
+    const res = await fetch('/api/export/xlsx', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: 'Реестр оборудования — КДЛ',
+        headers,
+        rows,
+        fields
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Ошибка экспорта');
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pipettes_${todayStr()}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Экспортировано: ${data.length} записей`, 'success');
+  } catch (e) {
+    showToast(e.message || 'Ошибка экспорта', 'error');
+  }
+}
+
 async function exportToPDF() {
   await refreshCurrentUser();
   if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
