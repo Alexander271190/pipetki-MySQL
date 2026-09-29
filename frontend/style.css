@@ -337,6 +337,7 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.success { background: #16a34a; }
 .toast.error { background: #dc2626; }
+.toast.warn { background: #d97706; }
 
 /* ========== ТАЙМЛАЙН (история поверок) ========== */
 .timeline { position: relative; padding-left: 28px; margin-top: 15px; }
@@ -662,7 +663,25 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   padding: 13px 20px;
   font-size: 1.05rem;
   font-weight: 600;
+  min-height: 50px;
+  box-sizing: border-box;
 }
+
+/* 🆕 Отключённая кнопка — приглушённая, курсор ожидания */
+.auth-form .btn:disabled {
+  opacity: .7;
+  cursor: wait;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* 🆕 Отключённые поля ввода */
+.auth-box .form-group input:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
 .auth-error { 
   color: #b91c1c;                    
   font-size: .95rem;                  
