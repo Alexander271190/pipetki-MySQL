@@ -27,8 +27,9 @@
           <input type="password" id="login-password" placeholder="Введите пароль" autocomplete="current-password">
         </div>
         <div id="login-error" class="auth-error"></div>
-        <button type="submit" class="btn btn-primary">
-          <i class="fa-solid fa-right-to-bracket"></i> Войти
+        <button type="submit" class="btn btn-primary" id="login-btn">
+          <i class="fa-solid fa-right-to-bracket" id="login-btn-icon"></i>
+          <span id="login-btn-text">Войти</span>
         </button>
       </form>
     </div>
@@ -511,7 +512,10 @@
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" id="cp-cancel-btn" onclick="closeChangePasswordModal()">Отмена</button>
-        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Сохранить пароль</button>
+               <button type="submit" class="btn btn-success" id="cp-btn">
+          <i class="fa-solid fa-floppy-disk" id="cp-btn-icon"></i>
+          <span id="cp-btn-text">Сохранить пароль</span>
+        </button>
       </div>
     </form>
   </div>
