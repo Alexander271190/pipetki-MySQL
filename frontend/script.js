@@ -4796,13 +4796,17 @@ async function exportHistoryToExcel() {
   const p = pipettes.find(x => x.id === currentHistoryId);
   if (!p) return;
 
-  const history = await getFilteredHistoryForExport();
+    const history = await getFilteredHistoryForExport();
   if (history.length === 0) {
     errEl.textContent = 'Нет записей за выбранный период';
     return;
   }
 
-    const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+  // 🆕 Переменные для строки «Период» (без них → ReferenceError)
+  const from = document.getElementById('he-from').value;
+  const to   = document.getElementById('he-to').value;
+
+  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
 
   const csvLines = [];
 
@@ -4843,6 +4847,77 @@ async function exportHistoryToExcel() {
 
   closeHistoryExportModal();
   showToast(`Экспортировано: ${history.length} записей`, 'success');
+}
+
+// Экспорт в Excel (.xlsx) — нативный
+async function exportHistoryToXlsx() {
+  const errEl = document.getElementById('he-error');
+  errEl.textContent = '';
+
+  const p = pipettes.find(x => x.id === currentHistoryId);
+  if (!p) return;
+
+  const history = await getFilteredHistoryForExport();
+  if (history.length === 0) {
+    errEl.textContent = 'Нет записей за выбранный период';
+    return;
+  }
+
+  const from = document.getElementById('he-from').value;
+  const to   = document.getElementById('he-to').value;
+
+  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+
+  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
+  const rows = history.map(h => ({
+    'Дата поверки':   h.date ? formatDate(h.date) : '',
+    'Свидетельство':  h.cert || '',
+    'Результат':      resultLabels[h.result] || h.result || '',
+    'Организация':    h.org || '',
+    'Примечание':     h.note || ''
+  }));
+
+  const meta = {
+    title: 'История поверок оборудования',
+    equipmentId: p.id,
+    model: p.model,
+    manufacturer: p.manufacturer || '',
+    serial: p.serial || '',
+    department: p.department || '',
+    period: (from || to) ? `${from || '…'} — ${to || '…'}` : 'вся история',
+    recordCount: history.length
+  };
+
+  try {
+    const token = JSON.parse(sessionStorage.getItem('pipette_session')).token;
+    const res = await fetch('/api/export/xlsx', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ mode: 'history', meta, headers, rows })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Ошибка экспорта');
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `history_${p.id}_${todayStr()}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    closeHistoryExportModal();
+    showToast(`Экспортировано: ${history.length} записей`, 'success');
+  } catch (e) {
+    errEl.textContent = e.message || 'Ошибка экспорта';
+    showToast(e.message || 'Ошибка экспорта', 'error');
+  }
 }
 
 // Экспорт в PDF (открывает вкладку с реестром)
