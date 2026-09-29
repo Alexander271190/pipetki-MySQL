@@ -11,8 +11,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({ origin: true, credentials: false }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Раздача статики
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Некорректный JSON в теле запроса' });
+  }
+  next(err);
+});
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 const asyncHandler = fn => (req, res, next) =>
