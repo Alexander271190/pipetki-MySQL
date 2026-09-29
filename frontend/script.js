@@ -2217,11 +2217,7 @@ async function exportToXlsx() {
     });
     return obj;
   });
-  const headers = fields.map(f => {
-    const def = getExportField(f);
-    return def ? def.label : f;
-  });
-
+  
   showToast('Формирование Excel…', 'success');
 
     try {
