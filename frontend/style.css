@@ -605,6 +605,7 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   background-repeat: no-repeat;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  min-height: 540px;
 }
 
 .auth-box-overlay {
@@ -694,11 +695,20 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   border-radius: 10px;               
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
   line-height: 1.4;
-  min-height: 0;                      
+
+  /* 🆕 Резервируем высоту под одну строку — бокс больше не прыгает */
+  min-height: 60px;
+  box-sizing: border-box;
+
+  /* 🆕 Скрываем через visibility, а не display — место сохраняется */
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .2s;
 }
 
-.auth-error:empty {
-  display: none;
+.auth-error:not(:empty) {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Поля — усиленный контраст для читаемости на фоне */
