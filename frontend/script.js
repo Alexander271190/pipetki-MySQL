@@ -1375,11 +1375,12 @@ function applyFilters() {
       filterState[f.id] = el ? el.value.trim() : '';
     }
   }
-   document.getElementById('filter-panel').classList.remove('show');
+    const savedScroll = window.scrollY;                    // 🆕 запомнили
+  document.getElementById('filter-panel').classList.remove('show');
   currentPage = 1;
 
-  // 🆕 Выделение НЕ очищается при смене фильтра
   render();
+  window.scrollTo(0, savedScroll);                       // 🆕 вернули
 }
 
 function resetFilters() {
@@ -2647,14 +2648,16 @@ let _searchTimeout = null;
 document.getElementById('search').addEventListener('input', () => {
   clearTimeout(_searchTimeout);
   _searchTimeout = setTimeout(() => {
+    const savedScroll = window.scrollY;                 // 🆕 запомнили позицию
+    document.getElementById('filter-panel').classList.remove('show');  // 🆕 закрыли панель фильтра
     currentPage = 1;
     render();
-    // 🆕 Выделение НЕ очищается при смене поиска —
-    // пользователь может искать по одному ID и набирать несколько
     updateSelectAllCheckbox();
     updateBulkCalButton();
+    window.scrollTo(0, savedScroll);                     // 🆕 вернули позицию
   }, 150);
 });
+
 document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 document.getElementById('quick-cal-modal').addEventListener('click', e => { if (e.target.id === 'quick-cal-modal') closeQuickCalModal(); });
 document.getElementById('history-modal').addEventListener('click', e => { if (e.target.id === 'history-modal') closeHistoryModal(); });
