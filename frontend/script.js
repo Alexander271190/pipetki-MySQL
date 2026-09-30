@@ -1348,10 +1348,20 @@ function toggleCustomPeriod(fid) {
   }
 }
 
-function toggleFilterPanel() {
+function toggleFilterPanel(ev) {
   const panel = document.getElementById('filter-panel');
   if (!panel) return;
   if (!_filterRendered) renderFilterFields();
+
+  // 🆕 Позиционируем fixed-панель под кнопкой «Фильтр»
+  const btn = (ev && ev.currentTarget) 
+    || document.querySelector('button[onclick*="toggleFilterPanel"]');
+  if (btn) {
+    const r = btn.getBoundingClientRect();
+    panel.style.top  = (r.bottom + 4) + 'px';
+    panel.style.left = r.left + 'px';
+  }
+
   panel.classList.toggle('show');
 }
 
