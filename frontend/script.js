@@ -1231,10 +1231,8 @@ function updateBulkCalButton() {
 
   if (!btnSend && !btnReturn) return;
 
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-   // 🛡️ Фильтруем только реально существующие
+   // 🆕 Учитываем ВСЕ выбранные, даже вне текущего фильтра
   const visibleSelected = [...selectedPipettes].filter(id => {
-    if (!visibleIds.includes(id)) return false;
     return pipettes.some(p => p.id === id);
   });
   
@@ -1248,10 +1246,14 @@ function updateBulkCalButton() {
     return p && p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
-  if (btnSend) {
+    if (btnSend) {
     if (toSend.length > 0) {
       btnSend.style.display = 'inline-flex';
-      if (counterSend) counterSend.textContent = toSend.length;
+      // 🆕 Показываем сколько выбрано всего и сколько из них внешних
+      const hint = toSend.length < selectedPipettes.size
+        ? `${toSend.length} / ${selectedPipettes.size}`
+        : toSend.length;
+      if (counterSend) counterSend.textContent = hint;
     } else {
       btnSend.style.display = 'none';
     }
@@ -1373,13 +1375,10 @@ function applyFilters() {
       filterState[f.id] = el ? el.value.trim() : '';
     }
   }
-  document.getElementById('filter-panel').classList.remove('show');
+   document.getElementById('filter-panel').classList.remove('show');
   currentPage = 1;
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-  for (const id of [...selectedPipettes]) {
-    if (!visibleIds.includes(id)) selectedPipettes.delete(id);
-  }
 
+  // 🆕 Выделение НЕ очищается при смене фильтра
   render();
 }
 
@@ -2640,12 +2639,10 @@ let _searchTimeout = null;
 document.getElementById('search').addEventListener('input', () => {
   clearTimeout(_searchTimeout);
   _searchTimeout = setTimeout(() => {
-    currentPage = 1; 
+    currentPage = 1;
     render();
-    const visibleIds = getFilteredPipettes().map(p => p.id);
-    for (const id of [...selectedPipettes]) {
-      if (!visibleIds.includes(id)) selectedPipettes.delete(id);
-    }
+    // 🆕 Выделение НЕ очищается при смене поиска —
+    // пользователь может искать по одному ID и набирать несколько
     updateSelectAllCheckbox();
     updateBulkCalButton();
   }, 150);
@@ -3743,8 +3740,10 @@ async function openBulkSendModal() {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-  const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
+   // 🆕 Включаем все выбранные, не только видимые
+  const selected = [...selectedPipettes].filter(id =>
+    pipettes.some(p => p.id === id)
+  );
     const toSend = selected.filter(id => {
     const p = pipettes.find(x => x.id === id);
     return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
@@ -4068,9 +4067,10 @@ async function openBulkReturnModal() {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
-  const visibleIds = getFilteredPipettes().map(p => p.id);
-  const selected = [...selectedPipettes].filter(id => visibleIds.includes(id));
-
+    // 🆕 Включаем все выбранные, не только видимые
+  const selected = [...selectedPipettes].filter(id =>
+    pipettes.some(p => p.id === id)
+  );
      const sentItems = selected
     .map(id => pipettes.find(x => x.id === id))
     .filter(p => p && p.sent_for_calibration && isExternalCalibration(p.equipment_type));
