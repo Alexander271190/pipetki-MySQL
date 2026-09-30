@@ -26,7 +26,7 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
 
     const COLS = Math.max(headers.length, 1);
 
-    // ── Шапка ──
+       // ── Шапка ──
     if (mode === 'history' && meta) {
       const titleRow = sheet.addRow([meta.title || 'История поверок']);
       sheet.mergeCells(1, 1, 1, COLS);
@@ -42,6 +42,23 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       if (meta.period)       sheet.addRow([`Период: ${meta.period}`]);
       sheet.addRow([`Записей: ${meta.recordCount ?? rows.length}`]);
       sheet.addRow([]); // пустая строка-разделитель
+
+    } else if (mode === 'registry' && meta) {
+      const titleRow = sheet.addRow([meta.title || 'Реестр оборудования']);
+      sheet.mergeCells(1, 1, 1, COLS);
+      titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
+      titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+      titleRow.height = 22;
+
+      // 🆕 В шапке — только дата и число записей (без «Сформировал»)
+      const metaParts = [];
+      if (meta.date)                metaParts.push(`Дата: ${meta.date}`);
+      if (meta.recordCount != null) metaParts.push(`Записей: ${meta.recordCount}`);
+      if (metaParts.length) {
+        sheet.addRow([metaParts.join('  ·  ')]);
+      }
+      sheet.addRow([]); // пустая строка-разделитель
+
     } else {
       const titleRow = sheet.addRow([title || 'Реестр оборудования']);
       sheet.mergeCells(1, 1, 1, COLS);
@@ -50,7 +67,6 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       titleRow.height = 22;
       sheet.addRow([]);
     }
-
     // ── Строка заголовков таблицы ──
     const headerRow = sheet.addRow(headers);
     headerRow.eachCell(cell => {
@@ -83,6 +99,25 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
         }
       });
     });
+
+    
+    // ── Подвал: кто сформировал + подпись ──
+    if (mode && meta) {
+      sheet.addRow([]); // пустая строка-разделитель
+
+      const userLine = sheet.addRow([
+        `Документ сформировал: ${(meta.userPosition || '').trim()}, ${(meta.user || '').trim()}`
+      ]);
+      userLine.getCell(1).font = { size: 10, bold: true, color: { argb: 'FF1E293B' } };
+      sheet.mergeCells(userLine.number, 1, userLine.number, COLS);
+
+      const signLine = sheet.addRow(['Подпись: _______________']);
+      signLine.getCell(1).font = { size: 10 };
+      sheet.mergeCells(signLine.number, 1, signLine.number, COLS);
+
+      // Отступ после подписи
+      sheet.addRow([]);
+    }
 
     // ── Автоширина столбцов ──
     sheet.columns.forEach((col, i) => {
