@@ -496,9 +496,8 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
 
 /* ========== ПАНЕЛЬ ФИЛЬТРА ========== */
 .filter-panel {
-  position: absolute;
-  top: 100%;
-  left: 0;
+  position: fixed;        /* 🆕 было absolute — fixed игнорирует overflow родителей */
+  /* top/left задаются динамически из JS */
   background: #fff;
   border: 1px solid #d1d5db;
   border-radius: 12px;
@@ -506,9 +505,11 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   padding: 14px;
   width: 460px;
   max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 100px);   /* 🆕 скролл внутри, если не влезает */
+  overflow-y: auto;                  /* 🆕 */
   z-index: 60;
   display: none;
-  margin-top: 4px;
+  margin-top: 0;                     /* 🆕 уже не нужен */
 }
 .filter-panel.show { display: block; }
 
