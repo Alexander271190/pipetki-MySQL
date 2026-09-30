@@ -82,7 +82,9 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
     });
     headerRow.height = 22;
 
-    // ── Данные ──
+       // ── Данные ──
+    let lastDataRow = null;                        // 🆕 ссылка на последнюю строку
+
     rows.forEach((row, idx) => {
       const r = sheet.addRow(headers.map(h => row[h] ?? ''));
       r.eachCell(cell => {
@@ -98,25 +100,54 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
         }
       });
+      lastDataRow = r;                             // 🆕 запоминаем
     });
 
     
-    // ── Подвал: кто сформировал + подпись ──
+       // ── Подвал: кто сформировал + подпись ──
     if (mode && meta) {
-      sheet.addRow([]); // пустая строка-разделитель
+      // 🆕 Отступ ~2.1 см от последней записи (60pt)
+      const spacer = sheet.addRow([]);
+      spacer.height = 60;
 
-      const userLine = sheet.addRow([
-        `Документ сформировал: ${(meta.userPosition || '').trim()}, ${(meta.user || '').trim()}`
-      ]);
-      userLine.getCell(1).font = { size: 10, bold: true, color: { argb: 'FF1E293B' } };
-      sheet.mergeCells(userLine.number, 1, userLine.number, COLS);
+      // 🆕 Подвал: слева «Документ сформировал», справа «Подпись»
+      const footerRow = sheet.addRow([]);
+      footerRow.height = 20;
 
-      const signLine = sheet.addRow(['Подпись: _______________']);
-      signLine.getCell(1).font = { size: 10 };
-      sheet.mergeCells(signLine.number, 1, signLine.number, COLS);
+      const userText = `Документ сформировал: ${(meta.userPosition || '').trim()}, ${(meta.user || '').trim()}`;
+      const signText = 'Подпись: _______________';
 
-      // Отступ после подписи
-      sheet.addRow([]);
+      if (COLS >= 2) {
+        // Левая часть — «Документ сформировал» (первая половина колонок)
+        const midCol = Math.ceil(COLS / 2);
+        sheet.mergeCells(footerRow.number, 1, footerRow.number, midCol);
+        const leftCell = footerRow.getCell(1);
+        leftCell.value = userText;
+        leftCell.font = { size: 10, bold: true, color: { argb: 'FF1E293B' } };
+        leftCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+        // Правая часть — «Подпись» (вторая половина колонок)
+        if (midCol + 1 <= COLS) {
+          sheet.mergeCells(footerRow.number, midCol + 1, footerRow.number, COLS);
+          const rightCell = footerRow.getCell(midCol + 1);
+          rightCell.value = signText;
+          rightCell.font = { size: 10 };
+          rightCell.alignment = { horizontal: 'right', vertical: 'middle' };
+        }
+      } else {
+        // Fallback: одна колонка — печатаем в одной ячейке
+        const cell = footerRow.getCell(1);
+        cell.value = `${userText}\n\n${signText}`;
+        cell.font = { size: 10, bold: true, color: { argb: 'FF1E293B' } };
+        cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+      }
+
+       const FORCE_BREAK_THRESHOLD = 40;
+        if (lastDataRow && rows.length > FORCE_BREAK_THRESHOLD) {
+          lastDataRow.addPageBreak();
+        }
+
+        sheet.addRow([]);
     }
 
     // ── Автоширина столбцов ──
@@ -129,6 +160,21 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       col.width = Math.min(Math.max(max + 2, 8), 45);
     });
 
+        // 🆕 Настройки печати: шапка таблицы на каждой странице + альбомная
+    sheet.pageSetup = {
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      orientation: 'landscape',
+      paperSize: 9,                     // A4
+      margins: {
+        left: 0.4, right: 0.4,
+        top: 0.5, bottom: 0.5,
+        header: 0.2, footer: 0.2,
+      },
+      printTitlesRow: headerRow.number + ':' + headerRow.number,   // 🆕 шапка на каждой странице
+    };
+    
     // ── Отдача файла ──
     const buffer = await workbook.xlsx.writeBuffer();
     const today = new Date().toISOString().slice(0, 10);
