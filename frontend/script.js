@@ -1384,7 +1384,10 @@ function repositionFilterPanel() {
 }
 
 window.addEventListener('scroll', repositionFilterPanel, { passive: true });
-window.addEventListener('resize', repositionFilterPanel, { passive: true });
+document.addEventListener('scroll', repositionFilterPanel, { passive: true, capture: true });
+window.addEventListener('wheel',     repositionFilterPanel, { passive: true });
+window.addEventListener('touchmove', repositionFilterPanel, { passive: true });
+window.addEventListener('resize',    repositionFilterPanel, { passive: true });
 
 function toggleFilterPanel(ev) {
   const panel = document.getElementById('filter-panel');
