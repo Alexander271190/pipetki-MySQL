@@ -151,24 +151,25 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
         sheet.addRow([]);
     }
 
-    // ── Автоширина столбцов ──
+       // ── Автоширина столбцов (узкие, чтобы все влезли по ширине) ──
     sheet.columns.forEach((col, i) => {
       let max = String(headers[i] || '').length;
       col.eachCell({ includeEmpty: false }, cell => {
         const len = String(cell.value || '').length;
         if (len > max) max = len;
       });
-      col.width = Math.min(Math.max(max + 2, 8), 45);
+      // 🆕 максимум 20 символов — иначе одна «Примечание» растянет всю таблицу
+      col.width = Math.min(Math.max(max + 1, 8), 20);
     });
-
-             // 🆕 Настройки печати: без автосжатия, фиксированный масштаб
+                  // 🆕 Настройки печати: все колонки уместить по ширине 1 листа
     sheet.pageSetup = {
-      fitToPage: false,                 // 🆕 отключаем автосжатие в 1 страницу
+      fitToPage: true,                  // 🆕 Excel сам подберёт масштаб
+      fitToWidth: 1,                    // вписать по ширине в 1 страницу
+      fitToHeight: 0,                   // по высоте — сколько нужно
       orientation: 'landscape',         // A4 горизонтальная
       paperSize: 9,                     // A4
-      scale: 75,                        // 🆕 75% — читаемо и компактно
       margins: {
-        left: 0.3, right: 0.3,
+        left: 0.25, right: 0.25,        // 🆕 уменьшены — больше места для колонок
         top: 0.4, bottom: 0.4,
         header: 0.2, footer: 0.2,
       },
