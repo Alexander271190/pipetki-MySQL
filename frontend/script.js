@@ -5180,11 +5180,14 @@ async function exportHistoryToPDF() {
         border-right: 1.5px solid #1e293b;
       }
 
-      .footer {
+       .footer {
         margin-top: 20px;
         font-size: 8pt;
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid #cbd5e1;
+        padding-top: 6px;
       }
 
       tr { page-break-inside: avoid; }
