@@ -1,0 +1,197 @@
+1. frontend/index.html — убрать CSV из меню экспорта
+Найди (в блоке тулбара, <div id="export-menu">):
+
+html
+<div id="export-menu" class="dropdown-menu">
+  <button class="dropdown-item" onclick="exportToXlsx(); closeExportMenu();"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>
+  <button class="dropdown-item" onclick="exportToExcel(); closeExportMenu();"><i class="fa-solid fa-file-csv"></i> CSV</button>
+  <button class="dropdown-item" onclick="exportToPDF(); closeExportMenu();"><i class="fa-solid fa-print"></i> PDF</button>
+</div>
+Замени на:
+
+html
+<div id="export-menu" class="dropdown-menu">
+  <button class="dropdown-item" onclick="exportToXlsx(); closeExportMenu();"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>
+  <button class="dropdown-item" onclick="exportToPDF(); closeExportMenu();"><i class="fa-solid fa-print"></i> PDF</button>
+</div>
+2. frontend/index.html — убрать CSV из модалки экспорта истории
+Найди (в <div id="history-export-modal">):
+
+html
+<div class="form-actions">
+  <button type="button" class="btn btn-secondary" onclick="closeHistoryExportModal()">Отмена</button>
+  <button type="button" class="btn btn-success" onclick="exportHistoryToXlsx()"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>
+  <button type="button" class="btn btn-secondary" onclick="exportHistoryToExcel()"><i class="fa-solid fa-file-csv"></i> CSV</button>
+  <button type="button" class="btn btn-info" onclick="exportHistoryToPDF()"><i class="fa-solid fa-print"></i> PDF</button>
+</div>
+Замени на:
+
+html
+<div class="form-actions">
+  <button type="button" class="btn btn-secondary" onclick="closeHistoryExportModal()">Отмена</button>
+  <button type="button" class="btn btn-success" onclick="exportHistoryToXlsx()"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>
+  <button type="button" class="btn btn-info" onclick="exportHistoryToPDF()"><i class="fa-solid fa-print"></i> PDF</button>
+</div>
+3. frontend/script.js — удалить CSV-функции
+3.1. Удали функцию exportToExcel() целиком
+Она начинается так:
+
+js
+async function exportToExcel() {
+  await refreshCurrentUser();
+  if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
+  const data = getFilteredPipettes();
+  ...
+И заканчивается перед async function exportToXlsx() {.
+
+Удали весь блок async function exportToExcel() { ... }.
+
+3.2. Удали функцию exportHistoryToExcel() целиком
+Она начинается так:
+
+js
+// Экспорт в Excel (CSV)
+async function exportHistoryToExcel() {
+  const errEl = document.getElementById('he-error');
+  ...
+И заканчивается перед // Экспорт в Excel (.xlsx) — нативный.
+
+Удали весь блок async function exportHistoryToExcel() { ... }.
+
+3.3. Удали sanitizeCsvCell() — она больше нигде не используется
+js
+function sanitizeCsvCell(value) {
+  let s = String(value == null ? '' : value);
+  if (/^[=+\-@\t\r\n|]/.test(s)) {
+    s = "'" + s;
+  }
+  s = s.replace(/"/g, '""');
+  return /[";\n\r]/.test(s) ? '"' + s + '"' : s;
+}
+Удали этот блок.
+
+4. frontend/script.js — поправить шапку .xlsx
+Найди в exportToXlsx():
+
+js
+body: JSON.stringify({
+  title: 'Реестр оборудования — КДЛ',
+  headers,
+  rows,
+  fields
+})
+Замени на:
+
+js
+body: JSON.stringify({
+  mode: 'registry',
+  meta: {
+    title: 'Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ',
+    date: new Date().toLocaleDateString('ru-RU'),
+    recordCount: data.length,
+    user: currentUser ? currentUser.fullName : ''
+  },
+  headers,
+  rows,
+  fields
+})
+5. routes/export.js — принимаем mode='registry' и meta
+Сейчас бэк для главного реестра игнорирует meta. Добавим такую же шапку, как для истории.
+
+Найди блок:
+
+js
+if (mode === 'history' && meta) {
+  const titleRow = sheet.addRow([meta.title || 'История поверок']);
+  sheet.mergeCells(1, 1, 1, COLS);
+  titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
+  titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+  titleRow.height = 22;
+
+  sheet.addRow([`ID: ${meta.equipmentId || ''}`]).getCell(1).font = { bold: true };
+  sheet.addRow([`Модель: ${meta.model || ''}`]);
+  if (meta.manufacturer) sheet.addRow([`Производитель: ${meta.manufacturer}`]);
+  if (meta.serial)       sheet.addRow([`Серийный номер: ${meta.serial}`]);
+  if (meta.department)   sheet.addRow([`Отдел: ${meta.department}`]);
+  if (meta.period)       sheet.addRow([`Период: ${meta.period}`]);
+  sheet.addRow([`Записей: ${meta.recordCount ?? rows.length}`]);
+  sheet.addRow([]); // пустая строка-разделитель
+} else {
+  const titleRow = sheet.addRow([title || 'Реестр оборудования']);
+  sheet.mergeCells(1, 1, 1, COLS);
+  titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
+  titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+  titleRow.height = 22;
+  sheet.addRow([]);
+}
+Замени на:
+
+js
+if (mode === 'history' && meta) {
+  const titleRow = sheet.addRow([meta.title || 'История поверок']);
+  sheet.mergeCells(1, 1, 1, COLS);
+  titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
+  titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+  titleRow.height = 22;
+
+  sheet.addRow([`ID: ${meta.equipmentId || ''}`]).getCell(1).font = { bold: true };
+  sheet.addRow([`Модель: ${meta.model || ''}`]);
+  if (meta.manufacturer) sheet.addRow([`Производитель: ${meta.manufacturer}`]);
+  if (meta.serial)       sheet.addRow([`Серийный номер: ${meta.serial}`]);
+  if (meta.department)   sheet.addRow([`Отдел: ${meta.department}`]);
+  if (meta.period)       sheet.addRow([`Период: ${meta.period}`]);
+  sheet.addRow([`Записей: ${meta.recordCount ?? rows.length}`]);
+  sheet.addRow([]); // пустая строка-разделитель
+
+} else if (mode === 'registry' && meta) {
+  const titleRow = sheet.addRow([meta.title || 'Реестр оборудования']);
+  sheet.mergeCells(1, 1, 1, COLS);
+  titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
+  titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+  titleRow.height = 22;
+
+  const metaParts = [];
+  if (meta.date)        metaParts.push(`Дата: ${meta.date}`);
+  if (meta.recordCount != null) metaParts.push(`Записей: ${meta.recordCount}`);
+  if (meta.user)        metaParts.push(`Сформировал: ${meta.user}`);
+  if (metaParts.length) {
+    sheet.addRow([metaParts.join('  ·  ')]);
+  }
+  sheet.addRow([]); // пустая строка-разделитель
+
+} else {
+  const titleRow = sheet.addRow([title || 'Реестр оборудования']);
+  sheet.mergeCells(1, 1, 1, COLS);
+  titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
+  titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+  titleRow.height = 22;
+  sheet.addRow([]);
+}
+6. Что осталось на бэке — не трогаем
+В routes/export.js CSV-эндпоинта и не было — там только POST /xlsx. Ничего дополнительно не удаляем.
+
+В routes/pipettes.js, import.js и прочих sanitizeCsvCell не используется — это чисто фронтовая утилита.
+
+7. Проверка после правок
+Перезапустить фронт (F5, без пересборки).
+
+Меню Экспорт → должно быть Excel (.xlsx) + PDF, без CSV.
+
+История пипетки → Экспорт истории → Excel (.xlsx) + PDF, без CSV.
+
+Меню Экспорт → Excel (.xlsx) — открыть файл:
+
+Строка 1: «Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ» (жирная, тёмная).
+
+Строка 2: Дата: 30.09.2026 · Записей: 629 · Сформировал: Администратор.
+
+Пустая строка.
+
+Шапка таблицы (ID, Серийный, Производитель, …).
+
+Данные.
+
+История → Excel (.xlsx) — шапка как была (ID/Модель/Серийный/Отдел/Период/Записей + пустая строка + шапка таблицы).
+
+В консоли нет ошибок exportToExcel is not defined / sanitizeCsvCell is not defined.
+

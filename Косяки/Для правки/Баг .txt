@@ -1,0 +1,170 @@
+Нашли настоящий баг — getVisiblePageIds() не сортирует
+Ключевая улика
+text
+// Ручной вызов — работает
+selectedPipettes.size: 3
+master.indeterminate: true     ← функция правильная
+
+// Через клик — не работает
+После 1 клика: 1 | indeterminate: false
+После 2 кликов: 2 | indeterminate: false
+Выбрано: 3 | indeterminate: false
+updateSelectAllCheckbox сама по себе работает. Значит проблема в том, как она получает pageIds — через getVisiblePageIds().
+
+Причина
+Смотрим на две функции:
+
+render() — сортирует и показывает:
+
+js
+function render() {
+  let filtered = getFilteredPipettes();
+  filtered.sort((a, b) => { ... });   // ← сортировка здесь
+  ...
+}
+getVisiblePageIds() — НЕ сортирует:
+
+js
+function getVisiblePageIds() {
+  const filtered = getFilteredPipettes();   // ← несортированный!
+  ...
+  return filtered.slice(startIdx, startIdx + pageSize).map(p => p.id);
+}
+getFilteredPipettes() возвращает несортированный массив. Сортировка происходит только локально внутри render().
+
+Итог: getVisiblePageIds() возвращает не те 100 ID, которые видит пользователь.
+
+Что это объясняет
+При сортировке по id ▲ пользователь видит A-001, A-002, ….
+getVisiblePageIds() возвращает первые 100 из API-порядка — какие-то M-XXX, T-XXX, и т. п.
+
+Теперь клик по A-001:
+
+selectedPipettes.add('A-001') → size = 1
+
+updateSelectAllCheckbox():
+
+js
+const pageIds = getVisiblePageIds();   // ['M-001', 'M-002', ...]
+const selectedOnPage = pageIds.filter(id => selectedPipettes.has(id));
+// 'A-001' не в pageIds → selectedOnPage = []
+selectedOnPage.length === 0 → master.indeterminate = false
+
+Пользователь визуально поставил галочку, а updateSelectAllCheckbox не видит её — потому что ищет в неправильном наборе.
+
+Подтверждение в консоли
+js
+// Сравним: что видно в DOM vs что возвращает getVisiblePageIds
+const domIds = [...document.querySelectorAll('#pipettes-body tr')]
+  .map(tr => tr.querySelector('td:nth-child(2) strong')?.textContent || '');
+const apiIds = getVisiblePageIds();
+
+console.log('DOM первый:', domIds[0]);
+console.log('API первый:', apiIds[0]);
+console.log('Совпадает:', domIds[0] === apiIds[0]);
+console.log('Совпадают все первые 10:',
+  domIds.slice(0, 10).every((id, i) => id === apiIds[i])
+);
+Ожидаемо: Совпадает: false — баг подтверждён.
+
+Фикс
+Нужно вынести сортировку в отдельную функцию и использовать её везде.
+
+Шаг 1. Добавь getSortedPipettes()
+В script.js найди функцию render() и перед ней добавь:
+
+js
+function getSortedPipettes() {
+  const filtered = getFilteredPipettes();
+  filtered.sort((a, b) => {
+    let va, vb;
+    if (sortField === 'nextCalibration') {
+      va = getNextDate(a) || new Date(8640000000000000);
+      vb = getNextDate(b) || new Date(8640000000000000);
+    } else if (sortField === 'volume') {
+      va = parseFloat(a.volume) || 0;
+      vb = parseFloat(b.volume) || 0;
+    } else if (sortField === 'equipmentType') {
+      va = (a.equipment_type || 'pipette');
+      vb = (b.equipment_type || 'pipette');
+    } else {
+      va = (a[sortField] || '').toString().toLowerCase();
+      vb = (b[sortField] || '').toString().toLowerCase();
+    }
+    if (va < vb) return -1 * sortDir;
+    if (va > vb) return 1 * sortDir;
+    return 0;
+  });
+  return filtered;
+}
+Шаг 2. В render() замени сортировку
+Найди в render():
+
+js
+function render() {
+  let filtered = getFilteredPipettes();
+
+  filtered.sort((a, b) => {
+    let va, vb;
+    if (sortField === 'nextCalibration') {
+      ...
+    }
+    ...
+  });
+
+  const totalPages = ...
+Замени на:
+
+js
+function render() {
+  let filtered = getSortedPipettes();
+
+  const totalPages = ...
+Шаг 3. В getVisiblePageIds() используй getSortedPipettes()
+Найди:
+
+js
+function getVisiblePageIds() {
+  const filtered = getFilteredPipettes();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const page = Math.min(Math.max(1, currentPage), totalPages);
+  const startIdx = (page - 1) * pageSize;
+  return filtered.slice(startIdx, startIdx + pageSize).map(p => p.id);
+}
+Замени на:
+
+js
+function getVisiblePageIds() {
+  const filtered = getSortedPipettes();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const page = Math.min(Math.max(1, currentPage), totalPages);
+  const startIdx = (page - 1) * pageSize;
+  return filtered.slice(startIdx, startIdx + pageSize).map(p => p.id);
+}
+Проверка после фикса
+F5.
+
+Кликни на ID в шапке (сортировка по возрастанию).
+
+Прогони:
+
+js
+const domIds = [...document.querySelectorAll('#pipettes-body tr')]
+  .map(tr => tr.querySelector('td:nth-child(2) strong')?.textContent || '');
+const apiIds = getVisiblePageIds();
+console.log('Совпадает:', domIds[0] === apiIds[0] && domIds[9] === apiIds[9]);
+Ожидаемо: Совпадает: true.
+
+Поставь галочку на 3 строки → проверь:
+
+js
+console.log('Выбрано:', selectedPipettes.size);
+console.log('indeterminate:', document.getElementById('select-all-checkbox').indeterminate);
+Ожидаемо: 3 и true.
+
+Поставь галочку в шапке → все 100 должны выделиться:
+
+js
+console.log('selectedPipettes.size:', selectedPipettes.size);
+console.log('Все из DOM в selected:', domIds.every(id => selectedPipettes.has(id)));
+Ожидаемо: 100 и true.
