@@ -4,12 +4,14 @@ body {
   font-family: 'Segoe UI', system-ui, sans-serif;
   background: #ffffff;
   color: #1a1a2e;
-  overflow-x: hidden;
+  /* clip вместо hidden — не создаёт scroll-контейнер,
+     поэтому absolute-панель фильтра не клиппится */
+  overflow-x: clip;
   max-width: 100vw;
 }
 
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ========== ШАПКА ========== */
@@ -496,8 +498,10 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
 
 /* ========== ПАНЕЛЬ ФИЛЬТРА ========== */
 .filter-panel {
-  position: fixed;        /* 🆕 было absolute — fixed игнорирует overflow родителей */
-  /* top/left задаются динамически из JS */
+  position: absolute;      /* привязана к обёртке кнопки — она position:relative */
+  top: 100%;               /* сразу под кнопкой */
+  left: 0;
+  margin-top: 4px;
   background: #fff;
   border: 1px solid #d1d5db;
   border-radius: 12px;
@@ -505,11 +509,10 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   padding: 14px;
   width: 460px;
   max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 100px);   /* 🆕 скролл внутри, если не влезает */
-  overflow-y: auto;                  /* 🆕 */
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
   z-index: 60;
   display: none;
-  margin-top: 0;                     /* 🆕 уже не нужен */
 }
 .filter-panel.show { display: block; }
 
