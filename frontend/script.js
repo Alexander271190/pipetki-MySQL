@@ -898,11 +898,10 @@ function getActiveFormFields(allFields) {
 }
 
 // ============================================================
-// РЕНДЕР ТАБЛИЦЫ
+// ОТСОРТИРОВАННЫЙ СПИСОК (единый источник для render и pageIds)
 // ============================================================
-function render() {
-  let filtered = getFilteredPipettes();
-
+function getSortedPipettes() {
+  const filtered = getFilteredPipettes();
   filtered.sort((a, b) => {
     let va, vb;
     if (sortField === 'nextCalibration') {
@@ -922,8 +921,17 @@ function render() {
     if (va > vb) return 1 * sortDir;
     return 0;
   });
-  
-    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  return filtered;
+}
+
+
+// ============================================================
+// РЕНДЕР ТАБЛИЦЫ
+// ============================================================
+function render() {
+  let filtered = getSortedPipettes();
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
@@ -1168,7 +1176,7 @@ function togglePipetteSelection(id, checked) {
 
 // 🛡️ Возвращает ID только ТЕКУЩЕЙ страницы (с учётом пагинации)
 function getVisiblePageIds() {
-  const filtered = getFilteredPipettes();
+  const filtered = getSortedPipettes();
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const page = Math.min(Math.max(1, currentPage), totalPages);
   const startIdx = (page - 1) * pageSize;
