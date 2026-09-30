@@ -3769,69 +3769,107 @@ async function openBulkSendModal() {
   }).join('');
   document.getElementById('bulk-send-list').innerHTML = listHtml;
 
-    document.getElementById('bulk-send-date').value = todayStr();
+   document.getElementById('bulk-send-date').value = todayStr();
   document.getElementById('bulk-send-note').value = '';
 
-  await loadReplacementOptions(toSend);
-
+  // 🆕 Открываем модалку СРАЗУ — не ждём загрузки замен
   document.getElementById('bulk-send-modal').classList.add('active');
+
+  // Замены грузим фоном с параллелизмом
+  loadReplacementOptions(toSend);
 }
 
-// 🆕 Загрузка складских для замены
+// 🆕 Параллельная загрузка замен с ограничением конкурентности
+// 🆕 Инкрементальный рендер — блоки дописываются, не пересоздаются
 async function loadReplacementOptions(ids) {
   const container = document.getElementById('replacement-options');
   if (!container) return;
 
-  container.innerHTML = '<p style="color:#94a3b8;font-size:.85rem;">Загрузка складских…</p>';
+  container.innerHTML = '<p id="repl-placeholder" style="color:#94a3b8;font-size:.85rem;">Загрузка складских…</p>';
 
-  const blocks = [];
-
+  // ── Собираем задачи ──
+  const tasks = [];
   for (const id of ids) {
     const p = pipettes.find(x => x.id === id);
     if (!p) continue;
 
-    try {
+    tasks.push(async () => {
       const url = `/pipettes/available-for-replacement?type=${encodeURIComponent(p.equipment_type)}&department=${encodeURIComponent(p.department || '')}&exclude=${encodeURIComponent(id)}`;
       const options = await apiRequest(url);
+      return { id, p, options };
+    });
+  }
 
-      if (options.length === 0) continue;
+  // ── Ограничение конкурентности (batch по 5) ──
+  const CONCURRENCY = 5;
+  let rendered = 0;
 
-      const safeName = id.replace(/[^a-zA-Z0-9_-]/g, '_');
-      let html = `<div style="margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;">
-        <div style="font-weight:600;font-size:.85rem;color:#475569;margin-bottom:6px;">
-          ${esc(id)} — ${esc(p.model)} (${esc(p.department || 'без отдела')})
-        </div>
-        <div style="font-size:.78rem;color:#64748b;margin-bottom:6px;">Складские того же типа:</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">`;
+  for (let i = 0; i < tasks.length; i += CONCURRENCY) {
+    const batch = tasks.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(t => t().catch(e => {
+        console.warn('Ошибка загрузки замен:', e.message);
+        return null;
+      }))
+    );
 
-      for (const opt of options) {
-        html += `
-          <label style="display:flex;align-items:center;gap:8px;padding:6px;background:#fff;border-radius:6px;cursor:pointer;font-size:.82rem;">
-            <input type="radio" name="repl-${safeName}" value="${esc(opt.id)}" data-for="${esc(id)}">
-            <span><strong>${esc(opt.id)}</strong> — ${esc(opt.model)}
-            ${opt.manufacturer ? `<span style="color:#94a3b8;">(${esc(opt.manufacturer)})</span>` : ''}
-            ${opt.last_calibration ? `<span style="color:#94a3b8;margin-left:8px;">поверка: ${formatDate(opt.last_calibration)}</span>` : ''}
-            </span>
-          </label>`;
+    // 🆕 Дописываем блоки, не пересоздавая контейнер
+    const newHtml = batchResults
+      .filter(r => r && r.options && r.options.length > 0)
+      .map(r => buildReplacementBlock(r.id, r.p, r.options))
+      .join('');
+
+    if (newHtml) {
+      // Первый блок — убираем плейсхолдер
+      if (rendered === 0) {
+        const ph = document.getElementById('repl-placeholder');
+        if (ph) ph.remove();
       }
-
-      html += `
-          <label style="display:flex;align-items:center;gap:8px;padding:6px;cursor:pointer;font-size:.82rem;color:#94a3b8;">
-            <input type="radio" name="repl-${safeName}" value="" data-for="${esc(id)}" checked>
-            <span>Без замены</span>
-          </label>
-        </div>
-      </div>`;
-
-      blocks.push(html);
-    } catch (e) {
-      console.error('Ошибка загрузки замен:', e);
+      container.insertAdjacentHTML('beforeend', newHtml);
+      rendered++;
     }
   }
 
-  container.innerHTML = blocks.length === 0
-    ? '<p style="color:#94a3b8;font-size:.85rem;">Нет доступных складских единиц того же типа.</p>'
-    : blocks.join('');
+  // ── Финальный статус ──
+  if (rendered === 0) {
+    container.innerHTML = '<p style="color:#94a3b8;font-size:.85rem;">Нет доступных складских единиц того же типа.</p>';
+  } else {
+    // 🆕 Убираем возможный оставшийся плейсхолдер (если он не удалился)
+    const ph = document.getElementById('repl-placeholder');
+    if (ph) ph.remove();
+  }
+}
+
+// 🆕 Вынесли рендер одного блока — чище и переиспользуемо
+function buildReplacementBlock(id, p, options) {
+  const safeName = id.replace(/[^a-zA-Z0-9_-]/g, '_');
+  let html = `<div style="margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;">
+    <div style="font-weight:600;font-size:.85rem;color:#475569;margin-bottom:6px;">
+      ${esc(id)} — ${esc(p.model)} (${esc(p.department || 'без отдела')})
+    </div>
+    <div style="font-size:.78rem;color:#64748b;margin-bottom:6px;">Складские того же типа:</div>
+    <div style="display:flex;flex-direction:column;gap:4px;">`;
+
+  for (const opt of options) {
+    html += `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px;background:#fff;border-radius:6px;cursor:pointer;font-size:.82rem;">
+        <input type="radio" name="repl-${safeName}" value="${esc(opt.id)}" data-for="${esc(id)}">
+        <span><strong>${esc(opt.id)}</strong> — ${esc(opt.model)}
+        ${opt.manufacturer ? `<span style="color:#94a3b8;">(${esc(opt.manufacturer)})</span>` : ''}
+        ${opt.last_calibration ? `<span style="color:#94a3b8;margin-left:8px;">поверка: ${formatDate(opt.last_calibration)}</span>` : ''}
+        </span>
+      </label>`;
+  }
+
+  html += `
+      <label style="display:flex;align-items:center;gap:8px;padding:6px;cursor:pointer;font-size:.82rem;color:#94a3b8;">
+        <input type="radio" name="repl-${safeName}" value="" data-for="${esc(id)}" checked>
+        <span>Без замены</span>
+      </label>
+    </div>
+  </div>`;
+
+  return html;
 }
 
 function closeBulkSendModal() {
