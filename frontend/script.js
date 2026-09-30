@@ -2241,8 +2241,15 @@ async function exportToXlsx() {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        title: 'Реестр оборудования — КДЛ',
+        body: JSON.stringify({
+        mode: 'registry',
+        meta: {
+          title: 'Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ',
+          date: new Date().toLocaleDateString('ru-RU'),
+          recordCount: data.length,
+          user: currentUser ? currentUser.fullName : '',
+          userPosition: currentUser ? (currentUser.position || '') : ''
+        },
         headers,
         rows,
         fields
@@ -2276,6 +2283,7 @@ async function exportToPDF() {
   const fields = getActiveExportFields();
   const today = new Date().toLocaleDateString('ru-RU');
   const user = currentUser ? currentUser.fullName : '';
+  const userPosition = currentUser ? (currentUser.position || '') : '';
 
     const headerCells = fields
     .map(f => {
@@ -2418,14 +2426,14 @@ async function exportToPDF() {
       thead { display: table-header-group; }
     </style></head><body>
     
-          <h1>Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
-      <div class="meta">Дата: <b>${today}</b> · Записей: <b>${data.length}</b> · Сформировал: <b>${esc(user)}</b></div>
+       <h1>Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
+      <div class="meta">Дата: <b>${today}</b> · Записей: <b>${data.length}</b></div>
       <table>
         <thead><tr>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="footer">
-        <div>Документ сформировал: <b>${esc(user)}</b></div>
+       <div class="footer">
+        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
         <div>Подпись: _______________</div>
       </div>
     </body></html>`);
@@ -3960,6 +3968,7 @@ async function printSendAct() {
   const note = (document.getElementById('bulk-send-note').value || '').trim();
   const today = new Date().toLocaleDateString('ru-RU');
   const user = currentUser ? currentUser.fullName : '';
+  const userPosition = currentUser ? (currentUser.position || '') : '';
 
   const rows = sendItems.map((id, index) => {
     const p = pipettes.find(x => x.id === id);
@@ -4017,12 +4026,11 @@ const win = window.open('', '_blank');
       <h1>АКТ ОТПРАВКИ НА ПОВЕРКУ</h1>
       <div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
 
-      <div class="meta">
+     <div class="meta">
         <div>Дата отправки: <b>${formatDate(sentDate)}</b></div>
         <div>Количество приборов: <b>${sendItems.length}</b></div>
         <div>Организация, производящая поверку: <b>ФБУ «Красноярский ЦСМ»</b></div>
-        <div>Сформировал: <b>${esc(user)}</b></div>
-        <div>Дата печати: <b>${today}</b></div>
+       <div>Дата печати: <b>${today}</b></div>
       </div>
 
       <table>
@@ -4042,6 +4050,11 @@ const win = window.open('', '_blank');
       </table>
 
       ${note ? `<div class="note-block"><b>Примечание:</b> ${esc(note)}</div>` : ''}
+
+           <div style="margin-top:30px;font-size:9.5pt;">
+        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+        <div style="margin-top:6px;">Подпись: _______________</div>
+      </div>
 
       <div class="signatures">
         <div class="sig-block">
@@ -5005,7 +5018,7 @@ async function exportHistoryToXlsx() {
     'Примечание':     h.note || ''
   }));
 
-  const meta = {
+   const meta = {
     title: 'История поверок оборудования',
     equipmentId: p.id,
     model: p.model,
@@ -5013,7 +5026,9 @@ async function exportHistoryToXlsx() {
     serial: p.serial || '',
     department: p.department || '',
     period: (from || to) ? `${from || '…'} — ${to || '…'}` : 'вся история',
-    recordCount: history.length
+    recordCount: history.length,
+    user: currentUser ? currentUser.fullName : '',
+    userPosition: currentUser ? (currentUser.position || '') : ''
   };
 
     try {
@@ -5074,6 +5089,7 @@ async function exportHistoryToPDF() {
     (from || to) ? `Период: ${from || '…'} — ${to || '…'}` : 'Период: вся история';
 
   const user = currentUser ? currentUser.fullName : '';
+  const userPosition = currentUser ? (currentUser.position || '') : '';
   const today = new Date().toLocaleDateString('ru-RU');
   const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
 
@@ -5175,8 +5191,8 @@ async function exportHistoryToPDF() {
       thead { display: table-header-group; }
     </style></head><body>
     
-      <h1>История поверок оборудования</h1>
-      <div class="meta">Дата формирования: <b>${today}</b> · Сформировал: <b>${esc(user)}</b></div>
+       <h1>История поверок оборудования</h1>
+      <div class="meta">Дата формирования: <b>${today}</b></div>
 
       <div class="info">
         <div><b>ID:</b> ${esc(p.id)}</div>
@@ -5201,8 +5217,9 @@ async function exportHistoryToPDF() {
         <tbody>${rows}</tbody>
       </table>
 
-      <div class="footer">
-        <div>Подпись: _______________</div>
+       <div class="footer">
+        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+      <div>Подпись: _______________</div>
       </div>
     </body></html>
   `;
