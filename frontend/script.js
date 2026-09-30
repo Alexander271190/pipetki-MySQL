@@ -1348,62 +1348,12 @@ function toggleCustomPeriod(fid) {
   }
 }
 
-// Панель фильтра «следует» за кнопкой при скролле и ресайзе
-function repositionFilterPanel() {
-  const panel = document.getElementById('filter-panel');
-  if (!panel || !panel.classList.contains('show')) return;
 
-  const btn = document.getElementById('filter-btn');
-  if (!btn) return;
-
-  const r = btn.getBoundingClientRect();
-  const panelH = panel.offsetHeight;
-  const panelW = panel.offsetWidth;
-
-  // 🆕 Если кнопка ушла за верх экрана — прячем панель
-  if (r.bottom < 0) {
-    panel.classList.remove('show');
-    return;
-  }
-
-  // 🆕 Горизонталь: не даём панели уехать за правый край
-  let left = r.left;
-  const maxLeft = window.innerWidth - panelW - 8;
-  if (left > maxLeft) left = Math.max(8, maxLeft);
-  if (left < 8) left = 8;
-
-  // 🆕 Вертикаль: если снизу не влезает — показываем над кнопкой
-  let top = r.bottom + 4;
-  if (top + panelH > window.innerHeight - 8) {
-    const above = r.top - panelH - 4;
-    top = above >= 8 ? above : Math.max(8, window.innerHeight - panelH - 8);
-  }
-
-  panel.style.top  = top + 'px';
-  panel.style.left = left + 'px';
-}
-
-window.addEventListener('scroll', repositionFilterPanel, { passive: true });
-document.addEventListener('scroll', repositionFilterPanel, { passive: true, capture: true });
-window.addEventListener('wheel',     repositionFilterPanel, { passive: true });
-window.addEventListener('touchmove', repositionFilterPanel, { passive: true });
-window.addEventListener('resize',    repositionFilterPanel, { passive: true });
-
-function toggleFilterPanel(ev) {
+function toggleFilterPanel() {
   const panel = document.getElementById('filter-panel');
   if (!panel) return;
   if (!_filterRendered) renderFilterFields();
-
   panel.classList.toggle('show');
-  if (panel.classList.contains('show')) {
-    // ставим позицию через общую функцию — учитывает края экрана
-    if (ev && ev.currentTarget) {
-      const r = ev.currentTarget.getBoundingClientRect();
-      panel.style.top  = (r.bottom + 4) + 'px';
-      panel.style.left = r.left + 'px';
-    }
-    repositionFilterPanel();
-  }
 }
 
 function applyFilters() {
