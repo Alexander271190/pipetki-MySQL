@@ -4711,6 +4711,8 @@ function openChangePasswordModal(force) {
   if (currentInput) currentInput.value = '';
   if (newInput) newInput.value = '';
   if (confirmInput) confirmInput.value = '';
+  const unameField = document.getElementById('cp-username');
+  if (unameField) unameField.value = (currentUser && (currentUser.login || currentUser.fullName)) || '';
   if (notice) notice.style.display = force ? 'block' : 'none';
 
   // При impersonate — не блокируем, даём шанс вернуться
