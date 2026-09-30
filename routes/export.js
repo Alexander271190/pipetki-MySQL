@@ -82,13 +82,14 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
     });
     headerRow.height = 22;
 
-       // ── Данные ──
-    let lastDataRow = null;                        // 🆕 ссылка на последнюю строку
+             // ── Данные ──
+    let lastDataRow = null;
 
     rows.forEach((row, idx) => {
       const r = sheet.addRow(headers.map(h => row[h] ?? ''));
+      r.height = 22;                                              // 🆕 высота строки 22pt
       r.eachCell(cell => {
-        cell.alignment = { vertical: 'top', wrapText: true };
+        cell.alignment = { vertical: 'middle', wrapText: true };  // 🆕 middle вместо top
         cell.font = { size: 10 };
         cell.border = {
           top:    { style: 'thin', color: { argb: 'FFE2E8F0' } },
@@ -100,7 +101,7 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
         }
       });
-      lastDataRow = r;                             // 🆕 запоминаем
+      lastDataRow = r;
     });
 
     
@@ -160,19 +161,18 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       col.width = Math.min(Math.max(max + 2, 8), 45);
     });
 
-        // 🆕 Настройки печати: шапка таблицы на каждой странице + альбомная
+             // 🆕 Настройки печати: без автосжатия, фиксированный масштаб
     sheet.pageSetup = {
-      fitToPage: true,
-      fitToWidth: 1,
-      fitToHeight: 0,
-      orientation: 'landscape',
+      fitToPage: false,                 // 🆕 отключаем автосжатие в 1 страницу
+      orientation: 'landscape',         // A4 горизонтальная
       paperSize: 9,                     // A4
+      scale: 75,                        // 🆕 75% — читаемо и компактно
       margins: {
-        left: 0.4, right: 0.4,
-        top: 0.5, bottom: 0.5,
+        left: 0.3, right: 0.3,
+        top: 0.4, bottom: 0.4,
         header: 0.2, footer: 0.2,
       },
-      printTitlesRow: headerRow.number + ':' + headerRow.number,   // 🆕 шапка на каждой странице
+      printTitlesRow: headerRow.number + ':' + headerRow.number,
     };
     
     // ── Отдача файла ──
