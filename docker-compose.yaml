@@ -12,6 +12,7 @@ services:
       MYSQL_DATABASE: pipette
       MYSQL_USER: pipette
       MYSQL_PASSWORD: pipette_secret
+      TZ: Asia/Krasnoyarsk
     volumes:
       # База данных сохраняется в проекте: ./mysqldata
       - ./mysqldata:/var/lib/mysql
@@ -32,6 +33,7 @@ services:
       - "3000:3000"
     environment:
       PORT: 3000
+      TZ: Asia/Krasnoyarsk
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: pipette
