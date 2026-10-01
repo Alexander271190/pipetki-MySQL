@@ -279,7 +279,18 @@ async function parseXlsx(buffer) {
       if (val !== '' && val !== undefined && val !== null) isEmpty = false;
       obj[h] = val;
     }
-    if (isEmpty) continue;
+        if (isEmpty) continue;
+
+    // 🛡️ Отсекаем мусор — подвал «Документ сформировал: …», «Подпись: …»,
+    // и размноженные merged-ячейки (там ID === Модель === Объём …)
+    const idKey    = headers.find(h => mapHeader(h) === 'id');
+    const modelKey = headers.find(h => mapHeader(h) === 'model');
+    const idVal    = idKey    ? String(obj[idKey] || '').trim()    : '';
+    const modelVal = modelKey ? String(obj[modelKey] || '').trim() : '';
+    if (/Документ сформировал|Подпись/i.test(idVal))    continue;
+    if (/Документ сформировал|Подпись/i.test(modelVal)) continue;
+    if (idVal && modelVal && idVal === modelVal)        continue;
+
     objects.push(obj);
   }
 
