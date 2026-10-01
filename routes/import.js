@@ -390,7 +390,18 @@ try {
   }
 } catch (parseErr) {
   console.warn('Import parse error:', parseErr.message);
-  return res.status(400).json({ error: 'Ошибка импорта: ' + parseErr.message });
+
+  // 🛡️ Дружелюбное сообщение для типичных случаев
+  let friendly = parseErr.message;
+  if (/not valid JSON|Unexpected token/i.test(parseErr.message)) {
+    friendly = 'Файл повреждён или не является корректным JSON';
+  } else if (/zip file|central directory/i.test(parseErr.message)) {
+    friendly = 'Файл повреждён или не является корректным XLSX';
+  } else if (/Пустой файл/i.test(parseErr.message)) {
+    friendly = 'Файл пуст или не содержит данных';
+  }
+
+  return res.status(400).json({ error: 'Ошибка импорта: ' + friendly });
 }
 
 if (!objects.length) {
