@@ -376,19 +376,26 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
     }
 
     let headers = [];
-    let objects = [];
+let objects = [];
 
-    if (ext === 'json') {
-      ({ headers, objects } = parseJson(buffer));
-    } else if (ext === 'csv' || ext === 'txt') {
-      ({ headers, objects } = parseCsv(buffer));
-    } else {
-      ({ headers, objects } = await parseXlsx(buffer));
-    }
+// 🛡️ Ошибки парсинга файла — это ошибка клиента (400), не сервера (500).
+// Битый base64, битый JSON, невалидный xlsx → всё сюда.
+try {
+  if (ext === 'json') {
+    ({ headers, objects } = parseJson(buffer));
+  } else if (ext === 'csv' || ext === 'txt') {
+    ({ headers, objects } = parseCsv(buffer));
+  } else {
+    ({ headers, objects } = await parseXlsx(buffer));
+  }
+} catch (parseErr) {
+  console.warn('Import parse error:', parseErr.message);
+  return res.status(400).json({ error: 'Ошибка импорта: ' + parseErr.message });
+}
 
-    if (!objects.length) {
-      return res.status(400).json({ error: 'Не найдено ни одной строки данных' });
-    }
+if (!objects.length) {
+  return res.status(400).json({ error: 'Не найдено ни одной строки данных' });
+}
 
     const colMap = headers.map(h => mapHeader(h));
     const mappedCount = colMap.filter(Boolean).length;
