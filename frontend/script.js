@@ -33,18 +33,6 @@ function esc(s) {
   }[c]));
 }
 
-function sanitizeCsvCell(value) {
-  let s = String(value == null ? '' : value);
-
-  // Гасим формулы: ведущий апостроф перед опасным первым символом
-  if (/^[=+\-@\t\r\n|]/.test(s)) {
-    s = "'" + s;
-  }
-
-  // Стандартное CSV-экранирование
-  s = s.replace(/"/g, '""');
-  return /[";\n\r]/.test(s) ? '"' + s + '"' : s;
-}
 // Парсим 'YYYY-MM-DD' как локальную дату, без UTC-сдвига
 function parseLocalDate(s) {
   if (!s) return null;
@@ -2165,44 +2153,12 @@ function getExportField(id) {
     }
   };
 }
+
 function getActiveExportFields() {
   if (exportFields && Array.isArray(exportFields) && exportFields.length > 0) {
     return exportFields.filter(f => !!getExportField(f));
   }
   return getExportFields().map(f => f.id);
-}
-
-async function exportToExcel() {
-  await refreshCurrentUser();
-  if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
-  const data = getFilteredPipettes();
-  if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
-
-    const fields = getActiveExportFields();
-  const headers = fields.map(f => {
-    const def = getExportField(f);
-    return def ? def.label : f;
-  });
-
-  const csvLines = [headers.join(';')];
-  data.forEach(p => {
-    const row = fields.map(f => {
-      const def = getExportField(f);
-      return def ? def.get(p) : '';
-    });
-    
-    const line = row.map(v => sanitizeCsvCell(v)).join(';');
-    csvLines.push(line);
-  });
-  const bom = '\uFEFF';
-  const blob = new Blob([bom + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `pipettes_${todayStr()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast(`Экспорт: ${fields.length} полей, ${data.length} записей`, 'success');
 }
 
 async function exportToXlsx() {
@@ -4933,67 +4889,6 @@ async function getFilteredHistoryForExport() {
   history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
   return history;
-}
-
-// Экспорт в Excel (CSV)
-async function exportHistoryToExcel() {
-  const errEl = document.getElementById('he-error');
-  errEl.textContent = '';
-
-  const p = pipettes.find(x => x.id === currentHistoryId);
-  if (!p) return;
-
-    const history = await getFilteredHistoryForExport();
-  if (history.length === 0) {
-    errEl.textContent = 'Нет записей за выбранный период';
-    return;
-  }
-
-  // 🆕 Переменные для строки «Период» (без них → ReferenceError)
-  const from = document.getElementById('he-from').value;
-  const to   = document.getElementById('he-to').value;
-
-  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
-
-  const csvLines = [];
-
-  // 🆕 Шапка с данными об оборудовании (как в PDF)
-  csvLines.push(['Оборудование', `${p.id} — ${p.model}`].map(sanitizeCsvCell).join(';'));
-  if (p.serial)       csvLines.push(['Серийный номер',  p.serial].map(sanitizeCsvCell).join(';'));
-  if (p.manufacturer) csvLines.push(['Производитель',   p.manufacturer].map(sanitizeCsvCell).join(';'));
-  csvLines.push(['Отдел', p.department || '—'].map(sanitizeCsvCell).join(';'));
-  if (from || to) {
-    csvLines.push(['Период', `${from || '…'} — ${to || '…'}`].map(sanitizeCsvCell).join(';'));
-  }
-  csvLines.push(['Записей', String(history.length)].map(sanitizeCsvCell).join(';'));
-  csvLines.push('');
-
-  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
-  csvLines.push(headers.map(sanitizeCsvCell).join(';'));
-
-  history.forEach(h => {
-    const row = [
-      h.date || '',
-      h.cert || '',
-      resultLabels[h.result] || h.result || '',
-      h.org || '',
-      h.note || ''
-    ];
-    const line = row.map(v => sanitizeCsvCell(v)).join(';');
-    csvLines.push(line);
-  });
-
-  const bom = '\uFEFF';
-  const blob = new Blob([bom + csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `history_${p.id}_${todayStr()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  closeHistoryExportModal();
-  showToast(`Экспортировано: ${history.length} записей`, 'success');
 }
 
 // Экспорт в Excel (.xlsx) — нативный
