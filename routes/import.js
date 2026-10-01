@@ -349,35 +349,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
     const buffer = Buffer.from(file, 'base64');
     const ext = (filename || '').toLowerCase().split('.').pop();
 
-    let headers = [];
-    let objects = [];
-
-    if (ext === 'json') {
-      ({ headers, objects } = parseJson(buffer));
-    } else if (ext === 'csv' || ext === 'txt') {
-      ({ headers, objects } = parseCsv(buffer));
-    } else {
-      // xlsx / xls — через exceljs
-      ({ headers, objects } = await parseXlsx(buffer));
-    }
-
-    if (!objects.length) {
-      return res.status(400).json({ error: 'Не найдено ни одной строки данных' });
-    }
-
-    const colMap = headers.map(h => mapHeader(h));
-    const mappedCount = colMap.filter(Boolean).length;
-
-    if (mappedCount === 0) {
-      return res.status(400).json({
-        error: 'Не удалось распознать ни одного столбца. Проверьте заголовки.',
-        headers: headers
-      });
-    }
-
-    const added = [], skipped = [], errors = [];
-    
-        // 🆕 Загружаем кастомные поля
+    // 🆕 ВСТАВЛЯЕМ СЮДА — ДО парсинга
     try {
       const [fRows] = await db.query(
         'SELECT id, label FROM field_config WHERE enabled = 1'
@@ -392,7 +364,28 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
       _importCustomFields = [];
     }
 
-    // 🛡️ Один раз читаем типы, чтобы не дёргать БД в цикле
+    let headers = [];
+    let objects = [];
+
+    if (ext === 'json') {
+      ({ headers, objects } = parseJson(buffer));
+    } else if (ext === 'csv' || ext === 'txt') {
+      ({ headers, objects } = parseCsv(buffer));
+    } else {
+      ({ headers, objects } = await parseXlsx(buffer));
+    }
+
+    if (!objects.length) {
+      return res.status(400).json({ error: 'Не найдено ни одной строки данных' });
+    }
+
+    const colMap = headers.map(h => mapHeader(h));
+    // ...
+    const added = [], skipped = [], errors = [];
+
+    // ↑↑↑ ЗДЕСЬ БОЛЬШЕ НЕТ БЛОКА ЗАГРУЗКИ КАСТОМНЫХ ПОЛЕЙ ↑↑↑
+
+    // 🛡️ Один раз читаем типы
     let typesCache = [];
     try {
       const [typeRows] = await db.query(
