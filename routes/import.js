@@ -391,11 +391,17 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
     }
 
     const colMap = headers.map(h => mapHeader(h));
-    // ...
+    const mappedCount = colMap.filter(Boolean).length;
+
+    if (mappedCount === 0) {
+       return res.status(400).json({
+       error: 'Не удалось распознать ни одного столбца. Проверьте заголовки.',
+       headers: headers
+     });
+   }
+
     const added = [], skipped = [], errors = [];
-
-    // ↑↑↑ ЗДЕСЬ БОЛЬШЕ НЕТ БЛОКА ЗАГРУЗКИ КАСТОМНЫХ ПОЛЕЙ ↑↑↑
-
+    
     // 🛡️ Один раз читаем типы
     let typesCache = [];
     try {
