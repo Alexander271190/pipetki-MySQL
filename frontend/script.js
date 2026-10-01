@@ -2677,7 +2677,19 @@ async function handleImport() {
   const fileInput = document.getElementById('import-file');
   const file = fileInput.files[0];
   if (!file) { showToast('Выберите файл', 'error'); return; }
-
+    
+  // 🛡️ Старый формат .xls (Excel 97-2003) не поддерживается — ExcelJS
+  // читает только .xlsx (Office Open XML). Показываем понятную подсказку.
+  if (file.name.toLowerCase().endsWith('.xls')) {
+    showToast(
+      'Формат .xls не поддерживается. Пересохраните файл как .xlsx ' +
+      '(Файл → Сохранить как → Книга Excel (*.xlsx))',
+      'error'
+    );
+    fileInput.value = '';
+    return;
+  }
+  
   const progress = document.getElementById('import-progress');
   if (progress) {
     progress.style.display = 'block';
