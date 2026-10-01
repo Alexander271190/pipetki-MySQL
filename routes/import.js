@@ -393,7 +393,7 @@ try {
 
   // 🛡️ Дружелюбное сообщение для типичных случаев
   let friendly = parseErr.message;
-  if (/not valid JSON|Unexpected token/i.test(parseErr.message)) {
+  if (/not valid JSON|Unexpected token|Expected property name|in JSON at position/i.test(parseErr.message)) {
     friendly = 'Файл повреждён или не является корректным JSON';
   } else if (/zip file|central directory/i.test(parseErr.message)) {
     friendly = 'Файл повреждён или не является корректным XLSX';
