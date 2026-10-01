@@ -27,11 +27,16 @@ function parseCustomData(raw) {
 function mergeCustom(p) {
   if (!p) return p;
   const custom = parseCustomData(p.custom_data);
-  return { ...p, ...custom };
+  for (const [k, v] of Object.entries(custom)) {
+    if (Object.prototype.hasOwnProperty.call(p, k)) continue;
+    p[k] = v;
+  }
+  return p;
 }
 
 function mergeCustomList(list) {
-  return list.map(mergeCustom);
+  list.forEach(mergeCustom);
+  return list;
 }
 
 // ============================================================
