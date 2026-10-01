@@ -230,26 +230,48 @@ async function parseXlsx(buffer) {
   const sheet = workbook.worksheets[0];
   if (!sheet) throw new Error('Файл не содержит листов');
 
-  const headers = [];
-  const objects = [];
+  // 🆕 Ищем строку с заголовками — где mapHeader() узнаёт максимум ячеек.
+  // Пропускает шапку «Реестр оборудования…», мета «Дата: … · Записей: …»,
+  // пустые строки. Работает и для чистых файлов (заголовки в 1-й строке).
+  let headerRowNum = 0;
+  let bestScore = 0;
+  const MAX_SCAN = Math.min(sheet.rowCount, 20);
 
-  // Первая строка — заголовки
-  const firstRow = sheet.getRow(1);
-  if (!firstRow) throw new Error('Пустой файл');
-  const colCount = firstRow.cellCount;
-  for (let i = 1; i <= colCount; i++) {
-    headers.push(String(cellValue(firstRow.getCell(i)) || '').trim());
+  for (let r = 1; r <= MAX_SCAN; r++) {
+    const row = sheet.getRow(r);
+    if (!row || row.cellCount === 0) continue;
+
+    let score = 0;
+    for (let c = 1; c <= row.cellCount; c++) {
+      const v = cellValue(row.getCell(c));
+      if (v === '' || v === undefined || v === null) continue;
+      if (mapHeader(v)) score++;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      headerRowNum = r;
+    }
   }
-  if (headers.length === 0) throw new Error('Пустой файл');
 
-  // Остальные строки — данные
-  for (let r = 2; r <= sheet.rowCount; r++) {
+  if (bestScore < 2) {
+    throw new Error('Не удалось распознать ни одного столбца. Проверьте заголовки.');
+  }
+
+  const headerRow = sheet.getRow(headerRowNum);
+  const headers = [];
+  const colCount = headerRow.cellCount;
+  for (let i = 1; i <= colCount; i++) {
+    headers.push(String(cellValue(headerRow.getCell(i)) || '').trim());
+  }
+
+  const objects = [];
+  for (let r = headerRowNum + 1; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
     if (!row || row.cellCount === 0) continue;
 
     const obj = {};
     let isEmpty = true;
-
     for (let c = 1; c <= headers.length; c++) {
       const h = headers[c - 1];
       if (!h) continue;
@@ -257,7 +279,6 @@ async function parseXlsx(buffer) {
       if (val !== '' && val !== undefined && val !== null) isEmpty = false;
       obj[h] = val;
     }
-
     if (isEmpty) continue;
     objects.push(obj);
   }
