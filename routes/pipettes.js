@@ -18,6 +18,13 @@ const STANDARD_FIELDS = new Set([
   'replacing'      // 🆕
 ]);
 
+// 🛡️ Локальная дата YYYY-MM-DD (как todayStr() на фронте).
+// Не используем toISOString() — он возвращает UTC и может дать сдвиг до ±1 дня.
+function todayLocalStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function parseCustomData(raw) {
   if (!raw) return {};
   if (typeof raw === 'object') return raw;
@@ -361,6 +368,13 @@ router.post('/', authenticate, requirePermission('manage_pipettes'), async (req,
     return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
   }
 
+  // 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
+if (lastCalibration) {
+  if (String(lastCalibration) > todayLocalStr()) {
+    return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
+  }
+}
+  
   // 🛡️ Пользователь с "только свой отдел" не может создавать в чужом отделе
   if (req.user.only_own_department && req.user.role !== 'admin') {
     if (!req.user.department) {
@@ -994,8 +1008,14 @@ router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes
     return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
   }
   const { date, cert, result, org, note } = req.body;
-  if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
-  const conn = await db.getConnection();
+if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
+
+// 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
+if (String(date) > todayLocalStr()) {
+  return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
+}
+
+const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
     const [exist] = await conn.query('SELECT id, department FROM pipettes WHERE id = ?', [req.params.id]);
