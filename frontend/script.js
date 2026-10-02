@@ -3192,6 +3192,13 @@ async function saveFilters() {
     await loadFilterConfig();
     _filterRendered = false;
 
+    // 🆕 Если панель открыта — перерисовать сразу, чтобы удалённые фильтры
+    // исчезли без закрытия/открытия
+    const panel = document.getElementById('filter-panel');
+    if (panel && panel.classList.contains('show')) {
+      renderFilterFields();
+    }
+
     syncFilterState();
     currentPage = 1;
     render();
