@@ -2655,6 +2655,62 @@ if (lastLogin) {
 }
 
 // ============================================================
+// СВОРАЧИВАНИЕ ШАПКИ
+// ============================================================
+function updateHeaderMiniStats() {
+  const el = document.getElementById('header-mini-stats');
+  if (!el) return;
+  const ok = document.getElementById('stat-ok')?.textContent || '0';
+  const total = document.getElementById('stat-total')?.textContent || '0';
+  el.innerHTML = `<b>${ok}</b>/${total} в норме`;
+}
+
+function toggleHeaderCollapse() {
+  const header = document.getElementById('main-header');
+  if (!header) return;
+
+  const collapsed = !header.classList.contains('collapsed');
+  header.classList.toggle('collapsed', collapsed);
+
+  try { localStorage.setItem('pipette_header_collapsed', collapsed ? '1' : '0'); } catch (e) {}
+
+  const btn = document.getElementById('header-collapse-btn');
+  if (btn) {
+    const label = btn.querySelector('.collapse-label');
+    if (label) label.textContent = collapsed ? '▼ Развернуть' : '▲ Свернуть';
+    btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
+  }
+}
+
+// Восстановление состояния при загрузке
+(function initHeaderCollapse() {
+  try {
+    const saved = localStorage.getItem('pipette_header_collapsed');
+    if (saved === '1') {
+      const header = document.getElementById('main-header');
+      if (header) header.classList.add('collapsed');
+      const btn = document.getElementById('header-collapse-btn');
+      if (btn) {
+        const label = btn.querySelector('.collapse-label');
+        if (label) label.textContent = '▼ Развернуть';
+      }
+    }
+  } catch (e) {}
+})();
+
+// Обновляем mini-stats после каждого рендера
+// (обёртка — оригинальный render останется работать)
+(function wrapRenderForMiniStats() {
+  if (typeof render !== 'function') return;
+  const origRender = window.render;
+  window.render = function() {
+    const result = origRender.apply(this, arguments);
+    try { updateHeaderMiniStats(); } catch (e) {}
+    return result;
+  };
+})();
+
+// ============================================================
 // ИМПОРТ ДАННЫХ
 // ============================================================
 async function openImportModal() {
