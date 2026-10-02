@@ -144,13 +144,16 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-     await db.query(
+    // 🆕 По умолчанию права пустые — админ сам выдаёт
+    const initialPermissions = role === 'admin' ? [] : (Array.isArray(extraPermissions) ? extraPermissions : []);
+
+    await db.query(
       `INSERT INTO users
        (id, login, password, full_name, position, department, role,
         only_own_department, extra_permissions, is_acting, acting_for_id, must_change_password)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [id, login, passwordHash, fullName, position, department || '', role || 'user',
-       onlyOwnDepartment ? 1 : 0, JSON.stringify(extraPermissions || []),
+       onlyOwnDepartment ? 1 : 0, JSON.stringify(initialPermissions),
        isActing ? 1 : 0, isActing && actingForId ? actingForId : null]
     );
 
