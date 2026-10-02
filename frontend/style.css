@@ -1552,25 +1552,13 @@ html[data-theme="dark"] .status-wip {
 }
 
 /* ============================================================
-   СВОРАЧИВАНИЕ ШАПКИ (мобильный UX)
+   СВОРАЧИВАНИЕ ШАПКИ
    ============================================================ */
 
-/* Короткая версия заголовка — только для свёрнутого состояния */
+/* Короткая версия заголовка — только в свёрнутом состоянии */
 .h1-short { display: none; }
 
-.header-body {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-/* user-info — прижат к правому краю (десктоп: stats слева, юзер справа) */
-.header-body .user-info {
-  margin-left: auto;
-}
-
+/* ── ДЕСКТОП: заголовок сверху, stats слева + user-info справа ── */
 .header-top {
   display: flex;
   align-items: center;
@@ -1586,7 +1574,6 @@ html[data-theme="dark"] .status-wip {
   margin: 0;
 }
 
-/* mini-stats и кнопка не сжимаются — иначе обрезаются на мобильном */
 .header-mini-stats,
 .header-collapse-btn {
   flex-shrink: 0;
@@ -1625,6 +1612,21 @@ html[data-theme="dark"] .status-wip {
 .header-collapse-btn:hover { background: rgba(255,255,255,.25); }
 .header-collapse-btn:active { transform: scale(.97); }
 
+/* 🆕 justify-content: space-between — вот ключевое отличие */
+.header-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Двойная страховка — user-info прижат вправо */
+.header-body .user-info {
+  margin-left: auto;
+}
+
 /* ── Свёрнутое состояние ── */
 .header.collapsed {
   padding: 10px 14px;
@@ -1637,7 +1639,7 @@ html[data-theme="dark"] .status-wip {
 .header.collapsed .header-body { display: none; }
 .header.collapsed .header-mini-stats { display: inline-flex; }
 
-/* Меняем длинный заголовок на короткий «КДЛ» */
+/* Длинный заголовок → короткий «КДЛ» */
 .header.collapsed h1 .h1-full { display: none; }
 .header.collapsed h1 .h1-short { display: inline; }
 .header.collapsed h1 {
@@ -1664,8 +1666,6 @@ html[data-theme="dark"] .status-wip {
   .header-top h1 { font-size: .95rem; }
   .header-mini-stats { font-size: .72rem; padding: 3px 8px; }
 }
-
-/* Совсем узкий экран (390px и меньше) — ещё компактнее */
 @media (max-width: 420px) {
   .header.collapsed { padding: 8px 10px; }
   .header.collapsed h1 { font-size: .9rem; gap: 4px; }
