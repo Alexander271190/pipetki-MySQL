@@ -74,4 +74,12 @@ const requirePermission = (perm) => (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireRole, requirePermission };
+const requireAnyPermission = (perms) => (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Требуется авторизация' });
+  if (req.user.role === 'admin') return next();
+  const userPerms = db.safeParse(req.user.extra_permissions, []);
+  if (perms.some(p => userPerms.includes(p))) return next();
+  return res.status(403).json({ error: 'Недостаточно прав' });
+};
+
+module.exports = { authenticate, requireRole, requirePermission, requireAnyPermission };
