@@ -1554,19 +1554,26 @@ html[data-theme="dark"] .status-wip {
 /* ============================================================
    СВОРАЧИВАНИЕ ШАПКИ (мобильный UX)
    ============================================================ */
+
+/* Короткая версия заголовка — только для свёрнутого состояния */
+.h1-short { display: none; }
+
 .header-body {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
   width: 100%;
 }
 
+/* user-info — прижат к правому краю (десктоп: stats слева, юзер справа) */
+.header-body .user-info {
+  margin-left: auto;
+}
+
 .header-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
   width: 100%;
@@ -1579,10 +1586,16 @@ html[data-theme="dark"] .status-wip {
   margin: 0;
 }
 
+/* mini-stats и кнопка не сжимаются — иначе обрезаются на мобильном */
+.header-mini-stats,
+.header-collapse-btn {
+  flex-shrink: 0;
+}
+
 .header-mini-stats {
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: .8rem;
   color: rgba(255,255,255,.85);
   background: rgba(255,255,255,.12);
@@ -1594,7 +1607,7 @@ html[data-theme="dark"] .status-wip {
 .header-mini-stats b { color: #fff; font-weight: 700; }
 
 .header-collapse-btn {
-  padding: 6px 14px;
+  padding: 6px 12px;
   font-size: .8rem;
   font-family: inherit;
   font-weight: 600;
@@ -1612,29 +1625,36 @@ html[data-theme="dark"] .status-wip {
 .header-collapse-btn:hover { background: rgba(255,255,255,.25); }
 .header-collapse-btn:active { transform: scale(.97); }
 
-/* Свёрнутое состояние */
+/* ── Свёрнутое состояние ── */
 .header.collapsed {
-  padding: 10px 16px;
+  padding: 10px 14px;
 }
 .header.collapsed .header-top {
   margin-bottom: 0;
   flex-wrap: nowrap;
-}
-.header.collapsed h1 {
-  font-size: .95rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  gap: 8px;
 }
 .header.collapsed .header-body { display: none; }
 .header.collapsed .header-mini-stats { display: inline-flex; }
+
+/* Меняем длинный заголовок на короткий «КДЛ» */
+.header.collapsed h1 .h1-full { display: none; }
+.header.collapsed h1 .h1-short { display: inline; }
+.header.collapsed h1 {
+  font-size: 1rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  min-width: 0;
+}
 
 /* На десктопе кнопка не нужна */
 @media (min-width: 1025px) {
   .header-collapse-btn { display: none; }
 }
 
-/* На мобильном уменьшаем шапку */
+/* На мобильном компактнее */
 @media (max-width: 768px) {
   .header-top { margin-bottom: 10px; }
   .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
@@ -1643,4 +1663,13 @@ html[data-theme="dark"] .status-wip {
 @media (max-width: 480px) {
   .header-top h1 { font-size: .95rem; }
   .header-mini-stats { font-size: .72rem; padding: 3px 8px; }
+}
+
+/* Совсем узкий экран (390px и меньше) — ещё компактнее */
+@media (max-width: 420px) {
+  .header.collapsed { padding: 8px 10px; }
+  .header.collapsed h1 { font-size: .9rem; gap: 4px; }
+  .header.collapsed h1 .logo { font-size: 1.1rem; }
+  .header.collapsed .header-mini-stats { font-size: .68rem; padding: 3px 7px; }
+  .header.collapsed .header-collapse-btn { padding: 4px 8px; font-size: .7rem; }
 }
