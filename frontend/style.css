@@ -1550,3 +1550,97 @@ html[data-theme="dark"] .status-wip {
   background: #422006;
   color: #fcd34d;
 }
+
+/* ============================================================
+   СВОРАЧИВАНИЕ ШАПКИ (мобильный UX)
+   ============================================================ */
+.header-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.header-top h1 {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+}
+
+.header-mini-stats {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: .8rem;
+  color: rgba(255,255,255,.85);
+  background: rgba(255,255,255,.12);
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.header-mini-stats b { color: #fff; font-weight: 700; }
+
+.header-collapse-btn {
+  padding: 6px 14px;
+  font-size: .8rem;
+  font-family: inherit;
+  font-weight: 600;
+  background: rgba(255,255,255,.15);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.header-collapse-btn:hover { background: rgba(255,255,255,.25); }
+.header-collapse-btn:active { transform: scale(.97); }
+
+/* Свёрнутое состояние */
+.header.collapsed {
+  padding: 10px 16px;
+}
+.header.collapsed .header-top {
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+.header.collapsed h1 {
+  font-size: .95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header.collapsed .header-body { display: none; }
+.header.collapsed .header-mini-stats { display: inline-flex; }
+
+/* На десктопе кнопка не нужна */
+@media (min-width: 1025px) {
+  .header-collapse-btn { display: none; }
+}
+
+/* На мобильном уменьшаем шапку */
+@media (max-width: 768px) {
+  .header-top { margin-bottom: 10px; }
+  .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
+  .header-collapse-btn { font-size: .75rem; padding: 5px 10px; }
+}
+@media (max-width: 480px) {
+  .header-top h1 { font-size: .95rem; }
+  .header-mini-stats { font-size: .72rem; padding: 3px 8px; }
+}
