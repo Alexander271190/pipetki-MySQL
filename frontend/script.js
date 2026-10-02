@@ -1058,12 +1058,8 @@ const labels = {
     if (_canDelete) {
       btns.push(`<button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>`);
     }
-    if (btns.length > 0) {
+     if (btns.length > 0) {
       actionsHtml = `<div class="action-btns">${btns.join('')}</div>`;
-    }
-  
-    } else {
-      actionsHtml = `<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История"><i class="fa-solid fa-clipboard-list"></i></button>`;
     }
 
     const cellsHtml = columns.map(colId => {
@@ -2595,12 +2591,10 @@ function renderAuthUI() {
     const hasAnyRowAction = canEditPipette() || canDeletePipette() || canQuickCal() || canViewHistory();
     const actionsHeader = document.getElementById('actions-header');
     if (actionsHeader) actionsHeader.style.display = hasAnyRowAction ? '' : 'none';
-    const actionsHeader = document.getElementById('actions-header');
-    if (actionsHeader) actionsHeader.style.display = canManage ? '' : 'none';
 
-    document.body.classList.toggle('can-manage', canManage);
-    document.body.classList.toggle('can-import', canImport);
-    document.body.classList.toggle('can-export', canExport);
+    document.body.classList.toggle('can-manage', canAdd || canEditPipette() || canDeletePipette());
+    document.body.classList.toggle('can-import', canImportData);
+    document.body.classList.toggle('can-export', canExportData);
     document.body.classList.toggle('is-admin', admin);
     if (currentUser.mustChangePassword) {
       
@@ -3830,7 +3824,7 @@ async function renderSystemSettings() {
     renderEquipmentTypesTable();
     renderBarcodePrintersList();
     loadBarcodeSettings();
-  } catch (e) {{
+  } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
 }
