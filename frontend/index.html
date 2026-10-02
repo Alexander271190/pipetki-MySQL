@@ -37,26 +37,32 @@
 </div>
   
 <!-- ОСНОВНОЙ КОНТЕНТ -->
-<div class="main-content" id="main-content">
-  <div class="header">
-    <h1><span class="logo"><i class="fa-solid fa-flask-vial"></i></span> Клинико-диагностическая лаборатория учёт оборудования и его поверок </h1>
-    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-      <div class="header-stats">
-        <div class="stat-card ok"><div class="num" id="stat-ok">0</div><div class="label">В норме</div></div>
-        <div class="stat-card warn"><div class="num" id="stat-warn">0</div><div class="label">Скоро поверка</div></div>
-        <div class="stat-card danger"><div class="num" id="stat-danger">0</div><div class="label">Просрочены</div></div>
-        <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Всего</div></div>
-      </div>
-      <div class="user-info" id="user-info">
-        <span class="name" id="user-fullname">Имя</span>
-        <span class="position" id="user-position">Должность</span>
-        <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()"><i class="fa-solid fa-arrow-left"></i> Вернуться</button>
-        <button class="btn btn-sm" id="theme-btn" onclick="toggleTheme()" title="Переключить тему">🌙</button>
-        <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль"><i class="fa-solid fa-lock"></i> Пароль</button>
-        <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
-      </div>
+<div class="header" id="main-header">
+  <div class="header-top">
+    <h1><span class="logo"><i class="fa-solid fa-flask-vial"></i></span> Клинико-диагностическая лаборатория учёт оборудования и его поверок</h1>
+    <div class="header-mini-stats" id="header-mini-stats"></div>
+    <button class="header-collapse-btn" id="header-collapse-btn" onclick="toggleHeaderCollapse()" title="Свернуть шапку">
+      <span class="collapse-label">▲ Свернуть</span>
+    </button>
+  </div>
+
+  <div class="header-body">
+    <div class="header-stats">
+      <div class="stat-card ok"><div class="num" id="stat-ok">0</div><div class="label">В норме</div></div>
+      <div class="stat-card warn"><div class="num" id="stat-warn">0</div><div class="label">Скоро поверка</div></div>
+      <div class="stat-card danger"><div class="num" id="stat-danger">0</div><div class="label">Просрочены</div></div>
+      <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Всего</div></div>
+    </div>
+    <div class="user-info" id="user-info">
+      <span class="name" id="user-fullname">Имя</span>
+      <span class="position" id="user-position">Должность</span>
+      <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()"><i class="fa-solid fa-arrow-left"></i> Вернуться</button>
+      <button class="btn btn-sm" id="theme-btn" onclick="toggleTheme()" title="Переключить тему">🌙</button>
+      <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль"><i class="fa-solid fa-lock"></i> Пароль</button>
+      <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
     </div>
   </div>
+</div>
 
   <div class="container">
  <div class="alert-banner" id="alert-banner">
