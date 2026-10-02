@@ -118,19 +118,29 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
     const newIds = new Set(fields.map(f => f.id));
     const removed = oldFields.map(r => r.id).filter(id => !newIds.has(id));
 
-    if (removed.length > 0) {
+        if (removed.length > 0) {
       const [rows] = await conn.query(
         'SELECT custom_data FROM pipettes WHERE custom_data IS NOT NULL'
       );
       const used = new Set();
+
       for (const r of rows) {
-        try {
-          const cd = JSON.parse(r.custom_data) || {};
-          for (const id of removed) {
-            if (cd[id] !== undefined && cd[id] !== null && cd[id] !== '') used.add(id);
-          }
-        } catch (e) { /* ignore */ }
+        // 🛡️ mysql2 возвращает JSON-колонки уже распарсенными (объект).
+        // Если это строка (драйвер другой) — парсим. Иначе используем как есть.
+        let cd;
+        if (r.custom_data == null) continue;
+        if (typeof r.custom_data === 'object') {
+          cd = r.custom_data;
+        } else {
+          try { cd = JSON.parse(r.custom_data) || {}; }
+          catch { continue; }
+        }
+
+        for (const id of removed) {
+          if (cd[id] !== undefined && cd[id] !== null && cd[id] !== '') used.add(id);
+        }
       }
+
       if (used.size > 0) {
         await conn.rollback();
         return res.status(400).json({
@@ -138,7 +148,7 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
         });
       }
     }
-
+    
     await conn.query('DELETE FROM field_config');
     for (const f of fields) {
       await conn.query(
