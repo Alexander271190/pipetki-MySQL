@@ -1031,24 +1031,37 @@ const labels = {
     const histCount = p.history_count || 0;
     const isChecked = selectedPipettes.has(p.id) ? 'checked' : '';
 
-        let actionsHtml = '';
-    if (canManage) {
+    const _canEdit     = canEditPipette();
+    const _canDelete   = canDeletePipette();
+    const _canQuickCal = canQuickCal();
+    const _canHistory  = canViewHistory();
+
+    let actionsHtml = '';
+    const btns = [];
+
+    if (_canHistory) {
+      btns.push(`<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})"><i class="fa-solid fa-clipboard-list"></i></button>`);
+    }
+    if (_canEdit) {
+      btns.push(`<button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать"><i class="fa-solid fa-pen"></i></button>`);
+    }
+    if (_canQuickCal) {
       if (status === 'sent') {
-        actionsHtml = `<div class="action-btns">
-          <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать"><i class="fa-solid fa-pen"></i></button>
-          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})"><i class="fa-solid fa-clipboard-list"></i></button>
-          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Вернулась"><i class="fa-solid fa-box-open"></i></button>
-          <button class="btn btn-warning btn-sm" onclick="cancelSend('${p.id}')" title="Отменить"><i class="fa-solid fa-rotate-left"></i></button>
-          <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>
-        </div>`;
+        btns.push(`<button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Вернулась"><i class="fa-solid fa-box-open"></i></button>`);
       } else {
-        actionsHtml = `<div class="action-btns">
-          <button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать"><i class="fa-solid fa-pen"></i></button>
-          <button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})"><i class="fa-solid fa-clipboard-list"></i></button>
-          <button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Быстрая поверка"><i class="fa-solid fa-check"></i></button>
-          <button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>
-        </div>`;
+        btns.push(`<button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Быстрая поверка"><i class="fa-solid fa-check"></i></button>`);
       }
+    }
+    if (status === 'sent' && canBulkSend()) {
+      btns.push(`<button class="btn btn-warning btn-sm" onclick="cancelSend('${p.id}')" title="Отменить"><i class="fa-solid fa-rotate-left"></i></button>`);
+    }
+    if (_canDelete) {
+      btns.push(`<button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>`);
+    }
+    if (btns.length > 0) {
+      actionsHtml = `<div class="action-btns">${btns.join('')}</div>`;
+    }
+  
     } else {
       actionsHtml = `<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История"><i class="fa-solid fa-clipboard-list"></i></button>`;
     }
@@ -1123,7 +1136,7 @@ const labels = {
       </td>
       
       ${cellsHtml}
-      <td ${!canManage ? 'style="display:none"' : ''}>${actionsHtml}</td>
+      <td ${!(canEditPipette() || canDeletePipette() || canQuickCal() || canViewHistory()) ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
   }).join('');
 
@@ -1221,15 +1234,11 @@ function updateBulkCalButton() {
   const btnReturn = document.getElementById('btn-bulk-return');
   const counterSend = document.getElementById('bulk-counter');
   const counterReturn = document.getElementById('bulk-return-counter');
-
   if (!btnSend && !btnReturn) return;
 
-   // 🆕 Учитываем ВСЕ выбранные, даже вне текущего фильтра
-  const visibleSelected = [...selectedPipettes].filter(id => {
-    return pipettes.some(p => p.id === id);
-  });
-  
-    const toSend = visibleSelected.filter(id => {
+  const visibleSelected = [...selectedPipettes].filter(id => pipettes.some(p => p.id === id));
+
+  const toSend = visibleSelected.filter(id => {
     const p = pipettes.find(x => x.id === id);
     return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
@@ -1239,13 +1248,10 @@ function updateBulkCalButton() {
     return p && p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
-    if (btnSend) {
-    if (toSend.length > 0) {
+  if (btnSend) {
+    if (canBulkSend() && toSend.length > 0) {
       btnSend.style.display = 'inline-flex';
-      // 🆕 Показываем сколько выбрано всего и сколько из них внешних
-      const hint = toSend.length < selectedPipettes.size
-        ? `${toSend.length} / ${selectedPipettes.size}`
-        : toSend.length;
+      const hint = toSend.length < selectedPipettes.size ? `${toSend.length} / ${selectedPipettes.size}` : toSend.length;
       if (counterSend) counterSend.textContent = hint;
     } else {
       btnSend.style.display = 'none';
@@ -1253,7 +1259,7 @@ function updateBulkCalButton() {
   }
 
   if (btnReturn) {
-    if (toReturn.length > 0) {
+    if (canBulkReturn() && toReturn.length > 0) {
       btnReturn.style.display = 'inline-flex';
       if (counterReturn) counterReturn.textContent = toReturn.length;
     } else {
@@ -1806,6 +1812,21 @@ async function savePipette(e) {
      }
 
      data[fieldId] = value;
+  }
+
+    const barcodeInput = container.querySelector('[data-field-id="barcode"]');
+  if (barcodeInput) {
+    if (currentUser.role === 'admin') {
+      const isManual = barcodeInput.dataset.manual === '1';
+      const val = barcodeInput.value.trim();
+      if (isManual && val) {
+        data.barcode = val;
+      } else {
+        delete data.barcode;
+      }
+    } else {
+      delete data.barcode;
+    }
   }
 
   // Единый формат сообщения о незаполненных полях
@@ -2550,16 +2571,30 @@ function renderAuthUI() {
       btnStop.style.display = isImpersonating() ? 'inline-flex' : 'none';
     }
 
-    const canManage = hasPermission('manage_pipettes');
-    const canImport = hasPermission('import_data');
-    const canExport = hasPermission('export_data');
-    const admin = isAdmin();
+        const admin           = isAdmin();
+    const canAdd          = canAddPipette();
+    const canImportData   = canImport();
+    const canExportData   = canExport();
+    const canSettings     = canManageSettings();
+    const canScan         = canScanBarcode();
+    const canPrint        = canPrintLabels();
 
-    document.querySelectorAll('.btn-add-pipette').forEach(el => el.style.display = canManage ? 'inline-flex' : 'none');
-    document.querySelectorAll('.btn-import').forEach(el => el.style.display = canImport ? 'inline-flex' : 'none');
-    document.querySelectorAll('.btn-export').forEach(el => el.style.display = canExport ? 'inline-flex' : 'none');
-    document.querySelectorAll('.btn-settings').forEach(el => el.style.display = admin ? 'inline-flex' : 'none');
+    document.querySelectorAll('.btn-add-pipette').forEach(el =>
+      el.style.display = canAdd ? 'inline-flex' : 'none');
+    document.querySelectorAll('.btn-import').forEach(el =>
+      el.style.display = canImportData ? 'inline-flex' : 'none');
+    document.querySelectorAll('.btn-export').forEach(el =>
+      el.style.display = canExportData ? 'inline-flex' : 'none');
+    document.querySelectorAll('.btn-settings').forEach(el =>
+      el.style.display = canSettings ? 'inline-flex' : 'none');
+    document.querySelectorAll('.btn-scan-barcode').forEach(el =>
+      el.style.display = canScan ? 'inline-flex' : 'none');
+    document.querySelectorAll('.btn-print-labels').forEach(el =>
+      el.style.display = canPrint ? 'inline-flex' : 'none');
 
+    const hasAnyRowAction = canEditPipette() || canDeletePipette() || canQuickCal() || canViewHistory();
+    const actionsHeader = document.getElementById('actions-header');
+    if (actionsHeader) actionsHeader.style.display = hasAnyRowAction ? '' : 'none';
     const actionsHeader = document.getElementById('actions-header');
     if (actionsHeader) actionsHeader.style.display = canManage ? '' : 'none';
 
@@ -2568,6 +2603,7 @@ function renderAuthUI() {
     document.body.classList.toggle('can-export', canExport);
     document.body.classList.toggle('is-admin', admin);
     if (currentUser.mustChangePassword) {
+      
       // Пока не сменит пароль — данные не грузим, показываем модалку
       openChangePasswordModal(true);
     } else {
@@ -3714,6 +3750,70 @@ async function renderSystemSettings() {
         </div>
       </div>
 
+            <div class="settings-form" style="margin-top:24px;">
+        <h4><i class="fa-solid fa-print"></i> Принтеры этикеток</h4>
+        <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
+          Список принтеров, доступных пользователям. Каждый может быть привязан к отделу.
+        </p>
+        <div id="barcode-printers-list"></div>
+        <button class="btn btn-primary" onclick="addBarcodePrinter()" style="margin-top:12px;">
+          <i class="fa-solid fa-plus"></i> Добавить принтер
+        </button>
+
+        <div style="margin-top:24px;padding:12px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:8px;">
+          <div style="font-weight:700;font-size:.85rem;color:#166534;margin-bottom:12px;text-transform:uppercase;">
+            <i class="fa-solid fa-tag"></i> Что печатать
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Размер этикетки</label>
+              <select id="bc-label-size">
+                <option value="58x40">58 × 40 мм</option>
+                <option value="40x25">40 × 25 мм</option>
+                <option value="100x50">100 × 50 мм</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Тип штрихкода</label>
+              <select id="bc-type">
+                <option value="code128">Code-128</option>
+                <option value="qr">QR-код</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Копий по умолчанию</label>
+              <input type="number" id="bc-default-copies" value="1" min="1" max="50">
+            </div>
+            <div class="form-group">
+              <label>Порт локального агента</label>
+              <input type="number" id="bc-agent-port" value="9200">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Макс. длина штрихкода</label>
+              <input type="number" id="bc-max-length" value="128" min="8" max="255">
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding-top:22px;">
+                <input type="checkbox" id="bc-fallback-to-pdf">
+                Fallback на PDF при ошибке
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Поля на этикетке</label>
+            <div id="bc-label-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:.9rem;margin-top:6px;"></div>
+          </div>
+        </div>
+
+        <button class="btn btn-success" onclick="saveBarcodeSettings()" style="margin-top:16px;">
+          <i class="fa-solid fa-floppy-disk"></i> Сохранить настройки печати
+        </button>
+      </div>
+
       <div class="settings-form" style="margin-top:24px;border-left:3px solid #dc2626;">
         <h4 style="color:#991b1b;"><i class="fa-solid fa-triangle-exclamation"></i> Опасная зона</h4>
         <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
@@ -3728,7 +3828,9 @@ async function renderSystemSettings() {
     `;
 
     renderEquipmentTypesTable();
-  } catch (e) {
+    renderBarcodePrintersList();
+    loadBarcodeSettings();
+  } catch (e) {{
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
 }
@@ -5282,3 +5384,1250 @@ function toggleTheme() {
   if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
 })();
 
+// ============================================================
+// 🆕 СПИСОК ПРАВ (16 штук, по 5 группам)
+// ============================================================
+const ALL_PERMISSIONS = [
+  { key: 'add_pipette',       group: 'Оборудование',      label: '➕ Добавление оборудования' },
+  { key: 'edit_pipette',      group: 'Оборудование',      label: '✏️ Редактирование оборудования' },
+  { key: 'delete_pipette',    group: 'Оборудование',      label: '🗑️ Удаление оборудования' },
+  { key: 'quick_calibration', group: 'Оборудование',      label: '✓ Быстрая поверка' },
+
+  { key: 'bulk_send',         group: 'Поверки',           label: '📦 Отправка на поверку' },
+  { key: 'bulk_return',       group: 'Поверки',           label: '📥 Возврат с поверки' },
+
+  { key: 'import_data',       group: 'Данные',            label: '📥 Импорт данных' },
+  { key: 'export_data',       group: 'Данные',            label: '📤 Экспорт данных' },
+
+  { key: 'scan_barcode',      group: 'Штрихкоды',         label: '📷 Сканирование штрихкодов' },
+  { key: 'print_labels',      group: 'Штрихкоды',         label: '🏷️ Печать этикеток' },
+  { key: 'manage_barcodes',   group: 'Штрихкоды',         label: '🔧 Ручной ввод / сброс штрихкодов' },
+
+  { key: 'manage_users',      group: 'Администрирование', label: '👥 Управление пользователями' },
+  { key: 'manage_settings',   group: 'Администрирование', label: '⚙️ Настройки системы' },
+  { key: 'manage_printers',   group: 'Администрирование', label: '🖨️ Управление принтерами' },
+  { key: 'view_log',          group: 'Администрирование', label: '📜 Просмотр журнала' },
+
+  { key: 'view_history',      group: 'Общие',             label: '📋 Просмотр истории поверок' },
+];
+
+// ============================================================
+// 🆕 ПРОВЕРКИ ПРАВ
+// ============================================================
+function canAddPipette()    { return hasPermission('add_pipette')       || hasPermission('manage_pipettes'); }
+function canEditPipette()   { return hasPermission('edit_pipette')      || hasPermission('manage_pipettes'); }
+function canDeletePipette() { return hasPermission('delete_pipette')    || hasPermission('manage_pipettes'); }
+function canQuickCal()      { return hasPermission('quick_calibration') || hasPermission('manage_pipettes'); }
+function canBulkSend()      { return hasPermission('bulk_send')         || hasPermission('manage_pipettes'); }
+function canBulkReturn()    { return hasPermission('bulk_return')       || hasPermission('manage_pipettes'); }
+function canImport()        { return hasPermission('import_data'); }
+function canExport()        { return hasPermission('export_data'); }
+function canScanBarcode()   { return hasPermission('scan_barcode'); }
+function canPrintLabels()   { return hasPermission('print_labels'); }
+function canManageBarcodes(){ return hasPermission('manage_barcodes'); }
+function canManageUsers()   { return hasPermission('manage_users'); }
+function canManageSettings(){ return hasPermission('manage_settings'); }
+function canManagePrinters(){ return hasPermission('manage_printers'); }
+function canViewLog()       { return hasPermission('view_log'); }
+function canViewHistory()   { return true; }
+
+// ============================================================
+// 🆕 СКАНИРОВАНИЕ ШТРИХКОДОВ
+// ============================================================
+let _barcodeScanList = [];
+
+function openBarcodeScannerModal() {
+  _barcodeScanList = [];
+  renderBarcodeScanList();
+  const modal = document.getElementById('barcode-scanner-modal');
+  const input = document.getElementById('barcode-input');
+  const errEl = document.getElementById('barcode-scan-error');
+  if (errEl) errEl.textContent = '';
+  if (input) input.value = '';
+  if (modal) modal.classList.add('active');
+  if (input) setTimeout(() => input.focus(), 100);
+}
+
+function closeBarcodeScannerModal() {
+  const modal = document.getElementById('barcode-scanner-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+async function handleBarcodeScan(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return;
+  const errEl = document.getElementById('barcode-scan-error');
+  if (errEl) errEl.textContent = '';
+  if (_barcodeScanList.some(x => x._scannedValue === value)) {
+    if (errEl) errEl.textContent = 'Уже в списке';
+    return;
+  }
+  try {
+    const res = await apiRequest('/barcodes/lookup', 'POST', { barcode: value });
+    if (_barcodeScanList.some(x => x.id === res.id)) {
+      if (errEl) errEl.textContent = 'Уже в списке';
+      return;
+    }
+    res._scannedValue = value;
+    _barcodeScanList.push(res);
+    renderBarcodeScanList();
+  } catch (e) {
+    if (errEl) errEl.textContent = e.message || 'Не найдено';
+  }
+}
+
+function renderBarcodeScanList() {
+  const list = document.getElementById('barcode-scan-list');
+  const counter = document.getElementById('barcode-scan-count');
+  const btnSend = document.getElementById('btn-scan-send');
+  const btnReturn = document.getElementById('btn-scan-return');
+  if (counter) counter.textContent = _barcodeScanList.length;
+  if (!_barcodeScanList.length) {
+    if (list) list.innerHTML = '<div style="color:#94a3b8;">Список пуст. Сканируйте штрихкоды.</div>';
+    if (btnSend) btnSend.disabled = true;
+    if (btnReturn) btnReturn.disabled = true;
+    return;
+  }
+  if (list) {
+    list.innerHTML = _barcodeScanList.map((p, i) => `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e2e8f0;">
+        <div><strong>${esc(p.id)}</strong> — ${esc(p.model || '')}</div>
+        <button class="btn btn-danger btn-sm" onclick="removeFromBarcodeScanList(${i})" style="padding:2px 8px;font-size:.7rem;">×</button>
+      </div>
+    `).join('');
+  }
+  const hasSendable = _barcodeScanList.some(p => !p.sent_for_calibration);
+  const hasReturnable = _barcodeScanList.some(p => p.sent_for_calibration);
+  if (btnSend) btnSend.disabled = !hasSendable;
+  if (btnReturn) btnReturn.disabled = !hasReturnable;
+}
+
+function removeFromBarcodeScanList(idx) {
+  _barcodeScanList.splice(idx, 1);
+  renderBarcodeScanList();
+}
+
+function clearBarcodeScanList() {
+  _barcodeScanList = [];
+  renderBarcodeScanList();
+}
+
+function openBulkSendFromScanner() {
+  const ids = _barcodeScanList.filter(p => !p.sent_for_calibration).map(p => p.id);
+  if (!ids.length) { showToast('Нет позиций для отправки', 'error'); return; }
+  selectedPipettes.clear();
+  ids.forEach(id => selectedPipettes.add(id));
+  closeBarcodeScannerModal();
+  openBulkSendModal();
+}
+
+function openBulkReturnFromScanner() {
+  const ids = _barcodeScanList.filter(p => p.sent_for_calibration).map(p => p.id);
+  if (!ids.length) { showToast('Нет позиций для возврата', 'error'); return; }
+  selectedPipettes.clear();
+  ids.forEach(id => selectedPipettes.add(id));
+  closeBarcodeScannerModal();
+  openBulkReturnModal();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('barcode-input');
+  if (!input) return;
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = input.value;
+      input.value = '';
+      await handleBarcodeScan(value);
+    }
+  });
+});
+
+// ============================================================
+// 🆕 ПЕЧАТЬ ЭТИКЕТОК
+// ============================================================
+function openBarcodePrintModal() {
+  updateBarcodePrintScopeCounts();
+  const hasSelected = selectedPipettes.size > 0;
+  const selRadio = document.getElementById('bc-scope-selected');
+  const filtRadio = document.getElementById('bc-scope-filtered');
+  if (hasSelected && selRadio) selRadio.checked = true;
+  else if (filtRadio) filtRadio.checked = true;
+
+  apiRequest('/settings/system').then(s => {
+    const copiesEl = document.getElementById('barcode-print-copies');
+    if (copiesEl && s.barcode_default_copies) copiesEl.value = s.barcode_default_copies;
+  }).catch(() => {});
+
+  loadPrintersForBarcodePrint();
+  const errEl = document.getElementById('barcode-print-error');
+  if (errEl) errEl.textContent = '';
+  document.getElementById('barcode-print-modal').classList.add('active');
+}
+
+function closeBarcodePrintModal() {
+  document.getElementById('barcode-print-modal').classList.remove('active');
+}
+
+async function loadPrintersForBarcodePrint() {
+  const container = document.getElementById('barcode-print-printer-options');
+  if (!container) return;
+  container.innerHTML = '<div style="color:#94a3b8;">Загрузка…</div>';
+
+  try {
+    const data = await apiRequest('/barcode-printers/available');
+    if (!data.printers || data.printers.length === 0) {
+      container.innerHTML = `
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;">
+          <input type="radio" name="bc-printer" value="pdf-a4" checked>
+          <span>📄 PDF (A4)</span>
+        </label>`;
+      return;
+    }
+
+    const modeLabels = {
+      'pdf-a4':      '📄 PDF (A4)',
+      'pdf-zebra':   '🖨️ PDF 58×40 (Ctrl+P на Zebra)',
+      'zebra-ip':    '🌐 Zebra по сети (IP)',
+      'zebra-agent': '⚡ Zebra через локальный агент',
+    };
+
+    const options = data.printers.map(p => {
+      const isPreferred = (p.id === data.preferredId);
+      const label = `${modeLabels[p.mode] || p.mode} — ${p.name}${p.department ? ' (' + p.department + ')' : ''}`;
+      return `
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;">
+          <input type="radio" name="bc-printer" value="printer:${p.id}" ${isPreferred ? 'checked' : ''}>
+          <span>${esc(label)}${isPreferred ? ' <span style="color:#16a34a;font-size:.7rem;">← ваш</span>' : ''}</span>
+        </label>`;
+    });
+
+    options.push(`
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;">
+        <input type="radio" name="bc-printer" value="pdf-a4" ${!data.preferredId ? 'checked' : ''}>
+        <span>📄 PDF (A4, обычный принтер)</span>
+      </label>`);
+
+    container.innerHTML = options.join('');
+  } catch (e) {
+    container.innerHTML = `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="radio" name="bc-printer" value="pdf-a4" checked>
+        <span>📄 PDF (A4)</span>
+      </label>`;
+  }
+}
+
+function updateBarcodePrintScopeCounts() {
+  const selectedCount = [...selectedPipettes].filter(id => pipettes.some(p => p.id === id)).length;
+  const el1 = document.getElementById('bc-scope-selected-count');
+  if (el1) el1.textContent = selectedCount;
+
+  const pageIds = getVisiblePageIds();
+  const el2 = document.getElementById('bc-scope-page-count');
+  if (el2) el2.textContent = pageIds.length;
+
+  const filtered = getFilteredPipettes();
+  const el3 = document.getElementById('bc-scope-filtered-count');
+  if (el3) el3.textContent = filtered.length;
+}
+
+function getBarcodePrintIds() {
+  const scope = document.querySelector('input[name="bc-scope"]:checked')?.value || 'filtered';
+  if (scope === 'selected') return [...selectedPipettes].filter(id => pipettes.some(p => p.id === id));
+  if (scope === 'page')     return getVisiblePageIds();
+  if (scope === 'filtered') return getFilteredPipettes().map(p => p.id);
+  return [];
+}
+
+async function submitBarcodePrint(ev) {
+  const errEl = document.getElementById('barcode-print-error');
+  if (errEl) errEl.textContent = '';
+
+  const ids = getBarcodePrintIds();
+  if (ids.length === 0) { if (errEl) errEl.textContent = 'Ничего не выбрано'; return; }
+
+  if (ids.length > 500) {
+    const ok = await showConfirm(
+      `Печатается ${ids.length} этикеток. Продолжить?`,
+      { icon: '⚠️', title: 'Много этикеток', okText: 'Продолжить', okClass: 'btn-warning' }
+    );
+    if (!ok) return;
+  }
+
+  const copies = Math.max(1, Math.min(50, parseInt(document.getElementById('barcode-print-copies').value, 10) || 1));
+
+  const printerRadio = document.querySelector('input[name="bc-printer"]:checked');
+  const printerValue = printerRadio ? printerRadio.value : 'pdf-a4';
+
+  if (printerValue === 'pdf-a4') {
+    await downloadBarcodePdf(ids, copies, 'a4');
+    closeBarcodePrintModal();
+    return;
+  }
+
+  const printerId = parseInt(printerValue.replace('printer:', ''), 10);
+
+  const btn = ev && ev.target ? ev.target.closest('button') : null;
+  const origHtml = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Печать…'; }
+
+  try {
+    const res = await apiRequest('/barcodes/print', 'POST', { ids, copies, printerId });
+
+    if (res.mode === 'zebra-ip') {
+      showToast(res.message || `Отправлено на «${res.printer}»`, 'success');
+      closeBarcodePrintModal();
+      return;
+    }
+
+    if (res.mode === 'zebra-agent') {
+      const ok = await sendToLocalAgent(res.zpl, res.agentPort || 9200);
+      if (ok) {
+        showToast(`Отправлено на «${res.printer}»: ${res.printed} этикеток`, 'success');
+        closeBarcodePrintModal();
+      } else {
+        showToast('Локальный агент не отвечает. Скачиваем PDF.', 'warn');
+        await downloadBarcodePdf(ids, copies, 'zebra');
+        closeBarcodePrintModal();
+      }
+      return;
+    }
+
+    if (res.mode === 'pdf-zebra') {
+      await downloadBarcodePdf(ids, copies, 'zebra');
+      closeBarcodePrintModal();
+      showToast(`PDF 58×40 для «${res.printer || 'Zebra'}»: ${ids.length * copies} этикеток`, 'success');
+      return;
+    }
+
+    if (res.mode === 'pdf-a4-fallback') {
+      showToast(`⚠️ ${res.reason}. Скачиваем PDF.`, 'warn');
+      await downloadBarcodePdf(ids, copies, 'a4');
+      closeBarcodePrintModal();
+      return;
+    }
+
+    if (res.mode === 'pdf-a4') {
+      await downloadBarcodePdf(ids, copies, 'a4');
+      closeBarcodePrintModal();
+      return;
+    }
+
+    showToast('Неизвестный режим: ' + res.mode, 'error');
+  } catch (e) {
+    if (errEl) errEl.textContent = e.message || 'Ошибка печати';
+  } finally {
+    if (btn && origHtml) { btn.disabled = false; btn.innerHTML = origHtml; }
+  }
+}
+
+async function downloadBarcodePdf(ids, copies, layout) {
+  const sess = sessionStorage.getItem('pipette_session');
+  if (!sess) throw new Error('Сессия истекла');
+  const token = JSON.parse(sess).token;
+  const url = `/api/barcodes/labels.pdf?ids=${encodeURIComponent(ids.join(','))}&copies=${copies}&layout=${layout}`;
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Ошибка генерации PDF');
+  }
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `labels_${layout}_${todayStr()}.pdf`;
+  a.click();
+  URL.revokeObjectURL(blobUrl);
+  showToast(`PDF: ${ids.length} × ${copies} = ${ids.length * copies} этикеток`, 'success');
+}
+
+async function sendToLocalAgent(zpl, port) {
+  try {
+    const res = await fetch(`http://localhost:${port}/print`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: zpl,
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn('Local agent unavailable:', e.message);
+    return false;
+  }
+}
+
+// ============================================================
+// 🆕 ОБЁРТКА generateFormFields — поле «Штрихкод» с кнопками
+// ============================================================
+(function wrapGenerateFormFieldsForBarcode() {
+  if (typeof window.generateFormFields !== 'function') return;
+  const orig = window.generateFormFields;
+  window.generateFormFields = async function(data) {
+    const result = await orig.apply(this, arguments);
+
+    const barcodeInput = document.querySelector('[data-field-id="barcode"]');
+    if (!barcodeInput) return result;
+    if (barcodeInput.parentElement?.dataset.barcodeWrapped === '1') return result;
+
+    const wrap = document.createElement('div');
+    wrap.dataset.barcodeWrapped = '1';
+    wrap.style.display = 'flex';
+    wrap.style.gap = '6px';
+
+    barcodeInput.parentNode.insertBefore(wrap, barcodeInput);
+    wrap.appendChild(barcodeInput);
+
+    if (!canManageBarcodes()) {
+      barcodeInput.readOnly = true;
+      barcodeInput.style.background = '#f1f5f9';
+      barcodeInput.style.cursor = 'not-allowed';
+      barcodeInput.title = 'Меняется администратором. Авто из инв. номера.';
+      return result;
+    }
+
+    const genBtn = document.createElement('button');
+    genBtn.type = 'button';
+    genBtn.className = 'btn btn-secondary';
+    genBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+    genBtn.title = 'Заполнить из инв. / серийного / ID';
+    genBtn.style.flexShrink = '0';
+    genBtn.onclick = () => {
+      const invInput    = document.querySelector('[data-field-id="inventorynumber"]');
+      const serialInput = document.querySelector('[data-field-id="serial"]');
+      const idInput     = document.querySelector('[data-field-id="id"]');
+      let value = '';
+      if (invInput && invInput.value.trim())            value = invInput.value.trim();
+      else if (serialInput && serialInput.value.trim()) value = serialInput.value.trim();
+      else if (idInput && idInput.value.trim())         value = idInput.value.trim();
+      else if (data && data.id)                         value = data.id;
+      if (!value) { showToast('Заполните инв. номер, серийный или ID', 'error'); return; }
+      barcodeInput.value = value;
+      barcodeInput.dataset.manual = '1';
+    };
+    wrap.appendChild(genBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn btn-warning';
+    resetBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
+    resetBtn.title = 'Сбросить ручной штрихкод — вернуть к авто';
+    resetBtn.style.flexShrink = '0';
+    resetBtn.onclick = async () => {
+      if (!data || !data.id) {
+        barcodeInput.value = '';
+        barcodeInput.dataset.manual = '0';
+        return;
+      }
+      const ok = await showConfirm(
+        'Сбросить ручной штрихкод и пересчитать из источника?',
+        { icon: '↩️', title: 'Сброс штрихкода', okText: 'Сбросить', okClass: 'btn-warning' }
+      );
+      if (!ok) return;
+      try {
+        await apiRequest('/barcodes/reset', 'POST', { id: data.id });
+        showToast('Штрихкод сброшен. Будет пересчитан при сохранении.', 'success');
+        barcodeInput.value = '';
+        barcodeInput.dataset.manual = '0';
+      } catch (e) {
+        showToast(e.message || 'Ошибка сброса', 'error');
+      }
+    };
+    wrap.appendChild(resetBtn);
+
+    barcodeInput.addEventListener('input', () => {
+      barcodeInput.dataset.manual = '1';
+    });
+
+    return result;
+  };
+})();
+
+// ============================================================
+// 🆕 ФОРМА — кнопка «Сохранить» учитывает barcode
+// ============================================================
+(function wrapSavePipetteForBarcode() {
+  if (typeof window.savePipette !== 'function') return;
+  const orig = window.savePipette;
+  window.savePipette = async function(ev) {
+    const container = document.getElementById('form-fields-container');
+    if (container) {
+      const barcodeInput = container.querySelector('[data-field-id="barcode"]');
+      if (barcodeInput) {
+        if (currentUser && currentUser.role === 'admin') {
+          const isManual = barcodeInput.dataset.manual === '1';
+          const val = barcodeInput.value.trim();
+          window._pendingBarcode = isManual && val ? val : null;
+        } else {
+          window._pendingBarcode = null;
+        }
+      }
+    }
+    return orig.apply(this, arguments);
+  };
+})();
+
+// ============================================================
+// 🆕 НАСТРОЙКИ АДМИНА — принтеры
+// ============================================================
+let _cachedBarcodePrinters = [];
+
+async function renderBarcodePrintersList() {
+  const container = document.getElementById('barcode-printers-list');
+  if (!container) return;
+
+  try {
+    _cachedBarcodePrinters = await apiRequest('/barcode-printers');
+
+    if (_cachedBarcodePrinters.length === 0) {
+      container.innerHTML = `<div style="padding:20px;text-align:center;color:#94a3b8;background:#f8fafc;border-radius:8px;">Принтеров пока нет. Нажмите «Добавить принтер».</div>`;
+      return;
+    }
+
+    const modeLabels = {
+      'pdf-a4':      '📄 PDF (A4)',
+      'pdf-zebra':   '🖨️ PDF 58×40 (Ctrl+P)',
+      'zebra-ip':    '🌐 Zebra по сети (IP)',
+      'zebra-agent': '⚡ Zebra (агент)',
+    };
+
+    let html = `<table class="field-settings-table"><thead><tr>
+      <th>Название</th><th>Режим</th><th>Отдел</th><th>IP</th>
+      <th>Размер</th><th>Вкл</th><th>По ум.</th><th>Действия</th>
+    </tr></thead><tbody>`;
+
+    for (const p of _cachedBarcodePrinters) {
+      html += `
+        <tr data-printer-id="${p.id}">
+          <td><input type="text" value="${esc(p.name)}" onchange="updateBarcodePrinterField(${p.id}, 'name', this.value)"></td>
+          <td>
+            <select onchange="updateBarcodePrinterField(${p.id}, 'mode', this.value)">
+              ${Object.entries(modeLabels).map(([v, l]) =>
+                `<option value="${v}" ${p.mode === v ? 'selected' : ''}>${l}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td>
+            <select onchange="updateBarcodePrinterField(${p.id}, 'department', this.value)">
+              <option value="">— любой —</option>
+              ${departmentsList.map(d => `<option value="${esc(d)}" ${p.department === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+            </select>
+          </td>
+          <td><input type="text" value="${esc(p.ip || '')}" onchange="updateBarcodePrinterField(${p.id}, 'ip', this.value)" placeholder="192.168.1.100"></td>
+          <td>
+            <select onchange="updateBarcodePrinterField(${p.id}, 'labelSize', this.value)">
+              <option value="58x40" ${p.labelSize === '58x40' ? 'selected' : ''}>58×40</option>
+              <option value="40x25" ${p.labelSize === '40x25' ? 'selected' : ''}>40×25</option>
+              <option value="100x50" ${p.labelSize === '100x50' ? 'selected' : ''}>100×50</option>
+            </select>
+          </td>
+          <td style="text-align:center;"><input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'enabled', this.checked)"></td>
+          <td style="text-align:center;"><input type="checkbox" ${p.isDefault ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'isDefault', this.checked)"></td>
+          <td class="actions">
+            <button class="btn btn-info btn-sm" onclick="checkPrinterById(${p.id})" title="Проверить связь"><i class="fa-solid fa-plug"></i></button>
+            <button class="btn btn-success btn-sm" onclick="saveBarcodePrinter(${p.id})" title="Сохранить"><i class="fa-solid fa-floppy-disk"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteBarcodePrinter(${p.id})" title="Удалить"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>`;
+    }
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<div style="color:#dc2626;padding:10px;">Ошибка: ${esc(e.message)}</div>`;
+  }
+}
+
+function updateBarcodePrinterField(id, field, value) {
+  const p = _cachedBarcodePrinters.find(x => x.id === id);
+  if (p) p[field] = value;
+}
+
+async function saveBarcodePrinter(id) {
+  const p = _cachedBarcodePrinters.find(x => x.id === id);
+  if (!p) return;
+  try {
+    await apiRequest('/barcode-printers/' + id, 'PUT', {
+      name: p.name,
+      department: p.department || '',
+      mode: p.mode,
+      ip: p.ip || '',
+      port: p.port || 9100,
+      labelSize: p.labelSize || '58x40',
+      enabled: !!p.enabled,
+      isDefault: !!p.isDefault,
+      sortOrder: p.sortOrder || 0,
+    });
+    showToast(`Принтер «${p.name}» сохранён`, 'success');
+  } catch (e) {
+    showToast(e.message || 'Ошибка', 'error');
+  }
+}
+
+async function deleteBarcodePrinter(id) {
+  const p = _cachedBarcodePrinters.find(x => x.id === id);
+  if (!p) return;
+  const ok = await showConfirm(
+    `Удалить принтер «${p.name}»?`,
+    { icon: '🖨️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
+  try {
+    await apiRequest('/barcode-printers/' + id, 'DELETE');
+    showToast('Удалён', 'success');
+    renderBarcodePrintersList();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function checkPrinterById(id) {
+  const p = _cachedBarcodePrinters.find(x => x.id === id);
+  if (!p) return;
+  if (p.mode === 'zebra-ip') {
+    try {
+      const res = await apiRequest('/barcodes/printer-status', 'POST', { ip: p.ip, port: p.port });
+      showToast(res.message, res.ok ? 'success' : 'error');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  } else if (p.mode === 'zebra-agent') {
+    showToast('Проверка агента выполняется на компе пользователя', 'warn');
+  } else {
+    showToast('Для этого режима проверка связи не требуется', 'warn');
+  }
+}
+
+async function addBarcodePrinter() {
+  const name = prompt('Название принтера (например «Zebra КДЛ»):');
+  if (!name || !name.trim()) return;
+  const mode = prompt(
+    'Режим:\n' +
+    '1 — pdf-a4 (PDF A4)\n' +
+    '2 — pdf-zebra (PDF 58×40, Ctrl+P)\n' +
+    '3 — zebra-ip (прямая печать по сети)\n' +
+    '4 — zebra-agent (через локальный агент)\n\n' +
+    'Введите номер:',
+    '2'
+  );
+  const modeMap = { '1': 'pdf-a4', '2': 'pdf-zebra', '3': 'zebra-ip', '4': 'zebra-agent' };
+  const selectedMode = modeMap[mode];
+  if (!selectedMode) { showToast('Отменено', 'error'); return; }
+
+  let ip = null;
+  let port = 9100;
+  if (selectedMode === 'zebra-ip') {
+    ip = prompt('IP адрес принтера (например 192.168.1.100):');
+    if (!ip || !ip.trim()) { showToast('IP не указан', 'error'); return; }
+    port = parseInt(prompt('Порт (по умолчанию 9100):', '9100') || '9100', 10) || 9100;
+  }
+
+  const department = prompt('Отдел (оставьте пустым для общего принтера):');
+
+  try {
+    await apiRequest('/barcode-printers', 'POST', {
+      name: name.trim(),
+      department: department ? department.trim() : '',
+      mode: selectedMode,
+      ip: ip ? ip.trim() : '',
+      port,
+      labelSize: '58x40',
+      enabled: true,
+      isDefault: false,
+    });
+    showToast('Принтер добавлен', 'success');
+    renderBarcodePrintersList();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// 🆕 НАСТРОЙКИ ПЕЧАТИ — загрузка / сохранение
+// ============================================================
+async function loadBarcodeSettings() {
+  try {
+    const s = await apiRequest('/settings/system');
+    const sizeEl = document.getElementById('bc-label-size');
+    if (sizeEl) sizeEl.value = s.barcode_label_size || '58x40';
+    const typeEl = document.getElementById('bc-type');
+    if (typeEl) typeEl.value = s.barcode_type || 'code128';
+    const copiesEl = document.getElementById('bc-default-copies');
+    if (copiesEl) copiesEl.value = s.barcode_default_copies || 1;
+    const agentEl = document.getElementById('bc-agent-port');
+    if (agentEl) agentEl.value = s.barcode_agent_port || 9200;
+    const maxEl = document.getElementById('bc-max-length');
+    if (maxEl) maxEl.value = s.barcode_max_length || 128;
+    const fbEl = document.getElementById('bc-fallback-to-pdf');
+    if (fbEl) fbEl.checked = s.barcode_fallback_to_pdf !== '0';
+
+    const container = document.getElementById('bc-label-fields');
+    if (container) {
+      const allFields = [
+        { id: 'id',              label: 'Внутренний номер' },
+        { id: 'model',           label: 'Модель' },
+        { id: 'serial',          label: 'Серийный' },
+        { id: 'inventorynumber', label: 'Инвентарный номер' },
+        { id: 'department',      label: 'Отдел' },
+        { id: 'responsible',     label: 'Ответственный' },
+      ];
+      let selected = ['id', 'model', 'serial', 'department'];
+      try { selected = JSON.parse(s.barcode_label_fields || '[]'); } catch (e) {}
+      container.innerHTML = allFields.map(f => `
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" class="bc-field-cb" value="${esc(f.id)}" ${selected.includes(f.id) ? 'checked' : ''}>
+          ${esc(f.label)}
+        </label>
+      `).join('');
+    }
+  } catch (e) {
+    console.warn('loadBarcodeSettings:', e);
+  }
+}
+
+async function saveBarcodeSettings() {
+  const fields = Array.from(document.querySelectorAll('.bc-field-cb:checked')).map(cb => cb.value);
+  if (fields.length === 0) { showToast('Выберите хотя бы одно поле', 'error'); return; }
+  const payload = {
+    barcode_label_size: document.getElementById('bc-label-size').value,
+    barcode_type: document.getElementById('bc-type').value,
+    barcode_default_copies: document.getElementById('bc-default-copies').value,
+    barcode_agent_port: document.getElementById('bc-agent-port').value,
+    barcode_max_length: document.getElementById('bc-max-length').value,
+    barcode_fallback_to_pdf: document.getElementById('bc-fallback-to-pdf').checked ? '1' : '0',
+    barcode_label_fields: JSON.stringify(fields),
+  };
+  try {
+    await apiRequest('/settings/system', 'PUT', payload);
+    showToast('Настройки печати сохранены', 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ============================================================
+// 🆕 ПОЛЬЗОВАТЕЛИ — новая форма с правами
+// ============================================================
+async function renderUsersSettings() {
+  const c = document.getElementById('settings-content');
+  try {
+    const users = await apiRequest('/users');
+    const roleLabels = { user: 'Пользователь', senior_lab: 'Ст. лаборант', admin: 'Администратор' };
+    const curId = currentUser.id;
+
+    let html = '<h3>Управление пользователями</h3>';
+    html += `<table class="field-settings-table" style="margin-bottom:20px;"><thead><tr>
+      <th>Логин</th><th>ФИО</th><th>Должность</th><th>Отдел</th><th>Роль</th><th>Права</th><th>Действия</th>
+    </tr></thead><tbody>`;
+
+    users.forEach(u => {
+      const perms = u.extraPermissions || [];
+      const isAdm = u.role === 'admin';
+      const permText = isAdm
+        ? '<span style="color:#dc2626;font-weight:700;">все</span>'
+        : (perms.length === 0
+            ? '<span style="color:#94a3b8;">нет</span>'
+            : String(perms.length));
+
+      html += `<tr>
+        <td>${esc(u.login)}</td>
+        <td>${esc(u.fullName || u.full_name)}</td>
+        <td>${esc(u.position)}${u.isActing
+          ? ` <span style="color:#eab308;font-weight:600;">(и.о.${u.actingForName ? ' за ' + esc(u.actingForName) : ''})</span>`
+          : ''}</td>
+        <td>${esc(u.department || '—')}</td>
+        <td>${roleLabels[u.role] || u.role}</td>
+        <td style="text-align:center;">${permText}</td>
+        <td class="actions">
+          <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="btn btn-primary btn-sm"
+                  onclick="openUserViewModal('${u.id}', '${esc(u.fullName || u.full_name)}')"
+                  title="Настроить видимые поля формы">
+            <i class="fa-solid fa-list-check"></i>
+          </button>
+          ${u.id !== curId ? `
+            <button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти как">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+            <button class="btn btn-warning btn-sm" onclick="resetUserPassword('${u.id}', '${esc(u.login)}')" title="Сбросить пароль">
+              <i class="fa-solid fa-key"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')" title="Удалить">
+              <i class="fa-solid fa-trash"></i>
+            </button>` : ''}
+        </td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    html += renderUserEditForm();
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
+  }
+}
+
+function renderUserEditForm() {
+  const groups = {};
+  for (const p of ALL_PERMISSIONS) {
+    if (!groups[p.group]) groups[p.group] = [];
+    groups[p.group].push(p);
+  }
+
+  let permsHtml = '';
+  for (const [group, items] of Object.entries(groups)) {
+    permsHtml += `
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:700;font-size:.82rem;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">
+          ${esc(group)}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
+          ${items.map(p => `
+            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:5px 8px;border-radius:6px;font-size:.85rem;line-height:1.3;">
+              <input type="checkbox" class="usr-perm-cb" value="${esc(p.key)}" style="margin-top:2px;">
+              <span>${esc(p.label)}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="settings-form" id="user-edit-form">
+      <h4 id="user-form-title"><i class="fa-solid fa-plus"></i> Добавить пользователя</h4>
+      <input type="hidden" id="usr-edit-id">
+
+      <div class="form-row">
+        <div class="form-group"><label>Логин *</label><input id="usr-login"></div>
+        <div class="form-group"><label>ФИО *</label><input id="usr-fullname"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Должность *</label><input id="usr-position"></div>
+        <div class="form-group"><label>Отдел</label>
+          <select id="usr-department">
+            <option value="">— не указан —</option>
+            ${departmentsList.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Роль</label>
+          <select id="usr-role" onchange="onUserRoleChange(this.value)">
+            <option value="user">Пользователь</option>
+            <option value="senior_lab">Старший лаборант</option>
+            <option value="admin">Администратор</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Строк на странице</label>
+          <select id="usr-page-size" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="500">500</option>
+          </select>
+        </div>
+      </div>
+      <small style="color:#64748b;display:block;margin-bottom:12px;font-size:.8rem;">
+        Пароль генерируется автоматически. Пользователь обязан сменить его при первом входе.
+      </small>
+
+      <div style="background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;padding:14px;margin:16px 0;">
+        <div style="font-weight:700;font-size:.95rem;color:#0369a1;margin-bottom:6px;">
+          <i class="fa-solid fa-key"></i> Права доступа
+        </div>
+        <small style="color:#0c4a6e;display:block;margin-bottom:10px;font-size:.8rem;">
+          Отмеченные права определяют, <strong>какие кнопки и действия доступны пользователю</strong>.
+          Если право не выдано — элемент скрыт. По умолчанию все права выключены.
+          Для роли «Администратор» все права выдаются автоматически.
+        </small>
+
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')">Очистить</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')">👤 Пользователь</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')">🔬 Ст. лаборант</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('manager')">📊 Менеджер</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')">⭐ Все права</button>
+        </div>
+
+        <div id="usr-permissions">${permsHtml}</div>
+      </div>
+
+      <div style="background:#fef9c3;border-left:3px solid #eab308;border-radius:8px;padding:12px;margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#854d0e;">
+          <input type="checkbox" id="usr-only-own-dept" style="width:18px;height:18px;">
+          <i class="fa-solid fa-eye-slash"></i>
+          Показывать только свой отдел
+        </label>
+        <small style="color:#92400e;display:block;margin-top:6px;margin-left:26px;font-size:.78rem;">
+          Если включено — пользователь увидит только пипетки своего отдела. Отдел должен быть указан выше.
+        </small>
+      </div>
+
+      <div style="background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;padding:12px;margin-bottom:16px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#0369a1;">
+          <input type="checkbox" id="usr-is-acting" style="width:18px;height:18px;" onchange="onActingChange(this.checked)">
+          <i class="fa-solid fa-user-clock"></i>
+          Исполняющий обязанности (и.о.)
+        </label>
+        <small style="color:#0c4a6e;display:block;margin-top:6px;margin-left:26px;font-size:.78rem;">
+          И.о. видит оборудование отдела основного и работает под его ФИО.
+        </small>
+        <div id="usr-acting-for-wrap" style="display:none;margin-top:10px;">
+          <label style="font-size:.85rem;font-weight:600;color:#0369a1;margin-bottom:4px;display:block;">За кого исполняет *</label>
+          <select id="usr-acting-for" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;">
+            <option value="">— выберите —</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+        <button class="btn btn-secondary" onclick="resetUserSettingForm()">
+          <i class="fa-solid fa-rotate-left"></i> Очистить форму
+        </button>
+        <button class="btn btn-success" onclick="saveUserSetting()">
+          <i class="fa-solid fa-floppy-disk"></i> Сохранить
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function applyPermPreset(preset) {
+  const presets = {
+    none: [],
+    user: ['view_history', 'print_labels', 'export_data'],
+    senior: [
+      'add_pipette', 'edit_pipette', 'quick_calibration',
+      'bulk_send', 'bulk_return',
+      'export_data', 'scan_barcode', 'print_labels',
+      'view_history',
+    ],
+    manager: [
+      'add_pipette', 'edit_pipette', 'delete_pipette', 'quick_calibration',
+      'bulk_send', 'bulk_return',
+      'import_data', 'export_data',
+      'scan_barcode', 'print_labels', 'manage_barcodes',
+      'manage_users', 'view_log',
+      'view_history',
+    ],
+    all: ALL_PERMISSIONS.map(p => p.key),
+  };
+  const selected = presets[preset] || [];
+  document.querySelectorAll('.usr-perm-cb').forEach(cb => {
+    cb.checked = selected.includes(cb.value);
+  });
+}
+
+function onUserRoleChange(role) {
+  const isAdminRole = (role === 'admin');
+  document.querySelectorAll('.usr-perm-cb').forEach(cb => {
+    if (isAdminRole) {
+      cb.checked = true;
+      cb.disabled = true;
+    } else {
+      if (cb.disabled) cb.checked = false;
+      cb.disabled = false;
+    }
+  });
+}
+
+async function onActingChange(checked) {
+  const wrap = document.getElementById('usr-acting-for-wrap');
+  const sel  = document.getElementById('usr-acting-for');
+  if (!wrap || !sel) return;
+  wrap.style.display = checked ? 'block' : 'none';
+  if (!checked) { sel.value = ''; return; }
+  if (sel.dataset.loaded !== '1') {
+    try {
+      const users = await apiRequest('/users/acting-targets');
+      sel.innerHTML = '<option value="">— выберите —</option>' +
+        users.map(u => `<option value="${esc(u.id)}">${esc(u.fullName)} — ${esc(u.department || 'без отдела')}</option>`).join('');
+      sel.dataset.loaded = '1';
+    } catch (e) {
+      showToast('Не удалось загрузить список для и.о.', 'error');
+    }
+  }
+}
+
+async function editUserSetting(id) {
+  try {
+    const users = await apiRequest('/users');
+    const u = users.find(x => x.id === id);
+    if (!u) return;
+
+    document.getElementById('usr-edit-id').value = u.id;
+    document.getElementById('usr-login').value = u.login;
+    document.getElementById('usr-fullname').value = u.fullName || u.full_name;
+    document.getElementById('usr-position').value = u.position;
+
+    const deptSel = document.getElementById('usr-department');
+    Array.from(deptSel.options).forEach(o => { if (o.dataset.broken === '1') o.remove(); });
+    deptSel.value = u.department || '';
+    if (u.department && deptSel.value !== u.department) {
+      const opt = document.createElement('option');
+      opt.value = u.department;
+      opt.textContent = u.department + '  ⚠ (нет в списке)';
+      opt.style.color = '#dc2626';
+      opt.dataset.broken = '1';
+      deptSel.appendChild(opt);
+      deptSel.value = u.department;
+      showToast(`Отдел «${u.department}» отсутствует в справочнике`, 'error');
+    }
+
+    document.getElementById('usr-role').value = u.role;
+    document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Редактирование: ' + esc(u.login);
+
+    let perms = [...(u.extraPermissions || [])];
+    if (perms.includes('manage_pipettes')) {
+      perms = perms.filter(p => p !== 'manage_pipettes');
+      perms.push('add_pipette', 'edit_pipette', 'delete_pipette', 'quick_calibration', 'bulk_send', 'bulk_return');
+      perms = [...new Set(perms)];
+    }
+    document.querySelectorAll('.usr-perm-cb').forEach(cb => {
+      cb.checked = perms.includes(cb.value);
+      cb.disabled = (u.role === 'admin');
+    });
+
+    document.getElementById('usr-only-own-dept').checked = !!u.onlyOwnDepartment;
+
+    const isActingCb = document.getElementById('usr-is-acting');
+    isActingCb.checked = !!u.isActing;
+    await onActingChange(isActingCb.checked);
+    const sel = document.getElementById('usr-acting-for');
+    if (sel) sel.value = u.actingForId || '';
+
+    let prefs = {};
+    try { prefs = await apiRequest(`/settings/user-preferences/${u.id}`); } catch (e) {}
+    const psEl = document.getElementById('usr-page-size');
+    if (psEl) psEl.value = String(prefs.defaultPageSize || 100);
+
+    document.getElementById('user-form-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function saveUserSetting() {
+  const id = document.getElementById('usr-edit-id').value;
+  const login = document.getElementById('usr-login').value.trim();
+  const fullName = document.getElementById('usr-fullname').value.trim();
+  const position = document.getElementById('usr-position').value.trim();
+  const department = document.getElementById('usr-department').value.trim();
+  const role = document.getElementById('usr-role').value;
+
+  const missing = [];
+  if (!login) missing.push('Логин');
+  if (!fullName) missing.push('ФИО');
+  if (!position) missing.push('Должность');
+  if (missing.length > 0) {
+    const msg = missing.length === 1
+      ? `Заполните поле «${missing[0]}»`
+      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    showToast(msg, 'error');
+    return;
+  }
+
+  const onlyOwnDepartment = document.getElementById('usr-only-own-dept').checked;
+  const isActing = document.getElementById('usr-is-acting').checked;
+  const actingForId = isActing ? document.getElementById('usr-acting-for').value.trim() : null;
+
+  if (isActing && !actingForId) { showToast('Для и.о. нужно указать, за кого он исполняет', 'error'); return; }
+
+  const extraPermissions = [];
+  if (role !== 'admin') {
+    document.querySelectorAll('.usr-perm-cb:checked').forEach(cb => extraPermissions.push(cb.value));
+  }
+
+  const payload = { login, fullName, position, department, role, onlyOwnDepartment, extraPermissions, isActing, actingForId };
+
+  try {
+    let userId = id;
+    if (id) {
+      await apiRequest('/users/' + id, 'PUT', payload);
+      showToast('Пользователь обновлён', 'success');
+    } else {
+      const res = await apiRequest('/users', 'POST', payload);
+      userId = res.id;
+      showToast('Пользователь создан', 'success');
+      setTimeout(() => showTempPasswordModal(res.login, fullName, res.tempPassword), 300);
+    }
+
+    if (userId) {
+      let existing = {};
+      try { existing = await apiRequest(`/settings/user-preferences/${userId}`); } catch (e) {}
+      const psEl = document.getElementById('usr-page-size');
+      const merged = { ...existing, defaultPageSize: parseInt(psEl ? psEl.value : '100', 10) || 100 };
+      try { await apiRequest(`/settings/user-preferences/${userId}`, 'PUT', merged); } catch (e) {}
+    }
+
+    if (id === currentUser.id) {
+      const me = (await apiRequest('/users')).find(x => x.id === id);
+      if (me) {
+        currentUser.fullName = me.fullName || me.full_name;
+        currentUser.position = me.position;
+        currentUser.department = me.department;
+        currentUser.role = me.role;
+        currentUser.onlyOwnDepartment = !!me.onlyOwnDepartment;
+        currentUser.extraPermissions = me.extraPermissions || [];
+        const origUser = getOriginalUser();
+        const origToken = getOriginalToken();
+        if (origUser && origToken) setSession(currentUser, authToken, origUser, origToken);
+        else setSession(currentUser, authToken);
+        renderAuthUI();
+      }
+    }
+
+    resetUserSettingForm();
+    renderUsersSettings();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function resetUserSettingForm() {
+  ['usr-edit-id', 'usr-login', 'usr-fullname', 'usr-position'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const deptSel = document.getElementById('usr-department');
+  if (deptSel) {
+    Array.from(deptSel.options).forEach(o => { if (o.dataset.broken === '1') o.remove(); });
+    deptSel.value = '';
+  }
+  const roleSel = document.getElementById('usr-role');
+  if (roleSel) roleSel.value = 'user';
+  const titleEl = document.getElementById('user-form-title');
+  if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-plus"></i> Добавить пользователя';
+  const onlyOwnCb = document.getElementById('usr-only-own-dept');
+  if (onlyOwnCb) onlyOwnCb.checked = false;
+  const isActingCb = document.getElementById('usr-is-acting');
+  if (isActingCb) { isActingCb.checked = false; onActingChange(false); }
+  document.querySelectorAll('.usr-perm-cb').forEach(cb => { cb.checked = false; cb.disabled = false; });
+  const psEl = document.getElementById('usr-page-size');
+  if (psEl) psEl.value = '100';
+}
+
+// ============================================================
+// 🆕 МОДАЛКА «Поля формы пользователя»
+// ============================================================
+let _userViewUserId = null;
+let _userViewVisibleFields = [];
+
+async function openUserViewModal(userId, userName) {
+  if (!isAdmin()) return;
+  _userViewUserId = userId;
+  _userViewVisibleFields = [];
+
+  document.getElementById('user-view-target').innerHTML =
+    `Настройка полей формы для: <strong>${esc(userName || userId)}</strong>`;
+
+  try {
+    const prefs = await apiRequest(`/settings/user-preferences/${userId}`);
+    if (prefs.visibleFields && Array.isArray(prefs.visibleFields)) {
+      _userViewVisibleFields = [...prefs.visibleFields];
+    }
+  } catch (e) {}
+
+  try {
+    _cachedFields = await apiRequest('/settings/fields');
+  } catch (e) {
+    _cachedFields = _cachedFields || [];
+    showToast('Ошибка загрузки полей: ' + e.message, 'error');
+  }
+
+  const allEnabled = _cachedFields.filter(f => f.enabled).map(f => f.id);
+  if (_userViewVisibleFields.length === 0) _userViewVisibleFields = [...allEnabled];
+
+  renderUserViewContent();
+  document.getElementById('user-view-modal').classList.add('active');
+}
+
+function closeUserViewModal() {
+  document.getElementById('user-view-modal').classList.remove('active');
+  _userViewUserId = null;
+  _userViewVisibleFields = [];
+}
+
+function renderUserViewContent() {
+  const c = document.getElementById('user-view-content');
+  if (!c) return;
+  const allFields = _cachedFields.filter(f => f.enabled).sort((a, b) => (a.order || 0) - (b.order || 0));
+  if (allFields.length === 0) {
+    c.innerHTML = '<div class="prefs-empty">Нет активных полей формы</div>';
+    return;
+  }
+  const visibleSet = new Set(_userViewVisibleFields);
+  c.innerHTML = `
+    <div class="prefs-list">
+      ${allFields.map(f => `
+        <label class="prefs-item">
+          <input type="checkbox" ${visibleSet.has(f.id) ? 'checked' : ''} onchange="toggleUserViewField('${f.id}', this.checked)">
+          <span class="prefs-label">${esc(f.label)}</span>
+        </label>
+      `).join('')}
+    </div>
+    <div class="prefs-hint">
+      <i class="fa-solid fa-circle-info"></i>
+      Отключённые поля не будут видны этому пользователю в форме добавления и редактирования.
+      Остальные настройки — в форме редактирования пользователя.
+    </div>
+  `;
+}
+
+function toggleUserViewField(id, checked) {
+  if (checked) {
+    if (!_userViewVisibleFields.includes(id)) _userViewVisibleFields.push(id);
+  } else {
+    _userViewVisibleFields = _userViewVisibleFields.filter(x => x !== id);
+  }
+}
+
+async function saveUserView() {
+  if (!_userViewUserId) return;
+  if (_userViewVisibleFields.length === 0) { showToast('Выберите хотя бы одно поле', 'error'); return; }
+  let existing = {};
+  try { existing = await apiRequest(`/settings/user-preferences/${_userViewUserId}`); } catch (e) {}
+  const merged = { ...existing, visibleFields: _userViewVisibleFields };
+  try {
+    await apiRequest(`/settings/user-preferences/${_userViewUserId}`, 'PUT', merged);
+    showToast('Поля формы сохранены', 'success');
+    closeUserViewModal();
+  } catch (e) {
+    showToast(e.message || 'Ошибка сохранения', 'error');
+  }
+}
+
+async function resetUserView() {
+  if (!_userViewUserId) return;
+  const ok = await showConfirm(
+    'Сбросить настройки полей формы к стандартным (показывать все включённые)?',
+    { icon: '↩️', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+  try {
+    await apiRequest(`/settings/user-preferences/${_userViewUserId}`, 'DELETE');
+    showToast('Сброшено. Пользователь увидит все включённые поля.', 'success');
+    closeUserViewModal();
+  } catch (e) {
+    showToast(e.message || 'Ошибка сброса', 'error');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'user-view-modal') closeUserViewModal();
+});
+
+// ============================================================
+// 🆕 ПАТЧИ СУЩЕСТВУЮЩИХ ФУНКЦИЙ
+// ============================================================
+
+// getActiveFormFields — учитывает prefs.visibleFields
+window.getActiveFormFields = function(allFields) {
+  const enabled = allFields.filter(f => f.enabled);
+  if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
+    return enabled;
+  }
+  const visible = new Set(myPrefs.visibleFields);
+  return enabled.filter(f => visible.has(f.id));
+};
+
+// getActiveTableColumns — всегда дефолтный (общий)
+window.getActiveTableColumns = function() {
+  return getDefaultTableColumns();
+};
