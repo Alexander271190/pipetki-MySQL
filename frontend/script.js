@@ -2883,12 +2883,45 @@ async function deleteFieldSetting(idx) {
 async function saveFieldsSettings() {
   try {
     await apiRequest('/settings/fields', 'PUT', _cachedFields);
-    // 🆕 Перечитываем актуальные поля и перестраиваем таблицу
     _cachedFields = await apiRequest('/settings/fields');
     showToast('Поля сохранены', 'success');
     closeSettingsModal();
     await loadPipetteData();
   } catch (e) {
+    // 🆕 Поля с данными → показать предупреждение и спросить подтверждение
+    if (e.response?.code === 'field_has_data') {
+      const affected = e.response.affected || 0;
+      const fieldsArr = e.response.fields || [];
+      const plural = fieldsArr.length > 1 ? 'я' : 'е';
+      const listText = fieldsArr.map(f => `«${f}»`).join(', ');
+      const recordPlural = affected === 1 ? 'и' : 'ей';
+
+      const ok = await showConfirm(
+        `Поле${plural} ${listText} заполнено у ${affected} запис${recordPlural}.\n\n` +
+        `При удалении данные будут безвозвратно стёрты.\n` +
+        `Продолжить?`,
+        {
+          icon: '⚠️',
+          title: 'Поле с данными',
+          okText: 'Удалить и стереть',
+          okClass: 'btn-danger'
+        }
+      );
+      if (!ok) return;
+
+      // Повторный PUT с флагом
+      try {
+        await apiRequest('/settings/fields?confirmDelete=true', 'PUT', _cachedFields);
+        _cachedFields = await apiRequest('/settings/fields');
+        showToast(`Поле удалено, данные очищены у ${affected} записей`, 'success');
+        closeSettingsModal();
+        await loadPipetteData();
+      } catch (e2) {
+        showToast(e2.message || 'Ошибка удаления', 'error');
+      }
+      return;
+    }
+
     showToast(e.message, 'error');
   }
 }
