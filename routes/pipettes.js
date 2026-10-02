@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { authenticate, requirePermission } = require('../middleware/auth');
+const { authenticate, requirePermission, requireAnyPermission } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -14,8 +14,10 @@ const STANDARD_FIELDS = new Set([
   'lastResult',
   'sentForCalibration',
   'sentNote',
-  'replacedBy',    // 🆕 для отмены отправки с заменой
-  'replacing'      // 🆕
+  'replacedBy',
+  'replacing',
+  'barcode',
+  'barcodeSource'
 ]);
 
 // 🛡️ Локальная дата YYYY-MM-DD (как todayStr() на фронте).
@@ -23,6 +25,14 @@ const STANDARD_FIELDS = new Set([
 function todayLocalStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function computeBarcodeValue(p) {
+  const custom = parseCustomData(p.custom_data);
+  const inv = custom.inventorynumber || custom.inventoryNumber || custom.inventory_no || '';
+  if (inv && String(inv).trim()) return { value: String(inv).trim(), source: 'inventorynumber' };
+  if (p.serial && String(p.serial).trim()) return { value: String(p.serial).trim(), source: 'serial' };
+  return { value: String(p.id).trim(), source: 'id' };
 }
 
 function parseCustomData(raw) {
@@ -341,7 +351,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // Создание
-router.post('/', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipettes']), async (req, res) => {
   
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
     return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
@@ -436,11 +446,25 @@ if (lastCalibration) {
       }
     }
 
+    const rawBarcode = req.body.barcode;
+    let barcodeValue = null;
+    let barcodeSource = null;
+
+    if (req.user.role === 'admin' && rawBarcode && String(rawBarcode).trim()) {
+      barcodeValue = String(rawBarcode).trim();
+      barcodeSource = 'manual';
+    } else {
+      const computed = computeBarcodeValue({ id, serial, custom_data: customData });
+      barcodeValue = computed.value;
+      barcodeSource = computed.source;
+    }
+
     await conn.query(
       `INSERT INTO pipettes
         (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
-         last_calibration, cert, last_result, active, responsible, location, notes, custom_data)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         last_calibration, cert, last_result, active, responsible, location, notes, custom_data,
+         barcode, barcode_source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, serial, manufacturer, model,
         equipmentType || 'pipette', volume, department,
@@ -448,7 +472,9 @@ if (lastCalibration) {
         result || 'pass',
         (active === false || active === 0 || active === 'false' || active === '0') ? 0 : 1,
         responsible, location, notes,
-        Object.keys(customData).length ? JSON.stringify(customData) : null
+        Object.keys(customData).length ? JSON.stringify(customData) : null,
+        barcodeValue,
+        barcodeSource,
       ]
     );
 
@@ -480,7 +506,7 @@ if (lastCalibration) {
 });
 
 // Обновление
-    router.put('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+    router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_pipettes']), async (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
     return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
   }
@@ -492,6 +518,13 @@ if (lastCalibration) {
     updates.responsible = req.user.acting_full_name  || '';
     updates.department  = req.user.acting_department || '';
   }
+
+    // 🆕 Штрихкод — обрабатывается отдельно
+  const manualBarcode = (req.user.role === 'admin' && updates.barcode !== undefined)
+    ? String(updates.barcode || '').trim()
+    : null;
+  delete updates.barcode;
+  delete updates.barcodeSource;
 
   const [pipRows] = await db.query(
   'SELECT department, equipment_type FROM pipettes WHERE id = ?', [req.params.id]
@@ -564,6 +597,47 @@ if (lastCalibration) {
    values.push(JSON.stringify(merged));
  }
 
+    // 🆕 Обработка штрихкода
+  {
+    const [curRows] = await db.query(
+      'SELECT id, barcode, barcode_source, serial, custom_data FROM pipettes WHERE id = ?',
+      [req.params.id]
+    );
+    const cur = curRows[0];
+
+    if (cur) {
+      const isManualSet = manualBarcode !== null;
+      const isManualClear = isManualSet && manualBarcode === '';
+      const wasManual = cur.barcode_source === 'manual';
+
+      if (isManualClear) {
+        fields.push('barcode = ?'); values.push(null);
+        fields.push('barcode_source = ?'); values.push(null);
+      } else if (isManualSet) {
+        fields.push('barcode = ?'); values.push(manualBarcode);
+        fields.push('barcode_source = ?'); values.push('manual');
+      } else if (!wasManual) {
+        const newSerial = updates.serial !== undefined ? updates.serial : cur.serial;
+        let baseCustom = {};
+        try {
+          baseCustom = typeof cur.custom_data === 'object'
+            ? { ...cur.custom_data }
+            : JSON.parse(cur.custom_data || '{}') || {};
+        } catch (e) { baseCustom = {}; }
+        Object.assign(baseCustom, customUpdates);
+
+        const computed = computeBarcodeValue({
+          id: cur.id, serial: newSerial, custom_data: baseCustom,
+        });
+
+        if (computed.value !== cur.barcode || computed.source !== cur.barcode_source) {
+          fields.push('barcode = ?'); values.push(computed.value);
+          fields.push('barcode_source = ?'); values.push(computed.source);
+        }
+      }
+    }
+  }
+
   if (!fields.length) return res.status(400).json({ error: 'Нет полей для обновления' });
   fields.push('updated_at = CURRENT_TIMESTAMP');
   values.push(req.params.id);
@@ -616,7 +690,7 @@ if (lastCalibration) {
 });
 
 // Удаление
-router.delete('/:id', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+router.delete('/:id', authenticate, requireAnyPermission(['delete_pipette', 'manage_pipettes']), async (req, res) => {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
@@ -690,7 +764,7 @@ router.delete('/:id', authenticate, requirePermission('manage_pipettes'), async 
 // ============================================================
 // МАССОВАЯ ОТПРАВКА НА ПОВЕРКУ
 // ============================================================
-router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'manage_pipettes']), async (req, res) => {
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
     return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
   }
@@ -859,7 +933,7 @@ router.post('/bulk-send', authenticate, requirePermission('manage_pipettes'), as
 // ============================================================
 // МАССОВЫЙ ВОЗВРАТ С ПОВЕРКИ
 // ============================================================
-router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', 'manage_pipettes']), async (req, res) => {
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
     return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
   }
@@ -1003,7 +1077,7 @@ router.post('/bulk-return', authenticate, requirePermission('manage_pipettes'), 
 });
 
 // Добавление поверки
-router.post('/:id/calibration', authenticate, requirePermission('manage_pipettes'), async (req, res) => {
+router.post('/:id/calibration', authenticate, requireAnyPermission(['quick_calibration', 'edit_pipette', 'manage_pipettes']), async (req, res) => {
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
     return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
   }
