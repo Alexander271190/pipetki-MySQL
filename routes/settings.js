@@ -118,34 +118,72 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
     const newIds = new Set(fields.map(f => f.id));
     const removed = oldFields.map(r => r.id).filter(id => !newIds.has(id));
 
-        if (removed.length > 0) {
+    if (removed.length > 0) {
+      const confirmDelete = req.query.confirmDelete === 'true';
+
       const [rows] = await conn.query(
-        'SELECT custom_data FROM pipettes WHERE custom_data IS NOT NULL'
+        'SELECT id, custom_data FROM pipettes WHERE custom_data IS NOT NULL'
       );
-      const used = new Set();
+
+      const removedLower = new Set(removed.map(id => id.toLowerCase()));
+      const usedFields = new Set();       // какие поля используются
+      let affectedRecords = 0;             // в скольких записях есть НЕпустые данные
+      const recordsToClean = [];           // { id, cleanedCustomData } для каскада
 
       for (const r of rows) {
-        // 🛡️ mysql2 возвращает JSON-колонки уже распарсенными (объект).
-        // Если это строка (драйвер другой) — парсим. Иначе используем как есть.
-        let cd;
         if (r.custom_data == null) continue;
-        if (typeof r.custom_data === 'object') {
-          cd = r.custom_data;
-        } else {
+
+        let cd;
+        if (typeof r.custom_data === 'object') cd = r.custom_data;
+        else {
           try { cd = JSON.parse(r.custom_data) || {}; }
           catch { continue; }
         }
 
-        for (const id of removed) {
-          if (cd[id] !== undefined && cd[id] !== null && cd[id] !== '') used.add(id);
-        }
+        // Ищем ключи, соответствующие удаляемым полям (регистронезависимо)
+        const keysToDelete = Object.keys(cd).filter(k => removedLower.has(k.toLowerCase()));
+        if (keysToDelete.length === 0) continue;
+
+        keysToDelete.forEach(k => usedFields.add(k));
+
+        // Проверяем, есть ли ХОТЯ БЫ ОДНО непустое значение
+        const hasData = keysToDelete.some(k =>
+          cd[k] !== undefined && cd[k] !== null && cd[k] !== ''
+        );
+        if (hasData) affectedRecords++;
+
+        // Готовим очищенный объект (без удаляемых ключей)
+        const cleaned = { ...cd };
+        keysToDelete.forEach(k => delete cleaned[k]);
+        recordsToClean.push({ id: r.id, cleaned });
       }
 
-      if (used.size > 0) {
+      // ── Случай 1: есть данные и нет подтверждения — 409 ──
+      if (affectedRecords > 0 && !confirmDelete) {
         await conn.rollback();
-        return res.status(400).json({
-          error: 'Нельзя удалить поля с данными: ' + [...used].join(', ')
+        return res.status(409).json({
+          error: `Поля заполнены у ${affectedRecords} запис${affectedRecords === 1 ? 'и' : 'ей'}`,
+          code: 'field_has_data',
+          affected: affectedRecords,
+          fields: [...usedFields]
         });
+      }
+
+      // ── Случай 2: подтверждено (или данных нет) — каскадная очистка ──
+      // Если поле удаляется — его ключ не должен оставаться в custom_data,
+      // даже если значение пустое. Чистим всех, у кого ключ был.
+      for (const rec of recordsToClean) {
+        const cleanedJson = Object.keys(rec.cleaned).length
+          ? JSON.stringify(rec.cleaned)
+          : null;
+        await conn.query(
+          'UPDATE pipettes SET custom_data = ? WHERE id = ?',
+          [cleanedJson, rec.id]
+        );
+      }
+
+      if (recordsToClean.length > 0) {
+        console.log(`🗑️ Каскадная очистка: ${recordsToClean.length} записей (поля: ${[...usedFields].join(', ')})`);
       }
     }
     
