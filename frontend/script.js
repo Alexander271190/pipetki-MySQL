@@ -204,7 +204,12 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     result = { error: `Ошибка ${response.status}: сервер вернул некорректный ответ` };
   }
 
-  if (!response.ok) throw new Error(result.error || 'Ошибка запроса');
+   if (!response.ok) {
+    const error = new Error(result.error || 'Ошибка запроса');
+    error.status = response.status;
+    error.response = result;   // 🆕 полный JSON-ответ сервера
+    throw error;
+  }
   return result;
 }
 
