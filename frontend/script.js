@@ -3635,64 +3635,67 @@ async function renderSystemSettings() {
 
             <div class="settings-form" style="margin-top:24px;">
         <h4><i class="fa-solid fa-print"></i> Принтеры этикеток</h4>
-        <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
+        <p style="color:#64748b;font-size:.85rem;margin:6px 0 10px;">
           Список принтеров, доступных пользователям. Каждый может быть привязан к отделу.
         </p>
+
         <div id="barcode-printers-list"></div>
-        <button class="btn btn-primary" onclick="addBarcodePrinter()" style="margin-top:12px;">
+
+        <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()" style="margin-top:10px;">
           <i class="fa-solid fa-plus"></i> Добавить принтер
         </button>
 
-        <div style="margin-top:24px;padding:12px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:8px;">
-          <div style="font-weight:700;font-size:.85rem;color:#166534;margin-bottom:12px;text-transform:uppercase;">
+        <div class="bc-settings-block">
+          <div class="bc-settings-title">
             <i class="fa-solid fa-tag"></i> Что печатать
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Размер этикетки</label>
+
+          <div class="bc-settings-grid">
+            <div class="bc-cell">
+              <label>Размер</label>
               <select id="bc-label-size">
                 <option value="58x40">58 × 40 мм</option>
                 <option value="40x25">40 × 25 мм</option>
                 <option value="100x50">100 × 50 мм</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>Тип штрихкода</label>
+            <div class="bc-cell">
+              <label>Тип ШК</label>
               <select id="bc-type">
                 <option value="code128">Code-128</option>
                 <option value="qr">QR-код</option>
               </select>
             </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Копий по умолчанию</label>
+            <div class="bc-cell">
+              <label>Копий</label>
               <input type="number" id="bc-default-copies" value="1" min="1" max="50">
             </div>
-            <div class="form-group">
-              <label>Порт локального агента</label>
+            <div class="bc-cell">
+              <label>Порт агента</label>
               <input type="number" id="bc-agent-port" value="9200">
             </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Макс. длина штрихкода</label>
+            <div class="bc-cell">
+              <label>Макс. длина</label>
               <input type="number" id="bc-max-length" value="128" min="8" max="255">
             </div>
-            <div class="form-group">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding-top:22px;">
+            <div class="bc-cell bc-cell-check">
+              <label class="bc-fallback-line">
                 <input type="checkbox" id="bc-fallback-to-pdf">
-                Fallback на PDF при ошибке
+                <span>Fallback на PDF</span>
               </label>
             </div>
           </div>
-          <div class="form-group">
-            <label>Поля на этикетке</label>
-            <div id="bc-label-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:.9rem;margin-top:6px;"></div>
+
+          <div class="bc-fields-section">
+            <div class="bc-fields-label">Поля на этикетке:</div>
+            <div id="bc-label-fields" class="bc-fields-grid"></div>
+            <div class="bc-fields-hint">
+              ℹ️ На этикетке 58×40 мм влезает <b>3–4 поля</b>
+            </div>
           </div>
         </div>
 
-        <button class="btn btn-success" onclick="saveBarcodeSettings()" style="margin-top:16px;">
+        <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()" style="margin-top:12px;">
           <i class="fa-solid fa-floppy-disk"></i> Сохранить настройки печати
         </button>
       </div>
@@ -5266,13 +5269,14 @@ function closeBarcodePrintModal() {
 async function loadPrintersForBarcodePrint() {
   const container = document.getElementById('barcode-print-printer-options');
   if (!container) return;
-  container.innerHTML = '<div style="color:#94a3b8;">Загрузка…</div>';
+  container.innerHTML = '<div class="bc-printer-empty">Загрузка…</div>';
 
   try {
     const data = await apiRequest('/barcode-printers/available');
+
     if (!data.printers || data.printers.length === 0) {
       container.innerHTML = `
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;">
+        <label class="bc-printer-item">
           <input type="radio" name="bc-printer" value="pdf-a4" checked>
           <span>📄 PDF (A4)</span>
         </label>`;
@@ -5281,23 +5285,23 @@ async function loadPrintersForBarcodePrint() {
 
     const modeLabels = {
       'pdf-a4':      '📄 PDF (A4)',
-      'pdf-zebra':   '🖨️ PDF 58×40 (Ctrl+P на Zebra)',
+      'pdf-zebra':   '🖨️ PDF 58×40 (Ctrl+P)',
       'zebra-ip':    '🌐 Zebra по сети (IP)',
-      'zebra-agent': '⚡ Zebra через локальный агент',
+      'zebra-agent': '⚡ Zebra (агент)',
     };
 
     const options = data.printers.map(p => {
       const isPreferred = (p.id === data.preferredId);
-      const label = `${modeLabels[p.mode] || p.mode} — ${p.name}${p.department ? ' (' + p.department + ')' : ''}`;
+      const label = `${modeLabels[p.mode] || p.mode} — ${esc(p.name)}${p.department ? ' (' + esc(p.department) + ')' : ''}`;
       return `
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;">
+        <label class="bc-printer-item">
           <input type="radio" name="bc-printer" value="printer:${p.id}" ${isPreferred ? 'checked' : ''}>
-          <span>${esc(label)}${isPreferred ? ' <span style="color:#16a34a;font-size:.7rem;">← ваш</span>' : ''}</span>
+          <span>${label}${isPreferred ? ' <span class="bc-printer-hint">← ваш</span>' : ''}</span>
         </label>`;
     });
 
     options.push(`
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;">
+      <label class="bc-printer-item">
         <input type="radio" name="bc-printer" value="pdf-a4" ${!data.preferredId ? 'checked' : ''}>
         <span>📄 PDF (A4, обычный принтер)</span>
       </label>`);
@@ -5305,7 +5309,7 @@ async function loadPrintersForBarcodePrint() {
     container.innerHTML = options.join('');
   } catch (e) {
     container.innerHTML = `
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <label class="bc-printer-item">
         <input type="radio" name="bc-printer" value="pdf-a4" checked>
         <span>📄 PDF (A4)</span>
       </label>`;
@@ -5549,20 +5553,26 @@ async function renderBarcodePrintersList() {
     _cachedBarcodePrinters = await apiRequest('/barcode-printers');
 
     if (_cachedBarcodePrinters.length === 0) {
-      container.innerHTML = `<div style="padding:20px;text-align:center;color:#94a3b8;background:#f8fafc;border-radius:8px;">Принтеров пока нет. Нажмите «Добавить принтер».</div>`;
+      container.innerHTML = `<div class="bc-empty">Принтеров пока нет. Нажмите «Добавить принтер».</div>`;
       return;
     }
 
     const modeLabels = {
-      'pdf-a4':      '📄 PDF (A4)',
-      'pdf-zebra':   '🖨️ PDF 58×40 (Ctrl+P)',
-      'zebra-ip':    '🌐 Zebra по сети (IP)',
-      'zebra-agent': '⚡ Zebra (агент)',
+      'pdf-a4':      'PDF (A4)',
+      'pdf-zebra':   'PDF 58×40',
+      'zebra-ip':    'Zebra IP',
+      'zebra-agent': 'Zebra агент',
     };
 
-    let html = `<table class="field-settings-table"><thead><tr>
-      <th>Название</th><th>Режим</th><th>Отдел</th><th>IP</th>
-      <th>Размер</th><th>Вкл</th><th>По ум.</th><th>Действия</th>
+    let html = `<table class="bc-printers-table"><thead><tr>
+      <th style="width:20%;">Название</th>
+      <th style="width:16%;">Режим</th>
+      <th style="width:20%;">Отдел</th>
+      <th style="width:18%;">IP</th>
+      <th style="width:9%;">Размер</th>
+      <th style="width:5%;">Вкл</th>
+      <th style="width:7%;">По&nbsp;ум.</th>
+      <th style="width:5%;"></th>
     </tr></thead><tbody>`;
 
     for (const p of _cachedBarcodePrinters) {
@@ -5590,12 +5600,12 @@ async function renderBarcodePrintersList() {
               <option value="100x50" ${p.labelSize === '100x50' ? 'selected' : ''}>100×50</option>
             </select>
           </td>
-          <td style="text-align:center;"><input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'enabled', this.checked)"></td>
-          <td style="text-align:center;"><input type="checkbox" ${p.isDefault ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'isDefault', this.checked)"></td>
-          <td class="actions">
-            <button class="btn btn-info btn-sm" onclick="checkPrinterById(${p.id})" title="Проверить связь"><i class="fa-solid fa-plug"></i></button>
-            <button class="btn btn-success btn-sm" onclick="saveBarcodePrinter(${p.id})" title="Сохранить"><i class="fa-solid fa-floppy-disk"></i></button>
-            <button class="btn btn-danger btn-sm" onclick="deleteBarcodePrinter(${p.id})" title="Удалить"><i class="fa-solid fa-trash"></i></button>
+          <td style="text-align:center;"><input type="checkbox" class="bc-chk" ${p.enabled ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'enabled', this.checked)"></td>
+          <td style="text-align:center;"><input type="checkbox" class="bc-chk" ${p.isDefault ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'isDefault', this.checked)"></td>
+          <td class="bc-printer-actions">
+            <button class="btn btn-info btn-sm bc-icon-btn" onclick="checkPrinterById(${p.id})" title="Проверить связь"><i class="fa-solid fa-plug"></i></button>
+            <button class="btn btn-success btn-sm bc-icon-btn" onclick="saveBarcodePrinter(${p.id})" title="Сохранить"><i class="fa-solid fa-floppy-disk"></i></button>
+            <button class="btn btn-danger btn-sm bc-icon-btn" onclick="deleteBarcodePrinter(${p.id})" title="Удалить"><i class="fa-solid fa-trash"></i></button>
           </td>
         </tr>`;
     }
