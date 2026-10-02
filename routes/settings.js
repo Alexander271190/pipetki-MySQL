@@ -19,53 +19,71 @@ router.get('/departments', authenticate, async (req, res) => {
 
 router.put('/departments', authenticate, requireRole(['admin']), async (req, res) => {
   const departments = req.body;
+
+  // ──────────────────────────────────────────────────────────
+  // 1. Проверка типа
+  // ──────────────────────────────────────────────────────────
   if (!Array.isArray(departments)) {
-    return res.status(400).json({ error: 'Ожидается массив' });
+    return res.status(400).json({ error: 'Ожидается массив отделов' });
   }
 
-  // Проверка: собираем имена, ищем дубли (без учёта регистра)
+  if (departments.length === 0) {
+    return res.status(400).json({ error: 'Добавьте хотя бы один отдел' });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 2. Нормализация: единый формат { name, enabled }
+  //    Принимает и строки ('Гематология'), и объекты ({name, enabled})
+  // ──────────────────────────────────────────────────────────
+  const normalized = departments
+    .map(d => {
+      const rawName = typeof d === 'string' ? d : (d && d.name ? d.name : '');
+      const name = String(rawName).trim();
+      const enabled = (d && typeof d === 'object' && d.enabled === false) ? 0 : 1;
+      return { name, enabled };
+    })
+    .filter(d => d.name.length > 0);
+
+  // ──────────────────────────────────────────────────────────
+  // 3. Проверка «после очистки пусто» — все имена были пробелами
+  // ──────────────────────────────────────────────────────────
+  if (normalized.length === 0) {
+    return res.status(400).json({ error: 'Добавьте хотя бы один отдел' });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 4. Проверка дублей (регистронезависимая)
+  // ──────────────────────────────────────────────────────────
   const seen = new Set();
   const duplicates = [];
-
-  for (const d of departments) {
-    const name = typeof d === 'string' ? d : (d && d.name ? d.name : '');
-    const trimmed = String(name).trim();
-    if (!trimmed) continue;
-
-    const key = trimmed.toLowerCase();
-    if (seen.has(key)) {
-      duplicates.push(trimmed);
-    } else {
-      seen.add(key);
-    }
+  for (const d of normalized) {
+    const key = d.name.toLowerCase();
+    if (seen.has(key)) duplicates.push(d.name);
+    else seen.add(key);
   }
-
-  // Если дубли есть — отклоняем с понятной ошибкой
   if (duplicates.length > 0) {
     return res.status(400).json({
       error: 'Дубли отделов: ' + [...new Set(duplicates)].join(', ')
     });
   }
 
+  // ──────────────────────────────────────────────────────────
+  // 5. Сохранение (транзакция)
+  // ──────────────────────────────────────────────────────────
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
     await conn.query('DELETE FROM departments');
 
-    for (const d of departments) {
-      const name = typeof d === 'string' ? d : (d && d.name ? d.name : '');
-      const enabled = (typeof d === 'object' && d.enabled === false) ? 0 : 1;
-      const trimmed = String(name).trim();
-      if (!trimmed) continue;
-
+    for (const d of normalized) {
       await conn.query(
         'INSERT INTO departments (name, enabled) VALUES (?, ?)',
-        [trimmed, enabled]
+        [d.name, d.enabled]
       );
     }
 
     await conn.commit();
-    res.json({ message: 'Отделы обновлены' });
+    res.json({ message: 'Отделы обновлены', count: normalized.length });
   } catch (e) {
     await conn.rollback();
     console.error('Ошибка обновления отделов:', e.message, '| code:', e.code);
