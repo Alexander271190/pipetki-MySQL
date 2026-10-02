@@ -372,7 +372,7 @@ async function seedInitialData() {
     `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)`,
     [JSON.stringify(defaultTypes)]
   );
-}
+
 
   // --- Поля формы ---
   const [fc] = await pool.query('SELECT COUNT(*) AS c FROM field_config');
