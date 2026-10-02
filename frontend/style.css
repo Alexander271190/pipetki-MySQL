@@ -1776,3 +1776,395 @@ html[data-theme="dark"] .status-wip {
   .header.collapsed .header-mini-stats { font-size: .64rem; padding: 2px 6px; }
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
 }
+
+/* ============================================================
+   ПЕЧАТЬ ЭТИКЕТОК — компактная вёрстка модалки
+   ============================================================ */
+
+.modal-compact {
+  max-width: 460px !important;
+  padding: 20px !important;
+}
+.modal-compact h2 {
+  font-size: 1.15rem !important;
+  margin-bottom: 14px !important;
+}
+
+.bc-block { margin-bottom: 14px; }
+
+.bc-block-title {
+  font-size: .82rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+/* Радио-строки */
+.bc-radio-item {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .88rem;
+  font-weight: 400 !important;
+  color: #1e293b !important;
+  margin: 0 !important;
+  transition: background .15s;
+}
+.bc-radio-item:hover { background: #f1f5f9; }
+.bc-radio-item input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4f46e5;
+  margin: 0;
+  flex-shrink: 0;
+}
+.bc-radio-item span { flex: 1; }
+.bc-radio-item b {
+  color: #4f46e5;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+/* Список принтеров */
+.bc-printer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.bc-printer-empty {
+  color: #94a3b8;
+  font-size: .85rem;
+  padding: 6px 8px;
+}
+.bc-printer-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .88rem;
+  font-weight: 400;
+  color: #1e293b;
+  transition: background .15s;
+}
+.bc-printer-item:hover { background: #e2e8f0; }
+.bc-printer-item input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4f46e5;
+  flex-shrink: 0;
+  margin: 0;
+}
+.bc-printer-item span { flex: 1; }
+.bc-printer-hint {
+  color: #16a34a;
+  font-size: .72rem;
+  font-weight: 600;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+/* Строка «Копий» */
+.bc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.bc-row-label {
+  font-size: .82rem !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  margin: 0 !important;
+  min-width: 110px;
+  display: block !important;
+}
+.bc-copies-input {
+  width: 90px;
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: .9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border .2s;
+  box-sizing: border-box;
+}
+.bc-copies-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+
+
+/* ============================================================
+   ПРИНТЕРЫ ЭТИКЕТОК — компактные настройки
+   ============================================================ */
+
+.bc-empty {
+  padding: 16px;
+  text-align: center;
+  color: #94a3b8;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: .88rem;
+}
+
+/* Таблица принтеров */
+.bc-printers-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+  table-layout: fixed;
+  margin-bottom: 8px;
+}
+.bc-printers-table th {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 7px 6px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.bc-printers-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.bc-printers-table input[type="text"],
+.bc-printers-table input[type="number"],
+.bc-printers-table select {
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: .82rem;
+  font-family: inherit;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+}
+.bc-printers-table input:focus,
+.bc-printers-table select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99,102,241,.15);
+}
+.bc-printers-table .bc-chk {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4f46e5;
+  margin: 0;
+}
+.bc-printer-actions {
+  display: flex;
+  gap: 3px;
+  justify-content: flex-end;
+}
+.bc-icon-btn {
+  padding: 4px 6px !important;
+  font-size: .72rem !important;
+  border-radius: 5px !important;
+  min-width: 0 !important;
+}
+
+/* Блок «Что печатать» */
+.bc-settings-block {
+  margin-top: 18px;
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border-left: 3px solid #16a34a;
+  border-radius: 8px;
+}
+.bc-settings-title {
+  font-weight: 700;
+  font-size: .82rem;
+  color: #166534;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bc-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+}
+.bc-cell { min-width: 0; }
+.bc-cell > label {
+  display: block;
+  font-size: .74rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 3px;
+  line-height: 1.15;
+}
+.bc-cell input[type="number"],
+.bc-cell input[type="text"],
+.bc-cell select {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: .83rem;
+  font-family: inherit;
+  outline: none;
+  background: #fff;
+  box-sizing: border-box;
+}
+.bc-cell input:focus,
+.bc-cell select:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22,163,74,.15);
+}
+.bc-cell-check {
+  display: flex;
+  align-items: flex-end;
+}
+.bc-fallback-line {
+  display: flex !important;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 400 !important;
+  color: #1e293b !important;
+  margin: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
+  height: 30px;
+}
+.bc-fallback-line input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #16a34a;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Поля на этикетке */
+.bc-fields-section { margin-top: 4px; }
+.bc-fields-label {
+  font-size: .76rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+.bc-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px 10px;
+}
+.bc-fields-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: .82rem;
+  font-weight: 400;
+  color: #1e293b;
+  padding: 4px 6px;
+  border-radius: 5px;
+  margin: 0;
+  transition: background .15s;
+}
+.bc-fields-grid label:hover { background: #dcfce7; }
+.bc-fields-grid input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #16a34a;
+  margin: 0;
+  flex-shrink: 0;
+}
+.bc-fields-hint {
+  color: #64748b;
+  font-size: .74rem;
+  margin-top: 8px;
+}
+.bc-fields-hint b { color: #166534; }
+
+/* ── Тёмная тема ── */
+html[data-theme="dark"] .bc-block-title { color: #94a3b8; }
+html[data-theme="dark"] .bc-radio-item { color: #e2e8f0 !important; }
+html[data-theme="dark"] .bc-radio-item:hover { background: #273449; }
+html[data-theme="dark"] .bc-radio-item b { color: #818cf8; }
+html[data-theme="dark"] .bc-printer-list { background: #273449; }
+html[data-theme="dark"] .bc-printer-item { color: #e2e8f0; }
+html[data-theme="dark"] .bc-printer-item:hover { background: #334155; }
+html[data-theme="dark"] .bc-row-label { color: #94a3b8 !important; }
+html[data-theme="dark"] .bc-copies-input {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .bc-empty {
+  background: #273449;
+  color: #94a3b8;
+}
+html[data-theme="dark"] .bc-printers-table th {
+  background: #273449;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+html[data-theme="dark"] .bc-printers-table td {
+  border-bottom-color: #334155;
+}
+html[data-theme="dark"] .bc-printers-table input,
+html[data-theme="dark"] .bc-printers-table select {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .bc-settings-block {
+  background: rgba(22,163,74,.08);
+}
+html[data-theme="dark"] .bc-settings-title { color: #86efac; }
+html[data-theme="dark"] .bc-cell > label { color: #94a3b8; }
+html[data-theme="dark"] .bc-cell input,
+html[data-theme="dark"] .bc-cell select {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .bc-fallback-line {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0 !important;
+}
+html[data-theme="dark"] .bc-fields-label { color: #94a3b8; }
+html[data-theme="dark"] .bc-fields-grid label { color: #e2e8f0; }
+html[data-theme="dark"] .bc-fields-grid label:hover { background: rgba(22,163,74,.2); }
+html[data-theme="dark"] .bc-fields-hint { color: #94a3b8; }
+html[data-theme="dark"] .bc-fields-hint b { color: #86efac; }
+
+/* ── Адаптив ── */
+@media (max-width: 768px) {
+  .bc-settings-grid { grid-template-columns: 1fr 1fr; }
+  .bc-fields-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .bc-settings-grid { grid-template-columns: 1fr; }
+  .bc-fields-grid { grid-template-columns: 1fr; }
+}
