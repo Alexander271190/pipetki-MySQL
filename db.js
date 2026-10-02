@@ -342,10 +342,9 @@ async function seedInitialData() {
   }
 
   // --- Системные настройки ---
-  await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('barcode_type', 'code128')`);
-  await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('barcode_label_fields', ?)`,
-    [JSON.stringify(['id', 'model', 'serial', 'department'])]);
-
+ await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('barcode_type', 'code128')`);
+ await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('barcode_label_fields', ?)`,
+  [JSON.stringify(['id', 'model', 'serial', 'department'])]);
   const bcDefaults = {
     barcode_mode: 'pdf-zebra',
     barcode_label_size: '58x40',
@@ -356,8 +355,8 @@ async function seedInitialData() {
     barcode_max_length: '128',
   };
   for (const [k, v] of Object.entries(bcDefaults)) {
-    await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)`, [k, v]);
-  }
+  await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES (?, ?)`, [k, v]);
+}
 
   // Дефолтные типы оборудования
    const defaultTypes = [
@@ -369,9 +368,9 @@ async function seedInitialData() {
     { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal' },
   ];
   await pool.query(
-    `INSERT INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)`,
-    [JSON.stringify(defaultTypes)]
-  );
+  `INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)`,
+  [JSON.stringify(defaultTypes)]
+);
 
 
   // --- Поля формы ---
