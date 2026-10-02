@@ -232,6 +232,25 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+        await conn.query(`
+      CREATE TABLE IF NOT EXISTS barcode_printers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        department VARCHAR(255) DEFAULT NULL,
+        mode VARCHAR(30) NOT NULL DEFAULT 'pdf-zebra',
+        ip VARCHAR(45) DEFAULT NULL,
+        port INT DEFAULT 9100,
+        label_size VARCHAR(20) DEFAULT '58x40',
+        enabled TINYINT DEFAULT 1,
+        is_default TINYINT DEFAULT 0,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_barcode_printers_department (department),
+        INDEX idx_barcode_printers_enabled (enabled)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // 🆕 Догон колонок
     await ensureColumns(conn, 'users', [
       { name: 'is_acting',           ddl: 'TINYINT DEFAULT 0' },
@@ -246,12 +265,15 @@ async function initSchema() {
       { name: 'replacing',            ddl: 'VARCHAR(255) DEFAULT NULL' },
       { name: 'sent_for_calibration', ddl: 'VARCHAR(20)' },
       { name: 'sent_note',            ddl: 'TEXT' },
+      { name: 'barcode',              ddl: 'VARCHAR(128) DEFAULT NULL' },
+      { name: 'barcode_source',       ddl: 'VARCHAR(20) DEFAULT NULL' },
     ]);
 
     // 🆕 Догон индексов
     await ensureIndexes(conn, 'pipettes', [
       { name: 'idx_pipettes_department',     ddl: 'CREATE INDEX idx_pipettes_department ON pipettes(department)' },
       { name: 'idx_pipettes_equipment_type', ddl: 'CREATE INDEX idx_pipettes_equipment_type ON pipettes(equipment_type)' },
+      { name: 'idx_pipettes_barcode',        ddl: 'CREATE INDEX idx_pipettes_barcode ON pipettes(barcode)' },
     ]);
 
     await ensureIndexes(conn, 'audit_log', [
@@ -320,9 +342,22 @@ async function seedInitialData() {
   }
 
   // --- Системные настройки ---
-  const [ssc] = await pool.query('SELECT COUNT(*) AS c FROM system_settings');
-if (ssc[0].c === 0) {
-  await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`);
+  await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('barcode_type', 'code128')`);
+  await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES ('barcode_label_fields', ?)`,
+    [JSON.stringify(['id', 'model', 'serial', 'department'])]);
+
+  const bcDefaults = {
+    barcode_mode: 'pdf-zebra',
+    barcode_label_size: '58x40',
+    barcode_fallback_to_pdf: '1',
+    barcode_default_copies: '1',
+    barcode_zebra_language: 'zpl',
+    barcode_agent_port: '9200',
+    barcode_max_length: '128',
+  };
+  for (const [k, v] of Object.entries(bcDefaults)) {
+    await pool.query(`INSERT INTO system_settings (setting_key, setting_value) VALUES (?, ?)`, [k, v]);
+  }
 
   // Дефолтные типы оборудования
    const defaultTypes = [
@@ -347,19 +382,20 @@ if (ssc[0].c === 0) {
         const fields = [
       ['id',              'Внутренний номер',              'text',     1, 1, '[]',                     '',       1],
       ['serial',          'Серийный номер',                'text',     0, 1, '[]',                     '',       2],
-      ['manufacturer',    'Производитель',                 'text',     0, 1, '[]',                     '',       3],
-      ['model',           'Модель',                        'text',     1, 1, '[]',                     '',       4],
-      ['equipmentType',   'Тип оборудования',              'select',   1, 1, '[]',                     'pipette', 5],
-      ['volume',          'Объём (мкл)',                   'text',     0, 1, '[]',                     '',       6],
-      ['department',      'Отдел',                         'select',   0, 1, '[]',                     '',       7],
-      ['interval',        'Межповерочный интервал (мес.)', 'number',   1, 1, '[]',                     '12',     8],
-      ['lastCalibration', 'Дата последней поверки',        'date',     1, 1, '[]',                     '',       9],
-      ['cert',            'Номер свидетельства',           'text',     0, 1, '[]',                     '',       10],
-      ['result',          'Результат поверки',             'select',   0, 1, '["pass","fail","wip"]', 'pass',   11],
-      ['active',          'Статус эксплуатации',           'select',   0, 1, '["true","false"]',       'true',   12],
-      ['responsible',     'Ответственный сотрудник',       'select',   0, 1, '[]',                     '',       13],
-      ['location',        'Место хранения',                'text',     0, 1, '[]',                     '',       14],
-      ['notes',           'Примечание',                    'textarea', 0, 1, '[]',                     '',       15]
+      ['barcode',         'Штрихкод',                      'text',     0, 1, '[]',                     '',       3],
+      ['manufacturer',    'Производитель',                 'text',     0, 1, '[]',                     '',       4],
+      ['model',           'Модель',                        'text',     1, 1, '[]',                     '',       5],
+      ['equipmentType',   'Тип оборудования',              'select',   1, 1, '[]',                     'pipette', 6],
+      ['volume',          'Объём (мкл)',                   'text',     0, 1, '[]',                     '',       7],
+      ['department',      'Отдел',                         'select',   0, 1, '[]',                     '',       8],
+      ['interval',        'Межповерочный интервал (мес.)', 'number',   1, 1, '[]',                     '12',     9],
+      ['lastCalibration', 'Дата последней поверки',        'date',     1, 1, '[]',                     '',       10],
+      ['cert',            'Номер свидетельства',           'text',     0, 1, '[]',                     '',       11],
+      ['result',          'Результат поверки',             'select',   0, 1, '["pass","fail","wip"]', 'pass',   12],
+      ['active',          'Статус эксплуатации',           'select',   0, 1, '["true","false"]',       'true',   13],
+      ['responsible',     'Ответственный сотрудник',       'select',   0, 1, '[]',                     '',       14],
+      ['location',        'Место хранения',                'text',     0, 1, '[]',                     '',       15],
+      ['notes',           'Примечание',                    'textarea', 0, 1, '[]',                     '',       16]
     ];
     for (const f of fields) await pool.query(ins, f);
   }
