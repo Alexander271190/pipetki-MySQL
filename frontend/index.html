@@ -626,43 +626,45 @@
   </div>
 </div>
 
-  <div class="modal-overlay" id="barcode-print-modal">
-  <div class="modal">
+  <!-- МОДАЛКА ПЕЧАТИ ЭТИКЕТОК -->
+<div class="modal-overlay" id="barcode-print-modal">
+  <div class="modal modal-compact">
     <h2><i class="fa-solid fa-tag"></i> Печать этикеток</h2>
 
-    <div class="form-group">
-      <label>Что печатать</label>
-      <div style="display:flex;flex-direction:column;gap:6px;font-size:.9rem;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="radio" name="bc-scope" value="selected" id="bc-scope-selected">
-          <span>Только выбранные в таблице (<span id="bc-scope-selected-count">0</span>)</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="radio" name="bc-scope" value="page" id="bc-scope-page">
-          <span>Текущая страница (<span id="bc-scope-page-count">0</span>)</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="radio" name="bc-scope" value="filtered" id="bc-scope-filtered" checked>
-          <span>Весь фильтр (<span id="bc-scope-filtered-count">0</span>)</span>
-        </label>
+    <!-- Что печатать -->
+    <div class="bc-block">
+      <div class="bc-block-title">Что печатать</div>
+      <label class="bc-radio-item">
+        <input type="radio" name="bc-scope" value="selected" id="bc-scope-selected">
+        <span>Только выбранные <b id="bc-scope-selected-count">0</b></span>
+      </label>
+      <label class="bc-radio-item">
+        <input type="radio" name="bc-scope" value="page" id="bc-scope-page">
+        <span>Текущая страница <b id="bc-scope-page-count">0</b></span>
+      </label>
+      <label class="bc-radio-item">
+        <input type="radio" name="bc-scope" value="filtered" id="bc-scope-filtered" checked>
+        <span>Весь фильтр <b id="bc-scope-filtered-count">0</b></span>
+      </label>
+    </div>
+
+    <!-- Принтер -->
+    <div class="bc-block">
+      <div class="bc-block-title">Принтер</div>
+      <div id="barcode-print-printer-options" class="bc-printer-list">
+        <div class="bc-printer-empty">Загрузка…</div>
       </div>
     </div>
 
-    <div class="form-group">
-      <label>Принтер</label>
-      <div id="barcode-print-printer-options" style="display:flex;flex-direction:column;gap:6px;font-size:.9rem;padding:10px;background:#f8fafc;border-radius:8px;">
-        <div style="color:#94a3b8;">Загрузка…</div>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Копий каждой</label>
-      <input type="number" id="barcode-print-copies" value="1" min="1" max="50" style="max-width:120px;">
+    <!-- Копий -->
+    <div class="bc-row">
+      <label class="bc-row-label">Копий каждой</label>
+      <input type="number" id="barcode-print-copies" value="1" min="1" max="50" class="bc-copies-input">
     </div>
 
     <div id="barcode-print-error" class="auth-error" style="margin-top:8px;"></div>
 
-    <div class="form-actions">
+    <div class="form-actions" style="margin-top:16px;">
       <button type="button" class="btn btn-secondary" onclick="closeBarcodePrintModal()">Отмена</button>
       <button type="button" class="btn btn-success" onclick="submitBarcodePrint(event)" id="barcode-print-btn">
         <i class="fa-solid fa-print"></i> Печать
@@ -670,7 +672,7 @@
     </div>
   </div>
 </div>
-
+  
   <div class="modal-overlay" id="user-view-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-list-check"></i> Поля формы пользователя</h2>
