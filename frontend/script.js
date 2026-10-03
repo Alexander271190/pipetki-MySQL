@@ -749,7 +749,7 @@ const SYSTEM_TABLE_COLUMNS = [
   { id: 'manufacturer',    label: 'Производитель', sortable: false, field: 'manufacturer' },
   { id: 'serial',          label: 'Серийный',      sortable: false, field: 'serial' },
   { id: 'cert',            label: 'Свидетельство', sortable: false, field: 'cert' },
-  { id: 'status',          label: 'Статус',        sortable: false, field: 'status' }
+  { id: 'status',          label: 'Статус',        sortable: true,  field: 'status' }
 ];
 
 const DEFAULT_TABLE_COLUMNS = [
@@ -951,6 +951,20 @@ function getSortedPipettes() {
     } else if (sortField === 'equipmentType') {
       va = (a.equipment_type || 'pipette');
       vb = (b.equipment_type || 'pipette');
+        } else if (sortField === 'status') {
+      // 🆕 Сортировка по статусу — по фиксированному порядку
+      const STATUS_ORDER = {
+        'danger':   1,   // Просрочена
+        'fail':     2,   // Брак
+        'wip':      3,   // В процессе
+        'warn':     4,   // Скоро поверка
+        'sent':     5,   // На поверке
+        'ok':       6,   // В норме
+        'inactive': 7,   // Неактивна
+        'unknown':  8    // Не задано
+      };
+      va = STATUS_ORDER[calcStatus(a)] || 99;
+      vb = STATUS_ORDER[calcStatus(b)] || 99;
     } else {
       va = (a[sortField] || '').toString().toLowerCase();
       vb = (b[sortField] || '').toString().toLowerCase();
