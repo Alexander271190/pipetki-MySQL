@@ -3896,7 +3896,7 @@ async function editUserSetting(id) {
 
     document.getElementById('usr-edit-id').value = u.id;
     document.getElementById('usr-login').value = u.login;
-    document.getElementById('usr-fullname').value = u.fullName || u.full_name;
+    document.getElementById('usr-fullname').value = u.fullName;
     document.getElementById('usr-position').value = u.position;
         // 🛡️ Отдел: безопасная установка с защитой от «битого» значения
     const deptSel = document.getElementById('usr-department');
@@ -4000,7 +4000,7 @@ async function saveUserSetting() {
        if (id === currentUser.id) {
       const me = (await apiRequest('/users')).find(x => x.id === id);
       if (me) {
-        currentUser.fullName = me.fullName || me.full_name;
+        currentUser.fullName = me.fullName;
         currentUser.position = me.position;
         currentUser.department = me.department;
         currentUser.role = me.role;
@@ -6310,7 +6310,7 @@ async function renderUsersSettings() {
 
       html += `<tr>
         <td>${esc(u.login)}</td>
-        <td>${esc(u.fullName || u.full_name)}</td>
+        <td>${esc(u.fullName)}</td>
         <td>${esc(u.position)}${u.isActing
           ? ` <span style="color:#eab308;font-weight:600;">(и.о.${u.actingForName ? ' за ' + esc(u.actingForName) : ''})</span>`
           : ''}</td>
@@ -6321,8 +6321,8 @@ async function renderUsersSettings() {
           <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">
             <i class="fa-solid fa-pen"></i>
           </button>
-          <button class="btn btn-primary btn-sm"
-                  onclick="openUserViewModal('${u.id}', '${esc(u.fullName || u.full_name)}')"
+           <button class="btn btn-primary btn-sm"
+                  onclick="openUserViewModal('${u.id}', '${esc(u.fullName)}')"
                   title="Настроить видимые поля формы">
             <i class="fa-solid fa-list-check"></i>
           </button>
@@ -6538,7 +6538,7 @@ async function editUserSetting(id) {
 
     document.getElementById('usr-edit-id').value = u.id;
     document.getElementById('usr-login').value = u.login;
-    document.getElementById('usr-fullname').value = u.fullName || u.full_name;
+    document.getElementById('usr-fullname').value = u.fullName;
     document.getElementById('usr-position').value = u.position;
 
     const deptSel = document.getElementById('usr-department');
@@ -6642,7 +6642,7 @@ async function saveUserSetting() {
     if (id === currentUser.id) {
       const me = (await apiRequest('/users')).find(x => x.id === id);
       if (me) {
-        currentUser.fullName = me.fullName || me.full_name;
+        currentUser.fullName = me.fullName;
         currentUser.position = me.position;
         currentUser.department = me.department;
         currentUser.role = me.role;
