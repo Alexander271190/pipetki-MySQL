@@ -6311,3 +6311,264 @@ window.getActiveFormFields = function(allFields) {
 window.getActiveTableColumns = function() {
   return getDefaultTableColumns();
 };
+
+// ============================================================
+// 🆕 СКАНИРОВАНИЕ ШТРИХ-КОДОВ КАМЕРОЙ ТЕЛЕФОНА
+// ============================================================
+let _cameraStream = null;
+let _cameraRafId = null;
+let _cameraZxingReader = null;
+let _cameraTorchOn = false;
+let _cameraTargetInput = null;
+let _cameraLastResult = '';
+let _cameraLastTime = 0;
+
+async function openCameraScan(targetInputId = null) {
+  _cameraTargetInput = targetInputId;
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Браузер не поддерживает доступ к камере', 'error');
+    return;
+  }
+
+  const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+  if (location.protocol !== 'https:' && !isLocal) {
+    showToast('Камера работает только по HTTPS. Обратитесь к администратору.', 'error');
+    return;
+  }
+
+  const modal = document.getElementById('camera-scan-modal');
+  const status = document.getElementById('camera-scan-status');
+  if (status) status.textContent = 'Запуск камеры…';
+  if (modal) modal.classList.add('active');
+
+  try {
+    _cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:  { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    });
+
+    const video = document.getElementById('camera-scan-video');
+    video.srcObject = _cameraStream;
+    await video.play();
+
+    if (status) status.textContent = 'Наведите камеру на штрих-код…';
+
+    checkTorchSupport();
+    startCameraDecoding(video);
+  } catch (e) {
+    console.error('Camera error:', e);
+    let msg = 'Не удалось открыть камеру';
+    if (e.name === 'NotAllowedError')       msg = 'Доступ к камере запрещён. Разрешите в настройках браузера.';
+    else if (e.name === 'NotFoundError')    msg = 'Камера не найдена на устройстве.';
+    else if (e.name === 'NotReadableError') msg = 'Камера занята другим приложением.';
+    if (status) status.textContent = '❌ ' + msg;
+    showToast(msg, 'error');
+  }
+}
+
+function closeCameraScan() {
+  if (_cameraStream) {
+    _cameraStream.getTracks().forEach(t => t.stop());
+    _cameraStream = null;
+  }
+  if (_cameraRafId) {
+    cancelAnimationFrame(_cameraRafId);
+    _cameraRafId = null;
+  }
+  if (_cameraZxingReader) {
+    try { _cameraZxingReader.reset(); } catch (e) {}
+    _cameraZxingReader = null;
+  }
+  _cameraTorchOn = false;
+  _cameraLastResult = '';
+  _cameraTargetInput = null;
+
+  const video = document.getElementById('camera-scan-video');
+  if (video) video.srcObject = null;
+
+  const modal = document.getElementById('camera-scan-modal');
+  if (modal) modal.classList.remove('active');
+
+  const torchBtn = document.getElementById('camera-torch-btn');
+  if (torchBtn) torchBtn.style.display = 'none';
+}
+
+function checkTorchSupport() {
+  const torchBtn = document.getElementById('camera-torch-btn');
+  if (!torchBtn || !_cameraStream) return;
+
+  const track = _cameraStream.getVideoTracks()[0];
+  if (!track) return;
+
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  torchBtn.style.display = caps.torch ? 'inline-flex' : 'none';
+}
+
+async function toggleCameraTorch() {
+  if (!_cameraStream) return;
+  const track = _cameraStream.getVideoTracks()[0];
+  if (!track) return;
+
+  _cameraTorchOn = !_cameraTorchOn;
+  try {
+    await track.applyConstraints({ advanced: [{ torch: _cameraTorchOn }] });
+  } catch (e) {
+    console.warn('Torch error:', e);
+    showToast('Фонарик не поддерживается', 'warn');
+    _cameraTorchOn = false;
+  }
+}
+
+function startCameraDecoding(video) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  try {
+    _cameraZxingReader = new ZXing.BrowserMultiFormatReader();
+  } catch (e) {
+    console.warn('ZXing не загружен, будут только QR-коды:', e.message);
+    _cameraZxingReader = null;
+  }
+
+  const tick = () => {
+    if (!_cameraStream) return;
+
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+
+      const maxSide = 640;
+      const scale = Math.min(1, maxSide / Math.max(w, h));
+      const cw = Math.floor(w * scale);
+      const ch = Math.floor(h * scale);
+
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+      }
+
+      ctx.drawImage(video, 0, 0, cw, ch);
+      const imageData = ctx.getImageData(0, 0, cw, ch);
+
+      if (window.jsQR) {
+        const qr = jsQR(imageData.data, cw, ch, { inversionAttempts: 'dontInvert' });
+        if (qr && qr.data) {
+          handleCameraResult(qr.data);
+          return;
+        }
+      }
+
+      if (_cameraZxingReader) {
+        try {
+          _cameraZxingReader.decodeFromCanvas(canvas)
+            .then(result => {
+              if (result && result.text) handleCameraResult(result.text);
+            })
+            .catch(() => {});
+        } catch (e) {}
+      }
+    }
+
+    _cameraRafId = requestAnimationFrame(tick);
+  };
+
+  _cameraRafId = requestAnimationFrame(tick);
+}
+
+function handleCameraResult(code) {
+  const clean = String(code || '').trim();
+  if (!clean) return;
+
+  const now = Date.now();
+  if (clean === _cameraLastResult && now - _cameraLastTime < 2000) return;
+  _cameraLastResult = clean;
+  _cameraLastTime = now;
+
+  if (navigator.vibrate) navigator.vibrate(80);
+
+  const status = document.getElementById('camera-scan-status');
+  if (status) status.textContent = '✅ Найдено: ' + clean;
+
+  let targetEl = null;
+  if (_cameraTargetInput) targetEl = document.getElementById(_cameraTargetInput);
+
+  if (targetEl) {
+    targetEl.value = clean;
+    targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+    showToast('Код вставлен', 'success');
+    closeCameraScan();
+    return;
+  }
+
+  const scannerInput = document.getElementById('barcode-input');
+  const scannerModal = document.getElementById('barcode-scanner-modal');
+  if (scannerInput && scannerModal && scannerModal.classList.contains('active')) {
+    scannerInput.value = clean;
+    scannerInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    closeCameraScan();
+    return;
+  }
+
+  const searchInput = document.getElementById('search');
+  if (searchInput) {
+    searchInput.value = clean;
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    showToast('Код вставлен в поиск', 'success');
+  } else {
+    showToast('Код: ' + clean, 'success');
+  }
+
+  closeCameraScan();
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'camera-scan-modal') closeCameraScan();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const m = document.getElementById('camera-scan-modal');
+    if (m && m.classList.contains('active')) closeCameraScan();
+  }
+});
+
+// ============================================================
+// 🆕 УМНАЯ КНОПКА «СКАНИРОВАТЬ»
+// Десктоп → USB-сканер, Телефон/планшет → камера
+// ============================================================
+function isMobileDevice() {
+  const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+  const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|PlayBook|Silk/i.test(ua);
+  const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  const hasTouch = (navigator.maxTouchPoints || 0) > 0 || ('ontouchstart' in window);
+  const narrowScreen = window.matchMedia('(max-width: 900px)').matches;
+
+  return uaMobile || iPadOS || (hasTouch && narrowScreen);
+}
+
+function handleScanButton() {
+  if (isMobileDevice()) {
+    openCameraScan();
+  } else {
+    openBarcodeScannerModal();
+  }
+}
+
+// 🆕 Подмена иконки кнопки «Сканировать» под устройство
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.btn-scan-barcode, [onclick*="handleScanButton"]').forEach(btn => {
+    const icon = btn.querySelector('i');
+    if (!icon) return;
+    if (isMobileDevice()) {
+      icon.className = 'fa-solid fa-camera';
+      btn.title = 'Сканировать камерой';
+    } else {
+      icon.className = 'fa-solid fa-barcode';
+      btn.title = 'Сканировать USB-сканером';
+    }
+  });
+});
