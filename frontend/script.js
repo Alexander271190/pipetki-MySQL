@@ -501,13 +501,22 @@ async function impersonateUser(userId) {
     showToast(e.message, 'error');
   }
 }
-function stopImpersonate() {
+async function stopImpersonate() {
   const originalUser = getOriginalUser();
   const originalToken = getOriginalToken();
   if (!originalUser || !originalToken) {
     showToast('Вы не в режиме переключения', 'error');
     return;
   }
+
+  // 🆕 Логируем возврат на сервере (не блокируем при ошибке)
+  try {
+    await apiRequest('/auth/stop-impersonate', 'POST', {});
+  } catch (e) {
+    // Не срываем возврат, даже если лог не удался
+    console.warn('Не удалось залогировать возврат:', e.message);
+  }
+
   authToken = originalToken;
   currentUser = originalUser;
   sessionStorage.setItem('pipette_session', JSON.stringify({
