@@ -91,7 +91,8 @@ router.get('/acting-targets', authenticate, requireRole(['admin']), async (req, 
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   const [users] = await db.query(
     `SELECT id, login, full_name, position, department, role,
-            only_own_department, extra_permissions, is_acting, acting_for_id
+            only_own_department, extra_permissions, is_acting, acting_for_id,
+            must_change_password
      FROM users`);
 
   const actingIds = users.filter(u => u.acting_for_id).map(u => u.acting_for_id);
