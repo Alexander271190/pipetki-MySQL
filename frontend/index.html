@@ -427,40 +427,27 @@
 <!-- МОДАЛКА НАСТРОЕК -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal modal-lg">
-    <h2><i class="fa-solid fa-gear"></i> Настройки системы</h2>
+    <!-- Заголовок меняется: либо «Настройки системы», либо название раздела -->
+    <h2 id="settings-header">
+      <button type="button" class="settings-back-btn" id="settings-back-btn" onclick="closeSettingsSection()" style="display:none;" title="Назад к списку">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <span id="settings-header-text">Настройки системы</span>
+    </h2>
 
-    <div class="settings-tabs">
-      <button class="tab-btn active" data-tab="fields" onclick="switchSettingsTab('fields')">
-        <i class="fa-solid fa-list"></i> Поля формы
-      </button>
-      <button class="tab-btn" data-tab="departments" onclick="switchSettingsTab('departments')">
-        <i class="fa-solid fa-building"></i> Отделы
-      </button>
-      <button class="tab-btn" data-tab="filters" onclick="switchSettingsTab('filters')">
-        <i class="fa-solid fa-filter"></i> Фильтры
-      </button>
-      <button class="tab-btn" data-tab="export" onclick="switchSettingsTab('export')">
-        <i class="fa-solid fa-file-export"></i> Экспорт
-      </button>
-      <button class="tab-btn" data-tab="users" onclick="switchSettingsTab('users')">
-        <i class="fa-solid fa-users"></i> Пользователи
-      </button>
-      <button class="tab-btn" data-tab="system" onclick="switchSettingsTab('system')">
-        <i class="fa-solid fa-gear"></i> Система
-      </button>
-      <button class="tab-btn" data-tab="log" onclick="switchSettingsTab('log')">
-        <i class="fa-solid fa-scroll"></i> Лог
-      </button>
+    <!-- СПИСОК РАЗДЕЛОВ (показывается по умолчанию) -->
+    <div id="settings-list"></div>
+
+    <!-- ОБЛАСТЬ РАЗДЕЛА (показывается при выборе) -->
+    <div id="settings-section" style="display:none;">
+      <div id="settings-section-content"></div>
     </div>
 
-    <div id="settings-content"></div>
-
-    <div class="form-actions">
+    <div class="form-actions" id="settings-footer">
       <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
     </div>
   </div>
 </div>
-
   <div class="modal-overlay confirm-overlay" id="confirm-modal">
   <div class="modal confirm-modal">
     <div class="confirm-icon" id="confirm-icon">⚠️</div>
