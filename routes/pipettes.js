@@ -1048,13 +1048,18 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
             [item.id]
           );
 
-        } else {
-          // Пользователь оставил Y в работе — снимаем только связь
-          await conn.query(
-            `UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-            [item.id]
-          );
-        }
+  } else {
+  // Пользователь оставил Y в работе — снимаем связь с обеих сторон
+  await conn.query(
+    `UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [item.id]
+  );
+  // 🆕 Снимаем replacing у замены (X), но оставляем её активной
+  await conn.query(
+    `UPDATE pipettes SET replacing = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [replId]
+  );
+}
       }
       
       successful.push(item.id);
