@@ -107,10 +107,10 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
     }
   }
 
-    res.json(users.map(u => ({
+     res.json(users.map(u => ({
     id:                u.id,
     login:             u.login,
-    fullName:          u.full_name,           // ← snake_case → camelCase
+    fullName:          u.full_name,
     position:          u.position,
     department:        u.department,
     role:              u.role,
@@ -119,7 +119,8 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
     actingForId:       u.acting_for_id || null,
     actingForName:     u.acting_for_id && actingById[u.acting_for_id]
       ? actingById[u.acting_for_id].fullName : null,
-    extraPermissions:  db.safeParse(u.extra_permissions, [])
+    extraPermissions:  db.safeParse(u.extra_permissions, []),
+    mustChangePassword: !!u.must_change_password
   })));
 });
 // ============================================================
