@@ -11,7 +11,7 @@ let _activeFilters = [];
 let _cachedFields = [];
 let exportFields = null;
 let selectedPipettes = new Set();
-let myPrefs = { visibleFields: null, tableColumns: null };
+let myPrefs = { visibleFields: null };
 let _equipmentTypes = [];            
 let _cachedEquipmentTypes = []; 
 let _responsibles = [];                
@@ -438,7 +438,7 @@ async function loginUser(e) {
 
 function logoutUser() {
   clearSession();
-  myPrefs = { visibleFields: null, tableColumns: null };
+  myPrefs = { visibleFields: null };
 
      // 🆕 Сброс состояния сессии
   filterState = {};
@@ -475,7 +475,7 @@ async function impersonateUser(userId) {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
 
-       myPrefs = { visibleFields: null, tableColumns: null };
+       myPrefs = { visibleFields: null };
     _dataLoadedForUser = null;
     _lastPermsCheck = 0;
 
@@ -514,7 +514,7 @@ function stopImpersonate() {
     user: originalUser,
     token: originalToken
   }));
-   myPrefs = { visibleFields: null, tableColumns: null };
+   myPrefs = { visibleFields: null };
   _dataLoadedForUser = null;
   _lastPermsCheck = 0;
 
@@ -3398,7 +3398,7 @@ async function saveFieldsSettings() {
     await apiRequest('/settings/fields', 'PUT', _cachedFields);
     _cachedFields = await apiRequest('/settings/fields');
   
-    myPrefs = { visibleFields: null, tableColumns: null, _loaded: false };
+    myPrefs = { visibleFields: null, _loaded: false };
     try {
       myPrefs = await apiRequest('/settings/my-preferences') || {};
       myPrefs._loaded = true;
@@ -3458,7 +3458,7 @@ async function saveFieldsSettings() {
         _cachedFields = await apiRequest('/settings/fields');
 
         // 🆕 Та же синхронизация prefs после удаления
-        myPrefs = { visibleFields: null, tableColumns: null, _loaded: false };
+        myPrefs = { visibleFields: null, _loaded: false };
         try {
           myPrefs = await apiRequest('/settings/my-preferences') || {};
           myPrefs._loaded = true;
@@ -3560,7 +3560,7 @@ function onDepartmentNameChange(idx, value) {
   if (warn) {
     if (duplicates.length > 0 && trimmed !== '') {
       warn.style.display = 'block';
-      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Отдел «${esc(trimmed)}» уже существует. При сохранении дубликат будет автоматически удалён.`;
+      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Отдел «${esc(trimmed)}» уже существует. Дубликат будет удалён при сохранении.`;
     } else {
       warn.style.display = 'none';
     }
