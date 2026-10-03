@@ -990,11 +990,14 @@ function openRowActions(ev, id) {
     });
   }
 
-  if (_canEdit) {
+   if (_canEdit) {
     items.push({
       label: 'Редактировать',
       action: () => openModal(id),
     });
+  }
+
+  if (canTransferPipette()) {
     items.push({
       label: 'Передать в другой отдел',
       action: () => openTransferModal(id),
