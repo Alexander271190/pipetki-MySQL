@@ -363,7 +363,16 @@ function hasPermission(permission) {
   return perms.includes(permission);
 }
 
-function canManagePipettes() { return hasPermission('manage_pipettes'); }
+// 🆕 Совместимость со старым правом manage_pipettes + новые права
+function canManagePipettes() {
+  return hasPermission('manage_pipettes')
+      || hasPermission('add_pipette')
+      || hasPermission('edit_pipette')
+      || hasPermission('delete_pipette')
+      || hasPermission('quick_calibration')
+      || hasPermission('bulk_send')
+      || hasPermission('bulk_return');
+}
 function canImport() { return hasPermission('import_data'); }
 function canExport() { return hasPermission('export_data'); }
 function isAuthenticated() { return !!currentUser; }
@@ -1170,6 +1179,12 @@ pipettes.forEach(p => {
   const columns = getActiveTableColumns();
   const canManage = canManagePipettes();
 
+   const columns = getActiveTableColumns();
+
+  // 🆕 Столбец «Действия» виден, если есть хоть какое-то право на действия
+  const hasAnyRowAction =
+    canViewHistory() || canEditPipette() || canDeletePipette() || canQuickCal();
+
   // Динамическая шапка
   thead.innerHTML = `
     <th class="col-checkbox">
@@ -1183,7 +1198,7 @@ pipettes.forEach(p => {
       }
       return `<th>${esc(def.label)}</th>`;
     }).join('')}
-    <th id="actions-header" ${!canManage ? 'style="display:none"' : ''}>Действия</th>
+    <th id="actions-header" ${!hasAnyRowAction ? 'style="display:none"' : ''}>Действия</th>
   `;
 
   if (filtered.length === 0) {
@@ -3020,12 +3035,23 @@ function renderSettingsList() {
   const c = document.getElementById('settings-list');
   if (!c) return;
 
+  // 🆕 Фильтр пунктов по правам
+  const canSee = (id) => {
+    if (id === 'users')    return canManageUsers();
+    if (id === 'printers') return canManagePrinters();
+    if (id === 'log')      return canViewLog();
+    return true;
+  };
+
   let html = '';
   for (const section of SETTINGS_SECTIONS) {
+    const visibleItems = section.items.filter(it => canSee(it.id));
+    if (visibleItems.length === 0) continue;
+
     html += `<div class="settings-group-title">${esc(section.group)}</div>`;
     html += `<div class="settings-items">`;
-    section.items.forEach((item, idx) => {
-      const isLast = idx === section.items.length - 1;
+    visibleItems.forEach((item, idx) => {
+      const isLast = idx === visibleItems.length - 1;
       html += `<button class="settings-item${isLast ? ' settings-item-last' : ''}" onclick="openSettingsSection('${item.id}')">${esc(item.label)}</button>`;
     });
     html += `</div>`;
@@ -3038,6 +3064,17 @@ async function openSettingsSection(id) {
     .flatMap(s => s.items)
     .find(i => i.id === id);
   if (!sectionDef) return;
+
+  // 🆕 Проверка прав на конкретный раздел
+  const permCheck = {
+    users:    canManageUsers,
+    printers: canManagePrinters,
+    log:      canViewLog,
+  }[id];
+  if (permCheck && !permCheck()) {
+    showToast('Недостаточно прав для этого раздела', 'error');
+    return;
+  }
 
   document.getElementById('settings-list').style.display = 'none';
   document.getElementById('settings-section').style.display = '';
@@ -3573,21 +3610,6 @@ async function saveExportSettings() {
   }
 }
 
-function onUserRoleChange(role) {
-  const checkboxes = document.querySelectorAll('#usr-permissions input[type="checkbox"]');
-  checkboxes.forEach(cb => {
-    if (role === 'admin') {
-      cb.checked = true;
-      cb.disabled = true;
-    } else {
-      // Переход admin → user: сбрасываем «унаследованные» галочки,
-      // чтобы случайно не выдать новому пользователю полные права
-      if (cb.disabled) cb.checked = false;
-      cb.disabled = false;
-    }
-  });
-}
-
 function resetUserSettingForm() {
   ['usr-edit-id', 'usr-login', 'usr-fullname', 'usr-position', 'usr-department'].forEach(id => {
     const el = document.getElementById(id);
@@ -3745,27 +3767,27 @@ async function saveUserSetting() {
       }, 300);
     }
 
-    if (id === currentUser.id) {
-  const me = (await apiRequest('/users')).find(x => x.id === id);
-  if (me) {
-    currentUser.fullName = me.fullName || me.full_name;
-    currentUser.position = me.position;
-    currentUser.department = me.department;
-    currentUser.role = me.role;
-    currentUser.onlyOwnDepartment = !!me.onlyOwnDepartment;
-    currentUser.extraPermissions = me.extraPermissions || [];
+       if (id === currentUser.id) {
+      const me = (await apiRequest('/users')).find(x => x.id === id);
+      if (me) {
+        currentUser.fullName = me.fullName || me.full_name;
+        currentUser.position = me.position;
+        currentUser.department = me.department;
+        currentUser.role = me.role;
+        currentUser.onlyOwnDepartment = !!me.onlyOwnDepartment;
+        currentUser.extraPermissions = me.extraPermissions || [];
 
-    // Сохраняем оригинальные данные impersonate, если они есть
-    const origUser  = getOriginalUser();
-    const origToken = getOriginalToken();
-    if (origUser && origToken) {
-      setSession(currentUser, authToken, origUser, origToken);
-    } else {
-      setSession(currentUser, authToken);
+        const origUser  = getOriginalUser();
+        const origToken = getOriginalToken();
+        if (origUser && origToken) {
+          setSession(currentUser, authToken, origUser, origToken);
+        } else {
+          setSession(currentUser, authToken);
+        }
+        renderAuthUI();
+        render();   // 🆕 перерисовать таблицу — обновятся кнопки ⋮ и столбец «Действия»
+      }
     }
-    renderAuthUI();
-  }
-}
  
     resetUserSettingForm();
     renderUsersSettings();
