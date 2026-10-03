@@ -374,15 +374,23 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
 
   if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
 
-  if (!responsible) {
-    return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
-  }
+if (!responsible) {
+  return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
+}
 
-  // 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
-if (lastCalibration) {
-  if (String(lastCalibration) > todayLocalStr()) {
-    return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
-  }
+// 🛡️ Дата поверки обязательна
+if (!lastCalibration || String(lastCalibration).trim() === '') {
+  return res.status(400).json({ error: 'Заполните поле «Дата последней поверки»' });
+}
+
+// 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
+if (String(lastCalibration) > todayLocalStr()) {
+  return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
+}
+
+// 🛡️ Дата должна быть валидной
+if (!/^\d{4}-\d{2}-\d{2}$/.test(String(lastCalibration))) {
+  return res.status(400).json({ error: 'Некорректный формат даты поверки (ожидается ГГГГ-ММ-ДД)' });
 }
   
   // 🛡️ Пользователь с "только свой отдел" не может создавать в чужом отделе
