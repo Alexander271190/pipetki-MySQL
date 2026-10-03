@@ -108,12 +108,19 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Вы уже вошли под этой учётной записью' });
     }
 
+    // 🆕 Кто зашёл под target — сохраняем в токене
     const token = jwt.sign(
-      { id: target.id, login: target.login, role: target.role },
+      {
+        id: target.id,
+        login: target.login,
+        role: target.role,
+        impersonatedBy: req.user.id,          // 🆕 id админа
+        impersonatedByName: req.user.full_name // 🆕 имя админа
+      },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
-
+    
     await db.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
       [req.user.id, req.user.full_name, 'Вход под пользователем', target.full_name]
@@ -137,6 +144,60 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Ошибка входа под пользователем' });
   }
 });
+
+// ============================================================
+// ВОЗВРАТ К СВОЕЙ УЧЁТНОЙ ЗАПИСИ (конец impersonate-сессии)
+// ============================================================
+router.post('/stop-impersonate', authenticate, async (req, res) => {
+  try {
+    // Достаём id админа из JWT (установлен в middleware/auth.js)
+    const adminId = req.impersonatedBy;
+    if (!adminId) {
+      return res.status(400).json({
+        error: 'Вы не в режиме переключения'
+      });
+    }
+
+    // Загружаем данные админа (для имени в логе)
+    const [adminRows] = await db.query(
+      'SELECT id, full_name, login FROM users WHERE id = ?',
+      [adminId]
+    );
+
+    if (!adminRows.length) {
+      // Админ был удалён — логируем хотя бы факт возврата
+      await db.query(
+        'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+        [
+          adminId,
+          req.impersonatedByName || 'admin (удалён)',
+          'Возврат к своей учётной записи',
+          `Работал под: ${req.user.full_name} (${req.user.login}); сам админ удалён`
+        ]
+      );
+      return res.json({ message: 'Возврат залогирован (админ удалён)' });
+    }
+
+    const admin = adminRows[0];
+
+    // 🆕 Логируем возврат от имени админа
+    await db.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [
+        admin.id,
+        admin.full_name,
+        'Возврат к своей учётной записи',
+        `Работал под: ${req.user.full_name} (${req.user.login})`
+      ]
+    );
+
+    res.json({ message: 'Возврат залогирован' });
+  } catch (e) {
+    console.error('POST /auth/stop-impersonate error:', e);
+    res.status(500).json({ error: 'Ошибка логирования возврата' });
+  }
+});
+
 
 // ============================================================
 // СМЕНА ПАРОЛЯ (свой аккаунт)
