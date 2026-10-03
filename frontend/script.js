@@ -871,30 +871,54 @@ function findColumn(id) {
 function getActiveTableColumns() {
   const allOrdered = getAllTableColumns();
 
-  // Если настроек нет — дефолтный набор (уже включает все активные системные + кастомные)
-  if (!myPrefs.tableColumns || !Array.isArray(myPrefs.tableColumns) || myPrefs.tableColumns.length === 0) {
+  // 🆕 Единый источник правды — prefs.visibleFields.
+  // Что включено у пользователя в форме, то и показываем в таблице.
+  // Если индивидуальных настроек нет — дефолтный набор.
+  if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
     return getDefaultTableColumns();
   }
 
-  const saved = new Set(myPrefs.tableColumns);
-  const SYSTEM_COL_IDS = new Set(SYSTEM_TABLE_COLUMNS.map(c => c.id));
+  // Маппинг: id поля в field_config → id колонки в таблице
+  const TABLE_ID_MAP = { equipmentType: 'type' };
 
-  // Кастомные поля показываем ВСЕГДА — даже если в prefs их нет.
-  // Причина: prefs сохранялись до того, как админ создал поле,
-  // и отличить «ещё не видел» от «выключил» невозможно.
-  const currentCustom = allOrdered
-    .map(c => c.id)
-    .filter(id => !SYSTEM_COL_IDS.has(id));
+  const visible = new Set(myPrefs.visibleFields);
 
-  // Системные поля показываем, если они есть в prefs, ИЛИ если они
-  // не дефолтные (т.е. потенциально могли быть добавлены позже)
-  const defaultCols = new Set(getDefaultTableColumns());
+  const cols = [];
+  const added = new Set();
 
-  const visible = new Set([...saved, ...currentCustom, ...defaultCols]);
+  // Идём по field_config в порядке field_order — берём только включённые
+  for (const f of (_cachedFields || [])) {
+    if (!f.enabled) continue;
+    if (!visible.has(f.id)) continue;
 
-  return allOrdered
-    .map(c => c.id)
-    .filter(id => visible.has(id));
+    const tableId = TABLE_ID_MAP[f.id] || f.id;
+
+    const def = allOrdered.find(c => c.id === tableId);
+    if (def) {
+      cols.push(tableId);
+      added.add(tableId);
+    }
+  }
+
+  // Виртуальные колонки — всегда
+  // «Следующая» — после «Поверка»
+  if (!added.has('nextCalibration')) {
+    const idx = cols.indexOf('lastCalibration');
+    if (idx !== -1) cols.splice(idx + 1, 0, 'nextCalibration');
+    else cols.push('nextCalibration');
+  }
+
+  // «Статус» — в конец
+  if (!added.has('status')) {
+    cols.push('status');
+  }
+
+  // Страховка: если ничего не собралось — дефолтный набор
+  if (cols.length <= 2) {
+    return getDefaultTableColumns();
+  }
+
+  return cols;
 }
 
 function getActiveFormFields(allFields) {
@@ -6713,14 +6737,27 @@ function toggleUserViewField(id, checked) {
 
 async function saveUserView() {
   if (!_userViewUserId) return;
-  if (_userViewVisibleFields.length === 0) { showToast('Выберите хотя бы одно поле', 'error'); return; }
+  if (_userViewVisibleFields.length === 0) {
+    showToast('Выберите хотя бы одно поле', 'error');
+    return;
+  }
+
   let existing = {};
   try { existing = await apiRequest(`/settings/user-preferences/${_userViewUserId}`); } catch (e) {}
+
   const merged = { ...existing, visibleFields: _userViewVisibleFields };
+
   try {
     await apiRequest(`/settings/user-preferences/${_userViewUserId}`, 'PUT', merged);
     showToast('Поля формы сохранены', 'success');
     closeUserViewModal();
+
+    // 🆕 Если настройки сохранили СЕБЕ — сразу обновить myPrefs и перерисовать
+    if (_userViewUserId === currentUser.id) {
+      myPrefs.visibleFields = [..._userViewVisibleFields];
+      myPrefs._loaded = true;
+      render();
+    }
   } catch (e) {
     showToast(e.message || 'Ошибка сохранения', 'error');
   }
