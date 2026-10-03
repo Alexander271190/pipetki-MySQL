@@ -19,6 +19,42 @@ let _bulkSendIds = [];
 let _bulkReturnIds = [];
 let _dataLoadedForUser = null;
 
+// ============================================================
+// 🆕 СТРУКТУРА РАЗДЕЛОВ НАСТРОЕК
+// ============================================================
+const SETTINGS_SECTIONS = [
+  {
+    group: 'Оборудование и данные',
+    items: [
+      { id: 'fields',      label: 'Поля формы' },
+      { id: 'departments', label: 'Отделы' },
+      { id: 'filters',     label: 'Фильтры' },
+      { id: 'export',      label: 'Экспорт' },
+      { id: 'equipment',   label: 'Типы оборудования' },
+    ]
+  },
+  {
+    group: 'Пользователи',
+    items: [
+      { id: 'users',       label: 'Пользователи' },
+    ]
+  },
+  {
+    group: 'Печать и штрихкоды',
+    items: [
+      { id: 'printers',    label: 'Принтеры этикеток' },
+      { id: 'barcodes',    label: 'Штрихкоды' },
+    ]
+  },
+  {
+    group: 'Общие',
+    items: [
+      { id: 'general',     label: 'Общие' },
+      { id: 'log',         label: 'Журнал действий' },
+    ]
+  }
+];
+
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -917,6 +953,158 @@ function getSortedPipettes() {
   return filtered;
 }
 
+// ============================================================
+// 🆕 МЕНЮ ДЕЙСТВИЙ В СТРОКЕ (кнопка ⋮)
+// ============================================================
+let _rowActionsMenu = null;
+
+function openRowActions(ev, id) {
+  ev.stopPropagation();
+
+  const p = pipettes.find(x => x.id === id);
+  if (!p) return;
+
+  const status = calcStatus(p);
+  const histCount = p.history_count || 0;
+
+  const _canEdit     = canEditPipette();
+  const _canDelete   = canDeletePipette();
+  const _canQuickCal = canQuickCal();
+  const _canHistory  = canViewHistory();
+
+  const items = [];
+
+  if (_canHistory) {
+    items.push({
+      label: 'История поверок' + (histCount > 0 ? ` (${histCount})` : ''),
+      action: () => openHistoryModal(id),
+    });
+  }
+
+  if (_canEdit) {
+    items.push({
+      label: 'Редактировать',
+      action: () => openModal(id),
+    });
+    items.push({
+      label: 'Передать в другой отдел',
+      action: () => openTransferModal(id),
+    });
+  }
+
+  if (_canQuickCal) {
+    items.push({ divider: true });
+    if (status === 'sent') {
+      items.push({
+        label: 'Вернулась с поверки',
+        class: 'item-success',
+        action: () => openQuickCalModal(id),
+      });
+    } else {
+      items.push({
+        label: 'Быстрая поверка',
+        class: 'item-success',
+        action: () => openQuickCalModal(id),
+      });
+    }
+  }
+
+  if (status === 'sent' && canBulkSend()) {
+    items.push({
+      label: 'Отменить отправку',
+      class: 'item-warning',
+      action: () => cancelSend(id),
+    });
+  }
+
+  if (_canDelete) {
+    items.push({ divider: true });
+    items.push({
+      label: 'Удалить',
+      class: 'item-danger',
+      action: () => deletePipette(id),
+    });
+  }
+
+  renderRowActionsMenu(ev.currentTarget, items);
+}
+
+function renderRowActionsMenu(anchorEl, items) {
+  closeRowActionsMenu();
+
+  const rect = anchorEl.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'row-actions-menu';
+  menu.id = 'row-actions-menu';
+
+  let html = '';
+  for (const item of items) {
+    if (item.divider) {
+      html += `<div class="row-actions-divider"></div>`;
+      continue;
+    }
+    html += `<button class="row-actions-item ${item.class || ''}" type="button">${esc(item.label)}</button>`;
+  }
+  menu.innerHTML = html;
+
+  document.body.appendChild(menu);
+  _rowActionsMenu = menu;
+
+  const menuRect = menu.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const top = (spaceBelow < menuRect.height + 10)
+    ? rect.top - menuRect.height - 6
+    : rect.bottom + 6;
+
+  let left = rect.right - menuRect.width;
+  if (left < 8) left = 8;
+  if (left + menuRect.width > window.innerWidth - 8) {
+    left = window.innerWidth - menuRect.width - 8;
+  }
+
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+
+  const realItems = items.filter(it => !it.divider);
+  menu.querySelectorAll('.row-actions-item').forEach((btn, i) => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const item = realItems[i];
+      if (item && item.action) item.action();
+      closeRowActionsMenu();
+    };
+  });
+
+  setTimeout(() => {
+    document.addEventListener('mousedown', _rowActionsOutsideClick, true);
+    window.addEventListener('resize', closeRowActionsMenu);
+    window.addEventListener('scroll', closeRowActionsMenu, true);
+  }, 0);
+}
+
+function _rowActionsOutsideClick(e) {
+  if (_rowActionsMenu && !_rowActionsMenu.contains(e.target)) {
+    closeRowActionsMenu();
+  }
+}
+
+function closeRowActionsMenu() {
+  if (_rowActionsMenu) {
+    _rowActionsMenu.remove();
+    _rowActionsMenu = null;
+  }
+  document.removeEventListener('mousedown', _rowActionsOutsideClick, true);
+  window.removeEventListener('resize', closeRowActionsMenu);
+  window.removeEventListener('scroll', closeRowActionsMenu, true);
+}
+
+// Заглушка, если нет openTransferModal
+if (typeof window.openTransferModal !== 'function') {
+  window.openTransferModal = function(id) {
+    showToast('Передача в другой отдел: функция в разработке', 'warn');
+  };
+}
+
 
 // ============================================================
 // РЕНДЕР ТАБЛИЦЫ
@@ -1036,30 +1224,11 @@ const labels = {
     const _canQuickCal = canQuickCal();
     const _canHistory  = canViewHistory();
 
-    let actionsHtml = '';
-    const btns = [];
+        const hasAnyAction = _canHistory || _canEdit || _canDelete || _canQuickCal;
 
-    if (_canHistory) {
-      btns.push(`<button class="btn btn-info btn-sm" onclick="openHistoryModal('${p.id}')" title="История (${histCount})"><i class="fa-solid fa-clipboard-list"></i></button>`);
-    }
-    if (_canEdit) {
-      btns.push(`<button class="btn btn-secondary btn-sm" onclick="openModal('${p.id}')" title="Редактировать"><i class="fa-solid fa-pen"></i></button>`);
-    }
-    if (_canQuickCal) {
-      if (status === 'sent') {
-        btns.push(`<button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Вернулась"><i class="fa-solid fa-box-open"></i></button>`);
-      } else {
-        btns.push(`<button class="btn btn-success btn-sm" onclick="openQuickCalModal('${p.id}')" title="Быстрая поверка"><i class="fa-solid fa-check"></i></button>`);
-      }
-    }
-    if (status === 'sent' && canBulkSend()) {
-      btns.push(`<button class="btn btn-warning btn-sm" onclick="cancelSend('${p.id}')" title="Отменить"><i class="fa-solid fa-rotate-left"></i></button>`);
-    }
-    if (_canDelete) {
-      btns.push(`<button class="btn btn-danger btn-sm" onclick="deletePipette('${p.id}')" title="Удалить"><i class="fa-solid fa-trash"></i></button>`);
-    }
-     if (btns.length > 0) {
-      actionsHtml = `<div class="action-btns">${btns.join('')}</div>`;
+    let actionsHtml = '';
+    if (hasAnyAction) {
+      actionsHtml = `<button class="row-actions-btn" onclick="openRowActions(event, '${esc(p.id)}')" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>`;
     }
 
     const cellsHtml = columns.map(colId => {
@@ -1132,7 +1301,7 @@ const labels = {
       </td>
       
       ${cellsHtml}
-      <td ${!(canEditPipette() || canDeletePipette() || canQuickCal() || canViewHistory()) ? 'style="display:none"' : ''}>${actionsHtml}</td>
+      <td ${!hasAnyAction ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
   }).join('');
 
@@ -2822,44 +2991,87 @@ async function handleImport() {
 async function openSettingsModal() {
   await refreshCurrentUser();
   if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
+
+  // Сброс к списку разделов
+  document.getElementById('settings-list').style.display = '';
+  document.getElementById('settings-section').style.display = 'none';
+  document.getElementById('settings-back-btn').style.display = 'none';
+  document.getElementById('settings-header-text').textContent = 'Настройки системы';
+  document.getElementById('settings-footer').style.display = '';
+
+  renderSettingsList();
   document.getElementById('settings-modal').classList.add('active');
-  switchSettingsTab('fields');
 }
+
 function closeSettingsModal() {
   document.getElementById('settings-modal').classList.remove('active');
 }
+
+async function closeSettingsSection() {
+  document.getElementById('settings-section').style.display = 'none';
+  document.getElementById('settings-list').style.display = '';
+  document.getElementById('settings-back-btn').style.display = 'none';
+  document.getElementById('settings-header-text').textContent = 'Настройки системы';
+  document.getElementById('settings-footer').style.display = '';
+  document.getElementById('settings-section-content').innerHTML = '';
+}
+
+function renderSettingsList() {
+  const c = document.getElementById('settings-list');
+  if (!c) return;
+
+  let html = '';
+  for (const section of SETTINGS_SECTIONS) {
+    html += `<div class="settings-group-title">${esc(section.group)}</div>`;
+    html += `<div class="settings-items">`;
+    section.items.forEach((item, idx) => {
+      const isLast = idx === section.items.length - 1;
+      html += `<button class="settings-item${isLast ? ' settings-item-last' : ''}" onclick="openSettingsSection('${item.id}')">${esc(item.label)}</button>`;
+    });
+    html += `</div>`;
+  }
+  c.innerHTML = html;
+}
+
+async function openSettingsSection(id) {
+  const sectionDef = SETTINGS_SECTIONS
+    .flatMap(s => s.items)
+    .find(i => i.id === id);
+  if (!sectionDef) return;
+
+  document.getElementById('settings-list').style.display = 'none';
+  document.getElementById('settings-section').style.display = '';
+  document.getElementById('settings-back-btn').style.display = 'inline-flex';
+  document.getElementById('settings-header-text').textContent = sectionDef.label;
+
+  const c = document.getElementById('settings-section-content');
+  c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
+
+  try {
+    if (id === 'fields')           await renderFieldsSettings();
+    else if (id === 'departments') await renderDepartmentsSettings();
+    else if (id === 'filters')     await renderFiltersSettings();
+    else if (id === 'export')      await renderExportSettings();
+    else if (id === 'users')       await renderUsersSettings();
+    else if (id === 'equipment')   await renderEquipmentSettings();
+    else if (id === 'printers')    await renderPrintersSettings();
+    else if (id === 'barcodes')    await renderBarcodesSettings();
+    else if (id === 'general')     await renderGeneralSettings();
+    else if (id === 'log')         await renderLogSettings();
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
 document.getElementById('settings-modal').addEventListener('click', e => {
   if (e.target.id === 'settings-modal') closeSettingsModal();
 });
-
-async function switchSettingsTab(tab) {
-  document.querySelectorAll('.settings-tabs .tab-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === tab);
-  });
-  const c = document.getElementById('settings-content');
-
-  // Плавно приглушаем старый контент, пока грузятся новые данные
-  c.classList.add('loading');
-
-  try {
-    if (tab === 'fields') await renderFieldsSettings();
-    else if (tab === 'departments') await renderDepartmentsSettings();
-    else if (tab === 'filters') await renderFiltersSettings();
-    else if (tab === 'export') await renderExportSettings();
-    else if (tab === 'users') await renderUsersSettings();
-    else if (tab === 'system') await renderSystemSettings();
-    else if (tab === 'log') await renderLogSettings();
-  } finally {
-    // Убираем приглушение — контент плавно проявляется
-    c.classList.remove('loading');
-  }
-}
 
 // ============================================================
 // ВКЛАДКА: ПОЛЯ ФОРМЫ
 // ============================================================
 async function renderFieldsSettings(skipFetch = false) {
-  const c = document.getElementById('settings-content');
+  const c = document.getElementById('settings-section-content');
   try {
     if (!skipFetch) {
       _cachedFields = await apiRequest('/settings/fields');
@@ -3016,7 +3228,7 @@ async function saveFieldsSettings() {
 // ВКЛАДКА: ОТДЕЛЫ
 // ============================================================
 async function renderDepartmentsSettings(skipFetch = false) {
-  const c = document.getElementById('settings-content');
+  const c = document.getElementById('settings-section-content');
   try {
     if (!skipFetch) {
       _cachedDepartmentsFull = await apiRequest('/settings/departments-full');
@@ -3166,7 +3378,7 @@ async function saveDepartmentsFull() {
 // ВКЛАДКА: ФИЛЬТРЫ
 // ============================================================
 async function renderFiltersSettings(skipFetch = false) {
-  const c = document.getElementById('settings-content');
+  const c = document.getElementById('settings-section-content');
   try {
     if (!skipFetch) {
       _cachedFilters = await apiRequest('/settings/filters');
@@ -3329,7 +3541,7 @@ function getExportFields() {
 const EXPORT_FIELDS = SYSTEM_EXPORT_FIELDS;
 
 async function renderExportSettings() {
-  const c = document.getElementById('settings-content');
+  const c = document.getElementById('settings-section-content');
   try {
     
     // 🆕 Подтягиваем актуальные поля
@@ -3576,148 +3788,183 @@ async function deleteUserSetting(id) {
 // ============================================================
 // ВКЛАДКА: СИСТЕМА
 // ============================================================
-async function renderSystemSettings() {
-  const c = document.getElementById('settings-content');
+// ============================================================
+// РАЗДЕЛ: ОБЩИЕ
+// ============================================================
+async function renderGeneralSettings() {
+  const c = document.getElementById('settings-section-content');
   try {
     const s = await apiRequest('/settings/system');
-    const types = await apiRequest('/settings/equipment-types');
-
-    // Кэшируем в глобальную переменную для редактирования
-    _cachedEquipmentTypes = JSON.parse(JSON.stringify(types));
-
     c.innerHTML = `
-      <h3>Системные настройки</h3>
-
       <div class="settings-form">
+        <h4>Уведомления</h4>
         <div class="form-group">
           <label>Порог предупреждения о поверке (дней)</label>
-          <input type="number" id="sys-warn-days" value="${esc(s.warn_days || '30')}" min="1" max="365">
+          <input type="number" id="sys-warn-days" value="${esc(s.warn_days || '30')}" min="1" max="365" style="max-width:150px;">
         </div>
-        <button class="btn btn-success" onclick="saveSystemSetting()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-      </div>
-
-      <div class="settings-form" style="margin-top:24px;">
-        <h4><i class="fa-solid fa-wrench"></i> Типы оборудования</h4>
-        <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
-          Управление списком типов. <strong>value</strong> — служебный ключ (латиница),
-          <strong>label</strong> — отображаемое название,
-          <strong>prefix</strong> — префикс для авто-ID.
-        </p>
-
-        <table class="field-settings-table" id="equip-types-table">
-          <thead>
-            <tr>
-              <th style="width:60px;">Порядок</th>
-              <th style="width:140px;">value</th>
-              <th>label</th>
-              <th style="width:80px;">prefix</th>
-              <th style="width:200px;">Место поверки</th>
-              <th style="width:60px;"></th>
-           </tr>
-          </thead>
-          <tbody id="equip-types-body"></tbody>
-        </table>
-
-        <div style="margin-top:12px;display:flex;gap:10px;">
-          <button class="btn btn-primary" onclick="addEquipmentType()">
-            <i class="fa-solid fa-plus"></i> Добавить тип
-          </button>
-          <button class="btn btn-success" onclick="saveEquipmentTypes()">
-             <i class="fa-solid fa-floppy-disk"></i> Сохранить типы
-          </button>
-        </div>
-
-        <div id="equip-types-warning"
-             style="display:none;margin-top:12px;padding:10px 12px;background:#fee2e2;
-                    border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
-        </div>
-      </div>
-
-            <div class="settings-form" style="margin-top:24px;">
-        <h4><i class="fa-solid fa-print"></i> Принтеры этикеток</h4>
-        <p style="color:#64748b;font-size:.85rem;margin:6px 0 10px;">
-          Список принтеров, доступных пользователям. Каждый может быть привязан к отделу.
-        </p>
-
-        <div id="barcode-printers-list"></div>
-
-        <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()" style="margin-top:10px;">
-          <i class="fa-solid fa-plus"></i> Добавить принтер
-        </button>
-
-        <div class="bc-settings-block">
-          <div class="bc-settings-title">
-            <i class="fa-solid fa-tag"></i> Что печатать
-          </div>
-
-          <div class="bc-settings-grid">
-            <div class="bc-cell">
-              <label>Размер</label>
-              <select id="bc-label-size">
-                <option value="58x40">58 × 40 мм</option>
-                <option value="40x25">40 × 25 мм</option>
-                <option value="100x50">100 × 50 мм</option>
-              </select>
-            </div>
-            <div class="bc-cell">
-              <label>Тип ШК</label>
-              <select id="bc-type">
-                <option value="code128">Code-128</option>
-                <option value="qr">QR-код</option>
-              </select>
-            </div>
-            <div class="bc-cell">
-              <label>Копий</label>
-              <input type="number" id="bc-default-copies" value="1" min="1" max="50">
-            </div>
-            <div class="bc-cell">
-              <label>Порт агента</label>
-              <input type="number" id="bc-agent-port" value="9200">
-            </div>
-            <div class="bc-cell">
-              <label>Макс. длина</label>
-              <input type="number" id="bc-max-length" value="128" min="8" max="255">
-            </div>
-            <div class="bc-cell bc-cell-check">
-              <label class="bc-fallback-line">
-                <input type="checkbox" id="bc-fallback-to-pdf">
-                <span>Fallback на PDF</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="bc-fields-section">
-            <div class="bc-fields-label">Поля на этикетке:</div>
-            <div id="bc-label-fields" class="bc-fields-grid"></div>
-            <div class="bc-fields-hint">
-              ℹ️ На этикетке 58×40 мм влезает <b>3–4 поля</b>
-            </div>
-          </div>
-        </div>
-
-        <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()" style="margin-top:12px;">
-          <i class="fa-solid fa-floppy-disk"></i> Сохранить настройки печати
+        <button class="btn btn-success btn-sm" onclick="saveSystemSetting()">
+          <i class="fa-solid fa-floppy-disk"></i> Сохранить
         </button>
       </div>
 
       <div class="settings-form" style="margin-top:24px;border-left:3px solid #dc2626;">
-        <h4 style="color:#991b1b;"><i class="fa-solid fa-triangle-exclamation"></i> Опасная зона</h4>
+        <h4 style="color:#991b1b;">Опасная зона</h4>
         <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
           Удаление <strong>всех данных</strong> об оборудовании и истории поверок.
           Пользователи, отделы, поля и настройки останутся.
           <strong>Действие необратимо.</strong>
         </p>
-        <button class="btn btn-danger" onclick="resetAllDataSetting()">
-            <i class="fa-solid fa-trash"></i> Сбросить все данные
-         </button>
+        <button class="btn btn-danger btn-sm" onclick="resetAllDataSetting()">
+          <i class="fa-solid fa-trash"></i> Сбросить все данные
+        </button>
+      </div>
+    `;
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+// ============================================================
+// РАЗДЕЛ: ТИПЫ ОБОРУДОВАНИЯ
+// ============================================================
+async function renderEquipmentSettings() {
+  const c = document.getElementById('settings-section-content');
+  try {
+    const types = await apiRequest('/settings/equipment-types');
+    _cachedEquipmentTypes = JSON.parse(JSON.stringify(types));
+
+    c.innerHTML = `
+      <p style="color:#64748b;font-size:.88rem;margin:0 0 12px;">
+        Управление списком типов. <strong>value</strong> — служебный ключ,
+        <strong>label</strong> — название, <strong>prefix</strong> — префикс для авто-ID.
+      </p>
+
+      <table class="field-settings-table" id="equip-types-table">
+        <thead>
+          <tr>
+            <th style="width:60px;">Порядок</th>
+            <th style="width:140px;">value</th>
+            <th>label</th>
+            <th style="width:80px;">prefix</th>
+            <th style="width:200px;">Место поверки</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="equip-types-body"></tbody>
+      </table>
+
+      <div style="margin-top:12px;display:flex;gap:10px;">
+        <button class="btn btn-primary btn-sm" onclick="addEquipmentType()">
+          <i class="fa-solid fa-plus"></i> Добавить тип
+        </button>
+        <button class="btn btn-success btn-sm" onclick="saveEquipmentTypes()">
+          <i class="fa-solid fa-floppy-disk"></i> Сохранить типы
+        </button>
+      </div>
+
+      <div id="equip-types-warning"
+           style="display:none;margin-top:12px;padding:10px 12px;background:#fee2e2;
+                  border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
       </div>
     `;
 
     renderEquipmentTypesTable();
-    renderBarcodePrintersList();
-    loadBarcodeSettings();
   } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+// ============================================================
+// РАЗДЕЛ: ПРИНТЕРЫ ЭТИКЕТОК
+// ============================================================
+async function renderPrintersSettings() {
+  const c = document.getElementById('settings-section-content');
+  try {
+    c.innerHTML = `
+      <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">
+        Список принтеров, доступных пользователям. Каждый может быть привязан к отделу.
+      </p>
+
+      <div id="barcode-printers-list"></div>
+
+      <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()" style="margin-top:10px;">
+        <i class="fa-solid fa-plus"></i> Добавить принтер
+      </button>
+    `;
+
+    await renderBarcodePrintersList();
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+// ============================================================
+// РАЗДЕЛ: ШТРИХКОДЫ
+// ============================================================
+async function renderBarcodesSettings() {
+  const c = document.getElementById('settings-section-content');
+  try {
+    c.innerHTML = `
+      <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">
+        Параметры генерации и печати штрихкодов на этикетках.
+      </p>
+
+      <div class="bc-settings-block" style="margin-top:0;">
+        <div class="bc-settings-title">Что печатать</div>
+
+        <div class="bc-settings-grid">
+          <div class="bc-cell">
+            <label>Размер</label>
+            <select id="bc-label-size">
+              <option value="58x40">58 × 40 мм</option>
+              <option value="40x25">40 × 25 мм</option>
+              <option value="100x50">100 × 50 мм</option>
+            </select>
+          </div>
+          <div class="bc-cell">
+            <label>Тип ШК</label>
+            <select id="bc-type">
+              <option value="code128">Code-128</option>
+              <option value="qr">QR-код</option>
+            </select>
+          </div>
+          <div class="bc-cell">
+            <label>Копий</label>
+            <input type="number" id="bc-default-copies" value="1" min="1" max="50">
+          </div>
+          <div class="bc-cell">
+            <label>Порт агента</label>
+            <input type="number" id="bc-agent-port" value="9200">
+          </div>
+          <div class="bc-cell">
+            <label>Макс. длина</label>
+            <input type="number" id="bc-max-length" value="128" min="8" max="255">
+          </div>
+          <div class="bc-cell bc-cell-check">
+            <label class="bc-fallback-line">
+              <input type="checkbox" id="bc-fallback-to-pdf">
+              <span>Fallback на PDF</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="bc-fields-section">
+          <div class="bc-fields-label">Поля на этикетке:</div>
+          <div id="bc-label-fields" class="bc-fields-grid"></div>
+          <div class="bc-fields-hint">
+            ℹ️ На этикетке 58×40 мм влезает <b>3–4 поля</b>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()" style="margin-top:16px;">
+        <i class="fa-solid fa-floppy-disk"></i> Сохранить настройки штрихкодов
+      </button>
+    `;
+
+    await loadBarcodeSettings();
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
   }
 }
 
@@ -3738,7 +3985,7 @@ async function saveSystemSetting() {
 // ВКЛАДКА: ЛОГ
 // ============================================================
 async function renderLogSettings() {
-  const c = document.getElementById('settings-content');
+  const c = document.getElementById('settings-section-content');
   try {
     const logs = await apiRequest('/log?limit=200');
     let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -5787,7 +6034,7 @@ async function saveBarcodeSettings() {
 // 🆕 ПОЛЬЗОВАТЕЛИ — новая форма с правами
 // ============================================================
 async function renderUsersSettings() {
-  const c = document.getElementById('settings-content');
+  const c = document.getElementById('settings-section-content');
   try {
     const users = await apiRequest('/users');
     const roleLabels = { user: 'Пользователь', senior_lab: 'Ст. лаборант', admin: 'Администратор' };
