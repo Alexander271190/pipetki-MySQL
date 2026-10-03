@@ -804,9 +804,21 @@ function getAllTableColumns() {
     added.add('status');
   }
 
-  // 3. Остальные системные — добавляем в конец (чтобы их можно было
-  //    включить через настройки вида, даже если field_config их не отдаёт)
-  for (const sys of SYSTEM_TABLE_COLUMNS) {
+    // 3. Остальные системные — добавляем в конец.
+  //    🆕 Расширяем SYSTEM_TABLE_COLUMNS определениями для системных полей,
+  //    которых там нет: interval, notes, result, active.
+  //    Иначе findColumn() вернёт undefined, и колонка не отрисуется,
+  //    хотя она есть в visibleFields.
+  const SYSTEM_EXTRA_COLUMNS = [
+    { id: 'interval', label: 'МПИ',         sortable: true,  field: 'interval' },
+    { id: 'notes',    label: 'Примечание',  sortable: false, field: 'notes' },
+    { id: 'result',   label: 'Результат',   sortable: false, field: 'last_result' },
+    { id: 'active',   label: 'Активность',  sortable: false, field: 'active' },
+  ];
+
+  const allSystemDefs = [...SYSTEM_TABLE_COLUMNS, ...SYSTEM_EXTRA_COLUMNS];
+
+  for (const sys of allSystemDefs) {
     if (!added.has(sys.id)) {
       result.push(sys);
       added.add(sys.id);
@@ -1333,9 +1345,12 @@ pipettes.forEach(p => {
   const table = document.getElementById('pipettes-table');
   const thead = table.querySelector('thead tr');
   if (!thead) return;
-  const columns = getActiveTableColumns();
- 
-    // 🆕 Столбец «Действия» виден, если есть хоть какое-то право на действия
+    // 🆕 Фильтруем колонки ОДИН РАЗ — только те, для которых есть определение.
+  // Это гарантирует, что <th> и <td> идут парами и не разъезжаются.
+  const columns = getActiveTableColumns()
+    .filter(col => !!findColumn(col));
+
+  // 🆕 Столбец «Действия» виден, если есть хоть какое-то право на действия
   const hasAnyRowAction =
     canViewHistory() || canEditPipette() || canDeletePipette() || canQuickCal();
 
@@ -1346,7 +1361,6 @@ pipettes.forEach(p => {
     </th>
      ${columns.map(col => {
       const def = findColumn(col);
-      if (!def) return '';
       if (def.sortable) {
         return `<th onclick="sortBy('${def.field}')">${esc(def.label)} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
       }
@@ -1447,8 +1461,18 @@ const labels = {
           return `<td>${esc(p.serial || '—')}</td>`;
         case 'cert':
           return `<td>${esc(p.cert || '—')}</td>`;
-        case 'status':
+                case 'status':
           return `<td><span class="status-badge status-${status}"><span class="status-dot"></span>${labels[status]}</span></td>`;
+        case 'interval':
+          return `<td>${p.interval != null ? esc(p.interval) + ' мес.' : '—'}</td>`;
+        case 'notes':
+          return `<td>${esc(p.notes || '—')}</td>`;
+        case 'result': {
+          const R = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
+          return `<td>${esc(R[p.last_result] || p.last_result || '—')}</td>`;
+        }
+        case 'active':
+          return `<td>${p.active ? 'В работе' : 'Не используется'}</td>`;
         default: {
           const raw = p[colId];
           const val = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
