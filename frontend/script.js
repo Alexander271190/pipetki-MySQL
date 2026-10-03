@@ -1107,13 +1107,139 @@ function closeRowActionsMenu() {
   window.removeEventListener('scroll', closeRowActionsMenu, true);
 }
 
-// Заглушка, если нет openTransferModal
-if (typeof window.openTransferModal !== 'function') {
-  window.openTransferModal = function(id) {
-    showToast('Передача в другой отдел: функция в разработке', 'warn');
-  };
+// ============================================================
+// 🆕 ПЕРЕДАЧА В ДРУГОЙ ОТДЕЛ
+// ============================================================
+let _transferPipetteId = null;
+
+async function openTransferModal(id) {
+  await refreshCurrentUser();
+  if (!canTransferPipette()) {
+    showToast('Нет прав на передачу оборудования', 'error');
+    return;
+  }
+
+  const p = pipettes.find(x => x.id === id);
+  if (!p) {
+    showToast('Оборудование не найдено', 'error');
+    return;
+  }
+
+  _transferPipetteId = id;
+
+  // Заголовок
+  document.getElementById('transfer-pipette-info').innerHTML =
+    `<strong>${esc(p.id)}</strong> — ${esc(p.model)}<br>
+     <small style="color:#64748b;">Текущий отдел: ${esc(p.department || 'без отдела')}</small>`;
+
+  // Список отделов: все, кроме текущего
+  const currentDept = p.department || '';
+  const available = departmentsList.filter(d => d !== currentDept);
+
+  const deptSel = document.getElementById('transfer-department');
+  deptSel.innerHTML = '<option value="">— выберите отдел —</option>' +
+    available.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+
+  // Селект ответственного — пуст до выбора отдела
+  const respSel = document.getElementById('transfer-responsible');
+  respSel.innerHTML = '<option value="">— сначала выберите отдел —</option>';
+  respSel.disabled = true;
+
+  // Очистка ошибок
+  document.getElementById('transfer-error').textContent = '';
+
+  document.getElementById('transfer-modal').classList.add('active');
 }
 
+function closeTransferModal() {
+  document.getElementById('transfer-modal').classList.remove('active');
+  _transferPipetteId = null;
+}
+
+// Загрузка ответственных для выбранного отдела
+async function onTransferDepartmentChange(dept) {
+  const respSel = document.getElementById('transfer-responsible');
+  if (!dept) {
+    respSel.innerHTML = '<option value="">— сначала выберите отдел —</option>';
+    respSel.disabled = true;
+    return;
+  }
+
+  respSel.disabled = false;
+  respSel.innerHTML = '<option value="">Загрузка…</option>';
+
+  try {
+    // Пытаемся получить всех пользователей — у кого есть роль/отдел
+    const users = await apiRequest('/users/responsibles');
+    const inDept = users.filter(u => (u.department || '') === dept);
+
+    if (inDept.length === 0) {
+      respSel.innerHTML = '<option value="">— нет сотрудников в этом отделе —</option>';
+      return;
+    }
+
+    respSel.innerHTML = '<option value="">— выберите ответственного —</option>' +
+      inDept.map(u => `<option value="${esc(u.fullName)}">${esc(u.fullName)}</option>`).join('');
+  } catch (e) {
+    respSel.innerHTML = '<option value="">— ошибка загрузки —</option>';
+    showToast('Не удалось загрузить список ответственных: ' + e.message, 'error');
+  }
+}
+
+async function saveTransfer() {
+  await refreshCurrentUser();
+  if (!canTransferPipette()) {
+    showToast('Нет прав на передачу оборудования', 'error');
+    return;
+  }
+
+  const id = _transferPipetteId;
+  if (!id) return;
+
+  const newDept = document.getElementById('transfer-department').value.trim();
+  const newResp = document.getElementById('transfer-responsible').value.trim();
+  const errEl = document.getElementById('transfer-error');
+
+  errEl.textContent = '';
+
+  if (!newDept) {
+    errEl.textContent = 'Выберите отдел';
+    return;
+  }
+  if (!newResp) {
+    errEl.textContent = 'Выберите ответственного';
+    return;
+  }
+
+  const p = pipettes.find(x => x.id === id);
+  if (!p) return;
+
+  const ok = await showConfirm(
+    `Передать «${id}» из «${p.department || 'без отдела'}» в «${newDept}»?\n\n` +
+    `Ответственный: ${newResp}.\n` +
+    `Вся история поверок сохранится.`,
+    { icon: '🔀', title: 'Передача в другой отдел', okText: 'Передать', okClass: 'btn-primary' }
+  );
+  if (!ok) return;
+
+  try {
+    await apiRequest(`/pipettes/${id}/transfer`, 'POST', {
+      department: newDept,
+      responsible: newResp,
+    });
+
+    showToast(`Передано в «${newDept}»`, 'success');
+    closeTransferModal();
+    await loadPipetteData();
+  } catch (e) {
+    errEl.textContent = e.message || 'Ошибка передачи';
+  }
+}
+
+// Закрытие модалки по клику на overlay
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'transfer-modal') closeTransferModal();
+});
 
 // ============================================================
 // РЕНДЕР ТАБЛИЦЫ
@@ -5381,6 +5507,7 @@ function canAddPipette()    { return hasPermission('add_pipette')       || hasPe
 function canEditPipette()   { return hasPermission('edit_pipette')      || hasPermission('manage_pipettes'); }
 function canDeletePipette() { return hasPermission('delete_pipette')    || hasPermission('manage_pipettes'); }
 function canQuickCal()      { return hasPermission('quick_calibration') || hasPermission('manage_pipettes'); }
+function canTransferPipette() { return hasPermission('transfer_pipette') || hasPermission('manage_pipettes'); }
 function canBulkSend()      { return hasPermission('bulk_send')         || hasPermission('manage_pipettes'); }
 function canBulkReturn()    { return hasPermission('bulk_return')       || hasPermission('manage_pipettes'); }
 function canImport()        { return hasPermission('import_data'); }
@@ -6242,8 +6369,8 @@ function applyPermPreset(preset) {
   const presets = {
     none: [],
     user: ['view_history', 'print_labels', 'export_data'],
-    senior: [
-      'add_pipette', 'edit_pipette', 'quick_calibration',
+     senior: [
+      'add_pipette', 'edit_pipette', 'quick_calibration', 'transfer_pipette',
       'bulk_send', 'bulk_return',
       'export_data', 'scan_barcode', 'print_labels',
       'view_history',
