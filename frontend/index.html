@@ -182,7 +182,47 @@
     </form>
   </div>
 </div>
+  
+<!-- МОДАЛКА ПЕРЕДАЧИ В ДРУГОЙ ОТДЕЛ -->
+<div class="modal-overlay" id="transfer-modal">
+  <div class="modal">
+    <h2><i class="fa-solid fa-right-left"></i> Передача в другой отдел</h2>
 
+    <div id="transfer-pipette-info"
+         style="margin-bottom:16px;padding:12px;background:#f8fafc;border-radius:8px;font-size:.9rem;">
+    </div>
+
+    <form id="transfer-form" onsubmit="event.preventDefault(); saveTransfer();" novalidate>
+      <div class="form-group">
+        <label>Новый отдел *</label>
+        <select id="transfer-department" onchange="onTransferDepartmentChange(this.value)">
+          <option value="">— выберите отдел —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Ответственный в новом отделе *</label>
+        <select id="transfer-responsible" disabled>
+          <option value="">— сначала выберите отдел —</option>
+        </select>
+      </div>
+
+      <div style="background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#0c4a6e;margin:12px 0;">
+        ℹ️ Вся история поверок, свидетельства и даты сохранятся при передаче.
+      </div>
+
+      <div id="transfer-error" class="auth-error" style="margin-top:12px;"></div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeTransferModal()">Отмена</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-right-left"></i> Передать
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+  
 <div class="modal-overlay" id="quick-cal-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-clipboard-list"></i> Быстрая поверка</h2>
