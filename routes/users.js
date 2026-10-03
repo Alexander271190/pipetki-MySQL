@@ -9,7 +9,19 @@ const router = express.Router();
 // СПИСОК ОТВЕТСТВЕННЫХ (для поля «Ответственный»)
 // Доступно всем авторизованным пользователям
 // ============================================================
-router.get('/responsibles', authenticate, requireRole(['admin', 'senior_lab']), async (req, res) => {
+router.get('/responsibles', authenticate, async (req, res, next) => {
+  // 🆕 Доступ: админ, ст. лаборант, или владелец права transfer_pipette / manage_pipettes
+  const allowed =
+    req.user.role === 'admin' ||
+    req.user.role === 'senior_lab' ||
+    (db.safeParse(req.user.extra_permissions, []) || []).some(p =>
+      p === 'transfer_pipette' || p === 'manage_pipettes'
+    );
+
+  if (!allowed) {
+    return res.status(403).json({ error: 'Недостаточно прав' });
+  }
+
   try {
     const [users] = await db.query(
       'SELECT id, full_name, login, department FROM users ORDER BY full_name'
