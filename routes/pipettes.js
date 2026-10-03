@@ -1076,6 +1076,99 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
   }
 });
 
+// ============================================================
+// ПЕРЕДАЧА В ДРУГОЙ ОТДЕЛ
+// ============================================================
+router.post('/:id/transfer', authenticate, requireAnyPermission(['transfer_pipette', 'manage_pipettes']), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+
+  const { department: newDept, responsible: newResp } = req.body;
+
+  if (!newDept || !String(newDept).trim()) {
+    return res.status(400).json({ error: 'Укажите новый отдел' });
+  }
+  if (!newResp || !String(newResp).trim()) {
+    return res.status(400).json({ error: 'Укажите ответственного' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Загружаем текущее оборудование с блокировкой
+    const [rows] = await conn.query(
+      'SELECT id, model, department, responsible FROM pipettes WHERE id = ? FOR UPDATE',
+      [req.params.id]
+    );
+    if (!rows.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
+
+    const p = rows[0];
+    const oldDept = p.department || '';
+
+    // Проверка доступа по отделу (для тех, у кого only_own_department)
+    if (!canAccessDepartment(req.user, oldDept)) {
+      await conn.rollback();
+      return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+    }
+
+    // Нельзя передать в тот же отдел
+    if (String(newDept).trim() === oldDept) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Оборудование уже в этом отделе' });
+    }
+
+    // Проверяем, что отдел существует в справочнике
+    const [deptCheck] = await conn.query(
+      'SELECT name FROM departments WHERE name = ? AND enabled = 1',
+      [String(newDept).trim()]
+    );
+    if (!deptCheck.length) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Отдел не найден в справочнике' });
+    }
+
+    // Обновляем department + responsible
+    await conn.query(
+      `UPDATE pipettes
+       SET department = ?, responsible = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [String(newDept).trim(), String(newResp).trim(), req.params.id]
+    );
+
+    // Аудит
+    await conn.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [
+        req.user.id,
+        req.user.full_name,
+        'Передача в другой отдел',
+        `${p.id} (${p.model}): «${oldDept || 'без отдела'}» → «${String(newDept).trim()}», ответственный: ${String(newResp).trim()}`
+      ]
+    );
+
+    await conn.commit();
+
+    res.json({
+      message: 'Оборудование передано',
+      id: p.id,
+      oldDepartment: oldDept,
+      newDepartment: String(newDept).trim(),
+      newResponsible: String(newResp).trim(),
+    });
+  } catch (e) {
+    await conn.rollback();
+    console.error('Transfer error:', e);
+    res.status(500).json({ error: 'Ошибка передачи' });
+  } finally {
+    conn.release();
+  }
+});
+
 // Добавление поверки
 router.post('/:id/calibration', authenticate, requireAnyPermission(['quick_calibration', 'edit_pipette', 'manage_pipettes']), async (req, res) => {
   if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
