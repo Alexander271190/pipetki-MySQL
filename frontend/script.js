@@ -1175,13 +1175,9 @@ pipettes.forEach(p => {
   const table = document.getElementById('pipettes-table');
   const thead = table.querySelector('thead tr');
   if (!thead) return;
-
   const columns = getActiveTableColumns();
-  const canManage = canManagePipettes();
-
-   const columns = getActiveTableColumns();
-
-  // 🆕 Столбец «Действия» виден, если есть хоть какое-то право на действия
+ 
+    // 🆕 Столбец «Действия» виден, если есть хоть какое-то право на действия
   const hasAnyRowAction =
     canViewHistory() || canEditPipette() || canDeletePipette() || canQuickCal();
 
