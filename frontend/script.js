@@ -767,15 +767,10 @@ const SYSTEM_FIELD_IDS_IN_CONFIG = new Set([
 
 // 🆕 Все доступные колонки: системные + кастомные (для настроек вида)
 function getAllTableColumns() {
-  // 🆕 Все доступные колонки — в порядке field_config.
-  // Системные, которых нет в field_config (nextCalibration, status),
-  // вставляются по смыслу: «Следующая» — после «Поверка», «Статус» — в конец.
-  // Системные, которые не входят в whitelist (interval, result, active,
-  // notes, cert, location, manufacturer, serial) — добавляются в конце,
-  // чтобы их можно было включить через настройки вида.
   const result = [];
   const added = new Set();
 
+  // 1. Проходим по field_config в его порядке — добавляем всё, что активно
   const fields = [...(_cachedFields || [])].sort(
     (a, b) => (a.order || 0) - (b.order || 0)
   );
@@ -790,12 +785,13 @@ function getAllTableColumns() {
       result.push(sysDef);
       added.add(tableId);
     } else if (!SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)) {
+      // Кастомное поле
       result.push({ id: f.id, label: f.label, sortable: true, field: f.id });
       added.add(f.id);
     }
   }
 
-  // Виртуальные
+  // 2. Виртуальные колонки
   if (!added.has('nextCalibration')) {
     const def = SYSTEM_TABLE_COLUMNS.find(c => c.id === 'nextCalibration');
     const idx = result.findIndex(c => c.id === 'lastCalibration');
@@ -808,7 +804,8 @@ function getAllTableColumns() {
     added.add('status');
   }
 
-  // Остальные системные — в конец
+  // 3. Остальные системные — добавляем в конец (чтобы их можно было
+  //    включить через настройки вида, даже если field_config их не отдаёт)
   for (const sys of SYSTEM_TABLE_COLUMNS) {
     if (!added.has(sys.id)) {
       result.push(sys);
@@ -819,21 +816,12 @@ function getAllTableColumns() {
   return result;
 }
 
-// 🆕 Дефолтный набор колонок таблицы.
-// Порядок берётся из field_config (тот, что админ задал в
-// «Управление полями формы»), но с фильтром:
-//   • системные — только те, что в белом списке (иначе
-//     в таблицу попадут МПИ, Результат, Активность и т.п.)
-//   • кастомные — все, что админ создал, на своих местах
-// Виртуальные колонки (nextCalibration, status) вставляются
-// по смыслу: «Следующая» — после «Поверка», «Статус» — в конец.
 function getDefaultTableColumns() {
-  // Системные поля, разрешённые в таблице.
-  // Остальные (interval, result, active, notes, cert, location,
-  // manufacturer, serial) — доступны только через настройки вида.
-  const SYSTEM_ALLOWED_IN_TABLE = new Set([
-    'id', 'equipmentType', 'model', 'volume', 'department',
-    'lastCalibration', 'responsible'
+  // Системные поля, которые уже представлены в таблице
+  // под другими id (не дублируем)
+  const SYSTEM_SKIP_IN_TABLE = new Set([
+    'id',            // уже есть как колонка 'id'
+    'equipmentType', // уже есть как колонка 'type'
   ]);
 
   const cols = [];
@@ -843,9 +831,8 @@ function getDefaultTableColumns() {
     if (!f.enabled) continue;
 
     if (SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)) {
-      // Системное — только из белого списка
-      if (SYSTEM_ALLOWED_IN_TABLE.has(f.id)) {
-        // Маппинг: id в field_config → id колонки в таблице
+      // Системное — пропускаем только те, что уже отражены как 'id'/'type'
+      if (!SYSTEM_SKIP_IN_TABLE.has(f.id)) {
         const tableId = (f.id === 'equipmentType') ? 'type' : f.id;
         cols.push(tableId);
       }
@@ -860,7 +847,7 @@ function getDefaultTableColumns() {
   const lastCalIdx = cols.indexOf('lastCalibration');
   if (lastCalIdx !== -1) {
     cols.splice(lastCalIdx + 1, 0, 'nextCalibration');
-  } else {
+  } else if (!cols.includes('nextCalibration')) {
     cols.push('nextCalibration');
   }
 
@@ -882,26 +869,30 @@ function findColumn(id) {
 }
 
 function getActiveTableColumns() {
-  // Если настроек нет — дефолтный набор (он уже включает все кастомные)
+  const allOrdered = getAllTableColumns();
+
+  // Если настроек нет — дефолтный набор (уже включает все активные системные + кастомные)
   if (!myPrefs.tableColumns || !Array.isArray(myPrefs.tableColumns) || myPrefs.tableColumns.length === 0) {
     return getDefaultTableColumns();
   }
 
-  const allOrdered = getAllTableColumns();
   const saved = new Set(myPrefs.tableColumns);
   const SYSTEM_COL_IDS = new Set(SYSTEM_TABLE_COLUMNS.map(c => c.id));
 
   // Кастомные поля показываем ВСЕГДА — даже если в prefs их нет.
   // Причина: prefs сохранялись до того, как админ создал поле,
   // и отличить «ещё не видел» от «выключил» невозможно.
-  // Скрыть кастомное поле можно только глобально — в «Настройки → Поля формы».
   const currentCustom = allOrdered
     .map(c => c.id)
     .filter(id => !SYSTEM_COL_IDS.has(id));
 
-  const visible = new Set([...saved, ...currentCustom]);
+  // Системные поля показываем, если они есть в prefs, ИЛИ если они
+  // не дефолтные (т.е. потенциально могли быть добавлены позже)
+  const defaultCols = new Set(getDefaultTableColumns());
 
-   return allOrdered
+  const visible = new Set([...saved, ...currentCustom, ...defaultCols]);
+
+  return allOrdered
     .map(c => c.id)
     .filter(id => visible.has(id));
 }
@@ -3358,6 +3349,36 @@ async function saveFieldsSettings() {
   try {
     await apiRequest('/settings/fields', 'PUT', _cachedFields);
     _cachedFields = await apiRequest('/settings/fields');
+  
+    myPrefs = { visibleFields: null, tableColumns: null, _loaded: false };
+    try {
+      myPrefs = await apiRequest('/settings/my-preferences') || {};
+      myPrefs._loaded = true;
+    } catch (e) {
+      myPrefs = { _loaded: true };
+      console.warn('Не удалось перезагрузить prefs после сохранения полей:', e);
+    }
+
+    const activeFieldIds = _cachedFields
+      .filter(f => f.enabled)
+      .map(f => f.id);
+
+    if (!Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
+      // Настроек вида нет — показываем все активные
+      myPrefs.visibleFields = [...activeFieldIds];
+    } else {
+      // Настройки есть — добавляем все новые активные поля, которых там не было
+      const visibleSet = new Set(myPrefs.visibleFields);
+      for (const id of activeFieldIds) {
+        if (!visibleSet.has(id)) {
+          myPrefs.visibleFields.push(id);
+        }
+      }
+      // Убираем из visibleFields те, что больше не активны
+      const activeSet = new Set(activeFieldIds);
+      myPrefs.visibleFields = myPrefs.visibleFields.filter(id => activeSet.has(id));
+    }
+
     showToast('Поля сохранены', 'success');
     closeSettingsModal();
     await loadPipetteData();
@@ -3387,6 +3408,28 @@ async function saveFieldsSettings() {
       try {
         await apiRequest('/settings/fields?confirmDelete=true', 'PUT', _cachedFields);
         _cachedFields = await apiRequest('/settings/fields');
+
+        // 🆕 Та же синхронизация prefs после удаления
+        myPrefs = { visibleFields: null, tableColumns: null, _loaded: false };
+        try {
+          myPrefs = await apiRequest('/settings/my-preferences') || {};
+          myPrefs._loaded = true;
+        } catch (err) {
+          myPrefs = { _loaded: true };
+        }
+
+        const activeIds = _cachedFields.filter(f => f.enabled).map(f => f.id);
+        if (!Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
+          myPrefs.visibleFields = [...activeIds];
+        } else {
+          const activeSet = new Set(activeIds);
+          const visibleSet = new Set(myPrefs.visibleFields);
+          for (const id of activeIds) {
+            if (!visibleSet.has(id)) myPrefs.visibleFields.push(id);
+          }
+          myPrefs.visibleFields = myPrefs.visibleFields.filter(id => activeSet.has(id));
+        }
+
         showToast(`Поле удалено, данные очищены у ${affected} записей`, 'success');
         closeSettingsModal();
         await loadPipetteData();
@@ -6702,25 +6745,6 @@ async function resetUserView() {
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'user-view-modal') closeUserViewModal();
 });
-
-// ============================================================
-// 🆕 ПАТЧИ СУЩЕСТВУЮЩИХ ФУНКЦИЙ
-// ============================================================
-
-// getActiveFormFields — учитывает prefs.visibleFields
-window.getActiveFormFields = function(allFields) {
-  const enabled = allFields.filter(f => f.enabled);
-  if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
-    return enabled;
-  }
-  const visible = new Set(myPrefs.visibleFields);
-  return enabled.filter(f => visible.has(f.id));
-};
-
-// getActiveTableColumns — всегда дефолтный (общий)
-window.getActiveTableColumns = function() {
-  return getDefaultTableColumns();
-};
 
 // ============================================================
 // 🆕 СКАНИРОВАНИЕ ШТРИХ-КОДОВ КАМЕРОЙ ТЕЛЕФОНА
