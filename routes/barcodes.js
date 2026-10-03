@@ -7,7 +7,7 @@ const bwipjs = require('bwip-js');
 const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
 const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireRole, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -194,7 +194,7 @@ router.get('/:id/png', authenticate, async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 // POST /api/barcodes/lookup
 // ═══════════════════════════════════════════════════════════
-router.post('/lookup', authenticate, async (req, res) => {
+router.post('/lookup', authenticate, requirePermission('scan_barcode'), async (req, res) => {
   try {
     const raw = req.body && req.body.barcode;
     if (!raw) return res.status(400).json({ error: 'Укажите штрихкод' });
@@ -304,7 +304,7 @@ router.post('/reset', authenticate, requireRole(['admin']), async (req, res) => 
 // ═══════════════════════════════════════════════════════════
 // GET /api/barcodes/labels.pdf
 // ═══════════════════════════════════════════════════════════
-router.get('/labels.pdf', authenticate, async (req, res) => {
+router.get('/labels.pdf', authenticate, requirePermission('print_labels'), async (req, res) => {
   try {
     const idsParam = req.query.ids || '';
     const copies   = Math.max(1, Math.min(50, parseInt(req.query.copies, 10) || 1));
@@ -467,7 +467,7 @@ router.post('/printer-status', authenticate, requireRole(['admin']), async (req,
 // ═══════════════════════════════════════════════════════════
 // POST /api/barcodes/print
 // ═══════════════════════════════════════════════════════════
-router.post('/print', authenticate, async (req, res) => {
+router.post('/print', authenticate, requirePermission('print_labels'), async (req, res) => {
   try {
     const { ids, copies: copiesRaw, printerId } = req.body || {};
     const copies = Math.max(1, Math.min(50, parseInt(copiesRaw, 10) || 1));
