@@ -382,16 +382,17 @@ if (!responsible) {
 if (!lastCalibration || String(lastCalibration).trim() === '') {
   return res.status(400).json({ error: 'Заполните поле «Дата последней поверки»' });
 }
+  
+  // 🛡️ Дата должна быть валидной
+if (!/^\d{4}-\d{2}-\d{2}$/.test(String(lastCalibration))) {
+  return res.status(400).json({ error: 'Некорректный формат даты поверки (ожидается ГГГГ-ММ-ДД)' });
+}
 
 // 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
 if (String(lastCalibration) > todayLocalStr()) {
   return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
 }
 
-// 🛡️ Дата должна быть валидной
-if (!/^\d{4}-\d{2}-\d{2}$/.test(String(lastCalibration))) {
-  return res.status(400).json({ error: 'Некорректный формат даты поверки (ожидается ГГГГ-ММ-ДД)' });
-}
   
   // 🛡️ Пользователь с "только свой отдел" не может создавать в чужом отделе
   if (req.user.only_own_department && req.user.role !== 'admin') {
@@ -1183,7 +1184,13 @@ router.post('/:id/calibration', authenticate, requireAnyPermission(['quick_calib
     return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
   }
   const { date, cert, result, org, note } = req.body;
+
 if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
+
+// 🛡️ Дата должна быть валидной
+if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+  return res.status(400).json({ error: 'Некорректный формат даты поверки (ожидается ГГГГ-ММ-ДД)' });
+}
 
 // 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
 if (String(date) > todayLocalStr()) {
