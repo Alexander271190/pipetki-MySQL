@@ -5349,11 +5349,12 @@ function toggleTheme() {
 // ============================================================
 // 🆕 СПИСОК ПРАВ (16 штук, по 5 группам)
 // ============================================================
-const ALL_PERMISSIONS = [
+  const ALL_PERMISSIONS = [
   { key: 'add_pipette',       group: 'Оборудование',      label: '➕ Добавление оборудования' },
   { key: 'edit_pipette',      group: 'Оборудование',      label: '✏️ Редактирование оборудования' },
   { key: 'delete_pipette',    group: 'Оборудование',      label: '🗑️ Удаление оборудования' },
   { key: 'quick_calibration', group: 'Оборудование',      label: '✓ Быстрая поверка' },
+  { key: 'transfer_pipette',  group: 'Оборудование',      label: '🔀 Передача в другой отдел' },
 
   { key: 'bulk_send',         group: 'Поверки',           label: '📦 Отправка на поверку' },
   { key: 'bulk_return',       group: 'Поверки',           label: '📥 Возврат с поверки' },
