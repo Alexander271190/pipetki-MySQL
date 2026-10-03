@@ -239,13 +239,22 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
       return res.status(400).json({ error: 'Нельзя понизить собственную роль администратора' });
     }
 
-    const [dup] = await db.query(
+       const [dup] = await db.query(
       'SELECT id FROM users WHERE login = ? AND id <> ?',
       [login, id]
     );
     if (dup.length) return res.status(409).json({ error: 'Логин уже занят' });
 
     const onlyOwn = onlyOwnDepartment ? 1 : 0;
+
+    // 🆕 Загружаем СТАРОЕ состояние для diff-логирования
+    const [oldRows] = await db.query(
+      `SELECT login, full_name, position, department, role,
+              only_own_department, extra_permissions, is_acting, acting_for_id
+       FROM users WHERE id = ?`,
+      [id]
+    );
+    const old = oldRows[0];
 
      await db.query(
       `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
@@ -256,6 +265,59 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
       [login, fullName, position, department || '', role || 'user',
        onlyOwn, JSON.stringify(extraPermissions || []),
        isActing ? 1 : 0, isActing && actingForId ? actingForId : null, id]
+    );
+
+    // 🆕 Собираем diff — что изменилось
+    const changes = [];
+
+    if (old.login !== login) {
+      changes.push(`логин: «${old.login}» → «${login}»`);
+    }
+    if (old.full_name !== fullName) {
+      changes.push(`ФИО: «${old.full_name}» → «${fullName}»`);
+    }
+    if (old.position !== position) {
+      changes.push(`должность: «${old.position}» → «${position}»`);
+    }
+    if ((old.department || '') !== (department || '')) {
+      changes.push(`отдел: «${old.department || '—'}» → «${department || '—'}»`);
+    }
+    if (old.role !== (role || 'user')) {
+      changes.push(`роль: ${old.role} → ${role || 'user'}`);
+    }
+    if (!!old.only_own_department !== !!onlyOwnDepartment) {
+      changes.push(`только свой отдел: ${old.only_own_department ? 'вкл' : 'выкл'} → ${onlyOwnDepartment ? 'вкл' : 'выкл'}`);
+    }
+    if (!!old.is_acting !== !!isActing) {
+      changes.push(`и.о.: ${old.is_acting ? 'вкл' : 'выкл'} → ${isActing ? 'вкл' : 'выкл'}`);
+    }
+
+    // Сравнение extra_permissions (нормализуем через safeParse)
+    const oldPerms = db.safeParse(old.extra_permissions, []).sort();
+    const newPerms = (extraPermissions || []).slice().sort();
+    const permsChanged =
+      oldPerms.length !== newPerms.length ||
+      oldPerms.some((p, i) => p !== newPerms[i]);
+
+    if (permsChanged) {
+      const added = newPerms.filter(p => !oldPerms.includes(p));
+      const removed = oldPerms.filter(p => !newPerms.includes(p));
+      const parts = [];
+      if (added.length)   parts.push(`+${added.join(', ')}`);
+      if (removed.length) parts.push(`-${removed.join(', ')}`);
+      changes.push(`права: ${parts.join(' ')}`);
+    }
+
+    // 🆕 Пишем в audit_log
+    const isSelf = (id === req.user.id);
+    const action = isSelf ? 'Редактирование своего профиля' : 'Редактирование пользователя';
+    const details = changes.length
+      ? `${login} (${fullName}): ${changes.join('; ')}`
+      : `${login} (${fullName}): без значимых изменений`;
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [req.user.id, req.user.full_name, action, details]
     );
 
     res.json({ message: 'Пользователь обновлён' });
@@ -285,21 +347,44 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
         return res.status(400).json({ error: 'Нельзя удалить последнего админа' });
       }
     }
-    // 🆕 Сбрасываем ссылки у и.о.
-  await db.query(
-  `UPDATE users SET is_acting = 0, acting_for_id = NULL,
-   updated_at = CURRENT_TIMESTAMP
-   WHERE acting_for_id = ?`,
-  [req.params.id]
-);
+        // 🆕 Сбрасываем ссылки у и.о.
+    await db.query(
+      `UPDATE users SET is_acting = 0, acting_for_id = NULL,
+       updated_at = CURRENT_TIMESTAMP
+       WHERE acting_for_id = ?`,
+      [req.params.id]
+    );
+
+    // 🆕 Загружаем данные удаляемого для audit_log
+    const [targetRows] = await db.query(
+      `SELECT login, full_name, position, department, role,
+              only_own_department, extra_permissions, is_acting
+       FROM users WHERE id = ?`,
+      [req.params.id]
+    );
+    const target = targetRows[0];
 
     await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
+
+    // 🆕 Пишем в audit_log с полной информацией о том, кого удалили
+    const details = [
+      `${target.login} (${target.full_name})`,
+      `должность: ${target.position || '—'}`,
+      `отдел: ${target.department || '—'}`,
+      `роль: ${target.role}`,
+    ].join(', ');
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [req.user.id, req.user.full_name, 'Удаление пользователя', details]
+    );
+
     res.json({ message: 'Пользователь удалён' });
   } catch (e) {
     console.error('DELETE /users error:', e);
     res.status(500).json({ error: 'Ошибка удаления пользователя' });
   }
-});
+});   
 
 // ============================================================
 // СБРОС ПАРОЛЯ (админом)
