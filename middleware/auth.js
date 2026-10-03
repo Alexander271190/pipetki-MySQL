@@ -52,7 +52,8 @@ const authenticate = async (req, res, next) => {
         user.acting_department = null;
       }
     }
-
+    req.impersonatedBy     = decoded.impersonatedBy     || null;
+    req.impersonatedByName = decoded.impersonatedByName || null;
     req.user = user;
     next();
   } catch (e) {
