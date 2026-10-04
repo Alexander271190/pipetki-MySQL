@@ -517,4 +517,92 @@ router.post('/reset-data', authenticate, requireRole(['admin']), async (req, res
   }
 });
 
+// POST /api/settings/apply-fields-to-all
+// Применяет указанный набор полей ко ВСЕМ пользователям,
+// у которых нет персональных настроек или которые явно отмечены.
+router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const { visibleFields, mode } = req.body || {};
+
+    if (!Array.isArray(visibleFields)) {
+      return res.status(400).json({ error: 'Ожидается массив visibleFields' });
+    }
+
+    // Режимы:
+    //   'missing' — только тем, у кого настроек НЕТ (не создавать лишние записи)
+    //   'all'     — всем без исключения (перезаписать настройки)
+    //   'add'     — добавить указанные поля ко всем, не трогая остальные
+    const m = mode || 'missing';
+
+    const [users] = await db.query('SELECT id FROM users');
+    const [prefsRows] = await db.query('SELECT user_id, preferences FROM user_preferences');
+    const prefsByUser = {};
+    for (const r of prefsRows) {
+      try { prefsByUser[r.user_id] = JSON.parse(r.preferences || '{}'); }
+      catch { prefsByUser[r.user_id] = {}; }
+    }
+
+    const conn = await db.getConnection();
+    let updated = 0;
+    try {
+      await conn.beginTransaction();
+
+      for (const u of users) {
+        const cur = prefsByUser[u.id] || {};
+        let nextVisibleFields;
+
+        if (m === 'all') {
+          nextVisibleFields = [...visibleFields];
+        } else if (m === 'missing') {
+          // Тем, у кого уже есть свои настройки — не трогаем
+          if (Array.isArray(cur.visibleFields) && cur.visibleFields.length > 0) continue;
+          nextVisibleFields = [...visibleFields];
+        } else if (m === 'add') {
+          // Добавить перечисленные поля, не трогая остальные
+          const existing = Array.isArray(cur.visibleFields) ? cur.visibleFields : [];
+          const set = new Set(existing);
+          for (const id of visibleFields) set.add(id);
+          nextVisibleFields = [...set];
+        } else {
+          return res.status(400).json({ error: 'Неизвестный mode' });
+        }
+
+        const merged = {
+          ...cur,
+          visibleFields: nextVisibleFields,
+          snapshotAtSave: [...visibleFields],   // опционально: снимок на момент применения
+        };
+
+        await conn.query(
+          `INSERT INTO user_preferences (user_id, preferences) VALUES (?, ?)
+           ON DUPLICATE KEY UPDATE preferences = VALUES(preferences), updated_at = CURRENT_TIMESTAMP`,
+          [u.id, JSON.stringify(merged)]
+        );
+        updated++;
+      }
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [req.user.id, req.user.full_name, 'Массовое применение полей',
+       `Режим: ${m}, полей: ${visibleFields.length}, обновлено: ${updated}`]
+    );
+
+    res.json({
+      message: `Обновлено пользователей: ${updated}`,
+      updated,
+      mode: m,
+    });
+  } catch (e) {
+    console.error('POST /settings/apply-fields-to-all:', e);
+    res.status(500).json({ error: 'Ошибка применения настроек' });
+  }
+});
+
 module.exports = router;
