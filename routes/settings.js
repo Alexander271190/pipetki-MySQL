@@ -527,15 +527,8 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
     if (!Array.isArray(visibleFields)) {
       return res.status(400).json({ error: 'Ожидается массив visibleFields' });
     }
-    router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const { visibleFields, mode } = req.body || {};
 
-    if (!Array.isArray(visibleFields)) {
-      return res.status(400).json({ error: 'Ожидается массив visibleFields' });
-    }
-
-    // 🆕 ЗАЩИТА ОТ ПУСТОГО МАССИВА — добавить это
+    // 🆕 ЗАЩИТА ОТ ПУСТОГО МАССИВА
     if (visibleFields.length === 0) {
       return res.status(400).json({
         error: 'Список полей пуст. Выберите хотя бы одно поле.'
@@ -550,11 +543,6 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
     if (!['missing', 'add', 'all'].includes(m)) {
       return res.status(400).json({ error: 'Неизвестный mode' });
     }
-    
-    const m = mode || 'missing';
-    if (!['missing', 'add', 'all'].includes(m)) {
-  return res.status(400).json({ error: 'Неизвестный mode' });
-}
 
     const [users] = await db.query('SELECT id FROM users');
     const [prefsRows] = await db.query('SELECT user_id, preferences FROM user_preferences');
@@ -585,12 +573,12 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
           const set = new Set(existing);
           for (const id of visibleFields) set.add(id);
           nextVisibleFields = [...set];
-        } 
-       
+        }
+
         const merged = {
           ...cur,
           visibleFields: nextVisibleFields,
-          snapshotAtSave: [...visibleFields],   // опционально: снимок на момент применения
+          snapshotAtSave: [...visibleFields],
         };
 
         await conn.query(
