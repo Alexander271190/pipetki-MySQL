@@ -599,7 +599,7 @@ async function loadPipetteData() {
       _cachedFields = _cachedFields || [];
     }
 
-     // 🆕 СИНХРОНИЗАЦИЯ visibleFields с активными полями field_config.
+        // 🆕 СИНХРОНИЗАЦИЯ visibleFields с активными полями field_config.
 if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
   const activeFieldIds = _cachedFields
     .filter(f => f.enabled)
@@ -609,20 +609,13 @@ if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
     Array.isArray(myPrefs.visibleFields) &&
     myPrefs.visibleFields.length > 0;
 
-  const neverConfigured =
-    myPrefs.visibleFields === null ||
-    myPrefs.visibleFields === undefined;
-
-  if (neverConfigured) {
-    // Настроек никогда не было → показываем все активные
+  if (!hasUserSettings) {
+    // Настроек нет ИЛИ пустой массив — показываем все активные
     myPrefs.visibleFields = [...activeFieldIds];
-  } else if (hasUserSettings) {
-    // Настройки есть → убираем только те, что глобально отключены
+  } else {
+    // Настройки есть — фильтруем только глобально отключённые
     const activeSet = new Set(activeFieldIds);
     myPrefs.visibleFields = myPrefs.visibleFields.filter(id => activeSet.has(id));
-  } else {
-    // Пустой массив [] — админ явно скрыл все. Оставляем как есть.
-    myPrefs.visibleFields = [];
   }
 }
 
