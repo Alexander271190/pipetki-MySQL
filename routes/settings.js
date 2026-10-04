@@ -533,6 +533,9 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
     //   'all'     — всем без исключения (перезаписать настройки)
     //   'add'     — добавить указанные поля ко всем, не трогая остальные
     const m = mode || 'missing';
+    if (!['missing', 'add', 'all'].includes(m)) {
+  return res.status(400).json({ error: 'Неизвестный mode' });
+}
 
     const [users] = await db.query('SELECT id FROM users');
     const [prefsRows] = await db.query('SELECT user_id, preferences FROM user_preferences');
@@ -563,10 +566,8 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
           const set = new Set(existing);
           for (const id of visibleFields) set.add(id);
           nextVisibleFields = [...set];
-        } else {
-          return res.status(400).json({ error: 'Неизвестный mode' });
-        }
-
+        } 
+       
         const merged = {
           ...cur,
           visibleFields: nextVisibleFields,
