@@ -6784,7 +6784,59 @@ function renderUserViewContent() {
       Отключённые поля не будут видны этому пользователю в форме добавления и редактирования.
       Остальные настройки — в форме редактирования пользователя.
     </div>
+
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e2e8f0;">
+      <div style="font-weight:600;font-size:.85rem;color:#475569;margin-bottom:8px;">
+        Применить ко всем пользователям:
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="applyFieldsToAll('missing')" title="Тем, у кого нет своих настроек">
+          <i class="fa-solid fa-users"></i> Тем, у кого нет настроек
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="applyFieldsToAll('add')" title="Добавить отмеченные поля всем, не трогая остальные">
+          <i class="fa-solid fa-plus"></i> Добавить отмеченные всем
+        </button>
+      </div>
+      <small style="color:#94a3b8;display:block;margin-top:8px;font-size:.78rem;">
+        «Тем, у кого нет настроек» — включит выбранные поля только новым/ненастроенным пользователям.<br>
+        «Добавить отмеченные всем» — добавит отмеченные галочками поля ко всем, сохранив их текущий набор.
+      </small>
+    </div>
   `;
+}
+
+async function applyFieldsToAll(mode) {
+  const selected = _userViewVisibleFields.filter(id => {
+    const f = _cachedFields.find(x => x.id === id);
+    return f && f.enabled;
+  });
+
+  if (selected.length === 0) {
+    showToast('Выберите хотя бы одно поле', 'error');
+    return;
+  }
+
+  const modeLabel = mode === 'missing'
+    ? 'только тем пользователям, у кого ещё нет своих настроек'
+    : 'ВСЕМ пользователям (добавить отмеченные поля, остальные сохранить)';
+
+  const ok = await showConfirm(
+    `Применить ${selected.length} полей ${modeLabel}?\n\n` +
+    `Действие затронет всех пользователей.`,
+    { icon: '⚠️', title: 'Массовое применение', okText: 'Применить', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+
+  try {
+    const res = await apiRequest('/settings/apply-fields-to-all', 'POST', {
+      visibleFields: selected,
+      mode,
+    });
+    showToast(res.message || `Обновлено: ${res.updated}`, 'success');
+    closeUserViewModal();
+  } catch (e) {
+    showToast(e.message || 'Ошибка применения', 'error');
+  }
 }
 
 function toggleUserViewField(id, checked) {
