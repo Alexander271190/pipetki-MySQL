@@ -527,11 +527,30 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
     if (!Array.isArray(visibleFields)) {
       return res.status(400).json({ error: 'Ожидается массив visibleFields' });
     }
+    router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const { visibleFields, mode } = req.body || {};
+
+    if (!Array.isArray(visibleFields)) {
+      return res.status(400).json({ error: 'Ожидается массив visibleFields' });
+    }
+
+    // 🆕 ЗАЩИТА ОТ ПУСТОГО МАССИВА — добавить это
+    if (visibleFields.length === 0) {
+      return res.status(400).json({
+        error: 'Список полей пуст. Выберите хотя бы одно поле.'
+      });
+    }
 
     // Режимы:
     //   'missing' — только тем, у кого настроек НЕТ (не создавать лишние записи)
     //   'all'     — всем без исключения (перезаписать настройки)
     //   'add'     — добавить указанные поля ко всем, не трогая остальные
+    const m = mode || 'missing';
+    if (!['missing', 'add', 'all'].includes(m)) {
+      return res.status(400).json({ error: 'Неизвестный mode' });
+    }
+    
     const m = mode || 'missing';
     if (!['missing', 'add', 'all'].includes(m)) {
   return res.status(400).json({ error: 'Неизвестный mode' });
