@@ -599,6 +599,29 @@ async function loadPipetteData() {
       _cachedFields = _cachedFields || [];
     }
 
+        // 🆕 СИНХРОНИЗАЦИЯ visibleFields с активными полями field_config.
+    // Без этого у пользователей со старыми/пустыми настройками пропадают поля в таблице.
+    if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
+      const activeFieldIds = _cachedFields
+        .filter(f => f.enabled)
+        .map(f => f.id);
+
+      if (!Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
+        // Настроек нет → показываем все активные поля
+        myPrefs.visibleFields = [...activeFieldIds];
+      } else {
+        // Настройки есть → дополняем новыми активными полями,
+        // уважая то, что пользователь уже скрыл вручную
+        const visibleSet = new Set(myPrefs.visibleFields);
+        for (const id of activeFieldIds) {
+          if (!visibleSet.has(id)) myPrefs.visibleFields.push(id);
+        }
+        // Убираем из visibleFields те поля, которые больше не активны
+        const activeSet = new Set(activeFieldIds);
+        myPrefs.visibleFields = myPrefs.visibleFields.filter(id => activeSet.has(id));
+      }
+    }
+
     // 🛡️ Список ответственных нужен только тем, кто может редактировать
     if (currentUser.role === 'admin' || isSeniorLab()) {
       try {
