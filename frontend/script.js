@@ -1455,7 +1455,7 @@ const labels = {
           if (p.replacing && p.replacedFor) {
             replLine = `<br><small style="color:#f59e0b;">↔ заменяет: ${esc(p.replacing)}</small>`;
           }
-          return `<td><strong>${esc(p.id)}</strong>${p.serial ? `<br><small style="color:#94a3b8">S/N: ${esc(p.serial)}</small>` : ''}${replLine}</td>`;
+          return `<td><strong>${esc(p.id)}</strong>${replLine}</td>`;
         }
       
   case 'type': {
