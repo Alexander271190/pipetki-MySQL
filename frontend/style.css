@@ -39,8 +39,8 @@ html {
 /* ========== КОНТЕЙНЕР ========== */
 .container {
   max-width: 100%;           
-  margin: 16px auto;
-  padding: 0 16px;
+  margin: 8px auto;
+  padding: 0 8px;
   width: 100%;
   box-sizing: border-box;
 }
