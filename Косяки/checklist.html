@@ -3,16 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Чек-лист КДЛ v3.8</title>
+<title>Чек-лист КДЛ v4.0.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f5f7fb;--card:#fff;--card-2:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--primary:#4f46e5;--primary-light:#eef2ff;--success:#16a34a;--success-light:#dcfce7;--danger:#dc2626;--danger-light:#fee2e2;--warn:#d97706;--warn-light:#fef3c7;--skip:#64748b;--skip-light:#f1f5f9;--shadow:0 1px 3px rgba(0,0,0,.06)}
 html[data-theme=dark]{--bg:#0f172a;--card:#1e293b;--card-2:#273449;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--primary:#818cf8;--primary-light:#312e81;--success:#4ade80;--success-light:#14532d;--danger:#f87171;--danger-light:#7f1d1d;--warn:#fbbf24;--warn-light:#78350f;--skip:#94a3b8;--skip-light:#334155;--shadow:0 1px 3px rgba(0,0,0,.4)}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;padding:20px;font-size:14px;transition:background .2s,color .2s}
 .container{max-width:1100px;margin:0 auto}
-header{background:var(--card);border-radius:12px;padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow);position:sticky;top:12px;z-index:100}
+header{background:var(--card);border-radius:12px;padding:20px 24px;margin-bottom:16px;box-shadow:var(--shadow);position:sticky;top:12px;z-index:100;transition:padding .2s}
 h1{font-size:20px;margin-bottom:4px}
 .subtitle{color:var(--muted);font-size:13px;margin-bottom:14px}
+.header-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.header-top h1{flex:1;margin-bottom:0;min-width:220px}
+.header-mini-stats{display:none;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--bg);padding:4px 10px;border-radius:8px}
+.header-mini-stats b{color:var(--text);font-weight:700}
+.header-collapse-btn{padding:6px 12px;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--muted);font-family:inherit;font-weight:600;white-space:nowrap;transition:all .15s}
+.header-collapse-btn:hover{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
+header.collapsed{padding:10px 20px}
+header.collapsed .header-top{margin-bottom:0}
+header.collapsed .header-mini-stats{display:inline-flex}
+header.collapsed h1{font-size:15px}
+header.collapsed .subtitle,
+header.collapsed .tabs,
+header.collapsed .stats,
+header.collapsed .progress-bar,
+header.collapsed .controls{display:none!important}
 .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap}
 .tab{padding:10px 20px;background:transparent;border:none;border-bottom:3px solid transparent;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);font-family:inherit;margin-bottom:-2px;transition:all .15s}
 .tab:hover{color:var(--text)}
@@ -119,8 +134,6 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .diff-row .diff-change .new{color:var(--success);font-weight:600}
 .diff-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
 .hint{display:inline-block;font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px;margin-left:6px}
-
-/* Snapshots */
 .snap-form{display:flex;gap:8px;margin-bottom:16px}
 .snap-form input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-family:inherit;font-size:13px;outline:none}
 .snap-form input:focus{border-color:var(--primary)}
@@ -133,8 +146,6 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .snap-item-actions button{padding:6px 12px;font-size:12px;border-radius:6px}
 .snap-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px;background:var(--card-2);border-radius:8px;border:1px dashed var(--border)}
 .snap-warn{padding:10px 14px;background:var(--warn-light);border-left:3px solid var(--warn);border-radius:6px;font-size:12.5px;color:var(--warn);margin-bottom:14px}
-
-/* ==================== ВИЗУАЛЬНЫЕ ПРЕВЬЮ (vp-*) ==================== */
 .vp-section{background:var(--card);border-radius:12px;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden;border-left:4px solid var(--success)}
 .vp-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .vp-title{font-weight:700;font-size:15px;flex:1}
@@ -223,21 +234,40 @@ html[data-theme=dark] .vp-modal-stage{background:rgba(0,0,0,.6)}
 
 @media print{
   header{position:static;box-shadow:none}
-  .controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint,.tabs{display:none!important}
+  .controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint,.tabs,.header-collapse-btn{display:none!important}
   .section{box-shadow:none;border:1px solid var(--border);break-inside:avoid}
   .item.hidden{display:none!important}
   .section[style*="display: none"]{display:none!important}
   body{background:#fff;padding:0}
   .tab-content{display:block!important}
 }
-@media (max-width:600px){body{padding:10px}header{padding:14px}h1{font-size:16px}.stat-value{font-size:18px}.item-text{font-size:13px;min-width:0}.controls input[type=search]{min-width:100%}.item-meta{margin-left:0}.diff-files{grid-template-columns:1fr}.section-ops{margin-right:0}.tab{padding:8px 12px;font-size:13px}.vp-modal .vp-form-row{flex-direction:column}.vp-modal{padding:16px}.snap-form{flex-direction:column}}
+@media (max-width:600px){
+  body{padding:10px}header{padding:14px}h1{font-size:16px}
+  .stat-value{font-size:18px}
+  .item-text{font-size:13px;min-width:0}
+  .controls input[type=search]{min-width:100%}
+  .item-meta{margin-left:0}
+  .diff-files{grid-template-columns:1fr}
+  .section-ops{margin-right:0}
+  .tab{padding:8px 12px;font-size:13px}
+  .vp-modal .vp-form-row{flex-direction:column}
+  .vp-modal{padding:16px}
+  .snap-form{flex-direction:column}
+  .header-top h1{font-size:15px}
+  .header-collapse-btn{padding:5px 10px;font-size:11px}
+  .header-mini-stats{font-size:11px;padding:3px 8px}
+}
 </style>
 </head>
 <body>
 <div class="container">
-<header>
-  <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400">v3.8</span></h1>
-  <div class="subtitle">Блоки 1–33 + сквозные сценарии 1–23 + визуальные превью + снимки состояния.<br>Учтены: типы поверки, замена оборудования, пагинация, автофильтр по дате, sticky-шапка, зебра, мобильный засвет, async-обёртка роутов.</div>
+<header id="main-header">
+  <div class="header-top">
+    <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400">v4.0.1</span></h1>
+    <div class="header-mini-stats" id="header-mini-stats"></div>
+    <button class="header-collapse-btn" id="header-collapse-btn" onclick="toggleHeaderCollapse()" title="Свернуть шапку">▲ Свернуть</button>
+  </div>
+  <div class="subtitle">Блоки 1–43 + сквозные сценарии 1–27 + визуальные превью + снимки состояния.<br>Учтены: типы поверки (external/internal), замена оборудования, режим и.о., автоперегенерация ID при смене типа, пагинация, автофильтр по дате, sticky-шапка, зебра, мобильный засвет, async-обёртка роутов, штрихкоды и этикетки, принтеры, сканирование камерой, свёртывание шапки, тёмная тема, экспорт XLSX, умный импорт.</div>
 
   <div class="tabs">
     <button class="tab active" data-tab="checklist" onclick="switchTab('checklist')">📋 Чек-лист <span class="count" id="tab-count-checklist">0/0</span></button>
@@ -283,7 +313,7 @@ html[data-theme=dark] .vp-modal-stage{background:rgba(0,0,0,.6)}
 
 <footer>
   Прогресс в localStorage. · <button onclick="window.print()" style="padding:4px 10px;font-size:12px">🖨️ Печать активной вкладки</button>
-  <div class="hint">Ctrl+Z — отменить · Ctrl+Y — вернуть · Esc — закрыть модалку</div>
+  <div class="hint">Ctrl+Z — отменить · Ctrl+Y — вернуть · Ctrl+Shift+H — свернуть/развернуть шапку · Esc — закрыть модалку</div>
 </footer>
 </div>
 
@@ -317,11 +347,13 @@ html[data-theme=dark] .vp-modal-stage{background:rgba(0,0,0,.6)}
 </div>
 
 <input type="file" id="import-file" accept=".json,application/json" style="display:none">
-
 <script>
-/* ================ ДАННЫЕ: БЛОКИ ЧЕК-ЛИСТА ================ */
+/* ============================================================
+   ЧАСТЬ 1 ИЗ 6 ЗАКОНЧЕНА. ПРОДОЛЖЕНИЕ — ЧАСТЬ 2/6
+   ============================================================ */
+/* ДАННЫЕ: БЛОКИ ЧЕК-ЛИСТА (1–22) */
 var DATA = [
-  { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
+    { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
     { g: "1.1 Backend", t: "docker-compose up -d без ошибок" },
     { g: "1.1 Backend", t: "Лог: MySQL подключён" },
     { g: "1.1 Backend", t: "Лог: Схема БД готова" },
@@ -331,69 +363,95 @@ var DATA = [
     { g: "1.1 Backend", t: "Лог: «➕ Индекс idx_pipettes_department создан»" },
     { g: "1.1 Backend", t: "Лог: «➕ Индекс idx_pipettes_equipment_type создан»" },
     { g: "1.1 Backend", t: "Лог: «➕ Индекс idx_audit_log_timestamp создан»" },
+    { g: "1.1 Backend", t: "Лог: «➕ Индекс idx_pipettes_barcode создан» (новое в v4)" },
     { g: "1.2 Frontend", t: "http://localhost:3000 открывается" },
     { g: "1.2 Frontend", t: "F12 Console без Unexpected token, SyntaxError, is not defined" },
     { g: "1.2 Frontend", t: "Виден экран логина с фоновой картинкой" },
     { g: "1.2 Frontend", t: "Логин подставлен из предыдущей сессии (если есть)" },
     { g: "1.2 Frontend", t: "Пароль пустой" },
-    { g: "1.3 БД", t: "Таблицы: users, pipettes, calibration_history, audit_log, departments, filter_config, system_settings, field_config, export_settings, user_preferences" },
+    { g: "1.3 БД", t: "Таблицы: users, pipettes, calibration_history, audit_log, departments, filter_config, system_settings, field_config, export_settings, user_preferences, barcode_printers" },
     { g: "1.3 БД", t: "1 пользователь (только admin), 8 отделов, 5 демо-пипеток" },
     { g: "1.3 БД", t: "В system_settings есть ключ equipment_types с 6 типами и calibrationPlace" },
     { g: "1.3 БД", t: "В system_settings есть warn_days = 30" },
+    { g: "1.3 БД", t: "В system_settings есть demo_seeded = 1 (защита от повторного сидинга)" },
+    { g: "1.3 БД", t: "В system_settings есть barcode_type, barcode_label_fields, barcode_mode" },
     { g: "1.3 БД", t: "Индекс idx_pipettes_department создан (SHOW INDEX FROM pipettes)" },
     { g: "1.3 БД", t: "Индекс idx_pipettes_equipment_type создан" },
+    { g: "1.3 БД", t: "Индекс idx_pipettes_barcode создан (v4)" },
     { g: "1.3 БД", t: "Индекс idx_audit_log_timestamp создан" },
-    { g: "1.3 БД", t: "Колонки replaced_by и replacing в таблице pipettes" },
+    { g: "1.3 БД", t: "Индексы idx_barcode_printers_department, idx_barcode_printers_enabled созданы" },
+    { g: "1.3 БД", t: "Колонки replaced_by, replacing, barcode, barcode_source в таблице pipettes" },
     { g: "1.3 БД", t: "Повторный запуск сервера не дублирует создание индексов" }
   ]},
+
   { title: "Блок 2. Авторизация и права", tag: "2", items: [
     { g: "2.1 Экран входа", t: "Вход admin / пароль из лога — система" },
     { g: "2.1 Экран входа", t: "Тост «Добро пожаловать, Администратор!»" },
     { g: "2.1 Экран входа", t: "В шапке: ФИО Администратор, должность Администратор системы (админ)" },
     { g: "2.1 Экран входа", t: "senior/user созданы через Настройки → Пользователи (в seed их нет)" },
-    { g: "2.1 Экран входа", t: "Вход senior — Петров Петр (ст. лаборант) · Гематологический отдел" },
-    { g: "2.1 Экран входа", t: "Вход user — Иванов Иван · Биохимический отдел" },
+    { g: "2.1 Экран входа", t: "Вход senior — (ст. лаборант) · отдел" },
+    { g: "2.1 Экран входа", t: "Вход user — (пользователь) · отдел" },
     { g: "2.2 Ошибки входа", t: "Пустой логин — Заполните поле Логин" },
     { g: "2.2 Ошибки входа", t: "Пустой пароль — Заполните поле Пароль" },
     { g: "2.2 Ошибки входа", t: "Пусто оба — Заполните поля: Логин, Пароль" },
     { g: "2.2 Ошибки входа", t: "Неверный логин/пароль — Неверный логин или пароль" },
     { g: "2.2 Ошибки входа", t: "Пароль скрыт за точками" },
+    { g: "2.2 Ошибки входа", t: "Кнопка входа блокируется при отправке, показывает спиннер" },
     { g: "2.3 Хранение логина", t: "После выхода логин остался в поле" },
     { g: "2.3 Хранение логина", t: "Пароль очистился" },
     { g: "2.3 Хранение логина", t: "F5 — логин подставлен из localStorage" },
     { g: "2.4 Роли", t: "user: нет Добавить, Импорт, Настройки, Экспорт" },
     { g: "2.4 Роли", t: "user: в истории нет Добавить поверку" },
-    { g: "2.4 Роли", t: "user: в таблице только кнопка История" },
+    { g: "2.4 Роли", t: "user: в таблице только ⋮ → История" },
     { g: "2.4 Роли", t: "user + openModal() из консоли — Доступ запрещён" },
     { g: "2.4 Роли", t: "user + apiRequest('/pipettes/P-001','DELETE') — 403" },
-    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1: POST /api/pipettes с чужим отделом — 403 «Можно создавать оборудование только в своём отделе»" },
-    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1 без отдела в профиле: POST /api/pipettes — 403 «У вас не указан отдел, создание оборудования недоступно»" },
-    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1: POST /api/pipettes со своим отделом — 201, ID сгенерирован" },
+    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1: POST /api/pipettes с чужим отделом — 403" },
+    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1 без отдела: POST — 403 «У вас не указан отдел»" },
+    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1: GET /api/pipettes — только его отдел" },
+    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1: PUT чужого — 403" },
+    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1: DELETE чужого — 403" },
+    { g: "2.4 Роли", t: "user с onlyOwnDepartment=1: GET истории чужого — 403" },
     { g: "2.4 Роли", t: "senior: есть Добавить, Импорт, Экспорт, Добавить поверку, нет Настройки" },
+    { g: "2.4 Роли", t: "senior: GET /api/users/responsibles — 200 (право transfer_pipette)" },
+    { g: "2.4 Роли", t: "senior: GET /api/users — 403" },
     { g: "2.4 Роли", t: "admin: всё доступно" },
+    { g: "2.4 Роли", t: "Смена отдела не-админом: PUT с другим department — 403" },
+    { g: "2.4 Роли", t: "canManagePipettes() — совместимость со старым правом manage_pipettes" },
+    { g: "2.4 Роли", t: "hasPermission — admin bypass, user — по extraPermissions" },
     { g: "2.5 Истёкшая сессия", t: "Удалить pipette_session — F5 — логин" },
     { g: "2.5 Истёкшая сессия", t: "Токен мусор — F5 — Недействительный токен" },
-    { g: "2.5 Истёкшая сессия", t: "clearSession() + apiRequest('/pipettes') — 401" }
+    { g: "2.5 Истёкшая сессия", t: "clearSession() + apiRequest('/pipettes') — 401" },
+    { g: "2.5 Истёкшая сессия", t: "getSession() при битом JSON в sessionStorage — не падает" }
   ]},
+
   { title: "Блок 3. Главная таблица", tag: "3", items: [
     { g: "3.1 Базовый рендер", t: "5 демо-строк: P-001, P-002, P-003, A-001, M-001" },
-    { g: "3.1 Базовый рендер", t: "Тип бейджем (P синий, остальные фиолетовый)" },
+    { g: "3.1 Базовый рендер", t: "Тип бейджем (pipette синий, остальные фиолетовый)" },
     { g: "3.1 Базовый рендер", t: "Объём с мкл, у не-пипеток прочерк" },
-    { g: "3.1 Базовый рендер", t: "В Следующая дата + (N дн.) / (просрочка N дн.)" },
+    { g: "3.1 Базовый рендер", t: "В «Следующая» дата + (N дн.) / (просрочка N дн.)" },
     { g: "3.1 Базовый рендер", t: "M-001 — Неактивна (серый)" },
     { g: "3.1 Базовый рендер", t: "Счётчики в шапке совпадают" },
     { g: "3.1 Базовый рендер", t: "Баннер появляется при danger/fail" },
-    { g: "3.1 Базовый рендер", t: "Тултип кнопки истории показывает реальный history_count (не 0)" },
-    { g: "3.1 Базовый рендер", t: "Все иконки в кнопках — Font Awesome, нет пустых квадратов □" },
+    { g: "3.1 Базовый рендер", t: "Тултип кнопки истории показывает реальный history_count" },
+    { g: "3.1 Базовый рендер", t: "GET /api/pipettes возвращает history_count числом, БЕЗ массива history" },
+    { g: "3.1 Базовый рендер", t: "Все иконки Font Awesome, нет пустых квадратов □" },
+    { g: "3.1 Базовый рендер", t: "getAllTableColumns() — системные + кастомные + виртуальные (nextCalibration, status)" },
+    { g: "3.1 Базовый рендер", t: "SYSTEM_EXTRA_COLUMNS: interval, notes, result, active добавлены" },
+    { g: "3.1 Базовый рендер", t: "Действия в строке через кнопку ⋮ (openRowActions)" },
     { g: "3.2 Пустая таблица", t: "Таблица скрыта, счётчики = 0" },
     { g: "3.3 Строка выбрана", t: "Фон строки #eef2ff" },
     { g: "3.3 Строка выбрана", t: "Hover #e0e7ff" },
-    { g: "3.4 Визуальный вид таблицы", t: "См. вкладку 🎨 Визуал — таблица с 5 демо-строками" },
-    { g: "3.4 Визуальный вид таблицы", t: "Шапка тёмная #1e293b, текст белый UPPERCASE" },
-    { g: "3.4 Визуальный вид таблицы", t: "Бейджи типов: пипетка синяя, прочее фиолетовая" },
-    { g: "3.4 Визуальный вид таблицы", t: "Статусы pill-бейджами с точкой (8 вариантов)" },
-    { g: "3.4 Визуальный вид таблицы", t: "Кнопки действий с FA-иконками" }
+    { g: "3.4 Визуальный вид", t: "См. вкладку 🎨 Визуал — таблица с 5 демо-строками" },
+    { g: "3.4 Визуальный вид", t: "Шапка тёмная #1e293b, текст белый UPPERCASE" },
+    { g: "3.4 Визуальный вид", t: "Бейджи типов: пипетка синяя, прочее фиолетовая" },
+    { g: "3.4 Визуальный вид", t: "Статусы pill-бейджами с точкой (8 вариантов)" },
+    { g: "3.4 Визуальный вид", t: "Кнопки действий с FA-иконками" },
+    { g: "3.5 Замены в таблице", t: "В столбце ID у отправленного: «↔ замена: P-SKL-01»" },
+    { g: "3.5 Замены в таблице", t: "У складской: «↔ заменяет: P-001»" },
+    { g: "3.5 Замены в таблице", t: "Если замена физически удалена: «⚠ замена удалена»" },
+    { g: "3.5 Замены в таблице", t: "mergeCustomList() раскрывает custom_data в каждую пипетку" }
   ]},
+
   { title: "Блок 4. CRUD", tag: "4", items: [
     { g: "4.2 Создание", t: "Все поля пустые (кроме даты, интервала, результата, статуса — дефолт)" },
     { g: "4.2 Создание", t: "Заполнить — Сохранить — тост Оборудование добавлено" },
@@ -404,19 +462,33 @@ var DATA = [
     { g: "4.2 Создание", t: "ID вручную уже занят — 409 ID уже существует" },
     { g: "4.2 Создание", t: "Анализатор — ID начинается на A-" },
     { g: "4.2 Создание", t: "Микроскоп — M-" },
+    { g: "4.2 Создание", t: "Без ответственного (не-админ) — Заполните поле Ответственный" },
     { g: "4.2 Создание", t: "Отмена — ничего не сохранено" },
+    { g: "4.2 Создание", t: "POST с кастомным полем (inventorynumber) — сохранено в custom_data" },
+    { g: "4.2 Создание", t: "POST с пустым body — 400, без падения сервера" },
+    { g: "4.2 Создание", t: "POST с массивом вместо объекта — 400" },
+    { g: "4.2 Создание", t: "generatePipetteId с FOR UPDATE — не гонится" },
     { g: "4.3 Редактирование", t: "Поля заполнены" },
     { g: "4.3 Редактирование", t: "ID read-only, серый фон" },
     { g: "4.3 Редактирование", t: "Модель — Сохранить — Оборудование обновлено" },
     { g: "4.3 Редактирование", t: "Стереть дату — Сохранить — дата не обнуляется (фолбэк)" },
     { g: "4.3 Редактирование", t: "Поле Результат скрыто — Сохранить — last_result сохраняется прежним" },
-    { g: "4.3 Редактирование", t: "Через Postman: PUT /api/pipettes/P-001 с {\"active\":\"false\"} (строка) — в БД active=0, UI показывает Неактивна" },
-    { g: "4.3 Редактирование", t: "PUT с {\"active\":false} (boolean) — active=0" },
-    { g: "4.3 Редактирование", t: "PUT с {\"active\":true} — active=1, статус В работе" },
+    { g: "4.3 Редактирование", t: "PUT с {\"active\":\"false\"} (строка) — в БД 0" },
+    { g: "4.3 Редактирование", t: "PUT с {\"active\":false} (boolean) — 0" },
+    { g: "4.3 Редактирование", t: "PUT с {\"active\":true} — 1" },
+    { g: "4.3 Редактирование", t: "PUT с кастомным полем — мёржится в custom_data" },
+    { g: "4.3 Редактирование", t: "PUT с interval='' — сохраняется NULL, не 0" },
+    { g: "4.3 Редактирование", t: "PUT с manualBarcode — только admin, barcode_source='manual'" },
+    { g: "4.3 Редактирование", t: "PUT без manualBarcode, был auto — пересчитывается (serial/custom/id)" },
+    { g: "4.3 Редактирование", t: "PUT с пустым manualBarcode — сброс barcode в NULL" },
     { g: "4.4 Удаление", t: "Отмена — ничего" },
-    { g: "4.4 Удаление", t: "Подтвердить — тост, строка исчезла, история удалена" },
+    { g: "4.4 Удаление", t: "Подтвердить — тост, строка исчезла, история удалена каскадом" },
+    { g: "4.4 Удаление", t: "Удалить пипетку с replaced_by → 400 «Нельзя удалить… отправлена на поверку»" },
+    { g: "4.4 Удаление", t: "Удалить пипетку, которая используется как замена другой → 400" },
+    { g: "4.4 Удаление", t: "Удалить пипетку, которая заменяет другую → 400" },
     { g: "4.4 Удаление", t: "Несуществующий (через API) — 404" }
   ]},
+
   { title: "Блок 5. Быстрая поверка", tag: "5", items: [
     { g: "", t: "Кнопка открывает модалку" },
     { g: "", t: "Инфо о приборе в шапке" },
@@ -427,38 +499,65 @@ var DATA = [
     { g: "", t: "В процессе — статус ожидания" },
     { g: "", t: "Пустая дата — ошибка" },
     { g: "", t: "Дата в будущем — ошибка" },
-    { g: "", t: "Поверка на На поверке — sent_for_calibration очищен" }
+    { g: "", t: "Поверка на На поверке — sent_for_calibration очищен" },
+    { g: "", t: "Результат не из allowed ('hacked') — сервер сохраняет 'pass'" },
+    { g: "", t: "Кнопка «Вернулась с поверки» в меню ⋮ для статуса sent" },
+    { g: "", t: "«Отменить отправку» в меню ⋮ для статуса sent" }
   ]},
+
   { title: "Блок 6. История поверок", tag: "6", items: [
     { g: "6.2 Просмотр", t: "Таймлайн свежий сверху" },
     { g: "6.2 Просмотр", t: "Свидетельство в синем бейдже, результат цветным" },
     { g: "6.2 Просмотр", t: "Организация и примечание серым" },
+    { g: "6.2 Просмотр", t: "Сортировка history.sort по date DESC" },
     { g: "6.3 Добавление поверки", t: "Добавить поверку — форма появляется ниже" },
     { g: "6.3 Добавление поверки", t: "Заполнить — Записать — Запись о поверке добавлена" },
     { g: "6.3 Добавление поверки", t: "Модалка закрылась, таблица обновлена" },
     { g: "6.3 Добавление поверки", t: "Валидация даты" },
     { g: "6.4 Экспорт истории", t: "Пустой период — вся история" },
-    { g: "6.4 Экспорт истории", t: "CSV: history_P-001_YYYY-MM-DD.csv, открывается в Excel" },
+    { g: "6.4 Экспорт истории", t: "Excel: history_P-001_YYYY-MM-DD.xlsx" },
     { g: "6.4 Экспорт истории", t: "PDF: вкладка с печатной формой" },
     { g: "6.4 Экспорт истории", t: "Фильтр С/По работает" },
-    { g: "6.4 Экспорт истории", t: "Пусто с фильтром — Нет записей за выбранный период" }
+    { g: "6.4 Экспорт истории", t: "Пусто с фильтром — Нет записей за выбранный период" },
+    { g: "6.4 Экспорт истории", t: "getFilteredHistoryForExport() — сортировка DESC, фильтр по date.slice(0,10)" }
   ]},
+
   { title: "Блок 7. Массовая отправка", tag: "7", items: [
     { g: "", t: "Выбрать 3 пипетки — счётчик (3)" },
-    { g: "", t: "Пипетка + анализатор — счётчик = 1" },
+    { g: "", t: "Пипетка + анализатор — счётчик = 1 (оба external)" },
+    { g: "", t: "Весы (internal) — счётчик их не считает" },
     { g: "", t: "Дата в будущем — ошибка" },
     { g: "", t: "Подтверждение — тост" },
     { g: "", t: "Статус На поверке" },
     { g: "", t: "Кнопка Отправить пропала, появилась Вернулись (N)" },
     { g: "", t: "Печать акта открывает окно с таблицей" },
-    { g: "", t: "Без выбора — Нет пипеток для печати" }
+    { g: "", t: "Без выбора — Нет пипеток для печати" },
+    { g: "", t: ">100 ID за раз — сервер отклоняет (максимум 100)" },
+    { g: "", t: "Пустой массив ids — 400 «Не выбрано ни одной единицы»" },
+    { g: "", t: "Без sentDate — 400 «Заполните поле Дата отправки»" },
+    { g: "", t: "Internal-тип в ids — skipped, в ответе skipped>=1" },
+    { g: "", t: "loadReplacementOptions — параллельная загрузка с CONCURRENCY=5" },
+    { g: "", t: "Инкрементальный рендер: buildReplacementBlock в контейнер" },
+    { g: "", t: "«Без замены» — radio checked по умолчанию" }
   ]},
+
   { title: "Блок 8. Массовый возврат", tag: "8", items: [
     { g: "", t: "Один чекбокс — индивидуальные поля отключаются" },
     { g: "", t: "Общий select — все строки меняются" },
     { g: "", t: "Без свидетельства — предупреждение" },
-    { g: "", t: "Подтверждение — тост Возврат оформлен…" }
+    { g: "", t: "Подтверждение — тост Возврат оформлен…" },
+    { g: "", t: "Одно свидетельство на всех — заполняется commonCert" },
+    { g: "", t: ">100 единиц — 400" },
+    { g: "", t: "result='hacked' — сохраняется 'pass'" },
+    { g: "", t: "Возврат не отправленной (sent_for_calibration IS NULL) — skipped" },
+    { g: "", t: "Internal-тип — skipped" },
+    { g: "", t: "Блок «На время поверки было выдано со склада» — для replaced_by" },
+    { g: "", t: "Чекбокс «Вернуть замену на склад» — по умолчанию checked" },
+    { g: "", t: "Снятие галочки — замена остаётся active, replacing обнуляется" },
+    { g: "", t: "missingReplacements — если замена удалена физически" },
+    { g: "", t: "Автофильтр по дате после возврата (см. Блок 31)" }
   ]},
+
   { title: "Блок 9. Фильтры и поиск", tag: "9", items: [
     { g: "9.1 Панель фильтра", t: "Кнопка Фильтр открывает панель" },
     { g: "9.1 Панель фильтра", t: "Все поля из БД" },
@@ -467,120 +566,247 @@ var DATA = [
     { g: "9.1 Панель фильтра", t: "Комбинация 3 фильтров + поиск" },
     { g: "9.1 Панель фильтра", t: "Сбросить — всё снято" },
     { g: "9.1 Панель фильтра", t: "Фильтр без результатов — заглушка" },
+    { g: "9.1 Панель фильтра", t: "Дата-период: переключение Тип = updated_at" },
+    { g: "9.1 Панель фильтра", t: "matchCalPeriodDynamic — today/yesterday/week/month/custom" },
+    { g: "9.1 Панель фильтра", t: "applyFilterStateToPanel — восстановление после возврата" },
     { g: "9.2 Поиск", t: "P-001 — одна строка" },
     { g: "9.2 Поиск", t: "eppendorf — все Eppendorf" },
     { g: "9.2 Поиск", t: "По отделу, ответственному, модели" },
     { g: "9.2 Поиск", t: "Пустой — все" },
+    { g: "9.2 Поиск", t: "Латиница/кириллица — normalizeSearch" },
+    { g: "9.2 Поиск", t: "Debounce 150ms — не рендерит на каждую букву" },
     { g: "9.3 Сортировка", t: "Клик по ID — вверх, повторный — вниз" },
     { g: "9.3 Сортировка", t: "Клик по Модель — переключение стрелок" },
+    { g: "9.3 Сортировка", t: "Сортировка по Статусу — фиксированный порядок (danger→fail→wip→warn→sent→ok→inactive→unknown)" },
     { g: "9.4 Массовый выбор", t: "Чекбокс в шапке — все видимые" },
     { g: "9.4 Массовый выбор", t: "Частичный — indeterminate" },
-    { g: "9.4 Массовый выбор", t: "Смена фильтра — выбор видимых сохраняется" }
+    { g: "9.4 Массовый выбор", t: "Смена страницы — выбор сохраняется" },
+    { g: "9.4 Массовый выбор", t: "getVisiblePageIds() — только текущая страница" },
+    { g: "9.5 Синхронизация filterState", t: "Удалить фильтр из настроек — при applyFilters его значение уходит" },
+    { g: "9.5 Синхронизация filterState", t: "Переименовать отдел — старая опция сбрасывается (syncFilterState)" },
+    { g: "9.5 Синхронизация filterState", t: "Отключить фильтр status — текущее значение снимается" },
+    { g: "9.5 Синхронизация filterState", t: "filterState обновляется при saveDepartmentsFull/saveFilters/saveEquipmentTypes" },
+    { g: "9.6 Меню действий ⋮", t: "openRowActions(event, id) — показывается кнопкой в строке" },
+    { g: "9.6 Меню действий ⋮", t: "Пункты меню зависят от прав и статуса" },
+    { g: "9.6 Меню действий ⋮", t: "Клик вне меню — закрывает (mousedown capture)" },
+    { g: "9.6 Меню действий ⋮", t: "Resize/scroll — закрывает" }
   ]},
+
   { title: "Блок 10. Экспорт данных", tag: "10", items: [
-    { g: "10.1 Меню", t: "CSV: pipettes_YYYY-MM-DD.csv с BOM, кириллица корректна" },
+    { g: "10.1 Меню", t: "Excel (.xlsx): pipettes_YYYY-MM-DD.xlsx" },
     { g: "10.1 Меню", t: "PDF: печатная форма, кнопка Печать" },
     { g: "10.1 Меню", t: "Активный фильтр — только отфильтрованные" },
     { g: "10.1 Меню", t: "Без прав — Нет прав на экспорт" },
-    { g: "10.2 CSV injection", t: "Модель =1+1 — в Excel текст =1+1, а не 2" },
-    { g: "10.2 CSV injection", t: "Модель +7 999 — текст, не число" },
+    { g: "10.1 Меню", t: "getActiveExportFields — системные + кастомные (getExportField)" },
+    { g: "10.1 Меню", t: "SYSTEM_EXPORT_FIELD_MAP — полный список" },
+    { g: "10.2 CSV injection", t: "Модель =1+1 — в Excel текст =1+1" },
+    { g: "10.2 CSV injection", t: "Модель +7 999 — текст" },
     { g: "10.2 CSV injection", t: "Модель -5 отклонение — текст" },
-    { g: "10.2 CSV injection", t: "Модель @user — текст" }
+    { g: "10.2 CSV injection", t: "Модель @user — текст" },
+    { g: "10.3 XLSX", t: "POST /api/export/xlsx с mode='registry'" },
+    { g: "10.3 XLSX", t: "Шапка: заголовок + мета (Дата, Записей)" },
+    { g: "10.3 XLSX", t: "Подвал: «Документ сформировал» + «Подпись»" },
+    { g: "10.3 XLSX", t: "Автоширина 8–20 символов" },
+    { g: "10.3 XLSX", t: "pageSetup: fitToWidth=1, landscape, A4" },
+    { g: "10.3 XLSX", t: "printTitlesRow — шапка повторяется" },
+    { g: "10.3 XLSX", t: "FORCE_BREAK_THRESHOLD > 40 — addPageBreak" }
   ]},
+
   { title: "Блок 11. Импорт", tag: "11", items: [
-    { g: "", t: "XLSX/XLS/CSV/JSON/TXT работают" },
-    { g: "", t: "Битый файл — ошибка" },
+    { g: "", t: "XLSX/CSV/JSON/TXT работают" },
+    { g: "", t: ".xls (старый формат) — понятная ошибка" },
+    { g: "", t: "Битый файл — ошибка 400" },
     { g: "", t: "Без заголовков — Не удалось распознать…" },
     { g: "", t: "Дубли ID — в skipped" },
     { g: "", t: "Дата 21.10.2024 — 2024-10-21" },
     { g: "", t: "Дата 10.21.2024 — 2024-10-21 (US)" },
+    { g: "", t: "Дата 05.07.2024 — 2024-07-05 (RU)" },
+    { g: "", t: "Дата как Date (ExcelJS) — конвертируется локально" },
     { g: "", t: "Результат Брак — fail" },
     { g: "", t: "Тип Микроскоп — microscope" },
-    { g: "", t: "Скрипт-тег — экранирование, нет всплытия" },
+    { g: "", t: "Скрипт-тег — экранирование" },
     { g: "", t: "Импорт под user — Нет прав" },
+    { g: "", t: "CSV с разделителем ; и , — автоопределение" },
+    { g: "", t: "Кавычки внутри ячеек CSV — корректный парсинг" },
+    { g: "", t: "Формула =SUM(...) — берётся result (cellValue)" },
+    { g: "", t: "Кастомные поля из field_config — распознаются по label (_importCustomFields)" },
+    { g: "", t: "mapHeader с фоллбэком на custom:${id}" },
+    { g: "", t: "Поиск строки заголовков (MAX_SCAN=20 строк)" },
+    { g: "", t: "bestScore >= 2 — иначе ошибка" },
+    { g: "", t: "Отсечение мусора: «Документ сформировал», «Подпись»" },
+    { g: "", t: "merged-ячейки: id === model — пропускается" },
+    { g: "", t: "parseJson: массив объектов обязателен" },
     { g: "11.6 Нагрузка", t: "500 строк < 30 сек" },
     { g: "11.6 Нагрузка", t: "1000 строк < 60 сек" },
     { g: "11.6 Нагрузка", t: "Таблица не тормозит" }
   ]},
+
   { title: "Блок 12. Напоминания", tag: "12", items: [
     { g: "", t: "Появляется через 600 мс при наличии danger/warn" },
-    { g: "", t: "Понятно — не появляется до завтра" },
-    { g: "", t: "Позже — появится при следующем входе" },
-    { g: "", t: "F5 — не появляется" },
-    { g: "", t: "Привязано к currentUser.id — при impersonate свой набор" }
+    { g: "", t: "Понятно — не появляется до завтра (localStorage по user.id)" },
+    { g: "", t: "Позже — появится при следующем входе (_reminderDismissed)" },
+    { g: "", t: "F5 — не появляется (localStorage ключ pipette_last_reminder_<id>)" },
+    { g: "", t: "Привязано к currentUser.id — при impersonate свой набор" },
+    { g: "", t: "_reminderScheduled защищает от повторного планирования" },
+    { g: "", t: "stopImpersonate/impersonate сбрасывает _reminderScheduled/_reminderDismissed" },
+    { g: "", t: "checkReminder не вызывает модалку если уже открыта" }
   ]},
+
   { title: "Блок 13. Настройки — Поля формы", tag: "13", items: [
     { g: "", t: "Снять Активно у Примечание — пропало из формы" },
     { g: "", t: "Переместить — порядок изменился" },
     { g: "", t: "Обяз. — поле required" },
-    { g: "", t: "oninput для label — правка, не убирая фокус, кликнуть — правка сохранилась" },
+    { g: "", t: "oninput для label — правка сохраняется" },
     { g: "", t: "Добавить поле — появилось" },
-    { g: "", t: "Тип select — textarea для опций" },
-    { g: "", t: "Сохранить — тост" }
+    { g: "", t: "Тип select — textarea для опций (renderFieldOptionsCell)" },
+    { g: "", t: "onFieldTypeChange — обновление ячейки без re-render" },
+    { g: "", t: "Сохранить — тост" },
+    { g: "", t: "Удалить поле с данными → 409 code='field_has_data'" },
+    { g: "", t: "Подтверждение удаления с данными → каскадная очистка custom_data" },
+    { g: "", t: "Системные поля (id, department, equipmentType, result, active) — тип disabled" },
+    { g: "", t: "SYSTEM_FIELD_IDS — список защищённых полей" },
+    { g: "", t: "После saveFieldsSettings — myPrefs перезагружается" },
+    { g: "", t: "activeFieldIds синхронизируются с myPrefs.visibleFields" }
   ]},
+
   { title: "Блок 14. Настройки — Отделы", tag: "14", items: [
     { g: "", t: "Дубликат — Такой отдел уже есть" },
-    { g: "", t: "oninput — правка названия без blur + клик не теряет правку" },
-    { g: "", t: "Сохранить — тост" }
+    { g: "", t: "oninput — правка без blur + клик не теряет правку" },
+    { g: "", t: "Сохранить — тост" },
+    { g: "", t: "PUT /settings/departments с дублями — 400" },
+    { g: "", t: "Все пустые — «Добавьте хотя бы один отдел»" },
+    { g: "", t: "Дубли удаляются (duplicate-warning через onDepartmentNameChange)" },
+    { g: "", t: "Нормализация: строка или {name, enabled}" },
+    { g: "", t: "После save — syncFilterState + loadDepartments + loadFilterConfig" }
   ]},
+
   { title: "Блок 15. Настройки — Фильтры", tag: "15", items: [
     { g: "", t: "Отключить Статус — пропал из UI после F5" },
-    { g: "", t: "Добавить фильтр — появился" }
+    { g: "", t: "Добавить фильтр — появился" },
+    { g: "", t: "Перемещение ▲▼ — порядок сохранён" },
+    { g: "", t: "Удалить фильтр, у которого открыта панель — состояние сброшено" },
+    { g: "", t: "После saveFilters — _filterRendered=false, renderFilterFields если панель открыта" },
+    { g: "", t: "optionsSource: departments / status_list / equipment_type_list / active_list" }
   ]},
+
   { title: "Блок 16. Настройки — Экспорт", tag: "16", items: [
-    { g: "", t: "Отметить 3 — CSV с 3 столбцами" },
-    { g: "", t: "Снять все — дефолт" }
+    { g: "", t: "Отметить 3 — XLSX с 3 столбцами" },
+    { g: "", t: "Снять все — дефолт" },
+    { g: "", t: "Кастомные поля из field_config — доступны (getExportFields)" },
+    { g: "", t: "SYSTEM_EXPORT_FIELDS — 16 полей" },
+    { g: "", t: "SYSTEM_FIELD_IDS_IN_CONFIG — исключение из кастомных" }
   ]},
+
   { title: "Блок 17. Настройки — Пользователи", tag: "17", items: [
     { g: "", t: "Своя строка — без действий" },
     { g: "", t: "Создать — модалка разового пароля" },
-    { g: "", t: "Нельзя понизить себя — Нельзя понизить собственную роль администратора" },
+    { g: "", t: "Нельзя понизить себя — Нельзя понизить собственную роль" },
     { g: "", t: "Последнего админа — Нельзя понизить последнего администратора" },
     { g: "", t: "Сброс пароля себе — Используйте Сменить пароль в шапке" },
     { g: "", t: "Роль admin — все чекбоксы disabled" },
     { g: "", t: "Только свой отдел — user видит только свой отдел" },
+    { g: "", t: "Только свой отдел без отдела — 400" },
+    { g: "", t: "Логин занят — 409" },
+    { g: "", t: "isActing=1 без actingForId — 400" },
+    { g: "", t: "acting-targets содержит только не-и.о." },
+    { g: "", t: "editUserSetting — «битое» значение отдела показывается как «⚠ (нет в списке)»" },
+    { g: "", t: "ALL_PERMISSIONS — 16 прав по 5 группам" },
+    { g: "", t: "applyPermPreset: none / user / senior / manager / all" },
+    { g: "", t: "onUserRoleChange — admin → все disabled+checked" },
+    { g: "", t: "generateTempPassword — 12 символов + рандомизация (crypto.randomInt)" },
+    { g: "", t: "audit_log с diff изменений (login/full_name/position/department/role/perms)" },
     { g: "17.7 Модалка разового пароля", t: "Показаны логин, ФИО, пароль" },
-    { g: "17.7 Модалка разового пароля", t: "Скопировать — тост, пароль в буфере" },
-    { g: "17.7 Модалка разового пароля", t: "Закрыть — модалка закрыта" }
+    { g: "17.7 Модалка разового пароля", t: "Скопировать — clipboard или execCommand fallback" },
+    { g: "17.8 Удаление пользователя", t: "Удалить себя — 400" },
+    { g: "17.8 Удаление пользователя", t: "Последнего админа — 400" },
+    { g: "17.8 Удаление пользователя", t: "Удалить основного, у которого есть и.о. — is_acting сбрасывается" },
+    { g: "17.9 Настройки вида пользователя", t: "openUserViewModal — модалка полей формы" },
+    { g: "17.9 Настройки вида пользователя", t: "applyFieldsToAll('missing'/'add')" },
+    { g: "17.9 Настройки вида пользователя", t: "saveUserView — если себе, myPrefs обновляется" },
+    { g: "17.9 Настройки вида пользователя", t: "resetUserView — DELETE user-preferences" }
   ]},
-  { title: "Блок 18. Настройки — Система", tag: "18", items: [
+
+  { title: "Блок 18. Настройки — Типы оборудования", tag: "18", items: [
     { g: "", t: "value read-only" },
     { g: "", t: "Изменить label — Сохранить" },
     { g: "", t: "Пустой prefix — авто EQ" },
     { g: "", t: "Дубли value — ошибка" },
+    { g: "", t: "Пустой label — ошибка" },
+    { g: "", t: "Дубли prefix — предупреждение (не блок)" },
     { g: "", t: "Удалить используемый тип — Нельзя удалить…" },
-    { g: "", t: "Колонка «Место поверки» присутствует (см. Блок 28)" }
+    { g: "", t: "Колонка «Место поверки» (📦 external / 🏠 internal)" },
+    { g: "", t: "calibrationPlace='invalid' — нормализуется в 'internal'" },
+    { g: "", t: "value не по regex — 400" },
+    { g: "", t: "updateEquipmentTypesWarning — problems (дубли, пустые)" },
+    { g: "", t: "moveEquipmentType — ▲▼" },
+    { g: "", t: "После save — _equipmentTypes = _cachedEquipmentTypes, syncFilterState" }
   ]},
+
   { title: "Блок 19. Настройки — Лог", tag: "19", items: [
     { g: "", t: "Все действия видны" },
-    { g: "", t: "Очистить — подтверждение — пусто" }
+    { g: "", t: "Очистить — подтверждение — пусто" },
+    { g: "", t: "limit=999999 — сервер ограничивает до 1000" },
+    { g: "", t: "limit не число / отрицательный — дефолт 100" }
   ]},
+
   { title: "Блок 20. Impersonate", tag: "20", items: [
-    { g: "", t: "Войти как под user1 — тост Вы вошли как Иванов Иван" },
-    { g: "", t: "В шапке Вернуться" },
+    { g: "", t: "Войти как под user1 — тост «Вы вошли как…»" },
+    { g: "", t: "В шапке кнопка Вернуться" },
     { g: "", t: "Кнопки управления скрыты (права user)" },
     { g: "", t: "Вернуться — тост Вернулись…" },
     { g: "", t: "F5 под impersonate — сессия сохранена" },
-    { g: "", t: "Действия логируются от имени user1" },
-    { g: "", t: "Свои prefs — у impersonated видны его поля/колонки, не оригинала" }
+    { g: "", t: "Действия логируются от имени user1 (req.user)" },
+    { g: "", t: "Свои prefs — у impersonated видны его поля" },
+    { g: "", t: "Войти как под себя — 400" },
+    { g: "", t: "Не-админ пытается impersonate — 403" },
+    { g: "", t: "После impersonate _lastPermsCheck сбрасывается" },
+    { g: "", t: "POST /api/auth/stop-impersonate логирует возврат" },
+    { g: "", t: "middleware/auth — декодирует impersonatedBy/impersonatedByName" },
+    { g: "", t: "impersonate → myPrefs сброс, pipettes сброс, filterState сброс" },
+    { g: "", t: "Все открытые модалки закрываются" }
   ]},
+
   { title: "Блок 21. Смена пароля", tag: "21", items: [
     { g: "", t: "Пустые — Заполните поле Новый пароль" },
     { g: "", t: "Меньше 8 — Минимум 8 символов" },
     { g: "", t: "Без заглавной — Хотя бы одна заглавная буква" },
     { g: "", t: "Без спецсимвола — ошибка" },
+    { g: "", t: "Пробелы в пароле — «Пробелы недопустимы»" },
     { g: "", t: "Пароли не совпадают" },
     { g: "", t: "Такой же как текущий — ошибка" },
+    { g: "", t: "Неверный текущий — Текущий пароль неверен" },
     { g: "", t: "Правильный — тост Пароль успешно изменён" },
-    { g: "", t: "После смены не выкидывает — свежий токен, следующий запрос работает" },
-    { g: "", t: "Impersonate + смена пароля — originalUser/originalToken сохранены" }
+    { g: "", t: "После смены не выкидывает — свежий токен" },
+    { g: "", t: "password_changed_at в БД обновился" },
+    { g: "", t: "Старый токен — 401 «Пароль был изменён, войдите заново»" },
+    { g: "", t: "Impersonate + смена пароля — originalUser/originalToken сохранены" },
+    { g: "", t: "cp-username hidden input для autocomplete" },
+    { g: "", t: "validatePasswordClient — те же правила, что на сервере (passwordPolicy.js)" }
   ]},
-  { title: "Блок 22. Настройки вида пользователя", tag: "22", items: [
-    { g: "", t: "Снять 3 поля — у user их нет" },
-    { g: "", t: "Вкладка Колонки таблицы — перемещение" },
-    { g: "", t: "Переместить Отдел вверх — порядок изменён" },
-    { g: "", t: "Пустой список — Нужно выбрать хотя бы одно поле" }
+
+  { title: "Блок 22. Режим И.О. (исполняющий обязанности)", tag: "22", items: [
+    { g: "22.1 Создание и.о.", t: "Настройки → Пользователи → чекбокс «Исполняющий обязанности»" },
+    { g: "22.1 Создание и.о.", t: "При включении — select «За кого исполняет *»" },
+    { g: "22.1 Создание и.о.", t: "Список грузится из /api/users/acting-targets (только не-и.о.)" },
+    { g: "22.1 Создание и.о.", t: "isActing=1 без actingForId — 400" },
+    { g: "22.2 Отображение в шапке", t: "«Должность · и.о. за Иванов И.И.»" },
+    { g: "22.2 Отображение в шапке", t: "Если acting_department — «· Отдел основного»" },
+    { g: "22.3 Список оборудования у и.о.", t: "GET /api/pipettes — только отдел основного" },
+    { g: "22.3 Список оборудования у и.о.", t: "Если у основного нет отдела — пустой список" },
+    { g: "22.4 Форма добавления у и.о.", t: "«Ответственный» = ФИО основного (disabled)" },
+    { g: "22.4 Форма добавления у и.о.", t: "«Отдел» = отдел основного (disabled)" },
+    { g: "22.5 Создание у и.о.", t: "POST — responsible/department принудительно из acting_*" },
+    { g: "22.6 Редактирование у и.о.", t: "PUT — принудительно заменяются" },
+    { g: "22.7 Доступ по отделу у и.о.", t: "canAccessDepartment — acting_department" },
+    { g: "22.7 Доступ по отделу у и.о.", t: "PUT чужого — 403" },
+    { g: "22.7 Доступ по отделу у и.о.", t: "bulk-send чужого отдела — skipped" },
+    { g: "22.8 Impersonate в и.о.", t: "Войти как под и.о. — acting_* подтягиваются" },
+    { g: "22.9 Удаление основного", t: "У и.о. is_acting=0, acting_for_id=NULL" },
+    { g: "22.10 Выключение и.о.", t: "Снять галку — is_acting=0, acting_for_id=NULL" },
+    { g: "22.10 Выключение и.о.", t: "Список оборудования — свой отдел" },
+    { g: "22.11 impersonate", t: "middleware auth подтягивает acting_full_name/acting_department" }
   ]},
+    
   { title: "Блок 23. UI и адаптивность", tag: "23", items: [
     { g: "", t: "375px — всё в одну колонку" },
     { g: "", t: "768px — планшетная адаптация" },
@@ -589,285 +815,573 @@ var DATA = [
     { g: "", t: "Двойной клик Сохранить — не дублируется" },
     { g: "", t: "Долгие названия отделов — не ломают вёрстку" },
     { g: "", t: "Эмодзи и кириллица в названиях — корректны" },
-    { g: "", t: "Все иконки Font Awesome рендерятся (нет пустых квадратов □)" },
-    { g: "", t: "В <option> внутри <select> эмодзи на месте (там FA не работает)" },
-    { g: "", t: "Заголовки модалок с FA-иконками (⚙️ Настройки → fa-gear)" }
+    { g: "", t: "Все иконки Font Awesome рендерятся" },
+    { g: "", t: "В <option> внутри <select> эмодзи на месте (FA не работает)" },
+    { g: "", t: "Заголовки модалок с FA-иконками" },
+    { g: "", t: "Тёмная тема переключается, состояние сохраняется (pipette_theme)" },
+    { g: "", t: "Кнопка «Свернуть/Развернуть» в шапке работает (pipette_header_collapsed)" },
+    { g: "", t: "overflow-x: clip (не hidden) — панель фильтра не клиппится" },
+    { g: "", t: "html { overflow-x: clip }" },
+    { g: "", t: "Кнопки .btn с градиентами и hover-подъёмом" },
+    { g: "", t: "Столбец «Действия» скрывается, если нет ни одного права (hasAnyRowAction)" },
+    { g: "", t: "row-actions-btn (⋮) — 34x34px, hover индиго" },
+    { g: "", t: "settings-back-btn — возврат к списку разделов" }
   ]},
+
   { title: "Блок 24. Безопасность", tag: "24", items: [
     { g: "", t: "JWT в sessionStorage (не localStorage)" },
     { g: "", t: "Подделать токен — 401" },
     { g: "", t: "Истёк токен — авторазлогин" },
-    { g: "", t: "SQL-инъекция в поиске — экранирование через знак вопроса" },
-    { g: "", t: "XSS-тег — экранирование через esc()" },
+    { g: "", t: "SQL-инъекция в поиске — параметризация (?)" },
+    { g: "", t: "XSS-тег — esc()" },
     { g: "", t: "Права проверяются и на фронте, и на бэке" },
     { g: "", t: "apiRequest('/settings/fields','PUT',[]) под user — 403" },
-    { g: "", t: "CSV injection — =HYPERLINK(...) в модели — в CSV не выполняется" }
+    { g: "", t: "apiRequest('/users','GET') под user — 403" },
+    { g: "", t: "apiRequest('/log','GET') под user — 403" },
+    { g: "", t: "CSV injection =HYPERLINK(...) — не выполняется" },
+    { g: "", t: "SQL-инъекция в :id (P-001' OR 1=1) — 404" },
+    { g: "", t: "requirePermission — admin bypass" },
+    { g: "", t: "requireAnyPermission — admin bypass, user — any of" },
+    { g: "", t: "password_changed_at vs iat — clock skew допуск +2 сек" }
   ]},
+
   { title: "Блок 25. Нагрузка", tag: "25", items: [
     { g: "", t: "Импорт 500 строк < 30 сек" },
     { g: "", t: "Импорт 1000 строк < 60 сек" },
     { g: "", t: "Таблица после импорта не тормозит" },
     { g: "", t: "Фильтры/поиск на 1000 работают" },
-    { g: "", t: "Экспорт 1000 — файл корректный" }
+    { g: "", t: "Экспорт 1000 — файл корректный" },
+    { g: "", t: "GET /pipettes на 1000 — < 2 сек" },
+    { g: "", t: "GROUP BY для history_count — не тянет записи" },
+    { g: "", t: "loadReplacementOptions — CONCURRENCY=5 батчами" }
   ]},
+
   { title: "Блок 26. Регрессия исправленных багов", tag: "26", items: [
-    { g: "26.1 Смена пароля не разлогинивает", t: "Войти — Пароль — ввести корректно — не выкинуло" },
-    { g: "26.1 Смена пароля не разлогинивает", t: "Следующее действие — работает, не Сессия истекла" },
-    { g: "26.2 Fresh token на клиенте", t: "После смены пароля authToken в sessionStorage обновился" },
-    { g: "26.2 Fresh token на клиенте", t: "Если был режим impersonate — originalUser/originalToken не потерялись" },
-    { g: "26.3 information_schema миграция", t: "На чистой БД db.js не пытается ALTER TABLE ... IF NOT EXISTS" },
-    { g: "26.3 information_schema миграция", t: "На старой БД (без password_changed_at) — колонка добавилась" },
-    { g: "26.4 PUBLIC_WHEN_FORCED", t: "must_change_password=1 — GET /api/pipettes — 403 password_change_required" },
-    { g: "26.4 PUBLIC_WHEN_FORCED", t: "POST /api/auth/change-password — не 403, работает" },
-    { g: "26.4 PUBLIC_WHEN_FORCED", t: "GET /api/auth/verify — 200" },
-    { g: "26.5 Clock skew допуск", t: "После смены пароля сразу refreshCurrentUser() — не 401" },
-    { g: "26.5 Clock skew допуск", t: "Смена пароля в 23:59 — следующий запрос в 00:00 — OK" },
-    { g: "26.6 bulk-return проверяет статус", t: "POST /api/pipettes/bulk-return для не отправленной — skipped" },
+    { g: "26.1 Смена пароля", t: "Войти — Пароль — корректно — не выкинуло" },
+    { g: "26.1 Смена пароля", t: "Следующее действие работает" },
+    { g: "26.2 Fresh token", t: "authToken в sessionStorage обновился" },
+    { g: "26.2 Fresh token", t: "Impersonate — originalUser/originalToken сохранены" },
+    { g: "26.3 information_schema", t: "На чистой БД нет ALTER IF NOT EXISTS" },
+    { g: "26.3 information_schema", t: "На старой БД колонка добавилась" },
+    { g: "26.4 PUBLIC_WHEN_FORCED", t: "must_change_password=1 — GET 403 password_change_required" },
+    { g: "26.4 PUBLIC_WHEN_FORCED", t: "change-password — не 403" },
+    { g: "26.4 PUBLIC_WHEN_FORCED", t: "verify — 200" },
+    { g: "26.5 Clock skew", t: "После смены пароля refreshCurrentUser — не 401" },
+    { g: "26.5 Clock skew", t: "Смена в 23:59, запрос в 00:00 — OK" },
+    { g: "26.6 bulk-return проверяет статус", t: "Для не отправленной — skipped" },
     { g: "26.6 bulk-return проверяет статус", t: "В calibration_history запись не создана" },
-    { g: "26.7 Защита от понижения себя", t: "Админ понижает себя — Нельзя понизить собственную роль администратора" },
-    { g: "26.7 Защита от понижения себя", t: "Последнего админа другой админ понижает — ошибка" },
-    { g: "26.8 oninput в настройках", t: "Поля формы — правка label — клик — правка сохранена" },
-    { g: "26.8 oninput в настройках", t: "То же для отделов, фильтров, типов" },
-    { g: "26.9 lastResult при скрытом поле", t: "У пользователя скрыто поле Результат в prefs" },
-    { g: "26.9 lastResult при скрытом поле", t: "Редактирование без Результат — last_result сохранился прежним" },
-    { g: "26.9 lastResult при скрытом поле", t: "Не сбросилось в pass по умолчанию" },
-    { g: "26.10 Напоминания per-user", t: "User A закрыл — User B видит своё" },
-    { g: "26.10 Напоминания per-user", t: "Impersonate — своё напоминание для impersonated" },
-    { g: "26.11 CSV sanitize", t: "Модель =1+1 — Excel показывает текст" },
-    { g: "26.11 CSV sanitize", t: "Модель +7 (999) 123-45-67 — текст, не формула" },
-    { g: "26.11 CSV sanitize", t: "Обычная модель Research Plus — без изменений" },
-    { g: "26.12 getSession при битом JSON", t: "sessionStorage.setItem('pipette_session', '{broken') — F5 — логин, без JS-ошибки" },
-    { g: "26.13 history_count вместо history", t: "GET /api/pipettes возвращает history_count числом, без массива history" },
-    { g: "26.13 history_count вместо history", t: "Открытие карточки истории по-прежнему грузит /pipettes/:id/calibration" },
-    { g: "26.13 history_count вместо history", t: "Тултип кнопки истории показывает N > 0 для пипеток с историей" },
-    { g: "26.13 history_count вместо history", t: "В списке пипеток в Console: p.history === undefined, p.history_count === число" },
-    { g: "26.14 Индексы БД", t: "SHOW INDEX FROM pipettes — idx_pipettes_department, idx_pipettes_equipment_type" },
-    { g: "26.14 Индексы БД", t: "SHOW INDEX FROM audit_log — idx_audit_log_timestamp" },
-    { g: "26.14 Индексы БД", t: "Повторный запуск сервера не пытается создать существующие индексы" },
-    { g: "26.14 Индексы БД", t: "В логе сервера при первом запуске: «➕ Индекс … создан» ×3" },
-    { g: "26.15 Seed только admin", t: "Чистая БД — 1 пользователь (id=admin1, login=admin, role=admin)" },
-    { g: "26.15 Seed только admin", t: "В логе только пароль admin, без senior/user" },
-    { g: "26.15 Seed только admin", t: "Остальных пользователей создаём через Настройки → Пользователи" },
-    { g: "26.16 Font Awesome", t: "Все кнопки в toolbar — с <i class=\"fa-solid fa-…\"></i>, без эмодзи" },
-    { g: "26.16 Font Awesome", t: "Кнопки действий в таблице — fa-pen, fa-clipboard-list, fa-check, fa-trash" },
-    { g: "26.16 Font Awesome", t: "Статусы: fa-box, fa-xmark, fa-hourglass-half, fa-circle-question" },
-    { g: "26.16 Font Awesome", t: "Заголовок модалки пипетки через innerHTML — иконка видна" },
-    { g: "26.16 Font Awesome", t: "В <option> внутри <select> эмодзи оставлены (FA не рендерится)" },
-    { g: "26.16 Font Awesome", t: "В PDF-экспорте, печати акта, экспорте истории — FA нет, эмодзи оставлены" },
-    { g: "26.16 Font Awesome", t: "Напоминание: icon.innerHTML, а не icon.textContent" },
-    { g: "26.16 Font Awesome", t: "Заголовки user-form-title — innerHTML + esc(u.login)" },
-    { g: "26.17 Debounce поиска", t: "Быстрый ввод в поиск — render() не на каждую букву (задержка 150 мс)" },
-    { g: "26.17 Debounce поиска", t: "После паузы 150+ мс результаты поиска корректны" },
-    { g: "26.17 Debounce поиска", t: "Быстрый ввод — нет визуальных лагов таблицы" },
-    { g: "26.18 Async-обёртка роутов (wrapRouter)", t: "Остановить MySQL: docker compose stop db при работающем приложении" },
-    { g: "26.18 Async-обёртка роутов (wrapRouter)", t: "В браузере нажать любое действие, бьющее в API (обновить список, создать оборудование)" },
-    { g: "26.18 Async-обёртка роутов (wrapRouter)", t: "Ожидание: toast «Ошибка запроса» / «Ошибка загрузки данных»" },
-    { g: "26.18 Async-обёртка роутов (wrapRouter)", t: "F12 → Network: запрос завершается со статусом 500 (НЕ pending)" },
-    { g: "26.18 Async-обёртка роутов (wrapRouter)", t: "Восстановить БД: docker compose start db — через 5–10 сек всё снова работает" },
-    { g: "26.18 Async-обёртка роутов (wrapRouter)", t: "Если запрос висит в pending — патч wrapRouter не работает, смотреть server.js" }
+    { g: "26.7 Защита от понижения", t: "Админ понижает себя — ошибка" },
+    { g: "26.7 Защита от понижения", t: "Последнего админа — ошибка" },
+    { g: "26.8 oninput в настройках", t: "Поля/Отделы/Фильтры/Типы — правка сохраняется" },
+    { g: "26.9 lastResult при скрытом поле", t: "Скрыто поле Результат — не сбрасывается в pass" },
+    { g: "26.10 Напоминания per-user", t: "A закрыл — B видит своё" },
+    { g: "26.10 Напоминания per-user", t: "Impersonate — своё напоминание" },
+    { g: "26.11 CSV sanitize", t: "=1+1 → текст в Excel" },
+    { g: "26.11 CSV sanitize", t: "+7 (999) 123-45-67 — текст" },
+    { g: "26.11 CSV sanitize", t: "Research Plus — без изменений" },
+    { g: "26.12 getSession при битом JSON", t: "sessionStorage = '{broken' — F5 — логин без JS-ошибки" },
+    { g: "26.13 history_count вместо history", t: "GET /api/pipettes — число, без массива" },
+    { g: "26.13 history_count вместо history", t: "Карточка грузит /:id/calibration" },
+    { g: "26.13 history_count вместо history", t: "Тултип кнопки истории показывает N > 0" },
+    { g: "26.14 Индексы БД", t: "SHOW INDEX FROM pipettes — 4 индекса" },
+    { g: "26.14 Индексы БД", t: "SHOW INDEX FROM audit_log — 1 индекс" },
+    { g: "26.14 Индексы БД", t: "Повторный запуск — не дублирует" },
+    { g: "26.14 Индексы БД", t: "Лог: «➕ Индекс … создан» ×4" },
+    { g: "26.15 Seed только admin", t: "1 пользователь, login=admin" },
+    { g: "26.15 Seed только admin", t: "demo_seeded=1 в system_settings" },
+    { g: "26.16 Font Awesome", t: "Toolbar кнопки — FA-иконки" },
+    { g: "26.16 Font Awesome", t: "Меню ⋮ — FA-иконки через fa-solid" },
+    { g: "26.16 Font Awesome", t: "В <option> эмодзи" },
+    { g: "26.16 Font Awesome", t: "PDF/Excel/печать акта — эмодзи" },
+    { g: "26.17 Debounce поиска", t: "Быстрый ввод — render не на каждую букву (150мс)" },
+    { g: "26.17 Debounce поиска", t: "После паузы — результаты корректны" },
+    { g: "26.18 Async-обёртка роутов", t: "docker compose stop db — запрос возвращает 500 (не pending)" },
+    { g: "26.18 Async-обёртка роутов", t: "docker compose start db — всё работает" },
+    { g: "26.18 Async-обёртка роутов", t: "wrapRouter в server.js оборачивает async-функции" },
+    { g: "26.19 Меню ⋮ в строке", t: "openRowActions — не вызывает stopPropagation ошибок" },
+    { g: "26.19 Меню ⋮ в строке", t: "renderRowActionsMenu — позиционирование по rect" },
+    { g: "26.19 Меню ⋮ в строке", t: "Если места снизу мало — открывается вверх" },
+    { g: "26.19 Меню ⋮ в строке", t: "Если места справа мало — сдвигается влево" },
+    { g: "26.20 settings-back-btn", t: "closeSettingsSection — возврат к списку" },
+    { g: "26.21 SETTINGS_SECTIONS", t: "Группировка: Оборудование и данные / Пользователи / Печать / Общие" },
+    { g: "26.21 SETTINGS_SECTIONS", t: "Права фильтруют пункты (canSee)" }
   ]},
+
   { title: "Блок 27. Визуальный вид модалок", tag: "27", items: [
-    { g: "27.1 Общие правила", t: "Overlay — тёмный фон rgba(0,0,0,.5), centered flex" },
-    { g: "27.1 Общие правила", t: "Окно модалки — белое, border-radius 16px, тень 0 20px 60px rgba(0,0,0,.3)" },
+    { g: "27.1 Общие правила", t: "Overlay — rgba(0,0,0,.5), centered flex" },
+    { g: "27.1 Общие правила", t: "Окно — border-radius 16px, тень 0 20px 60px" },
     { g: "27.1 Общие правила", t: "max-width 640px (обычная), 900px (modal-lg)" },
-    { g: "27.1 Общие правила", t: "max-height 90vh, вертикальный скролл внутри" },
-    { g: "27.1 Общие правила", t: "padding 24px, заголовок h2 1.3rem цвет #1e293b" },
+    { g: "27.1 Общие правила", t: "max-height 90vh, скролл внутри" },
+    { g: "27.1 Общие правила", t: "padding 24px, h2 1.3rem #1e293b" },
     { g: "27.1 Общие правила", t: "Клик по фону — закрытие (кроме confirm и change-password force)" },
-    { g: "27.1 Общие правила", t: "Esc — закрытие confirm-модалки" },
-    { g: "27.2 Модалка добавления/редактирования", t: "Заголовок «➕ Добавить оборудование» с fa-plus" },
-    { g: "27.2 Модалка добавления/редактирования", t: "При редактировании — «✏️ Редактировать оборудование» с fa-pen" },
-    { g: "27.2 Модалка добавления/редактирования", t: "Поля формы — вертикально, label сверху (font-size .85rem, цвет #475569)" },
-    { g: "27.2 Модалка добавления/редактирования", t: "Input — padding 9px 12px, border 1px #d1d5db, radius 8px" },
-    { g: "27.2 Модалка добавления/редактирования", t: "Input:focus — border #6366f1, box-shadow 0 0 0 3px rgba(99,102,241,.15)" },
-    { g: "27.2 Модалка добавления/редактирования", t: "ID при редактировании — read-only, фон #f1f5f9, cursor not-allowed" },
-    { g: "27.2 Модалка добавления/редактирования", t: "Кнопки внизу справа: Отмена (серая) + Сохранить (зелёная с fa-floppy-disk)" },
-    { g: "27.3 Быстрая поверка", t: "Заголовок «📋 Быстрая поверка» с fa-clipboard-list" },
-    { g: "27.3 Быстрая поверка", t: "Инфо о приборе — серая плашка (#f8fafc), radius 8px, padding 10px" },
-    { g: "27.3 Быстрая поверка", t: "Поля в 2 колонки (form-row flex), на мобильном — 1 колонка" },
-    { g: "27.3 Быстрая поверка", t: "Select результата — варианты ✅ Годен / ❌ Брак / ⏳ В процессе" },
-    { g: "27.4 Массовая отправка", t: "Заголовок «📦 Отправить на поверку» с fa-box" },
-    { g: "27.4 Массовая отправка", t: "Плашка «Выбрано единиц: N» — голубая (#f0f9ff), border-left 3px #0ea5e9" },
-    { g: "27.4 Массовая отправка", t: "Список выбранных — серый фон (#f8fafc), max-height 150px, скролл" },
-    { g: "27.4 Массовая отправка", t: "Инфо-блок жёлтый (#fef9c3) с ℹ️ про типы external" },
-    { g: "27.4 Массовая отправка", t: "Блок «Подобрать замену» — серая плашка с radio" },
-    { g: "27.4 Массовая отправка", t: "Кнопки: Отмена + Распечатать акт (голубая, fa-print) + Отправить (жёлтая, fa-box)" },
-    { g: "27.5 Массовый возврат", t: "Заголовок «📥 Возврат с поверки» с fa-box-open" },
-    { g: "27.5 Массовый возврат", t: "Плашка «Возвращается единиц: N» — зелёная (#ecfdf5), border-left 3px #16a34a" },
-    { g: "27.5 Массовый возврат", t: "Чекбокс «Одно свидетельство на всех» — большая голубая плашка" },
-    { g: "27.5 Массовый возврат", t: "Таблица свидетельств — input для номера + select результата" },
-    { g: "27.5 Массовый возврат", t: "Блок «Вернуть замену на склад?» — голубая плашка (#eff6ff)" },
-    { g: "27.5 Массовый возврат", t: "Заголовок таблицы — серый фон (#f1f5f9), padding 8px 10px" },
-    { g: "27.5 Массовый возврат", t: "Кнопки: Отмена + Применить ко всем (зелёная, fa-floppy-disk)" },
-    { g: "27.6 История поверок", t: "Заголовок «История поверок — P-001» (id=history-title)" },
-    { g: "27.6 История поверок", t: "Info-grid — серая плашка (#f8fafc), grid 2 колонки, radius 10px" },
-    { g: "27.6 История поверок", t: "Метки в info-grid — UPPERCASE, серые (#94a3b8), letter-spacing .3px" },
-    { g: "27.6 История поверок", t: "Таймлайн — вертикальная линия #e2e8f0 слева, точки-кружки" },
-    { g: "27.6 История поверок", t: "Таймлайн точка зелёная (pass), жёлтая (wip), красная (fail), обводка 2px" },
-    { g: "27.6 История поверок", t: "Свидетельство — синий бейдж (#e0f2fe/#0369a1) с fa-file-lines" },
-    { g: "27.6 История поверок", t: "Результат — цветной бейдж: pass зелёный, fail красный, wip голубой" },
-    { g: "27.6 История поверок", t: "Кнопки внизу: Экспорт истории (жёлтая, fa-upload) + Закрыть + Добавить поверку (голубая, fa-plus)" },
-    { g: "27.7 Настройки системы", t: "Заголовок «⚙️ Настройки системы» с fa-gear" },
-    { g: "27.7 Настройки системы", t: "Вкладки: Поля формы, Отделы, Фильтры, Экспорт, Пользователи, Система, Лог" },
-    { g: "27.7 Настройки системы", t: "Активная вкладка — синяя (#4f46e5), белый текст" },
-    { g: "27.7 Настройки системы", t: "Неактивная — серая, hover светло-серый" },
-    { g: "27.7 Настройки системы", t: "Таблицы настроек — фон th серый (#f1f5f9), th текст #1e293b" },
-    { g: "27.7 Настройки системы", t: "Стрелки ▲▼ — маленькие кнопки 22×22px в колонке порядка" },
-    { g: "27.8 Смена пароля", t: "Заголовок «🔒 Смена пароля» с fa-lock" },
-    { g: "27.8 Смена пароля", t: "Плашка-предупреждение жёлтая (#fef9c3), border-left 3px #eab308" },
-    { g: "27.8 Смена пароля", t: "Блок «Требования к паролю» — серый фон (#f1f5f9), маркированный список" },
-    { g: "27.8 Смена пароля", t: "Ошибка — красный текст в auth-error с белым фоном и красной рамкой" },
-    { g: "27.8 Смена пароля", t: "Кнопка Отмена скрыта при force (must_change_password)" },
-    { g: "27.9 Разовый пароль", t: "Заголовок «🔑 Разовый пароль» с fa-key" },
-    { g: "27.9 Разовый пароль", t: "Плашка-инфо жёлтая с текстом про смену при первом входе" },
-    { g: "27.9 Разовый пароль", t: "Логин и ФИО — readonly, фон #f1f5f9, cursor not-allowed" },
-    { g: "27.9 Разовый пароль", t: "Пароль — monospace, letter-spacing 1px, кнопка Скопировать (fa-copy) рядом" },
-    { g: "27.10 Экспорт истории", t: "Заголовок «📤 Экспорт истории поверок» с fa-upload" },
-    { g: "27.10 Экспорт истории", t: "Поля С/По — 2 колонки, date input" },
-    { g: "27.10 Экспорт истории", t: "Кнопки: Отмена + Excel (зелёная, fa-file-excel) + PDF (голубая, fa-print)" },
-    { g: "27.11 Подтверждение", t: "Модалка узкая (max-width 420px), центрированная, padding 28px 24px 20px" },
-    { g: "27.11 Подтверждение", t: "Иконка большая (3.2rem) сверху по центру" },
-    { g: "27.11 Подтверждение", t: "Заголовок h3 центрированный (1.2rem)" },
-    { g: "27.11 Подтверждение", t: "Сообщение — pre-line (сохраняет \\n), цвет #475569" },
-    { g: "27.11 Подтверждение", t: "Кнопки: Отмена + ОК (min-width 110px, gap 12px)" },
-    { g: "27.12 Импорт", t: "Заголовок «📥 Импорт данных» с fa-download" },
-    { g: "27.12 Импорт", t: "Input file — стандартный браузерный, accept .json,.csv,.xlsx,.xls,.txt" },
-    { g: "27.12 Импорт", t: "Инфо-блок голубой про автораспознавание заголовков" },
-    { g: "27.12 Импорт", t: "Прогресс — серый (#f1f5f9), «⏳ Загрузка…», скрыт по умолчанию" },
-    { g: "27.12 Импорт", t: "Кнопки: Отмена + Загрузить (зелёная, fa-download)" },
-    { g: "27.13 Настройки пользователя (вид)", t: "Заголовок «⚙️ Настройки пользователя» с fa-gear" },
-    { g: "27.13 Настройки пользователя (вид)", t: "Вкладки: Поля формы (fa-clipboard-list) / Колонки таблицы (fa-table-columns)" },
-    { g: "27.13 Настройки пользователя (вид)", t: "Список полей — grid 2 колонки, чекбоксы слева, label справа" },
-    { g: "27.13 Настройки пользователя (вид)", t: "Перемещение колонок — кнопки ▲▼ маленькие справа" },
-    { g: "27.13 Настройки пользователя (вид)", t: "Кнопки: Сбросить (fa-rotate-left) + Закрыть + Сохранить (fa-floppy-disk)" }
+    { g: "27.2 Редактирование", t: "Заголовок «➕ Добавить» / «✏️ Редактировать»" },
+    { g: "27.2 Редактирование", t: "ID read-only, серый фон" },
+    { g: "27.2 Редактирование", t: "Input:focus — border #6366f1 + shadow" },
+    { g: "27.3 Быстрая поверка", t: "Инфо о приборе — серая плашка" },
+    { g: "27.3 Быстрая поверка", t: "Поля в 2 колонки" },
+    { g: "27.3 Быстрая поверка", t: "Select результата — ✅/❌/⏳" },
+    { g: "27.4 Массовая отправка", t: "Голубая плашка «Выбрано единиц: N»" },
+    { g: "27.4 Массовая отправка", t: "Список выбранных — max-height 150px, скролл" },
+    { g: "27.4 Массовая отправка", t: "Инфо-блок жёлтый про external-типы" },
+    { g: "27.4 Массовая отправка", t: "Блок «Подобрать замену»" },
+    { g: "27.4 Массовая отправка", t: "Кнопки: Отмена + Распечатать акт + Отправить" },
+    { g: "27.5 Массовый возврат", t: "Зелёная плашка «Возвращается единиц: N»" },
+    { g: "27.5 Массовый возврат", t: "Чекбокс «Одно свидетельство на всех»" },
+    { g: "27.5 Массовый возврат", t: "Таблица свидетельств — input + select" },
+    { g: "27.5 Массовый возврат", t: "Блок «На время поверки было выдано со склада»" },
+    { g: "27.6 История поверок", t: "Info-grid — серая плашка, grid 2 колонки" },
+    { g: "27.6 История поверок", t: "Таймлайн — вертикальная линия #e2e8f0, точки-кружки" },
+    { g: "27.6 История поверок", t: "Свидетельство — синий бейдж с fa-file-lines" },
+    { g: "27.6 История поверок", t: "Кнопки: Экспорт истории + Закрыть + Добавить поверку" },
+    { g: "27.7 Настройки системы", t: "Список разделов, не вкладки — settings-group-title + settings-items" },
+    { g: "27.7 Настройки системы", t: "settings-back-btn — возврат с иконкой ←" },
+    { g: "27.7 Настройки системы", t: "Групповые заголовки UPPERCASE" },
+    { g: "27.8 Смена пароля", t: "Плашка-предупреждение жёлтая" },
+    { g: "27.8 Смена пароля", t: "Блок «Требования к паролю» — серый фон" },
+    { g: "27.8 Смена пароля", t: "Кнопка Отмена скрыта при force" },
+    { g: "27.9 Разовый пароль", t: "Логин и ФИО readonly" },
+    { g: "27.9 Разовый пароль", t: "Пароль monospace + letter-spacing 1px" },
+    { g: "27.10 Экспорт истории", t: "Поля С/По — 2 колонки" },
+    { g: "27.11 Подтверждение", t: "Модалка 420px, центрированная" },
+    { g: "27.11 Подтверждение", t: "Иконка 3.2rem сверху" },
+    { g: "27.11 Подтверждение", t: "Сообщение pre-line (\\n сохраняется)" },
+    { g: "27.12 Импорт", t: "Инфо-блок голубой про автораспознавание" },
+    { g: "27.12 Импорт", t: "Прогресс — серый, скрыт по умолчанию" },
+    { g: "27.13 Настройки пользователя (вид)", t: "Вкладки Поля формы / Колонки таблицы" },
+    { g: "27.13 Настройки пользователя (вид)", t: "Список полей — grid 2 колонки" },
+    { g: "27.14 Печать этикеток", t: "modal-compact — 460px" },
+    { g: "27.14 Печать этикеток", t: "bc-block / bc-radio-item / bc-printer-list" },
+    { g: "27.14 Печать этикеток", t: "Кнопка Печать — зелёная" },
+    { g: "27.15 Принтеры", t: "bc-printers-table — компактная" },
+    { g: "27.15 Принтеры", t: "bc-icon-btn — иконки без текста" },
+    { g: "27.16 Настройки штрихкодов", t: "bc-settings-block — зелёная плашка" },
+    { g: "27.16 Настройки штрихкодов", t: "bc-fields-grid — чекбоксы полей" }
   ]},
+
   { title: "Блок 28. Тип поверки: внешняя / на месте", tag: "28", items: [
-    { g: "28.1 Настройки типов", t: "Настройки → Система → Типы оборудования: колонка «Место поверки» присутствует" },
-    { g: "28.1 Настройки типов", t: "Выпадающий список: 📦 Внешняя (с отправкой) / 🏠 На месте" },
-    { g: "28.1 Настройки типов", t: "Дефолт: Пипетка=внешняя, Анализатор=внешняя, Термометр=на месте, Весы=на месте, Фотометр=на месте, Микроскоп=на месте" },
-    { g: "28.1 Настройки типов", t: "Изменить Пипетку на «На месте» → Сохранить → тост «Типы оборудования сохранены»" },
-    { g: "28.1 Настройки типов", t: "После смены типа на internal — кнопка «Отправить на поверку» для этого типа пропадает" },
-    { g: "28.1 Настройки типов", t: "Валидация: если у типа не указано место — при сохранении ставится internal + предупреждение в блоке problems" },
-    { g: "28.2 Поведение UI по типу", t: "Пипетка (external) + выбрана → кнопка «Отправить на поверку (N)»" },
-    { g: "28.2 Поведение UI по типу", t: "Весы (internal) + выбрана → кнопка «Отправить на поверку» НЕ появляется" },
-    { g: "28.2 Поведение UI по типу", t: "Весы (internal) → в строке доступна только «Быстрая поверка»" },
-    { g: "28.2 Поведение UI по типу", t: "Выбрано 5 пипеток + 3 весов → счётчик отправки = 5 (весы отфильтрованы)" },
-    { g: "28.3 Защита на сервере", t: "POST /api/pipettes/bulk-send с internal-типом → skipped с причиной" },
-    { g: "28.3 Защита на сервере", t: "POST /api/pipettes/bulk-return с internal-типом → skipped" },
-    { g: "28.3 Защита на сервере", t: "GET /api/pipettes/available-for-replacement?type=weighing → массив (200, не 404)" },
-    { g: "28.4 API", t: "GET /api/settings/equipment-types возвращает calibrationPlace у каждого типа" },
-    { g: "28.4 API", t: "PUT /api/settings/equipment-types с calibrationPlace='invalid' → сохранён как 'internal'" },
-    { g: "28.4 API", t: "PUT /api/settings/equipment-types с calibrationPlace='external' → сохранён как 'external'" }
+    { g: "28.1 Настройки типов", t: "Колонка «Место поверки» присутствует" },
+    { g: "28.1 Настройки типов", t: "📦 Внешняя (external) / 🏠 На месте (internal)" },
+    { g: "28.1 Настройки типов", t: "Дефолт: Пипетка=external, Анализатор=external, остальные=internal" },
+    { g: "28.1 Настройки типов", t: "Изменить → Сохранить → тост" },
+    { g: "28.1 Настройки типов", t: "Смена на internal — кнопка отправки пропадает" },
+    { g: "28.1 Настройки типов", t: "Пустое место — internal + предупреждение" },
+    { g: "28.2 Поведение UI", t: "external + выбрана → кнопка «Отправить (N)»" },
+    { g: "28.2 Поведение UI", t: "internal + выбрана → кнопка НЕ появляется" },
+    { g: "28.2 Поведение UI", t: "internal — только «Быстрая поверка»" },
+    { g: "28.2 Поведение UI", t: "5 пипеток + 3 весов → счётчик = 5" },
+    { g: "28.3 Защита на сервере", t: "bulk-send с internal → skipped" },
+    { g: "28.3 Защита на сервере", t: "bulk-return с internal → skipped" },
+    { g: "28.3 Защита на сервере", t: "available-for-replacement?type=weighing → 200" },
+    { g: "28.3 Защита на сервере", t: "available-for-replacement без type → 400" },
+    { g: "28.4 API", t: "GET equipment-types возвращает calibrationPlace" },
+    { g: "28.4 API", t: "PUT с calibrationPlace='invalid' → 'internal'" },
+    { g: "28.4 API", t: "PUT с 'external' → 'external'" },
+    { g: "28.4 API", t: "GET без записи в БД → fallback с calibrationPlace" },
+    { g: "28.5 isExternalCalibration", t: "Функция на фронте — true если external" },
+    { g: "28.5 isExternalCalibration", t: "isExternalCalibrationServer — на бэке" }
   ]},
+
   { title: "Блок 29. Замена оборудования при отправке на поверку", tag: "29", items: [
-    { g: "29.1 Подбор замены", t: "Создать складскую пипетку: active=false, location=«Склад», тип=pipette" },
-    { g: "29.1 Подбор замены", t: "Отправить рабочую пипетку (external) с активной — модалка открывается" },
-    { g: "29.1 Подбор замены", t: "Блок «Складские того же типа» показывает складские пипетки" },
-    { g: "29.1 Подбор замены", t: "Радиокнопка «Без замены» — выбрана по умолчанию" },
-    { g: "29.1 Подбор замены", t: "Выбрать складскую → Сохранить → тост с упоминанием замены" },
-    { g: "29.1 Подбор замены", t: "Отправленная → статус «На поверке», в столбце ID подпись «↔ замена: S-059»" },
-    { g: "29.1 Подбор замены", t: "Складская → active=true, location = место работающего, в столбце ID «↔ заменяет: P-001»" },
-    { g: "29.1 Подбор замены", t: "В складской location НЕ осталось «Склад», а стало «Лаб. 302» (место работающего)" },
-    { g: "29.2 Фильтр по отделу", t: "Складская из другого отдела — показывается (или нет, в зависимости от department отправляемой)" },
-    { g: "29.2 Фильтр по отделу", t: "Складская без отдела — показывается для любой отправляемой" },
-    { g: "29.2 Фильтр по отделу", t: "Складская, которая уже кого-то заменяет (replacing != NULL) — НЕ показывается в списке" },
-    { g: "29.3 Защиты на сервере", t: "Замена = сама отправляемая → 400 «не может заменить само себя»" },
-    { g: "29.3 Защиты на сервере", t: "Одна складская выбрана для двух отправляемых → 400 «не может заменить несколько»" },
-    { g: "29.3 Защиты на сервере", t: "Замена уже активна → skippedReplacements с причиной «замена уже активна»" },
-    { g: "29.3 Защиты на сервере", t: "Замена уже отправлена (sent_for_calibration != NULL) → skipped" },
-    { g: "29.3 Защиты на сервере", t: "Замена типа не совпадает → skipped «тип не совпадает»" },
-    { g: "29.4 Возврат замены", t: "Модалка возврата показывает блок «На время поверки было выдано со склада»" },
-    { g: "29.4 Возврат замены", t: "Чекбокс «Вернуть замену на склад» — по умолчанию отмечен" },
-    { g: "29.4 Возврат замены", t: "Оставить галочку → Сохранить → складская active=false, location=«Склад»" },
-    { g: "29.4 Возврат замены", t: "У отправляемой обнуляется replaced_by (в столбце ID пропадает «↔ замена»)" },
-    { g: "29.4 Возврат замены", t: "Снять галочку → складская остаётся активной, location не меняется" },
-    { g: "29.5 Удаление связанного", t: "Удалить складскую → у отправляемой replaced_by=NULL (в UI подпись пропала)" },
-    { g: "29.5 Удаление связанного", t: "Удалить отправляемую → у складской replacing=NULL (в UI подпись пропала)" },
-    { g: "29.6 API", t: "GET /api/pipettes возвращает поля replacement и replacedFor (объекты) для связанных" },
-    { g: "29.6 API", t: "GET /api/pipettes/:id возвращает replacement и replacedFor" },
-    { g: "29.7 Граничные случаи", t: "Нет складских того же типа → блок «Нет доступных складских единиц»" },
-    { g: "29.7 Граничные случаи", t: "Пипеток в отправке несколько, складская одна → можно выбрать одну замену" },
-    { g: "29.7 Граничные случаи", t: "Обновить страницу в момент отправки — связи сохранились" }
+    { g: "29.1 Подбор замены", t: "Складская: active=false, location=«Склад»" },
+    { g: "29.1 Подбор замены", t: "Отправить рабочую — модалка открывается" },
+    { g: "29.1 Подбор замены", t: "Блок «Складские того же типа»" },
+    { g: "29.1 Подбор замены", t: "«Без замены» — по умолчанию" },
+    { g: "29.1 Подбор замены", t: "Выбрать складскую → Сохранить → тост" },
+    { g: "29.1 Подбор замены", t: "Отправленная — «↔ замена: S-059»" },
+    { g: "29.1 Подбор замены", t: "Складская — active=true, location = место работающего" },
+    { g: "29.1 Подбор замены", t: "«↔ заменяет: P-001»" },
+    { g: "29.1 Подбор замены", t: "Location складской НЕ остался «Склад»" },
+    { g: "29.2 Фильтр по отделу", t: "Складская из другого отдела — по логике query" },
+    { g: "29.2 Фильтр по отделу", t: "Складская без отдела — показывается" },
+    { g: "29.2 Фильтр по отделу", t: "replacing != NULL — НЕ показывается" },
+    { g: "29.2 Фильтр по отделу", t: "sent_for_calibration != NULL — НЕ показывается" },
+    { g: "29.2 Фильтр по отделу", t: "exclude=:id — самоисключение" },
+    { g: "29.3 Защиты на сервере", t: "Замена = сама — 400" },
+    { g: "29.3 Защиты на сервере", t: "Одна складская для двух — 400" },
+    { g: "29.3 Защиты на сервере", t: "Замена активна — skipped «замена уже активна»" },
+    { g: "29.3 Защиты на сервере", t: "Замена отправлена — skipped" },
+    { g: "29.3 Защиты на сервере", t: "Тип не совпадает — skipped" },
+    { g: "29.4 Возврат замены", t: "Блок «На время поверки было выдано со склада»" },
+    { g: "29.4 Возврат замены", t: "Чекбокс отмечен по умолчанию" },
+    { g: "29.4 Возврат замены", t: "Оставить → active=false, location=«Склад»" },
+    { g: "29.4 Возврат замены", t: "replaced_by у отправляемой → NULL" },
+    { g: "29.4 Возврат замены", t: "Снять галочку → остаётся active, replacing=NULL" },
+    { g: "29.5 Удаление связанного", t: "Удалить складскую → replaced_by=NULL" },
+    { g: "29.5 Удаление связанного", t: "Удалить отправляемую → replacing=NULL" },
+    { g: "29.6 API", t: "GET /pipettes возвращает replacement и replacedFor" },
+    { g: "29.6 API", t: "GET /pipettes/:id — те же поля" },
+    { g: "29.7 Граничные случаи", t: "Нет складских — «Нет доступных»" },
+    { g: "29.7 Граничные случаи", t: "Одна складская на несколько — можно" },
+    { g: "29.7 Граничные случаи", t: "Обновить страницу — связи сохранились" },
+    { g: "29.8 cancelSend", t: "Отмена отправки — разрывает связь с заменой" },
+    { g: "29.8 cancelSend", t: "Замена возвращается на склад (active=false, location='Склад')" }
   ]},
+
   { title: "Блок 30. Пагинация таблицы", tag: "30", items: [
-    { g: "30.1 Базовое поведение", t: "Внизу таблицы блок «Стр. 1 из N · X записей»" },
-    { g: "30.1 Базовое поведение", t: "При ≤ 100 записях блок скрыт" },
-    { g: "30.1 Базовое поведение", t: "При > 100 записях блок виден" },
-    { g: "30.1 Базовое поведение", t: "pageSize = 100 (100 записей на страницу)" },
-    { g: "30.2 Навигация", t: "Кнопка «← Назад» на стр. 1 — disabled" },
-    { g: "30.2 Навигация", t: "Кнопка «Вперёд →» на последней — disabled" },
-    { g: "30.2 Навигация", t: "Клик «Вперёд» — показаны записи 101–200" },
-    { g: "30.2 Навигация", t: "Клик «Назад» — возврат на стр. 1" },
-    { g: "30.3 Сброс при фильтрах", t: "Были на стр. 5, применили фильтр — перешли на стр. 1" },
-    { g: "30.3 Сброс при фильтрах", t: "Поиск — сброс на стр. 1" },
-    { g: "30.3 Сброс при фильтрах", t: "Сортировка — сброс на стр. 1" },
-    { g: "30.3 Сброс при фильтрах", t: "Импорт новых записей — сброс на стр. 1" },
-    { g: "30.3 Сброс при фильтрах", t: "Массовая отправка — сброс на стр. 1" },
-    { g: "30.3 Сброс при фильтрах", t: "Массовый возврат — сброс на стр. 1" },
-    { g: "30.4 Выбор строк", t: "Чекбокс «Выбрать все» выделяет только текущую страницу" },
-    { g: "30.4 Выбор строк", t: "Выделение сохраняется при переходе между страницами" },
-    { g: "30.4 Выбор строк", t: "Кнопка «Отправить на поверку (N)» суммирует по всем страницам" },
-    { g: "30.4 Выбор строк", t: "Частичное выделение на странице — indeterminate у master-checkbox" },
-    { g: "30.5 Автокоррекция", t: "Удалить последнюю запись на стр. N → перешли на стр. N-1" },
-    { g: "30.5 Автокоррекция", t: "Фильтр дал 0 записей — блок скрыт, показана заглушка" }
+    { g: "30.1 Базовое поведение", t: "«Стр. 1 из N · X записей»" },
+    { g: "30.1 Базовое поведение", t: "≤ 100 записей — блок скрыт" },
+    { g: "30.1 Базовое поведение", t: "> 100 записей — блок виден" },
+    { g: "30.1 Базовое поведение", t: "pageSize = 100" },
+    { g: "30.2 Навигация", t: "«← Назад» на стр. 1 — disabled" },
+    { g: "30.2 Навигация", t: "«Вперёд →» на последней — disabled" },
+    { g: "30.2 Навигация", t: "Клик «Вперёд» — 101–200" },
+    { g: "30.3 Сброс при фильтрах", t: "Были на стр. 5, фильтр → стр. 1" },
+    { g: "30.3 Сброс при фильтрах", t: "Поиск — стр. 1" },
+    { g: "30.3 Сброс при фильтрах", t: "Сортировка — стр. 1" },
+    { g: "30.3 Сброс при фильтрах", t: "Импорт — стр. 1" },
+    { g: "30.3 Сброс при фильтрах", t: "Массовая отправка — стр. 1" },
+    { g: "30.3 Сброс при фильтрах", t: "Массовый возврат — стр. 1" },
+    { g: "30.4 Выбор строк", t: "Чекбокс «Выбрать все» — только текущая страница" },
+    { g: "30.4 Выбор строк", t: "Выделение сохраняется между страницами" },
+    { g: "30.4 Выбор строк", t: "getVisiblePageIds() для select-all" },
+    { g: "30.4 Выбор строк", t: "Кнопка «Отправить (N)» суммирует по всем страницам" },
+    { g: "30.4 Выбор строк", t: "indeterminate у master-checkbox" },
+    { g: "30.5 Автокоррекция", t: "Удалить последнюю → N-1" },
+    { g: "30.5 Автокоррекция", t: "0 записей — заглушка" },
+    { g: "30.6 getSortedPipettes", t: "Единый источник для render и pageIds" }
   ]},
+
   { title: "Блок 31. Автофильтр по дате после возврата", tag: "31", items: [
-    { g: "31.1 Базовое поведение", t: "Отправить пипетки (external), вернуть с датой ≠ сегодня" },
-    { g: "31.1 Базовое поведение", t: "После «Применить ко всем» — таблица отфильтрована по этой дате" },
-    { g: "31.1 Базовое поведение", t: "В таблице — только возвращённые пипетки" },
-    { g: "31.1 Базовое поведение", t: "Панель фильтров: «Дата поверки», «Произвольный период», from=to=дата" },
-    { g: "31.2 Синхронизация UI", t: "Открыть панель фильтра после возврата — поля заполнены" },
-    { g: "31.2 Синхронизация UI", t: "Кнопка «Сбросить» в панели — фильтр снят" },
-    { g: "31.2 Синхронизация UI", t: "Поиск поверх фильтра — работает" },
-    { g: "31.3 Экспорт", t: "После возврата «Экспорт → PDF» — только возвращённые" },
-    { g: "31.3 Экспорт", t: "После возврата «Экспорт → CSV» — только возвращённые" },
-    { g: "31.4 Если фильтр даты не активен", t: "Удалить фильтр calPeriod из настроек — возврат работает без автофильтра" }
+    { g: "31.1 Базовое поведение", t: "Отправить external, вернуть с датой ≠ сегодня" },
+    { g: "31.1 Базовое поведение", t: "После «Применить ко всем» — таблица отфильтрована" },
+    { g: "31.1 Базовое поведение", t: "Панель: «Дата поверки», «Произвольный», from=to=дата" },
+    { g: "31.2 Синхронизация UI", t: "applyFilterStateToPanel — поля заполнены" },
+    { g: "31.2 Синхронизация UI", t: "«Сбросить» — фильтр снят" },
+    { g: "31.2 Синхронизация UI", t: "Поиск поверх фильтра" },
+    { g: "31.3 Экспорт", t: "Только возвращённые" },
+    { g: "31.4 Если фильтр не активен", t: "Возврат без автофильтра" },
+    { g: "31.5 Тост", t: "«Таблица отфильтрована по дате… Сбросьте фильтр»" }
   ]},
+
   { title: "Блок 32. Визуальные улучшения таблицы", tag: "32", items: [
-    { g: "32.1 Зебра", t: "Чётные строки — светлый фон #f8fafc" },
+    { g: "32.1 Зебра", t: "Чётные — #f8fafc" },
     { g: "32.1 Зебра", t: "Нечётные — белые" },
-    { g: "32.1 Зебра", t: "При наведении — #eef2ff (для всех)" },
-    { g: "32.2 Sticky-шапка", t: "Скроллить таблицу вниз — шапка остаётся видимой сверху" },
-    { g: "32.2 Sticky-шапка", t: "На мобильном — тоже sticky" },
-    { g: "32.3 Подсветка по статусу", t: "Строка со статусом «Просрочена» — бледно-красный #fff5f5" },
-    { g: "32.3 Подсветка по статусу", t: "Строка со статусом «Брак» — бледно-красный" },
-    { g: "32.3 Подсветка по статусу", t: "Строка со статусом «Скоро поверка» — бледно-жёлтый #fffdf5" },
-    { g: "32.3 Подсветка по статусу", t: "Строка «В норме» — обычная (зебра)" },
-    { g: "32.4 Приоритет", t: "Отмеченная галочкой просроченная строка — цвет выделения (#eef2ff) побеждает красный" },
-    { g: "32.5 Шрифты", t: "th: font-size .72rem, weight 700, uppercase, letter-spacing .6px" },
-    { g: "32.5 Шрифты", t: "td: font-size .88rem, line-height 1.35" },
-    { g: "32.5 Шрифты", t: "td strong (ID) — крупнее и жирнее (.92rem/700)" },
-    { g: "32.5 Шрифты", t: "td small (S/N, производитель) — мельче (.72rem, серый)" },
-    { g: "32.6 Цифры", t: "font-variant-numeric: tabular-nums — цифры выровнены по ширине" }
+    { g: "32.1 Зебра", t: "Hover — #eef2ff" },
+    { g: "32.2 Sticky-шапка", t: "Скролл — шапка видна" },
+    { g: "32.2 Sticky-шапка", t: "Мобильный — тоже sticky" },
+    { g: "32.3 Подсветка по статусу", t: "Просрочена — #fff5f5 (row-danger)" },
+    { g: "32.3 Подсветка по статусу", t: "Брак — row-fail" },
+    { g: "32.3 Подсветка по статусу", t: "Скоро поверка — #fffdf5 (row-warn)" },
+    { g: "32.3 Подсветка по статусу", t: "В норме — обычная (зебра)" },
+    { g: "32.4 Приоритет", t: "Отмеченная галочкой просроченная — #eef2ff побеждает" },
+    { g: "32.5 Шрифты", t: "th .72rem/700/uppercase/.6px" },
+    { g: "32.5 Шрифты", t: "td .88rem/1.35" },
+    { g: "32.5 Шрифты", t: "td strong .92rem/700" },
+    { g: "32.5 Шрифты", t: "td small .72rem серый" },
+    { g: "32.6 Цифры", t: "font-variant-numeric: tabular-nums" },
+    { g: "32.7 even-строки", t: "row-danger:nth-child(even) — #fff0f0" },
+    { g: "32.7 even-строки", t: "row-warn:nth-child(even) — #fffbea" },
+    { g: "32.8 :has(.row-checkbox:checked)", t: "Приоритет над row-danger/fail/warn" }
   ]},
+
   { title: "Блок 33. Мобильная адаптация (засвет устранён)", tag: "33", items: [
-    { g: "33.1 Засвет справа", t: "Открыть сайт на телефоне (iOS/Android)" },
-    { g: "33.1 Засвет справа", t: "Белой полосы справа нет" },
-    { g: "33.1 Засвет справа", t: "body: overflow-x: hidden, max-width: 100vw" },
-    { g: "33.1 Засвет справа", t: "html: overflow-x: hidden" },
-    { g: "33.2 Header", t: "Шапка не выпирает за экран" },
-    { g: "33.2 Header", t: "Карточки статистики — по 2 в ряд (flex: 1 1 calc(50% - 6px))" },
-    { g: "33.2 Header", t: "user-info — flex-wrap: wrap, не переполняет" },
-    { g: "33.3 Таблица", t: "Скроллится только внутри .table-wrapper" },
-    { g: "33.3 Таблица", t: "th: padding 10px, font-size .68rem" },
-    { g: "33.3 Таблица", t: "td: padding 10px, font-size .82rem" },
-    { g: "33.4 Пагинация", t: "Кнопки «Назад/Вперёд» крупные, тапаются пальцем" },
-    { g: "33.4 Пагинация", t: "Информация «Стр. N из M · X записей» не ломает вёрстку" },
-    { g: "33.5 Модалки", t: "max-width 95% на мобильном" },
-    { g: "33.5 Модалки", t: "Список складских в модалке отправки не выпирает" },
-    { g: "33.6 Проверка разрешений", t: "375px — всё в одну колонку, засвета нет" },
-    { g: "33.6 Проверка разрешений", t: "414px — то же" },
-    { g: "33.6 Проверка разрешений", t: "768px — планшетная адаптация, засвета нет" },
-    { g: "33.6 Проверка разрешений", t: "1440px — обычный десктоп, ничего не сломалось" }
+    { g: "33.1 Засвет справа", t: "Открыть на телефоне" },
+    { g: "33.1 Засвет справа", t: "Белой полосы справа НЕТ" },
+    { g: "33.1 Засвет справа", t: "body: overflow-x: clip (не hidden)" },
+    { g: "33.1 Засвет справа", t: "html: overflow-x: clip" },
+    { g: "33.1 Засвет справа", t: "max-width: 100vw на body" },
+    { g: "33.2 Header", t: "Не выпирает за экран" },
+    { g: "33.2 Header", t: "Stat-card 2 в ряд (flex: 1 1 calc(50% - 6px))" },
+    { g: "33.2 Header", t: "user-info flex-wrap" },
+    { g: "33.3 Таблица", t: "Скролл только внутри .table-wrapper" },
+    { g: "33.3 Таблица", t: "th padding 10px, font-size .68rem" },
+    { g: "33.3 Таблица", t: "td padding 10px, font-size .82rem" },
+    { g: "33.4 Пагинация", t: "Кнопки крупные" },
+    { g: "33.4 Пагинация", t: "Инфо не ломает вёрстку" },
+    { g: "33.5 Модалки", t: "max-width 95%" },
+    { g: "33.5 Модалки", t: "Список складских не выпирает" },
+    { g: "33.6 Разрешения", t: "375px — 1 колонка" },
+    { g: "33.6 Разрешения", t: "414px — 1 колонка" },
+    { g: "33.6 Разрешения", t: "768px — планшет, засвета нет" },
+    { g: "33.6 Разрешения", t: "1440px — десктоп" },
+    { g: "33.7 Сверх-узкие ≤ 375px", t: "Специальные правила для iPhone SE" },
+    { g: "33.7 Сверх-узкие ≤ 375px", t: "Filter-panel — 1 колонка" },
+    { g: "33.7 Сверх-узкие ≤ 375px", t: "Пагинация — column" }
+  ]},
+
+  { title: "Блок 34. Свёртывание шапки", tag: "34", items: [
+    { g: "", t: "Кнопка «▲ Свернуть» в шапке" },
+    { g: "", t: "Клик — header.collapsed" },
+    { g: "", t: "Скрывается header-body (stats, user-info)" },
+    { g: "", t: "Показывается header-mini-stats" },
+    { g: "", t: "Длинный h1 → h1-short" },
+    { g: "", t: "Состояние сохраняется (localStorage: pipette_header_collapsed)" },
+    { g: "", t: "F5 — состояние восстановлено" },
+    { g: "", t: "На десктопе (> 1025px) кнопка скрыта" },
+    { g: "", t: "На мобильном — компактная" },
+    { g: "", t: "updateHeaderMiniStats — «N/M в норме»" },
+    { g: "", t: "wrapRenderForMiniStats — обновляет после render" },
+    { g: "", t: "initHeaderCollapse — восстановление при загрузке" }
+  ]},
+
+  { title: "Блок 35. Тёмная тема", tag: "35", items: [
+    { g: "", t: "Кнопка 🌙/☀️ в шапке" },
+    { g: "", t: "Клик — toggleTheme" },
+    { g: "", t: "data-theme='dark' на <html>" },
+    { g: "", t: "Сохраняется в localStorage: pipette_theme" },
+    { g: "", t: "F5 — тема восстановлена" },
+    { g: "", t: "Кнопка показывает эмодзи: dark → ☀️, light → 🌙" },
+    { g: "", t: "initTheme — без мигания при загрузке" },
+    { g: "", t: "Все компоненты адаптированы: header, toolbar, table, modal, filter-panel, dropdown-menu" },
+    { g: "", t: "settings-items, row-actions-menu адаптированы" },
+    { g: "", t: "bc-* компоненты адаптированы" },
+    { g: "", t: "camera-scan-* адаптированы" }
+  ]},
+
+  { title: "Блок 36. Автоперегенерация ID при смене типа", tag: "36", items: [
+    { g: "36.1 Триггер", t: "Открыть P-001, сменить тип на Анализатор" },
+    { g: "36.1 Триггер", t: "Сохранить — «ID изменён: P-001 → A-XXX»" },
+    { g: "36.2 Формат", t: "Новый ID с prefix нового типа" },
+    { g: "36.2 Формат", t: "Разрядность сохраняется (001 → 001)" },
+    { g: "36.2 Формат", t: "Если A-001 занят — A-002" },
+    { g: "36.3 Связь истории", t: "calibration_history перепривязана" },
+    { g: "36.3 Связь истории", t: "История по новому ID доступна" },
+    { g: "36.4 Связь замен", t: "replaced_by обновляется в связанной" },
+    { g: "36.4 Связь замен", t: "replacing обновляется" },
+    { g: "36.5 Без изменения prefix", t: "Тот же prefix — ID не меняется" },
+    { g: "36.5 Без изменения prefix", t: "Пустой prefix — не меняется" },
+    { g: "36.6 Некорректный старый ID", t: "CUSTOM-X — не меняется" },
+    { g: "36.6 Некорректный старый ID", t: "Тип не найден — не меняется" },
+    { g: "36.7 Аудит", t: "«P-001 → A-001 (смена типа pipette → analyzer)»" },
+    { g: "36.7 Аудит", t: "idChanged=true, newId, oldId" },
+    { g: "36.8 API", t: "PUT с idChanged=true" },
+    { g: "36.8 API", t: "PUT без смены типа — idChanged=false" },
+    { g: "36.9 maybeRegenerateId", t: "FOR UPDATE через транзакцию" },
+    { g: "36.9 maybeRegenerateId", t: "Поиск первого свободного" },
+    { g: "36.10 applyIdChange", t: "SET FOREIGN_KEY_CHECKS=0 → UPDATE → 1" },
+    { g: "36.10 applyIdChange", t: "UPDATE calibration_history, pipettes.replaced_by, pipettes.replacing, pipettes.id" }
+  ]},
+
+  { title: "Блок 37. Штрихкоды", tag: "37", items: [
+    { g: "37.1 resolveBarcodeValue", t: "manual → barcode" },
+    { g: "37.1 resolveBarcodeValue", t: "custom.inventorynumber → inv" },
+    { g: "37.1 resolveBarcodeValue", t: "serial → serial" },
+    { g: "37.1 resolveBarcodeValue", t: "fallback → id" },
+    { g: "37.2 computeBarcodeValue (сервер)", t: "Тот же порядок" },
+    { g: "37.3 GET /api/barcodes/:id/png", t: "type=code128 → PNG" },
+    { g: "37.3 GET /api/barcodes/:id/png", t: "type=qr → PNG" },
+    { g: "37.3 GET /api/barcodes/:id/png", t: "Cache-Control: max-age=300" },
+    { g: "37.3 GET /api/barcodes/:id/png", t: "Несуществующий ID — 404" },
+    { g: "37.4 POST /api/barcodes/lookup", t: "По barcode" },
+    { g: "37.4 POST /api/barcodes/lookup", t: "По id" },
+    { g: "37.4 POST /api/barcodes/lookup", t: "По serial" },
+    { g: "37.4 POST /api/barcodes/lookup", t: "По custom.inventorynumber (JSON_EXTRACT)" },
+    { g: "37.4 POST /api/barcodes/lookup", t: "Не найдено — 404" },
+    { g: "37.4 POST /api/barcodes/lookup", t: "Без barcode — 400" },
+    { g: "37.4 POST /api/barcodes/lookup", t: "Требует право scan_barcode" },
+    { g: "37.5 POST /api/barcodes/manual", t: "Установка вручную (admin)" },
+    { g: "37.5 POST /api/barcodes/manual", t: "Максимум barcode_max_length" },
+    { g: "37.5 POST /api/barcodes/manual", t: "Дубль barcode — 409" },
+    { g: "37.5 POST /api/barcodes/manual", t: "Несуществующий id — 404" },
+    { g: "37.5 POST /api/barcodes/manual", t: "Аудит с деталями" },
+    { g: "37.6 POST /api/barcodes/reset", t: "barcode=NULL, barcode_source=NULL" },
+    { g: "37.6 POST /api/barcodes/reset", t: "Аудит" },
+    { g: "37.7 Автоштрихкод при создании", t: "Если admin передал barcode — manual" },
+    { g: "37.7 Автоштрихкод при создании", t: "Иначе — computeBarcodeValue" },
+    { g: "37.8 Автоштрихкод при обновлении", t: "manualBarcode у admin — сохраняется" },
+    { g: "37.8 Автоштрихкод при обновлении", t: "Не manual — пересчитывается" },
+    { g: "37.8 Автоштрихкод при обновлении", t: "Пустая строка — сброс" },
+    { g: "37.9 UI поля штрихкода", t: "wrapGenerateFormFieldsForBarcode" },
+    { g: "37.9 UI поля штрихкода", t: "Кнопка ✨ «Заполнить из инв/серийного/ID»" },
+    { g: "37.9 UI поля штрихкода", t: "Кнопка ↩️ «Сбросить ручной»" },
+    { g: "37.9 UI поля штрихкода", t: "data-manual='1' при ручном вводе" },
+    { g: "37.9 UI поля штрихкода", t: "Только canManageBarcodes — иначе readOnly" },
+    { g: "37.10 generateBarcodePng", t: "bwip-js code128 scale=3 height=12 includetext" },
+    { g: "37.10 generateBarcodePng", t: "QRCode.toBuffer для qr" },
+    { g: "37.11 normalizeBarcode", t: "trim + удаление пробелов" }
+  ]},
+
+  { title: "Блок 38. Печать этикеток", tag: "38", items: [
+    { g: "38.1 Модалка печати", t: "openBarcodePrintModal — открывается" },
+    { g: "38.1 Модалка печати", t: "Область: selected / page / filtered" },
+    { g: "38.1 Модалка печати", t: "updateBarcodePrintScopeCounts" },
+    { g: "38.1 Модалка печати", t: "Приоритет: selected если есть выбор" },
+    { g: "38.1 Модалка печати", t: "Копий каждой — дефолт из настроек" },
+    { g: "38.2 Список принтеров", t: "loadPrintersForBarcodePrint" },
+    { g: "38.2 Список принтеров", t: "Если нет — «📄 PDF (A4)»" },
+    { g: "38.2 Список принтеров", t: "preferredId — принтер отдела пользователя" },
+    { g: "38.2 Список принтеров", t: "modeLabels: pdf-a4 / pdf-zebra / zebra-ip / zebra-agent" },
+    { g: "38.3 GET /api/barcodes/labels.pdf", t: "ids обязателен, иначе 400" },
+    { g: "38.3 GET /api/barcodes/labels.pdf", t: "copies ограничен 1–50" },
+    { g: "38.3 GET /api/barcodes/labels.pdf", t: "layout=a4 — COLS=3, ROWS_PER_PAGE=8" },
+    { g: "38.3 GET /api/barcodes/labels.pdf", t: "layout=zebra — размер из barcode_label_size" },
+    { g: "38.3 GET /api/barcodes/labels.pdf", t: "PDF через pdfkit" },
+    { g: "38.4 POST /api/barcodes/print", t: "Автоподбор принтера" },
+    { g: "38.4 POST /api/barcodes/print", t: "По department пользователя (или acting_department)" },
+    { g: "38.4 POST /api/barcodes/print", t: "Fallback на любой enabled+default" },
+    { g: "38.4 POST /api/barcodes/print", t: "mode=zebra-ip — TCP сокет" },
+    { g: "38.4 POST /api/barcodes/print", t: "mode=zebra-agent — ZPL на клиент" },
+    { g: "38.4 POST /api/barcodes/print", t: "mode=pdf-zebra — PDF 58×40" },
+    { g: "38.4 POST /api/barcodes/print", t: "mode=pdf-a4 — PDF A4" },
+    { g: "38.4 POST /api/barcodes/print", t: "pdf-a4-fallback при ошибке Zebra" },
+    { g: "38.4 POST /api/barcodes/print", t: "Аудит zebra-ip" },
+    { g: "38.5 buildZplForPipette", t: "^XA … ^XZ" },
+    { g: "38.5 buildZplForPipette", t: "^PW / ^LL — размеры" },
+    { g: "38.5 buildZplForPipette", t: "^BCN code128 / ^BQN QR" },
+    { g: "38.5 buildZplForPipette", t: "Экранирование ^ ~ \\ ," },
+    { g: "38.5 buildZplForPipette", t: "labelFields — id/model/serial/department/responsible/inventorynumber" },
+    { g: "38.6 sendZplToPrinter", t: "TCP net.Socket" },
+    { g: "38.6 sendZplToPrinter", t: "Таймаут 4000 мс" },
+    { g: "38.7 UI кнопки печати", t: "submitBarcodePrint — рисует спиннер" },
+    { g: "38.7 UI кнопки печати", t: "downloadBarcodePdf — Blob → a.click()" },
+    { g: "38.7 UI кнопки печати", t: "sendToLocalAgent — fetch http://localhost:9200/print" },
+    { g: "38.7 UI кнопки печати", t: "Если агент не отвечает — fallback на PDF" },
+    { g: "38.8 Лимиты UI", t: ">500 этикеток — подтверждение" },
+    { g: "38.8 Лимиты UI", t: "Пустой выбор — «Ничего не выбрано»" },
+    { g: "38.9 Лейбл-размеры", t: "58x40 / 40x25 / 100x50 (LABEL_SIZES)" }
+  ]},
+
+  { title: "Блок 39. Принтеры этикеток", tag: "39", items: [
+    { g: "39.1 Admin список", t: "GET /api/barcode-printers — admin only" },
+    { g: "39.1 Admin список", t: "renderBarcodePrintersList — таблица" },
+    { g: "39.1 Admin список", t: "bc-printers-table — компактная" },
+    { g: "39.2 Для пользователя", t: "GET /api/barcode-printers/available" },
+    { g: "39.2 Для пользователя", t: "preferredId — по отделу" },
+    { g: "39.2 Для пользователя", t: "userDepartment — acting_department или department" },
+    { g: "39.3 Создание", t: "POST /api/barcode-printers — admin" },
+    { g: "39.3 Создание", t: "Валидация: name обязателен" },
+    { g: "39.3 Создание", t: "Валидация: mode из списка" },
+    { g: "39.3 Создание", t: "zebra-ip требует IP" },
+    { g: "39.3 Создание", t: "Аудит" },
+    { g: "39.4 Обновление", t: "PUT /api/barcode-printers/:id" },
+    { g: "39.4 Обновление", t: "is_default сбрасывает у других того же отдела" },
+    { g: "39.5 Удаление", t: "DELETE /api/barcode-printers/:id" },
+    { g: "39.5 Удаление", t: "Аудит" },
+    { g: "39.6 addBarcodePrinter (UI)", t: "prompt name → mode → ip → dept" },
+    { g: "39.6 addBarcodePrinter (UI)", t: "modeMap 1/2/3/4" },
+    { g: "39.7 checkPrinterById", t: "zebra-ip → POST /printer-status" },
+    { g: "39.7 checkPrinterById", t: "zebra-agent → «проверка на компе пользователя»" },
+    { g: "39.7 checkPrinterById", t: "pdf-* → «проверка не требуется»" },
+    { g: "39.8 POST /api/barcodes/printer-status", t: "TCP connect с таймаутом" },
+    { g: "39.8 POST /api/barcodes/printer-status", t: "Возвращает {ok, message}" },
+    { g: "39.9 Режимы", t: "pdf-a4 / pdf-zebra / zebra-ip / zebra-agent" },
+    { g: "39.9 Режимы", t: "labelSize: 58x40 / 40x25 / 100x50" }
+  ]},
+
+  { title: "Блок 40. Сканирование камерой", tag: "40", items: [
+    { g: "40.1 Открытие", t: "openCameraScan — только mobile" },
+    { g: "40.1 Открытие", t: "Без getUserMedia — ошибка" },
+    { g: "40.1 Открытие", t: "Без HTTPS и не localhost — ошибка" },
+    { g: "40.2 Доступ", t: "NotAllowedError — «Доступ запрещён»" },
+    { g: "40.2 Доступ", t: "NotFoundError — «Камера не найдена»" },
+    { g: "40.2 Доступ", t: "NotReadableError — «Камера занята»" },
+    { g: "40.3 Декодирование", t: "jsQR (QR)" },
+    { g: "40.3 Декодирование", t: "ZXing (штрихкоды) через decodeFromCanvas" },
+    { g: "40.3 Декодирование", t: "Масштаб до 640px" },
+    { g: "40.3 Декодирование", t: "willReadFrequently: true" },
+    { g: "40.4 Антидубль", t: "_cameraLastResult + 2000 мс окно" },
+    { g: "40.5 Вибрация", t: "navigator.vibrate(80)" },
+    { g: "40.6 Куда вставлять", t: "_cameraTargetInput если задан" },
+    { g: "40.6 Куда вставлять", t: "barcode-input в scanner-modal" },
+    { g: "40.6 Куда вставлять", t: "search поле" },
+    { g: "40.6 Куда вставлять", t: "Иначе — toast с кодом" },
+    { g: "40.7 Фонарик", t: "checkTorchSupport — capabilities.torch" },
+    { g: "40.7 Фонарик", t: "toggleCameraTorch — applyConstraints" },
+    { g: "40.8 handleScanButton", t: "isMobileDevice → openCameraScan" },
+    { g: "40.8 handleScanButton", t: "Иначе — openBarcodeScannerModal" },
+    { g: "40.9 isMobileDevice", t: "UA-детекция + iPadOS + touch+narrow" },
+    { g: "40.10 Кнопка «Сканировать»", t: "Иконка fa-camera на мобильном" },
+    { g: "40.10 Кнопка «Сканировать»", t: "fa-barcode на десктопе" }
+  ]},
+
+  { title: "Блок 41. Сканирование USB-сканером", tag: "41", items: [
+    { g: "", t: "openBarcodeScannerModal — модалка" },
+    { g: "", t: "Input autofocus" },
+    { g: "", t: "Enter → handleBarcodeScan" },
+    { g: "", t: "POST /api/barcodes/lookup" },
+    { g: "", t: "Уже в списке — «Уже в списке»" },
+    { g: "", t: "Ошибка — «Не найдено»" },
+    { g: "", t: "renderBarcodeScanList — список" },
+    { g: "", t: "removeFromBarcodeScanList — × " },
+    { g: "", t: "clearBarcodeScanList — очистить" },
+    { g: "", t: "Кнопка «На отправку» — openBulkSendFromScanner" },
+    { g: "", t: "Кнопка «На возврат» — openBulkReturnFromScanner" },
+    { g: "", t: "Кнопки disabled если нет подходящих" },
+    { g: "", t: "_barcodeScanList хранит _scannedValue" }
+  ]},
+
+  { title: "Блок 42. Экспорт XLSX (детально)", tag: "42", items: [
+    { g: "42.1 Registry", t: "mode='registry'" },
+    { g: "42.1 Registry", t: "Заголовок meta.title" },
+    { g: "42.1 Registry", t: "Мета: «Дата: … · Записей: …»" },
+    { g: "42.1 Registry", t: "Пустая строка" },
+    { g: "42.1 Registry", t: "Headers row" },
+    { g: "42.1 Registry", t: "Данные с чередованием fgColor #F8FAFC" },
+    { g: "42.1 Registry", t: "Border thin #E2E8F0" },
+    { g: "42.1 Registry", t: "Row height 22pt" },
+    { g: "42.2 History", t: "mode='history'" },
+    { g: "42.2 History", t: "Мета: ID/Модель/Производитель/Serial/Отдел/Период/Записей" },
+    { g: "42.2 History", t: "Пустая строка после меты" },
+    { g: "42.3 Подвал", t: "spacer 60pt" },
+    { g: "42.3 Подвал", t: "«Документ сформировал: {position}, {user}» слева" },
+    { g: "42.3 Подвал", t: "«Подпись: ___» справа" },
+    { g: "42.4 Автоширина", t: "Math.min(Math.max(max+1, 8), 20)" },
+    { g: "42.5 pageSetup", t: "fitToPage: true" },
+    { g: "42.5 pageSetup", t: "fitToWidth: 1, fitToHeight: 0" },
+    { g: "42.5 pageSetup", t: "orientation: 'landscape'" },
+    { g: "42.5 pageSetup", t: "paperSize: 9 (A4)" },
+    { g: "42.5 pageSetup", t: "margins: left/right 0.25" },
+    { g: "42.5 pageSetup", t: "printTitlesRow — повтор шапки" },
+    { g: "42.6 Разрыв страницы", t: "FORCE_BREAK_THRESHOLD = 40" },
+    { g: "42.6 Разрыв страницы", t: "lastDataRow.addPageBreak()" },
+    { g: "42.7 Требования", t: "requirePermission('export_data')" },
+    { g: "42.8 Валидация", t: "headers[] и rows[] обязательны" },
+    { g: "42.9 filename", t: "registry: pipettes_YYYY-MM-DD.xlsx" },
+    { g: "42.9 filename", t: "history: history_<id>_YYYY-MM-DD.xlsx" }
+  ]},
+
+  { title: "Блок 43. Импорт (детально)", tag: "43", items: [
+    { g: "43.1 Парсинг форматов", t: "XLSX через exceljs" },
+    { g: "43.1 Парсинг форматов", t: "CSV с автоопределением разделителя" },
+    { g: "43.1 Парсинг форматов", t: "JSON — массив объектов" },
+    { g: "43.1 Парсинг форматов", t: "TXT — как CSV" },
+    { g: "43.1 Парсинг форматов", t: ".xls — 400 с понятной ошибкой" },
+    { g: "43.2 cellValue", t: "result формулы" },
+    { g: "43.2 cellValue", t: "richText — map(r => r.text).join('')" },
+    { g: "43.2 cellValue", t: "hyperlink — v.text" },
+    { g: "43.3 Поиск заголовков", t: "MAX_SCAN = 20 строк" },
+    { g: "43.3 Поиск заголовков", t: "bestScore — счётчик распознанных" },
+    { g: "43.3 Поиск заголовков", t: "bestScore < 2 — ошибка" },
+    { g: "43.4 Отсечение мусора", t: "«Документ сформировал» / «Подпись» — skip" },
+    { g: "43.4 Отсечение мусора", t: "id === model (merged) — skip" },
+    { g: "43.5 HEADER_MAP", t: "Полный словарь синонимов" },
+    { g: "43.5 HEADER_MAP", t: "Нормализация: lowercase + trim + замена пробелов + удаление кавычек/точек/двоеточий" },
+    { g: "43.5 HEADER_MAP", t: "Фоллбэк: n2 = n без содержимого в ()" },
+    { g: "43.5 HEADER_MAP", t: "Кастомные поля: custom:<id> из _importCustomFields" },
+    { g: "43.6 parseDate", t: "Date (ExcelJS) → YYYY-MM-DD локально" },
+    { g: "43.6 parseDate", t: "DD.MM.YYYY / DD-MM-YYYY / DD/MM/YYYY" },
+    { g: "43.6 parseDate", t: "US-формат при g2 > 12" },
+    { g: "43.6 parseDate", t: "YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD" },
+    { g: "43.6 parseDate", t: "Битую дату — ''" },
+    { g: "43.7 normalizeResult", t: "брак/fail → 'fail'" },
+    { g: "43.7 normalizeResult", t: "процесс/wip → 'wip'" },
+    { g: "43.7 normalizeResult", t: "годен/pass/ok → 'pass'" },
+    { g: "43.7 normalizeResult", t: "Дефолт 'pass'" },
+    { g: "43.8 normalizeEquipmentTypeCached", t: "По value/label из typesCache" },
+    { g: "43.8 normalizeEquipmentTypeCached", t: "Фоллбэк: эвристики (пипет→pipette)" },
+    { g: "43.9 normalizeActive", t: "Да/yes/true/1 → 1" },
+    { g: "43.9 normalizeActive", t: "Нет/no/false/0 → 0" },
+    { g: "43.9 normalizeActive", t: "Пусто → 1" },
+    { g: "43.10 parseInterval", t: "Только цифры" },
+    { g: "43.10 parseInterval", t: "Дефолт 12" },
+    { g: "43.11 Транзакция", t: "Одна на строку" },
+    { g: "43.11 Транзакция", t: "ER_DUP_ENTRY → skipped (гонка)" },
+    { g: "43.11 Транзакция", t: "Другие ошибки → errors[]" },
+    { g: "43.12 Кастомные поля", t: "customObj из custom:<id>" },
+    { g: "43.12 Кастомные поля", t: "Сохраняются в custom_data JSON" },
+    { g: "43.13 История", t: "Первичная поверка «Импорт из файла»" },
+    { g: "43.14 Ответ", t: "{ added, skipped, errors, skippedDetails, errorDetails, recognizedFields, totalColumns }" },
+    { g: "43.15 Аудит", t: "«Импорт из файла: filename: добавлено N, пропущено M, ошибок K»" },
+    { g: "43.16 Права", t: "requirePermission('import_data')" }
   ]}
 ];
-
-/* ================ ДАННЫЕ: СЦЕНАРИИ ================ */
+  /* ================ ДАННЫЕ: СЦЕНАРИИ (1–13) ================ */
 var SCENARIOS = [
   { tag: "S1", title: "Сценарий 1. Администратор: от запуска до аудита", time: "60 мин", priority: "🔴", blocks: "1, 2.1, 3–6, 9, 10, 13–19, 27", steps: [
-    "docker-compose up -d, проверить логи MySQL, БД, сервера, разовый пароль admin (не 3)",
-    "SHOW TABLES — все 10 таблиц, 1 пользователь (admin), 8 отделов, 5 демо-пипеток",
-    "SHOW INDEX FROM pipettes, audit_log — 3 индекса на месте",
-    "system_settings: equipment_types (6 + calibrationPlace), warn_days = 30",
+    "docker-compose up -d, проверить логи MySQL, БД, сервера, разовый пароль admin",
+    "SHOW TABLES — все 11 таблиц (включая barcode_printers), 1 пользователь (admin), 8 отделов, 5 демо-пипеток",
+    "SHOW INDEX FROM pipettes, audit_log, barcode_printers — все 5 индексов на месте",
+    "system_settings: equipment_types (6 + calibrationPlace), warn_days, demo_seeded, barcode_*",
     "Открыть http://localhost:3000, Console без ошибок",
     "Войти admin — тост, ФИО, должность в шапке",
     "Создать P-006, A-002, M-002. Проверить префиксы ID",
@@ -878,24 +1392,26 @@ var SCENARIOS = [
     "Записать Брак для другой пипетки — статус красный",
     "История P-001: таймлайн, свидетельство, организация, примечание",
     "Добавить поверку вручную из истории. Тост, таблица обновлена",
-    "Экспорт истории: пустой период и конкретный. CSV и PDF",
+    "Экспорт истории: пустой период и конкретный. XLSX и PDF",
     "Фильтры: статус Просрочены, период, отдел, ответственный, модель",
     "Сбросить фильтры. Сортировка по ID и модели",
-    "Открыть настройки: поля, отделы, фильтры, экспорт, система, лог",
+    "Открыть настройки: разделы (не вкладки) — Поля, Отделы, Фильтры, Экспорт, Типы, Пользователи, Принтеры, Штрихкоды, Общие, Лог",
     "Открыть вкладку 🎨 Визуал — сверить таблицу и все модалки",
     "В логе проверить: вход, добавление, смена пароля, импорт",
     "Очистить лог с подтверждением — пусто"
   ], expected: "Все действия проходят, данные не теряются, ошибки валидации корректны, лог заполняется, вкладка Визуал совпадает с реальным UI" },
 
   { tag: "S2", title: "Сценарий 2. Роли, права и impersonate", time: "30 мин", priority: "🔴", blocks: "2.4, 2.5, 20", steps: [
-    "Создать user/user и senior/senior через Настройки → Пользователи (в seed только admin)",
+    "Создать user/user и senior/senior через Настройки → Пользователи",
     "Разовые пароли из модалки — сменить при первом входе",
-    "Войти user. Проверить: Иванов Иван, Биохимический отдел",
+    "Войти user. Проверить: имя, отдел",
     "Нет кнопок Добавить, Импорт, Настройки, Экспорт",
-    "В истории нет Добавить поверку, в таблице только История",
+    "В истории нет Добавить поверку, в таблице только ⋮",
     "openModal() из консоли — Доступ запрещён",
     "apiRequest('/pipettes/P-001','DELETE') — 403",
-    "Войти senior/senior. Есть Добавить, Импорт, Экспорт, Добавить поверку; нет Настройки",
+    "Войти senior. Есть Добавить, Импорт, Экспорт, Добавить поверку; нет Настройки",
+    "senior: GET /users/responsibles — 200",
+    "senior: GET /users — 403",
     "Войти admin. Всё доступно",
     "Открыть пользователей, Войти как под user — тост, кнопка Вернуться",
     "Кнопки управления скрыты, права user",
@@ -903,25 +1419,29 @@ var SCENARIOS = [
     "Вернуться — тост, права admin вернулись",
     "Снова Войти как user, F5 — сессия impersonate сохранилась",
     "Напоминания: у user свой набор, у admin свой",
-    "Включить Только свой отдел у user — видит только Биохимический"
+    "Включить Только свой отдел у user — видит только свой",
+    "user: PUT чужого — 403",
+    "user: DELETE чужого — 403",
+    "user: GET истории чужого — 403"
   ], expected: "Права работают и на фронте, и на бэке; impersonate не теряет originalUser/originalToken; лог пишется от impersonated" },
 
   { tag: "S3", title: "Сценарий 3. Массовые операции и напоминания", time: "30 мин", priority: "🔴", blocks: "7, 8, 12, 27.4, 27.5", steps: [
     "Войти admin",
     "Выбрать 3 пипетки — счётчик (3)",
-    "Добавить анализатор — счётчик стал 1 или не учитывается",
+    "Добавить анализатор — счётчик = 4",
+    "Добавить весы — счётчик не изменился (internal)",
     "Открыть Отправить на поверку: список, дата, примечание",
     "Сверить с превью во вкладке 🎨 Визуал → Модалка массовой отправки",
     "Дата в будущем — ошибка",
     "Подтвердить: тост, статус На поверке, кнопка Отправить пропала, Вернулись (N)",
-    "Распечатать акт — окно с таблицей. Без выбора — Нет пипеток",
+    "Распечатать акт — окно с таблицей",
     "Открыть Возврат: счётчик возвращаемых",
-    "Сверить с превью во вкладке 🎨 Визуал → Модалка массового возврата",
+    "Сверить с превью 🎨 Визуал → Модалка массового возврата",
     "Одно свидетельство на всех — индивидуальные поля отключились",
     "Общий результат Годен, изменить общий select — все строки поменялись",
     "Пустое свидетельство — предупреждение",
     "Подтвердить: тост Возврат оформлен, статус и история обновились",
-    "curl POST /api/pipettes/bulk-return для не отправленной — skipped, истории нет",
+    "curl POST /api/pipettes/bulk-return для не отправленной — skipped",
     "Перезагрузить: напоминание через 600 мс при danger/warn",
     "Понятно — не появляется до завтра. Позже — появится при входе",
     "F5 — напоминание не появляется",
@@ -929,33 +1449,36 @@ var SCENARIOS = [
     "Impersonate — своё напоминание"
   ], expected: "Массовые операции корректны, статусы обновляются, напоминания per-user, модалки визуально совпадают с превью" },
 
-  { tag: "S4", title: "Сценарий 4. Настройки и пользовательский вид", time: "45 мин", priority: "🟡", blocks: "13–18, 22, 27.7, 27.13", steps: [
+  { tag: "S4", title: "Сценарий 4. Настройки и пользовательский вид", time: "45 мин", priority: "🟡", blocks: "13–19, 22, 27.7, 27.13", steps: [
     "Войти admin, открыть Настройки",
+    "Проверить структуру: список разделов с группами (Оборудование и данные / Пользователи / Печать и штрихкоды / Общие)",
+    "Клик на раздел — открывается, кнопка ← возвращает",
     "Поля формы: снять Активно у Примечание — пропало из формы",
     "Переместить поле — порядок изменился",
     "Поставить Обяз. — поле стало required",
     "Изменить label, не убирая фокус, кликнуть стрелку — правка сохранилась",
     "Добавить поле, тип select — textarea для опций",
     "Сохранить — тост",
+    "Удалить поле с данными — 409, подтверждение → каскадная очистка",
     "Отделы: дубликат — Такой отдел уже есть",
     "Изменить название без blur, кликнуть стрелку — правка не потерялась",
     "Сохранить — тост",
     "Фильтры: отключить Статус — после F5 пропал из UI",
     "Добавить фильтр — появился",
-    "Экспорт: 3 поля — CSV с 3 столбцами. Снять все — дефолт",
+    "Экспорт: 3 поля — XLSX с 3 столбцами",
     "Пользователи: своя строка без действий",
     "Создать пользователя — модалка разового пароля. Скопировать пароль",
     "Сверить с превью 🎨 Визуал → Модалка разового пароля",
     "Понизить себя — Нельзя понизить собственную роль",
-    "Понизить последнего админа — Нельзя понизить последнего администратора",
+    "Понизить последнего админа — Нельзя понизить последнего",
     "Сброс пароля себе — Используйте Сменить пароль",
     "Роль admin — все чекбоксы disabled",
-    "Система: изменить warn_days, сохранить",
+    "Система → Типы: изменить warn_days, сохранить",
     "Типы: value read-only, label изменить, пустой prefix — EQ, дубли — ошибка, используемый — Нельзя удалить",
-    "Лог: все действия, Очистить с подтверждением",
-    "Настройки вида: снять 3 поля у user, Колонки таблицы, Отдел вверх",
-    "Войти user — скрытых полей нет, порядок изменён",
-    "Пустой список — Нужно выбрать хотя бы одно поле"
+    "Кнопка «Настроить видимые поля» в строке пользователя — модалка",
+    "applyFieldsToAll('missing') — только ненастроенным",
+    "applyFieldsToAll('add') — добавить всем",
+    "Лог: все действия, Очистить с подтверждением"
   ], expected: "Настройки применяются, валидации работают, права не ломаются, вкладки и таблицы настроек визуально верны" },
 
   { tag: "S5", title: "Сценарий 5. Пароли, сессии и безопасность", time: "40 мин", priority: "🔴", blocks: "2.2, 21, 24, 26.1–26.5, 27.8", steps: [
@@ -979,85 +1502,91 @@ var SCENARIOS = [
     "SQL-инъекция в поле поиска — экранирование через знак вопроса",
     "XSS-тег — экранирование через esc()",
     "apiRequest('/settings/fields','PUT',[]) под user — 403",
+    "apiRequest('/users','GET') под user — 403",
+    "apiRequest('/log','GET') под user — 403",
     "CSV injection: =1+1, +7 999, -5, @user — текст в Excel",
-    "=HYPERLINK(...) — в CSV не выполняется",
     "Смена пароля в 23:59, запрос в 00:00 — OK",
     "sessionStorage с битым JSON — F5 — логин без JS-ошибки"
-  ], expected: "Пароли и сессии работают, безопасность не пробивается, регрессия не возвращается, модалка смены пароля визуально верна" },
+  ], expected: "Пароли и сессии работают, безопасность не пробивается, регрессия не возвращается" },
 
-  { tag: "S6", title: "Сценарий 6. Импорт, экспорт и нагрузка", time: "30 мин", priority: "🟡", blocks: "10, 11, 25", steps: [
+  { tag: "S6", title: "Сценарий 6. Импорт, экспорт и нагрузка", time: "30 мин", priority: "🟡", blocks: "10, 11, 25, 42, 43", steps: [
     "Войти admin, открыть Импорт",
     "Сверить с превью 🎨 Визуал → Модалка импорта",
-    "Загрузить XLSX, XLS, CSV, JSON, TXT — все работают",
+    "Загрузить XLSX, CSV, JSON, TXT — все работают",
+    "Загрузить .xls — понятная ошибка «Пересохраните как .xlsx»",
     "Битый файл — ошибка",
     "Без заголовков — Не удалось распознать…",
+    "XLSX с шапкой «Реестр оборудования…» — заголовки находятся автоматически",
     "Дубли ID — в skipped",
     "Дата 21.10.2024 — 2024-10-21",
     "Дата 10.21.2024 — 2024-10-21 (US)",
-    "Результат Брак — fail",
-    "Тип Микроскоп — microscope",
-    "Скрипт-тег — экранирование, нет всплытия",
+    "Дата 05.07.2024 — 2024-07-05 (RU)",
+    "Формула =SUM(...) — берётся result",
+    "Кастомное поле — распознано по label из field_config",
     "Импорт под user — Нет прав",
-    "Импортировать 500 строк < 30 сек. Таблица, фильтры, поиск",
-    "Импортировать 1000 строк < 60 сек. Не тормозит",
-    "Экспорт 1000 — CSV корректен, PDF открывается",
-    "Активный фильтр — экспорт только отфильтрованных",
-    "Без прав — Нет прав на экспорт",
-    "CSV: BOM, кириллица, pipettes_YYYY-MM-DD.csv",
-    "PDF: печатная форма, кнопка Печать",
+    "Импортировать 500 строк < 30 сек",
+    "Импортировать 1000 строк < 60 сек",
+    "Экспорт XLSX registry — файл корректный",
+    "Экспорт XLSX history — файл корректный",
+    "Открыть XLSX в Excel: fitToWidth=1, шапка повторяется, подвал с подписью",
     "docker exec SELECT COUNT(*) — совпадает"
   ], expected: "Импорт и экспорт стабильны, нагрузка в норме, безопасность соблюдена" },
 
   { tag: "S7", title: "Сценарий 7. Регрессия исправленных багов", time: "20 мин", priority: "🔴", blocks: "26", steps: [
-    "26.1. Смена пароля не разлогинивает: сменить, открыть таблицу — работает",
+    "26.1. Смена пароля не разлогинивает",
     "26.2. Fresh token: authToken обновился, impersonate сохранил original",
     "26.3. На чистой БД нет ALTER, на старой — колонка добавилась",
-    "26.4. must_change_password: GET pipettes 403, change-password OK, verify 200",
-    "26.5. Clock skew: refreshCurrentUser() сразу — не 401; смена в 23:59, запрос в 00:00 — OK",
-    "26.6. bulk-return для не отправленной — skipped, истории нет",
+    "26.4. must_change_password: 403 / change OK / verify OK",
+    "26.5. Clock skew: refreshCurrentUser() сразу — не 401",
+    "26.6. bulk-return для не отправленной — skipped",
     "26.7. Понижение себя и последнего админа — ошибка",
-    "26.8. oninput в Поля/Отделы/Фильтры/Типы — правка сохраняется",
+    "26.8. oninput в Поля/Отделы/Фильтры/Типы — сохраняется",
     "26.9. lastResult при скрытом поле — не сбрасывается в pass",
-    "26.10. Напоминания per-user: A закрыл, B видит своё; impersonate своё",
-    "26.11. CSV sanitize: =1+1, +7 (999), Research Plus — корректно",
-    "26.12. sessionStorage с битым JSON — F5 — логин без ошибки",
-    "26.13. history_count: GET /pipettes — число, история грузится отдельно, тултип N > 0",
-    "26.14. Индексы БД: SHOW INDEX — 3 индекса, повторный запуск не дублирует",
-    "26.15. Seed только admin: чистая БД — 1 пользователь, лог только про admin",
-    "26.16. FA иконки: в кнопках/заголовках — Font Awesome, в <option> — эмодзи",
-    "26.17. Debounce поиска: быстрый ввод не тормозит, результаты корректны",
-    "26.18. Async-обёртка: docker compose stop db — запросы возвращают 500, не pending; docker compose start db — всё снова работает"
-  ], expected: "Все 18 регрессионных пунктов проходят, старые баги не вернулись" },
+    "26.10. Напоминания per-user",
+    "26.11. CSV sanitize",
+    "26.12. sessionStorage с битым JSON",
+    "26.13. history_count: число, без массива, тултип N > 0",
+    "26.14. Индексы БД: 5 индексов, повторный запуск не дублирует",
+    "26.15. Seed только admin: 1 пользователь, demo_seeded=1",
+    "26.16. FA иконки везде, кроме <option>",
+    "26.17. Debounce поиска",
+    "26.18. Async-обёртка: docker compose stop db — 500 (не pending)",
+    "26.19. Меню ⋮: позиционирование при нехватке места снизу/справа",
+    "26.20. settings-back-btn: возврат к списку разделов",
+    "26.21. SETTINGS_SECTIONS: группировка + фильтр по правам"
+  ], expected: "Все 21 регрессионных пункта проходят, старые баги не вернулись" },
 
-  { tag: "S8", title: "Сценарий 8. UI и адаптивность", time: "15 мин", priority: "🟢", blocks: "23", steps: [
+  { tag: "S8", title: "Сценарий 8. UI и адаптивность", time: "15 мин", priority: "🟢", blocks: "23, 34, 35", steps: [
     "375px — всё в одну колонку",
     "768px — планшетная адаптация",
     "Клик по фону модалки — закрывается",
     "Esc — закрывает confirm",
     "Двойной клик Сохранить — не дублируется",
-    "Долгие названия отделов — не ломают вёрстку",
-    "Эмодзи и кириллица в названиях — корректны"
-  ], expected: "UI работает на всех разрешениях, эмодзи и кириллица не ломают вёрстку" },
+    "Кнопка «Свернуть/Развернуть» шапки работает",
+    "F5 после свёртывания — состояние восстановлено",
+    "Кнопка темы 🌙/☀️ работает",
+    "F5 после смены темы — тема восстановлена"
+  ], expected: "UI работает на всех разрешениях, шапка сворачивается, тема сохраняется" },
 
   { tag: "S9", title: "Сценарий 9. Жизненный цикл пипетки", time: "30 мин", priority: "🔴", blocks: "4, 5, 6, 7, 8", steps: [
-    "Создать P-100 с полными данными: модель, производитель, объём 1000, отдел, МПИ 12, дата сегодня, Годен, В работе, ответственный, место, примечание",
+    "Создать P-100 с полными данными",
     "P-100 появилась, счётчики обновились, статус зелёный",
     "История P-100 — одна запись (создание)",
-    "Быстрая поверка через 6 мес: Годен — Поверка и Следующая обновились, в истории 2 записи",
+    "Быстрая поверка через 6 мес: Годен — в истории 2 записи",
     "Изменить отдел — в истории остался старый отдел",
     "Сменить ответственного — в истории зафиксировано",
     "Отправить на внешнюю поверку — статус На поверке",
-    "Вернуть с Брак — статус красный, запись с браком в истории",
-    "Изменить статус эксплуатации на Неактивна — серый цвет",
+    "Вернуть с Брак — статус красный",
+    "Изменить статус на Неактивна — серый",
     "Удалить P-100 — история удалена каскадом"
-  ], expected: "На каждом шаге данные консистентны, история полная, удаление каскадное" },
+  ], expected: "На каждом шаге данные консистентны, история полная" },
 
-  { tag: "S10", title: "Сценарий 10. Граничные значения и валидация", time: "30 мин", priority: "🟡", blocks: "4, 5, 11", steps: [
+  { tag: "S10", title: "Сценарий 10. Граничные значения", time: "30 мин", priority: "🟡", blocks: "4, 5, 11", steps: [
     "Пустые: без модели, без даты, без отдела — все ошибки",
     "Модель 500 символов, примечание 5000 — сохраняется или обрезается?",
-    "Спецсимволы в модели (угловые скобки, кавычки, амперсанд, слэш, пайп) — экранирование, нет XSS",
-    "Эмодзи в отделе: микроскоп Гематология кровь — корректно",
-    "Модель только из пробелов — Заполните поле",
+    "Спецсимволы в модели — экранирование, нет XSS",
+    "Эмодзи в отделе — корректно",
+    "Модель из пробелов — Заполните поле",
     "Дата сегодня — сохраняется",
     "Дата завтра — ошибка",
     "Дата 1900-01-01 — сохраняется или ошибка?",
@@ -1065,263 +1594,347 @@ var SCENARIOS = [
     "МПИ 0 — ошибка или дефолт",
     "МПИ -1 — ошибка",
     "МПИ 999 — сохраняется?",
-    "Объём 0 для пипетки — ошибка или допустимо",
+    "Объём 0 — ошибка или допустимо",
     "Объём отрицательный — ошибка",
     "Объём 999999 мкл — сохраняется?",
     "ID P-!@# — ошибка",
-    "ID длиной 100 символов — обрезается или ошибка"
-  ], expected: "Все граничные случаи обрабатываются предсказуемо, нет падений, нет XSS, ошибки понятны" },
+    "ID длиной 100 — обрезается или ошибка"
+  ], expected: "Все граничные случаи обрабатываются предсказуемо" },
 
-  { tag: "S11", title: "Сценарий 11. Комбинированные фильтры и экспорт", time: "20 мин", priority: "🟡", blocks: "9, 10", steps: [
+  { tag: "S11", title: "Сценарий 11. Комбинированные фильтры", time: "20 мин", priority: "🟡", blocks: "9, 10", steps: [
     "Минимум 50 пипеток разных отделов, статусов, моделей",
     "Открыть панель фильтров",
-    "Статус Просрочены + отдел Гематологический + период от/до",
+    "Статус Просрочены + отдел + период от/до",
     "В таблице только подходящие строки",
-    "Добавить в поиск eppendorf — строки сузились",
-    "Счётчики в шапке совпадают с числом видимых",
-    "Отсортировать по Следующая (возрастание)",
-    "Экспорт CSV — только отфильтрованные строки, правильный порядок",
+    "Добавить в поиск — строки сузились",
+    "Счётчики совпадают с числом видимых",
+    "Сортировка по Следующая (возрастание)",
+    "Экспорт XLSX — только отфильтрованные",
     "Экспорт PDF — печатная форма только с отфильтрованным",
     "Сбросить фильтры — таблица полностью вернулась",
-    "Фильтр Без ответственного (если есть)",
-    "Фильтр по дате только С — работает",
-    "Противоречивые фильтры — заглушка Ничего не найдено"
-  ], expected: "Фильтры комбинируются логично, экспорт синхронизирован с экраном, сортировка сохраняется" },
+    "Противоречивые фильтры — заглушка"
+  ], expected: "Фильтры комбинируются логично, экспорт синхронизирован с экраном" },
 
-  { tag: "S12", title: "Сценарий 12. Многопользовательская работа через экспорт/импорт", time: "30 мин", priority: "🟡", blocks: "всё", steps: [
-    "Браузер A: admin, блоки 1–5, экспорт A.json",
-    "Браузер B: admin, блоки 6–10, экспорт B.json",
-    "A импортирует B.json — появились блоки 6–10, 1–5 не затронуты",
-    "B импортирует A.json — симметрично",
+  { tag: "S12", title: "Сценарий 12. Многопользовательская работа", time: "30 мин", priority: "🟡", blocks: "всё", steps: [
+    "Браузер A: admin, блоки 1–22, экспорт A.json",
+    "Браузер B: admin, блоки 23–43, экспорт B.json",
+    "A импортирует B.json",
+    "B импортирует A.json",
     "Оба имеют полный прогресс? Счётчики совпадают",
     "A: пункт 3.1 в fail, экспорт A2.json",
-    "B импортирует A2.json — пункт 3.1 стал fail, не перезаписался pass",
-    "B: пункт 3.1 в warn, экспорт B2.json",
-    "A импортирует B2.json — победил более свежий timestamp",
-    "Комментарии и баг-ссылки тоже мерджатся, не теряются"
-  ], expected: "Импорт мерджит по timestamp, не затирает более свежие правки, комментарии сохраняются" },
+    "B импортирует A2.json — пункт стал fail",
+    "Комментарии и баг-ссылки мерджатся"
+  ], expected: "Импорт мерджит по timestamp" },
 
-  { tag: "S13", title: "Сценарий 13. Аудит и восстановление после сбоев", time: "20 мин", priority: "🟢", blocks: "всё", steps: [
+  { tag: "S13", title: "Сценарий 13. Аудит и восстановление", time: "20 мин", priority: "🟢", blocks: "всё", steps: [
     "Пройти 20 пунктов, разные статусы, комментарии",
     "Закрыть вкладку. Открыть — всё на месте",
-    "DevTools — удалить kdl_checklist_v35. F5",
-    "Чек-лист пустой, не сломан. Console без ошибок",
-    "Пройти несколько. Закрыть браузер полностью. Открыть — сохранилось",
-    "localStorage.setItem('kdl_checklist_v35', битый JSON). F5",
-    "Приложение стартует с чистого, не падает, нет красных ошибок",
-    "localStorage.setItem(..., 'null'). F5 — то же",
-    "Пустой JSON с version, items, settings — пустой чек-лист, без ошибок",
-    "Инкогнито: 5 пунктов, закрыть, обычное окно — прогресса нет (ожидаемо)"
-  ], expected: "Приложение устойчиво к порче localStorage, битому JSON, отсутствию ключа" },
+    "DevTools — удалить kdl_checklist_v41. F5",
+    "Приложение стартует с чистого",
+    "localStorage с битым JSON. F5",
+    "localStorage.setItem(..., 'null'). F5",
+    "Пустой JSON — не падает",
+    "Инкогнито: прогресс не переносится"
+  ], expected: "Устойчивость к порче localStorage" },
 
-  { tag: "S14", title: "Сценарий 14. Даты и часовые пояса", time: "25 мин", priority: "🟡", blocks: "4, 5, 6, 11", steps: [
-    "Системное время 23:59, создать с датой сегодня — не завтра",
-    "Время 00:01 следующего дня — Следующая пересчиталась",
+  { tag: "S14", title: "Сценарий 14. Даты и часовые пояса", time: "25 мин", priority: "🟡", blocks: "4, 5, 6, 11, 43", steps: [
+    "Системное время 23:59 — создать с датой сегодня",
+    "Время 00:01 — Следующая пересчиталась",
     "Дата 21.10.2024 — распознана",
     "10.21.2024 — 21 октября (US)",
+    "05.07.2024 — 5 июля (RU)",
     "2024-10-21 — распознана",
     "21/10/2024 — распознана",
     "2024/10/21 — распознана",
     "32.13.2024 — ошибка",
     "abc — ошибка",
     "Пустая строка — Заполните поле",
+    "Excel Date object — конвертация локально",
     "МПИ 12 мес — ровно через год",
     "МПИ 1 мес — через месяц",
-    "МПИ 0 — ошибка или дефолт",
-    "просрочка N дн. считается от сегодня, не от последней поверки"
-  ], expected: "Все форматы дат распознаются, часовые пояса не ломают логику, МПИ считает корректно" },
+    "31 января + 1 мес → 28/29 февраля",
+    "просрочка N дн. от сегодня"
+  ], expected: "Все форматы дат распознаются, часовые пояса не ломают" },
 
   { tag: "S15", title: "Сценарий 15. Кросс-браузерное тестирование", time: "30 мин", priority: "🟢", blocks: "всё", steps: [
-    "Chrome: без JS-ошибок, пройти 10, F5 сохранил",
+    "Chrome: без JS-ошибок, 10 пунктов, F5 сохранил",
     "Chrome: экспорт/импорт JSON работают",
-    "Chrome: Diff двух JSON, различия видны",
-    "Chrome: Jira CSV, кириллица в Excel",
-    "Chrome: Markdown, чекбоксы на месте",
-    "Chrome: тёмная тема, адаптив 375/768/1440, печать",
-    "Firefox: те же шаги 1–6",
-    "Safari: те же шаги 1–6",
-    "Edge: те же шаги 1–6"
-  ], expected: "Одинаковое поведение во всех браузерах, нет браузер-специфичных багов" },
+    "Chrome: Diff двух JSON",
+    "Chrome: Jira CSV, кириллица",
+    "Chrome: Markdown",
+    "Chrome: тёмная тема, адаптив, печать",
+    "Firefox: те же шаги",
+    "Safari: те же шаги",
+    "Edge: те же шаги"
+  ], expected: "Одинаковое поведение во всех браузерах" },
 
-  { tag: "S16", title: "Сценарий 16. Негативные сценарии и что если", time: "25 мин", priority: "🟡", blocks: "всё", steps: [
-    "Console: undo() 100 раз — не падает, Нечего отменять",
+  { tag: "S16", title: "Сценарий 16. Негативные сценарии", time: "25 мин", priority: "🟡", blocks: "всё", steps: [
+    "Console: undo() 100 раз — Нечего отменять",
     "redo() 100 раз — аналогично",
     "importData({}) — не падает",
     "importData(null) — обрабатывается",
-    "exportJiraCSV() без багов — Нет багов для экспорта",
-    "Diff: загрузить один файл — Загрузите оба файла",
-    "Diff: .txt вместо JSON — Ошибка чтения",
+    "exportJiraCSV() без багов — Нет багов",
+    "Diff: один файл — Загрузите оба",
+    "Diff: .txt вместо JSON — Ошибка",
     "Diff: JSON без items — не падает",
-    "Diff: items: null — не падает",
     "Ссылка при 250+ пунктах — предупреждение",
     "Поиск: 1000 символов — не тормозит",
     "Поиск: regex-спецсимволы — не падает",
     "Двойной клик Сохранить в мета — не дублируется",
-    "Сброс + отмена в confirm — прогресс на месте",
+    "Сброс + отмена — прогресс на месте",
     "Сброс + подтверждение — очищено, тема сохранена, автоснимок создан"
-  ], expected: "Все негативные сценарии обрабатываются, приложение не падает" },
+  ], expected: "Все негативные сценарии обрабатываются" },
 
-  { tag: "S17", title: "Сценарий 17. Производительность на больших объёмах", time: "20 мин", priority: "🟢", blocks: "25", steps: [
-    "Заполнить все ~400 пунктов статусами (скриптом)",
-    "Замер render() через performance.now() < 500 мс",
-    "Поиск по букве — отфильтровалось мгновенно < 100 мс",
-    "Фильтр Провалы при 0 — заглушка мгновенно",
-    "Фильтр С мета при 400 комментариях — без тормозов",
-    "Экспорт JSON < 500 КБ, скачался < 1 сек",
+  { tag: "S17", title: "Сценарий 17. Производительность", time: "20 мин", priority: "🟢", blocks: "25", steps: [
+    "Заполнить ~400 пунктов скриптом",
+    "Замер render() < 500 мс",
+    "Поиск по букве — < 100 мс",
+    "Фильтр Провалы при 0 — мгновенно",
+    "Фильтр С мета при 400 — без тормозов",
+    "Экспорт JSON < 500 КБ, < 1 сек",
     "Импорт этого JSON < 1 сек",
     "Diff двух полных JSON < 1 сек",
     "Jira CSV при 400 багах < 1 сек",
     "Markdown при 400 пунктах < 1 сек",
-    "Undo 50 раз подряд — не тормозит"
-  ], expected: "Все операции < 1 сек, UI не залипает" },
+    "Undo 50 раз — не тормозит"
+  ], expected: "Все операции < 1 сек" },
 
-  { tag: "S18", title: "Сценарий 18. Командная работа 3 тестировщиков", time: "60 мин", priority: "🔴", blocks: "всё", steps: [
-    "A: блоки 1–7 (запуск, авторизация, таблица, CRUD, поверки, история, отправка)",
-    "B: блоки 8–15 (возврат, фильтры, экспорт, импорт, напоминания, настройки)",
-    "C: блоки 16–27 (пользователи, система, лог, impersonate, пароль, вид, UI, безопасность, нагрузка, регрессия, модалки)",
+  { tag: "S18", title: "Сценарий 18. Командная работа", time: "60 мин", priority: "🔴", blocks: "всё", steps: [
+    "A: блоки 1–11 (запуск, авторизация, таблица, CRUD, поверки, история, отправка, возврат, фильтры, экспорт, импорт)",
+    "B: блоки 12–22 (напоминания, настройки полей-отделов-фильтров-экспорта-пользователей-типов-логов, impersonate, пароль, и.о.)",
+    "C: блоки 23–35 (UI, безопасность, нагрузка, регрессия, модалки, типы поверки, замены, пагинация, автофильтр, зебра, мобильный засвет, свёртывание, тёмная тема)",
+    "D: блоки 36–43 (автоперегенерация ID, штрихкоды, печать этикеток, принтеры, камера, USB-сканер, XLSX-экспорт, импорт детально)",
     "Каждый находит баги, ставит fail, комментарий, ссылку",
-    "A экспортирует A.json, B и C импортируют — у всех 1–7",
-    "B экспортирует B.json, A и C импортируют — у всех 8–15",
-    "C экспортирует C.json, A и B импортируют — у всех полный прогресс",
+    "A экспортирует A.json, B, C, D импортируют",
+    "B экспортирует B.json — A, C, D импортируют",
+    "C экспортирует C.json — A, B, D импортируют",
+    "D экспортирует D.json — A, B, C импортируют",
     "Лидер: Jira CSV — все баги в трекер",
-    "Лидер: Markdown — TESTING.md — коммит в репозиторий",
-    "Лидер: Diff before.json / after.json — видит все изменения"
-  ], expected: "Командная работа без потерь, мердж корректен, отчёт готов" },
+    "Лидер: Markdown — TESTING.md",
+    "Лидер: Diff before.json / after.json"
+  ], expected: "Командная работа без потерь" },
 
-  { tag: "S19", title: "Сценарий 19. Безопасность экспортов и импортов", time: "25 мин", priority: "🔴", blocks: "10, 11, 24", steps: [
-    "Комментарий с HTML-тегом script — экспорт/импорт — не выполнился",
+  { tag: "S19", title: "Сценарий 19. Безопасность экспортов и импортов", time: "25 мин", priority: "🔴", blocks: "10, 11, 24, 42, 43", steps: [
+    "Комментарий с <script> — не выполнился",
     "Баг-ссылка javascript:alert(1) — не кликабельна",
-    "Модель =cmd с вертикальной чертой — CSV — формула не выполняется",
-    "Модель +7 (999) 123-45-67 — не число",
-    "Комментарий с символами CRLF (инъекция) — не ломает CSV",
-    "Комментарий 100 КБ — экспорт не падает",
-    "JSON с dunder-proto в ключах — prototype pollution не происходит",
-    "JSON с constructor в ключах — не падает",
-    "JSON с вложенными объектами в items — корректно или отклоняется",
-    "JSON с items как массивом — не падает",
+    "Модель =cmd — не выполняется",
+    "Модель +7 999 — текст",
+    "Комментарий с CRLF — не ломает CSV",
+    "Комментарий 100 КБ — не падает",
+    "JSON с __proto__ — prototype pollution не происходит",
+    "JSON с constructor — не падает",
+    "JSON с вложенными объектами в items — корректно",
     "JSON с 10 000 пунктов — не виснет"
   ], expected: "Все экспорты безопасны, импорты не создают уязвимостей" },
 
   { tag: "S20", title: "Сценарий 20. Полный smoke-тест перед сдачей", time: "15 мин", priority: "🔴", blocks: "всё", steps: [
     "Открыть — нет JS-ошибок",
-    "1 пункт через чекбокс — pass, счётчики обновились",
+    "1 пункт через чекбокс — pass",
     "1 пункт через fail — fail",
     "1 пункт через skip — skip",
     "Комментарий — 💬-бейдж",
-    "Баг-ссылка — 🐞-бейдж, кликабельна",
-    "Фильтр Провалы — только провалы",
-    "Фильтр С мета — только с комментами",
-    "Фильтр С багами — только баги",
-    "Поиск P-001 — одна строка",
-    "Групповая pass на блоке — весь блок зелёный",
-    "Групповая очистка — блок чистый",
-    "Ctrl+Z — вернулось. Ctrl+Y — снова очистилось",
-    "Тёмная тема — переключилась",
-    "Экспорт JSON — файл скачался",
-    "Импорт JSON — данные на месте",
-    "Diff двух JSON — различия видны",
-    "Jira CSV — файл с багами",
-    "Markdown — чекбоксы на месте",
-    "Сброс — чисто, тема сохранена, автоснимок создан",
+    "Баг-ссылка — 🐞-бейдж",
+    "Фильтр Провалы",
+    "Фильтр С мета",
+    "Фильтр С багами",
+    "Поиск P-001",
+    "Групповая pass на блоке",
+    "Групповая очистка",
+    "Ctrl+Z",
+    "Ctrl+Y",
+    "Тёмная тема",
+    "Экспорт JSON",
+    "Импорт JSON",
+    "Diff двух JSON",
+    "Jira CSV",
+    "Markdown",
+    "Сброс — чисто, автоснимок",
     "F5 — прогресс на месте",
-    "Тултип кнопки истории показывает реальный N (history_count)",
-    "Все кнопки toolbar — с Font Awesome иконками",
-    "Поиск без лагов при быстром вводе (debounce)",
-    "Открыть вкладку 🎨 Визуал — таблица и модалки отрисованы корректно",
-    "Сверить реальный UI с превью — расхождений нет"
-  ], expected: "Все 26 шагов проходят без ошибок. Если что-то падает — блокер для сдачи" },
+    "Тултип истории — history_count",
+    "FA иконки",
+    "Debounce поиска",
+    "Вкладка 🎨 Визуал — превью корректны",
+    "Кнопка Свернуть/Развернуть"
+  ], expected: "Все 27 шагов проходят без ошибок" },
 
   { tag: "S21", title: "Сценарий 21. Полный цикл с заменой оборудования", time: "30 мин", priority: "🔴", blocks: "28, 29", steps: [
-    "Войти admin. Настройки → Система → Типы оборудования",
-    "Проверить, что Пипетка = 📦 Внешняя, Весы = 🏠 На месте",
-    "Создать складскую пипетку P-SKL-01: тип=pipette, active=false, location=«Склад», отдел=Гематологический",
-    "Создать рабочую пипетку P-001 — отдел Гематологический, location=«Лаб. 302», active=true",
-    "Выделить P-001 → кнопка «Отправить на поверку (1)» появилась",
-    "Нажать → модалка отправки. В блоке «Складские того же типа» видна P-SKL-01",
-    "Сверить с превью вкладки 🎨 Визуал → Модалка 3 «Отправить на поверку»",
-    "Выбрать P-SKL-01 → дата отправки = сегодня → Сохранить",
-    "Тост подтверждает, P-001 = «📦 На поверке», подпись «↔ замена: P-SKL-01»",
-    "P-SKL-01 = active=true, location=«Лаб. 302», подпись «↔ заменяет: P-001»",
-    "Проверить в БД: SELECT id, active, location, replaced_by, replacing FROM pipettes",
-    "Отправить P-002 (тоже external, отдел Гематологический) — модалка открывается",
-    "В блоке замен P-SKL-01 уже НЕ показана (она кого-то заменяет)",
-    "Отправить P-002 без замены — сохранено",
-    "Попытаться удалить P-SKL-01 — удаление возможно, но replaced_by у P-001 обнулится",
-    "Отменить удаление. Вернуться к P-001",
-    "Отфильтровать статус «На поверке» — видны P-001, P-002",
-    "Выделить P-001 → кнопка «Вернулись с поверки (1)»",
-    "Нажать → модалка возврата. Блок «На время поверки было выдано со склада» с P-SKL-01",
-    "Сверить с превью вкладки 🎨 Визуал → Модалка 4 «Возврат с поверки»",
-    "Заполнить дату поверки (не сегодня!), свидетельство, результат=Годен",
-    "Оставить галочку «Вернуть замену на склад» отмеченной",
-    "Нажать «Применить ко всем» → тост, P-001 = «В норме»",
+    "Войти admin. Настройки → Типы оборудования",
+    "Проверить: Пипетка=📦 Внешняя, Весы=🏠 На месте",
+    "Создать складскую P-SKL-01: active=false, location=«Склад»",
+    "Создать рабочую P-001 — отдел Гематологический",
+    "Выделить P-001 → кнопка Отправить",
+    "Модалка: в блоке «Складские того же типа» видна P-SKL-01",
+    "Сверить с превью 🎨 Визуал → Модалка 3",
+    "Выбрать P-SKL-01 → дата = сегодня → Сохранить",
+    "P-001 = «📦 На поверке», подпись «↔ замена: P-SKL-01»",
+    "P-SKL-01 = active=true, location=«Лаб. 302», «↔ заменяет: P-001»",
+    "SELECT id, active, location, replaced_by, replacing FROM pipettes",
+    "Отправить P-002 — модалка, P-SKL-01 уже не показана",
+    "Отправить без замены",
+    "Попытаться удалить P-SKL-01 → заменяет связь → replaced_by=NULL",
+    "Отменить удаление",
+    "Отфильтровать На поверке — видны P-001, P-002",
+    "Выделить P-001 → кнопка Вернулись",
+    "Модалка: блок «На время поверки было выдано со склада» с P-SKL-01",
+    "Сверить с превью 🎨 Визуал → Модалка 4",
+    "Заполнить дату, свидетельство, Годен",
+    "Оставить галочку «Вернуть замену на склад»",
+    "Применить → P-001 «В норме»",
     "P-SKL-01 = active=false, location=«Склад», replacing=NULL",
-    "Таблица автоматически отфильтрована по дате поверки (произвольный период)",
-    "В таблице только P-001 (со свежей датой)",
-    "Нажать «Экспорт → PDF» — выгружена только P-001",
-    "Открыть панель фильтра — поля «С даты»/«По дату» заполнены",
-    "Сбросить фильтр — видны все пипетки",
-    "Отправить P-003 на поверку с P-SKL-01 в качестве замены",
-    "Открыть модалку возврата P-003 — снять галочку «Вернуть замену»",
-    "Применить → P-SKL-01 осталась active=true, location=«Лаб. 105» (место P-003)",
-    "P-003 = «В норме», replaced_by=NULL",
-    "В БД: SELECT * FROM pipettes WHERE id IN ('P-001','P-003','P-SKL-01') — связи корректны"
-  ], expected: "Полный цикл работает: подбор замены, отправка, возврат, возврат замены на склад, автофильтр по дате" },
+    "Таблица автоотфильтрована по дате поверки",
+    "Экспорт → PDF только P-001",
+    "Панель фильтра — С/По заполнены",
+    "Сбросить фильтр — все пипетки",
+    "Отправить P-003 с P-SKL-01 в качестве замены",
+    "Вернуть P-003, снять галочку «Вернуть замену»",
+    "P-SKL-01 осталась active=true, replacing=NULL"
+  ], expected: "Полный цикл работает, автофильтр по дате корректен" },
 
   { tag: "S22", title: "Сценарий 22. Пагинация на 1000+ записях", time: "25 мин", priority: "🔴", blocks: "30, 32", steps: [
-    "Импортировать 1000+ записей через модалку Импорт",
-    "Убедиться, что все записи на месте (SELECT COUNT(*) FROM pipettes)",
+    "Импортировать 1000+ записей",
+    "SELECT COUNT(*) — все на месте",
     "Открыть главную — блок пагинации внизу",
-    "Ожидаемо: «Стр. 1 из 11 · 1038 записей»",
-    "Проверить, что блок пагинации виден (записей > 100)",
-    "Клик «Вперёд →» — Стр. 2, показаны записи 101–200",
-    "Клик «Вперёд →» 9 раз — Стр. 11, показаны последние (1001–1038)",
-    "На последней странице «Вперёд →» — disabled",
-    "На стр. 1 «← Назад» — disabled",
-    "Клик «Назад» на стр. 11 — переход на стр. 10",
-    "Отметить галочкой 3 записи на стр. 1",
-    "Перейти на стр. 2 — там выделения нет",
-    "Отметить 2 записи на стр. 2",
-    "Вернуться на стр. 1 — первые 3 всё ещё отмечены",
-    "Отметить ещё 1 на стр. 1 → итого 6, кнопка «Отправить (6)»",
-    "Применить фильтр «Просрочены» — сброс на стр. 1, пагинация пересчитана",
-    "Поиск «Eppendorf» — сброс на стр. 1",
-    "Клик по столбцу «Модель» — сброс на стр. 1, сортировка по модели",
-    "Импортировать ещё 100 записей — сброс на стр. 1",
-    "Заменить 8 пипеток через модалку возврата — сброс на стр. 1, фильтр по дате",
-    "Смотреть визуально: чётные строки светлее, просроченные бледно-красные",
-    "Скроллить вниз — шапка остаётся сверху (sticky)",
-    "Замерить скорость: переключение страницы — мгновенно (< 100 мс)"
-  ], expected: "Пагинация работает, выделение сохраняется между страницами, фильтры сбрасывают на стр. 1, зебра и sticky-шапка в норме" },
+    "«Стр. 1 из 11 · 1038 записей»",
+    "Клик Вперёд — Стр. 2, показаны 101–200",
+    "9 раз Вперёд — Стр. 11, последние",
+    "На последней Вперёд — disabled",
+    "На стр. 1 Назад — disabled",
+    "Отметить 3 на стр. 1",
+    "Стр. 2 — выделения нет",
+    "Отметить 2",
+    "Стр. 1 — 3 всё ещё отмечены",
+    "Отметить ещё 1 — итого 6, кнопка Отправить (6)",
+    "Фильтр Просрочены — стр. 1",
+    "Поиск Eppendorf — стр. 1",
+    "Сортировка по Модель — стр. 1",
+    "Импорт 100 — стр. 1",
+    "Заменить 8 через возврат — стр. 1",
+    "Чётные строки светлее, просроченные красные",
+    "Скроллить вниз — шапка sticky",
+    "Переключение страницы < 100 мс"
+  ], expected: "Пагинация работает, выделение сохраняется, фильтры сбрасывают на стр. 1" },
 
   { tag: "S23", title: "Сценарий 23. Мобильная версия и засвет", time: "20 мин", priority: "🟡", blocks: "33", steps: [
-    "Открыть http://192.168.10.100:3000 на телефоне (Android/iOS)",
-    "Открыть сайт на iPhone Safari — белой полосы справа нет",
-    "Открыть на Android Chrome — тоже нет",
-    "Шапка: карточки статистики по 2 в ряд (205 / 15 / 518 / Всего)",
-    "Прокрутить вниз — шапка не растягивается за границы",
-    "user-info: «Мартыненко А.С. · Медицинский технолог · Гематологический отдел» — переносы корректны",
-    "Таблица: скроллится внутри .table-wrapper, страница целиком не двигается",
-    "Проверить столбцы: ID, Тип, Модель, Объём, Отдел — все видны",
-    "Кнопки действий в строке — крупные, тапаются",
-    "Пагинация: кнопки «Назад/Вперёд» удобного размера",
-    "Открыть модалку отправки на поверку — не выпирает за экран",
-    "Блок «Подобрать замену» — складские видны, чекбоксы кликабельны",
-    "Открыть модалку возврата — поля и таблица свидетельств не выпирают",
-    "Модалка смены пароля — читается, поля удобны для тапа",
-    "Изменение ориентации: повернуть в ландшафт",
-    "В ландшафте — всё по-прежнему в границах экрана",
-    "Проверить на 375px (узкий) — 1 колонка",
-    "Проверить на 414px (iPhone 11) — 1 колонка",
-    "Проверить на 768px (iPad) — планшетная, засвета нет",
-    "Проверить на 1440px (десктоп) — ничего не сломалось"
-  ], expected: "Засвет справа устранён, адаптив корректен на всех разрешениях, модалки не выпирают" }
-];
+    "Открыть на телефоне",
+    "iPhone Safari — белой полосы справа НЕТ",
+    "Android Chrome — тоже нет",
+    "Шапка: статистика 2 в ряд",
+    "Прокрутить — не растягивается",
+    "user-info переносится",
+    "Таблица скроллится внутри wrapper",
+    "Кнопки действий крупные",
+    "Пагинация удобная",
+    "Модалка отправки не выпирает",
+    "Список складских не выпирает",
+    "Модалка возврата — таблица свидетельств компактная",
+    "Смена пароля — читается",
+    "Повернуть в ландшафт",
+    "375px — 1 колонка",
+    "414px — 1 колонка",
+    "768px — планшет",
+    "1440px — десктоп"
+  ], expected: "Засвет справа устранён, адаптив корректен" },
 
-/* ================ STATE ================ */
-var STORAGE_KEY = "kdl_checklist_v35";
-var SNAPSHOTS_KEY = "kdl_checklist_v35_snapshots";
-var LEGACY_KEYS = ["kdl_checklist_v34","kdl_checklist_v33","kdl_checklist_v32","kdl_checklist_v31"];
+  { tag: "S24", title: "Сценарий 24. Режим И.О.", time: "35 мин", priority: "🔴", blocks: "22, 2.4, 17", steps: [
+    "Войти admin",
+    "Создать основного Иванова И.И. — отдел Гематологический",
+    "Создать заместителя Петрова П.П. — отдел Биохимический",
+    "Открыть карточку Петрова, включить «И.о.»",
+    "Select «За кого» → Иванов",
+    "Сохранить — is_acting=1, acting_for_id",
+    "Войти под Петровым",
+    "В шапке: «Биохимический · и.о. за Иванов»",
+    "Список оборудования — только Гематологический",
+    "Добавить оборудование — Отдел = Гематологический, disabled",
+    "Ответственный = Иванов, disabled",
+    "Создать P-500 — в БД Иванов/Гематологический",
+    "POST с чужим отделом — перезапись",
+    "PUT чужого — 403",
+    "Impersonate — то же",
+    "Вернуться",
+    "Выключить И.о.",
+    "Войти Петровым — Биохимический",
+    "Включить И.о. без actingForId — 400",
+    "Удалить Иванова — у Петрова сброс"
+  ], expected: "Режим И.О. работает корректно" },
+
+  { tag: "S25", title: "Сценарий 25. Смена типа с автоперегенерацией ID", time: "30 мин", priority: "🔴", blocks: "36, 18", steps: [
+    "Войти admin. Создать P-100 (Пипетка)",
+    "Создать A-100 (Анализатор)",
+    "Открыть P-100 на редактирование",
+    "Сменить тип: Пипетка → Анализатор. Сохранить",
+    "Тост «ID изменён: P-100 → A-101»",
+    "idChanged=true, newId=A-101, oldId=P-100",
+    "Таблица перезагружена — строка A-101",
+    "История A-101 — 2 записи",
+    "SELECT — записи по новому ID",
+    "Создать P-200, отправить с заменой P-SKL-99",
+    "replaced_by=P-SKL-99",
+    "Открыть P-200, сменить тип на Анализатор",
+    "ID стал A-XXX, у P-SKL-99 replacing = A-XXX",
+    "Открыть P-SKL-99 — подпись «↔ заменяет: A-XXX»",
+    "Сменить тип ещё раз: → Микроскоп",
+    "Цепочка: P-200 → A-XXX → M-XXX. История и замены живы",
+    "Смена типа с тем же prefix — ID не меняется",
+    "audit_log: 3 записи",
+    "Прямой PUT без смены типа — idChanged=false"
+  ], expected: "Автоперегенерация ID работает, история и замены перепривязываются" },
+
+  { tag: "S26", title: "Сценарий 26. Штрихкоды и этикетки", time: "30 мин", priority: "🟡", blocks: "37, 38, 39", steps: [
+    "Войти admin. Открыть карточку P-001",
+    "Поле «Штрихкод» присутствует",
+    "Кнопка ✨ «Заполнить из инв/серийного/ID»",
+    "Кнопка ↩️ «Сбросить ручной»",
+    "Открыть P-001 — штрихкод = P-001 (fallback на ID)",
+    "POST /api/barcodes/manual — установить MANUAL-001",
+    "lookup по MANUAL-001 — находит P-001",
+    "GET /api/barcodes/P-001/png?type=code128 — PNG",
+    "GET /api/barcodes/P-001/png?type=qr — PNG",
+    "POST /api/barcodes/reset — штрихкод сброшен",
+    "Кнопка «Печать этикеток» в toolbar",
+    "Модалка: Область — selected/page/filtered",
+    "Счётчики совпадают с реальными",
+    "Принтер — список с preferred отдела",
+    "Сверить с превью 🎨 Визуал → Модалка печати этикеток",
+    "Копий: 1",
+    "PDF A4 — COLS=3, ROWS_PER_PAGE=8",
+    "PDF Zebra 58x40 — размер из настроек",
+    "POST /api/barcodes/print — mode из принтера",
+    "zebra-ip без IP — fallback на PDF",
+    "Принтеры в админ-настройках: список",
+    "Добавить принтер — валидации",
+    "Проверить связь — zebra-ip: TCP-коннект",
+    "Штрихкоды в настройках: label_size, type, copies, agent_port, max_length, fallback",
+    "Поля этикетки — чекбоксы"
+  ], expected: "Штрихкоды генерируются, печать работает, принтеры управляются" },
+
+  { tag: "S27", title: "Сценарий 27. Сканирование USB и камерой", time: "25 мин", priority: "🟡", blocks: "40, 41", steps: [
+    "Открыть на десктопе — кнопка «Сканировать» с fa-barcode",
+    "Открыть модалку сканирования",
+    "Ввести P-001 вручную → Enter — добавлено в список",
+    "Ввести несуществующий — «Не найдено»",
+    "Ввести дубль — «Уже в списке»",
+    "Список: счётчик совпадает",
+    "Удалить одну — ×",
+    "Очистить — пусто",
+    "Кнопка «На отправку» — disabled (нет подходящих)",
+    "Отсканировать пипетку — кнопка активна",
+    "Открыть на телефоне — fa-camera",
+    "handleScanButton — openCameraScan",
+    "Разрешить камеру — видим превью",
+    "Навести на штрихкод — вибрирует",
+    "Код вставлен в search",
+    "Фонарик (если поддерживается)",
+    "Закрыть — stream остановлен",
+    "Навести на QR — декодировано через jsQR",
+    "Навести на Code128 — декодировано через ZXing",
+    "Не дать разрешение — «Доступ запрещён»"
+  ], expected: "USB и камера работают, антидубль срабатывает" }
+];
+  /* ================ STATE ================ */
+var STORAGE_KEY = "kdl_checklist_v41";
+var SNAPSHOTS_KEY = "kdl_checklist_v41_snapshots";
+var LEGACY_KEYS = ["kdl_checklist_v40","kdl_checklist_v39","kdl_checklist_v38","kdl_checklist_v35","kdl_checklist_v34","kdl_checklist_v33","kdl_checklist_v32","kdl_checklist_v31"];
 var MAX_HISTORY = 50;
 var MAX_SNAPSHOTS = 20;
 
@@ -1332,7 +1945,7 @@ var activeTab = "checklist";
 var undoStack = [];
 var historyIndex = -1;
 
-function defaultState(){return {version:5,items:{},settings:{theme:"light",tab:"checklist"}}}
+function defaultState(){return {version:8,items:{},settings:{theme:"light",tab:"checklist",headerCollapsed:false}}}
 function loadState(){
   try{
     var raw=localStorage.getItem(STORAGE_KEY);
@@ -1350,7 +1963,8 @@ function loadState(){
       return m;
     }
     if(!p.items)p.items={};
-    if(!p.settings)p.settings={theme:"light",tab:"checklist"};
+    if(!p.settings)p.settings={theme:"light",tab:"checklist",headerCollapsed:false};
+    if(p.settings.headerCollapsed===undefined)p.settings.headerCollapsed=false;
     return p;
   }catch(e){return defaultState()}
 }
@@ -1364,6 +1978,28 @@ function setItem(key,patch){
   if(!next.s&&!next.c&&!next.b)delete state.items[key];
   else state.items[key]=next;
   saveState();
+}
+
+/* ================ HEADER COLLAPSE ================ */
+function toggleHeaderCollapse(){
+  var header = document.getElementById("main-header");
+  if(!header)return;
+  var collapsed = !header.classList.contains("collapsed");
+  header.classList.toggle("collapsed", collapsed);
+  state.settings.headerCollapsed = collapsed;
+  saveState();
+  updateHeaderCollapseBtn();
+  if(!collapsed){
+    var toolbar = document.querySelector(".controls");
+    if(toolbar) toolbar.style.display = (activeTab === "visual") ? "none" : "";
+  }
+}
+function updateHeaderCollapseBtn(){
+  var btn = document.getElementById("header-collapse-btn");
+  if(!btn)return;
+  var collapsed = !!state.settings.headerCollapsed;
+  btn.textContent = collapsed ? "▼ Развернуть" : "▲ Свернуть";
+  btn.title = collapsed ? "Развернуть шапку" : "Свернуть шапку";
 }
 
 /* ================ SNAPSHOTS ================ */
@@ -1754,7 +2390,7 @@ function renderVisual(){
   root.appendChild(makeVpSection({
     tag: "ТАБЛИЦА",
     title: "Главная таблица оборудования",
-    desc: "Как выглядит таблица с 5 демо-строками из seed. Шапка тёмная, статусы pill-бейджами, кнопки с FA-иконками.",
+    desc: "Как выглядит таблица с 5 демо-строками из seed. Шапка тёмная, статусы pill-бейджами, кнопка действий ⋮.",
     body: renderPreviewTable()
   }));
 
@@ -1823,8 +2459,8 @@ function renderVisual(){
 
   root.appendChild(makeVpSection({
     tag: "МОДАЛКА 9",
-    title: "Настройки системы (вкладка Поля формы)",
-    desc: "Активная вкладка синяя, таблица с полями и стрелками ▲▼.",
+    title: "Настройки системы (список разделов)",
+    desc: "Список разделов с группами вместо вкладок.",
     body: renderPreviewModal_settings()
   }));
 
@@ -1833,6 +2469,20 @@ function renderVisual(){
     title: "Импорт данных",
     desc: "Стандартный input file + голубой инфо-блок + серая плашка прогресса.",
     body: renderPreviewModal_import()
+  }));
+
+  root.appendChild(makeVpSection({
+    tag: "МОДАЛКА 11",
+    title: "Печать этикеток",
+    desc: "Область (selected/page/filtered), список принтеров, копий.",
+    body: renderPreviewModal_barcodePrint()
+  }));
+
+  root.appendChild(makeVpSection({
+    tag: "МОДАЛКА 12",
+    title: "Просмотр штрихкода",
+    desc: "Поле штрихкода с кнопками ✨ и ↩️.",
+    body: renderPreviewModal_barcodeField()
   }));
 }
 
@@ -1877,8 +2527,8 @@ function renderPreviewTable(){
         last:"05.11.2024", next:"05.11.2025", days:"41 дн.", daysColor:"#16a34a",
         resp:"Иванова М.С.", loc:"Лаб. 201, шкаф 3",
         status:"ok", statusText:"В норме",
-        actions:["secondary","info","success","danger"],
-        actionIcons:["fa-pen","fa-clipboard-list","fa-check","fa-trash"]
+        actions:["secondary"],
+        actionIcons:["fa-ellipsis-vertical"]
       })+
       rowTable({
         id:"P-002", sn:"EP2024002",
@@ -1888,30 +2538,30 @@ function renderPreviewTable(){
         last:"05.12.2024", next:"05.12.2025", days:"71 дн.", daysColor:"#16a34a",
         resp:"Петров А.В.", loc:"Лаб. 201, шкаф 3",
         status:"warn", statusText:"Скоро поверка",
-        actions:["secondary","info","success","danger"],
-        actionIcons:["fa-pen","fa-clipboard-list","fa-check","fa-trash"]
+        actions:["secondary"],
+        actionIcons:["fa-ellipsis-vertical"]
       })+
       rowTable({
         id:"P-003", sn:"GT2023005",
         typeLabel:"Пипетка", typeCls:"vp-badge-pipette",
         model:"Pipetman L", mfr:"Gilson",
         vol:"5000 мкл", dept:"Коагулогический отдел",
-        last:"05.03.2025", next:"05.09.2025", days:"— просрочка 20 дн.", daysColor:"#dc2626",
+        last:"05.03.2025", next:"05.09.2025", days:"просрочка 20 дн.", daysColor:"#dc2626",
         resp:"Иванова М.С.", loc:"Лаб. 105",
         status:"danger", statusText:"Просрочена",
-        actions:["secondary","info","success","danger"],
-        actionIcons:["fa-pen","fa-clipboard-list","fa-check","fa-trash"]
+        actions:["secondary"],
+        actionIcons:["fa-ellipsis-vertical"]
       })+
       rowTable({
         id:"A-001", sn:"AN2022001",
         typeLabel:"Анализатор", typeCls:"vp-badge-other",
         model:"BC-5150", mfr:"Mindray",
         vol:"—", dept:"Гематологический отдел",
-        last:"05.08.2024", next:"05.08.2025", days:"— просрочка 52 дн.", daysColor:"#dc2626",
+        last:"05.08.2024", next:"05.08.2025", days:"просрочка 52 дн.", daysColor:"#dc2626",
         resp:"Сидорова Е.К.", loc:"Лаб. 302",
         status:"fail", statusText:"Брак",
-        actions:["secondary","info","success","danger"],
-        actionIcons:["fa-pen","fa-clipboard-list","fa-check","fa-trash"]
+        actions:["secondary"],
+        actionIcons:["fa-ellipsis-vertical"]
       })+
       rowTable({
         id:"M-001", sn:"MI2023010",
@@ -1922,19 +2572,8 @@ function renderPreviewTable(){
         days:"", daysColor:"",
         resp:"Петров А.В.", loc:"Склад",
         status:"inactive", statusText:"Неактивна",
-        actions:["secondary","info","success","danger"],
-        actionIcons:["fa-pen","fa-clipboard-list","fa-check","fa-trash"]
-      })+
-      rowTable({
-        id:"P-004", sn:"EP2024010",
-        typeLabel:"Пипетка", typeCls:"vp-badge-pipette",
-        model:"Research Plus", mfr:"Eppendorf",
-        vol:"200 мкл", dept:"Экспресс отдел",
-        last:"01.09.2025", next:"📦 15.09.2025", days:"", daysColor:"",
-        resp:"Иванова М.С.", loc:"Лаб. 110",
-        status:"sent", statusText:"На поверке",
-        actions:["secondary","info","success","warning","danger"],
-        actionIcons:["fa-pen","fa-clipboard-list","fa-box-open","fa-rotate-left","fa-trash"]
+        actions:["secondary"],
+        actionIcons:["fa-ellipsis-vertical"]
       })+
     '</tbody>'+
     '</table>';
@@ -1980,10 +2619,10 @@ function renderBadgesLegend(){
     '<div class="vp-swatches">'+
       '<div class="vp-swatch"><span class="vp-badge-type vp-badge-pipette">Пипетка</span> <span style="font-weight:400;color:var(--muted);font-size:.75rem">синий</span></div>'+
       '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Анализатор</span> <span style="font-weight:400;color:var(--muted);font-size:.75rem">фиолетовый</span></div>'+
-      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Микроскоп</span> <span style="font-weight:400;color:var(--muted);font-size:.75rem">фиолетовый</span></div>'+
-      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Термометр</span> <span style="font-weight:400;color:var(--muted);font-size:.75rem">фиолетовый</span></div>'+
-      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Весы</span> <span style="font-weight:400;color:var(--muted);font-size:.75rem">фиолетовый</span></div>'+
-      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Фотометр</span> <span style="font-weight:400;color:var(--muted);font-size:.75rem">фиолетовый</span></div>'+
+      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Микроскоп</span></div>'+
+      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Термометр</span></div>'+
+      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Весы</span></div>'+
+      '<div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Фотометр</span></div>'+
     '</div>'+
     '<div style="margin:20px 0 12px;font-weight:700;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Статусы (все 8 вариантов)</div>'+
     '<div class="vp-swatches">'+
@@ -2012,10 +2651,11 @@ function renderPreviewModal_addEdit(){
       '<h2><i class="fa-solid fa-pen"></i> Редактировать оборудование</h2>'+
       '<div class="vp-form-group"><label>Внутренний номер *</label><input type="text" value="P-001" readonly></div>'+
       '<div class="vp-form-group"><label>Серийный номер</label><input type="text" value="EP2024001"></div>'+
+      '<div class="vp-form-group"><label>Штрихкод</label><div style="display:flex;gap:6px"><input type="text" value="P-001"><button class="vp-btn vp-btn-secondary" style="flex-shrink:0"><i class="fa-solid fa-wand-magic-sparkles"></i></button><button class="vp-btn vp-btn-warning" style="flex-shrink:0"><i class="fa-solid fa-rotate-left"></i></button></div></div>'+
       '<div class="vp-form-group"><label>Производитель</label><input type="text" value="Eppendorf"></div>'+
       '<div class="vp-form-group"><label>Модель *</label><input type="text" value="Research Plus"></div>'+
       '<div class="vp-form-group"><label>Тип оборудования *</label>'+
-        '<select><option>Пипетка</option><option>Анализатор</option><option>Термометр</option></select>'+
+        '<select><option>Пипетка</option><option>Анализатор</option></select>'+
       '</div>'+
       '<div class="vp-form-row">'+
         '<div class="vp-form-group"><label>Объём (мкл)</label><input type="text" value="1000"></div>'+
@@ -2055,7 +2695,7 @@ function renderPreviewModal_quickCal(){
         '</div>'+
         '<div class="vp-form-group"><label>Поверяющая организация</label><input type="text" placeholder="напр. ФБУ «Красноярский ЦСМ»"></div>'+
       '</div>'+
-      '<div class="vp-form-group"><label>Примечание</label><textarea rows="2" placeholder="результаты, отклонения, особые отметки"></textarea></div>'+
+      '<div class="vp-form-group"><label>Примечание</label><textarea rows="2"></textarea></div>'+
       '<div class="vp-actions">'+
         '<button class="vp-btn vp-btn-secondary" type="button">Отмена</button>'+
         '<button class="vp-btn vp-btn-success" type="button"><i class="fa-solid fa-floppy-disk"></i> Записать</button>'+
@@ -2071,15 +2711,15 @@ function renderPreviewModal_bulkSend(){
       '<div class="vp-info-box vp-info-blue"><strong>Выбрано единиц:</strong> 3</div>'+
       '<div style="font-weight:600;color:#475569;margin-bottom:8px;font-size:.85rem">Выбранное оборудование:</div>'+
       '<div style="max-height:150px;overflow-y:auto;padding:8px;background:#f8fafc;border-radius:8px;font-size:.85rem;line-height:1.6">'+
-        '<div><strong>P-001</strong> — Research Plus <span style="color:#94a3b8">(Гематологический отдел)</span></div>'+
-        '<div><strong>P-002</strong> — Research Plus <span style="color:#94a3b8">(Биохимический отдел)</span></div>'+
-        '<div><strong>P-003</strong> — Pipetman L <span style="color:#94a3b8">(Коагулологический отдел)</span></div>'+
+        '<div><strong>P-001</strong> — Research Plus <span style="color:#94a3b8">(Гематологический)</span></div>'+
+        '<div><strong>P-002</strong> — Research Plus <span style="color:#94a3b8">(Биохимический)</span></div>'+
+        '<div><strong>P-003</strong> — Pipetman L <span style="color:#94a3b8">(Коагулогический)</span></div>'+
       '</div>'+
       '<div class="vp-info-box vp-info-yellow" style="margin-top:14px">'+
-        'ℹ️ На внешнюю поверку отправляются типы с местом поверки <strong>📦 Внешняя</strong>. Для внутренних используйте <strong>✔️ Быстрая поверка</strong>.'+
+        'ℹ️ На внешнюю поверку отправляются типы с местом поверки <strong>📦 Внешняя</strong>. Для внутренних — <strong>✔️ Быстрая поверка</strong>.'+
       '</div>'+
       '<div style="margin-top:14px;padding:10px;background:#f8fafc;border-radius:8px">'+
-        '<div style="font-weight:600;font-size:.85rem;color:#475569;margin-bottom:6px">P-001 — Research Plus (Гематологический отдел)</div>'+
+        '<div style="font-weight:600;font-size:.85rem;color:#475569;margin-bottom:6px">P-001 — Research Plus</div>'+
         '<div style="font-size:.78rem;color:#64748b;margin-bottom:6px">Складские того же типа:</div>'+
         '<label style="display:flex;align-items:center;gap:8px;padding:6px;background:#fff;border-radius:6px;font-size:.82rem;margin-bottom:4px">'+
           '<input type="radio" name="repl-demo" checked> <span><strong>Без замены</strong></span>'+
@@ -2089,7 +2729,7 @@ function renderPreviewModal_bulkSend(){
         '</label>'+
       '</div>'+
       '<div class="vp-form-group" style="margin-top:14px"><label>Дата отправки *</label><input type="date" value="2025-09-24"></div>'+
-      '<div class="vp-form-group"><label>Примечание</label><textarea rows="2" placeholder="например: отправлено курьером, накладная №123"></textarea></div>'+
+      '<div class="vp-form-group"><label>Примечание</label><textarea rows="2"></textarea></div>'+
       '<div class="vp-actions">'+
         '<button class="vp-btn vp-btn-secondary" type="button">Отмена</button>'+
         '<button class="vp-btn vp-btn-info" type="button"><i class="fa-solid fa-print"></i> Распечатать акт</button>'+
@@ -2121,22 +2761,10 @@ function renderPreviewModal_bulkReturn(){
       '<div style="margin:15px 0">'+
         '<div style="font-weight:600;color:#475569;margin-bottom:8px;font-size:.85rem">Свидетельства по оборудованию:</div>'+
         '<table class="vp-modal-table">'+
-          '<thead><tr>'+
-            '<th style="width:35%">ID / Модель</th>'+
-            '<th style="width:40%">Номер свидетельства</th>'+
-            '<th style="width:25%">Результат</th>'+
-          '</tr></thead>'+
+          '<thead><tr><th style="width:35%">ID / Модель</th><th style="width:40%">Номер свидетельства</th><th style="width:25%">Результат</th></tr></thead>'+
           '<tbody>'+
-            '<tr>'+
-              '<td><strong>P-001</strong><br><small>Research Plus</small><br><small style="color:#0ea5e9">отправлена 15.09.2025</small></td>'+
-              '<td><input type="text" placeholder="напр. С-АБ-..." style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"></td>'+
-              '<td><select style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"><option>✅ Годен</option><option>❌ Брак</option><option>⏳ В процессе</option></select></td>'+
-            '</tr>'+
-            '<tr>'+
-              '<td><strong>P-002</strong><br><small>Research Plus</small><br><small style="color:#0ea5e9">отправлена 15.09.2025</small></td>'+
-              '<td><input type="text" placeholder="напр. С-АБ-..." style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"></td>'+
-              '<td><select style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"><option>✅ Годен</option><option>❌ Брак</option><option>⏳ В процессе</option></select></td>'+
-            '</tr>'+
+            '<tr><td><strong>P-001</strong><br><small>Research Plus</small><br><small style="color:#0ea5e9">отправлена 15.09.2025</small></td><td><input type="text" placeholder="напр. С-АБ-..." style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"></td><td><select style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"><option>✅ Годен</option><option>❌ Брак</option></select></td></tr>'+
+            '<tr><td><strong>P-002</strong><br><small>Research Plus</small><br><small style="color:#0ea5e9">отправлена 15.09.2025</small></td><td><input type="text" style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"></td><td><select style="width:100%;padding:6px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:.85rem"><option>✅ Годен</option><option>❌ Брак</option></select></td></tr>'+
           '</tbody>'+
         '</table>'+
       '</div>'+
@@ -2144,10 +2772,10 @@ function renderPreviewModal_bulkReturn(){
         '<div style="font-weight:600;color:#1e40af;margin-bottom:8px"><i class="fa-solid fa-arrows-rotate"></i> На время поверки было выдано со склада:</div>'+
         '<label style="display:flex;align-items:flex-start;gap:8px;padding:6px;background:#fff;border-radius:6px;cursor:pointer">'+
           '<input type="checkbox" checked style="margin-top:3px">'+
-          '<span><strong>P-001</strong> → было заменено на <strong>P-SKL-01</strong><br><small style="color:#64748b">Вернуть замену на склад (Склад, не активна)</small></span>'+
+          '<span><strong>P-001</strong> → было заменено на <strong>P-SKL-01</strong><br><small style="color:#64748b">Вернуть замену на склад</small></span>'+
         '</label>'+
       '</div>'+
-      '<div class="vp-form-group"><label>Примечание (общее для всех)</label><textarea rows="2" placeholder="например: без замечаний, годны к эксплуатации"></textarea></div>'+
+      '<div class="vp-form-group"><label>Примечание (общее для всех)</label><textarea rows="2"></textarea></div>'+
       '<div class="vp-actions">'+
         '<button class="vp-btn vp-btn-secondary" type="button">Отмена</button>'+
         '<button class="vp-btn vp-btn-success" type="button"><i class="fa-solid fa-floppy-disk"></i> Применить ко всем</button>'+
@@ -2160,15 +2788,13 @@ function renderPreviewModal_history(){
   return modalStage(
     '<div class="vp-modal vp-modal-lg">'+
       '<h2>История поверок — P-001</h2>'+
-      '<div class="vp-info-grey" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;padding:16px;background:#f8fafc;border-radius:10px;margin-bottom:16px">'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">Модель</label><div style="font-size:.9rem">Research Plus (Eppendorf)</div></div>'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">Серийный номер</label><div style="font-size:.9rem">EP2024001</div></div>'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">Объём</label><div style="font-size:.9rem">1000 мкл</div></div>'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">Отдел</label><div style="font-size:.9rem">Гематологический отдел</div></div>'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">МПИ</label><div style="font-size:.9rem">12 мес.</div></div>'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">Последняя поверка</label><div style="font-size:.9rem">05.11.2024</div></div>'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">Следующая поверка</label><div style="font-size:.9rem">05.11.2025</div></div>'+
-        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.3px;font-weight:600">Статус</label><div><span class="vp-status-badge vp-status-ok"><span class="vp-status-dot"></span>В норме</span></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;padding:16px;background:#f8fafc;border-radius:10px;margin-bottom:16px">'+
+        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;font-weight:600">Модель</label><div style="font-size:.9rem">Research Plus (Eppendorf)</div></div>'+
+        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;font-weight:600">Серийный</label><div style="font-size:.9rem">EP2024001</div></div>'+
+        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;font-weight:600">Отдел</label><div style="font-size:.9rem">Гематологический</div></div>'+
+        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;font-weight:600">МПИ</label><div style="font-size:.9rem">12 мес.</div></div>'+
+        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;font-weight:600">Последняя</label><div style="font-size:.9rem">05.11.2024</div></div>'+
+        '<div><label style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;font-weight:600">Следующая</label><div style="font-size:.9rem">05.11.2025</div></div>'+
       '</div>'+
       '<div style="margin-bottom:10px"><h3 style="font-size:1rem;color:#1e293b">Журнал поверок (2)</h3></div>'+
       '<div style="position:relative;padding-left:28px;margin-top:15px">'+
@@ -2177,14 +2803,11 @@ function renderPreviewModal_history(){
           '<div style="font-weight:600;font-size:.85rem;color:#475569">05.11.2024</div>'+
           '<div style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px"><i class="fa-solid fa-file-lines"></i> Свидетельство № С-АБ-1234567/2025</div>'+
           '<span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;margin-left:6px;background:#dcfce7;color:#166534">Годен</span>'+
-          '<div style="font-size:.85rem;color:#64748b;margin-top:4px">Организация: ФБУ Красноярский ЦСМ</div>'+
         '</div>'+
-        '<div style="position:relative;padding-bottom:20px;border-left:2px solid #e2e8f0;padding-left:20px">'+
+        '<div style="position:relative;padding-bottom:0;border-left:2px solid #e2e8f0;padding-left:20px">'+
           '<div style="position:absolute;left:-7px;top:4px;width:12px;height:12px;border-radius:50%;background:#4f46e5;border:2px solid #fff;box-shadow:0 0 0 2px #4f46e5"></div>'+
           '<div style="font-weight:600;font-size:.85rem;color:#475569">05.11.2023</div>'+
           '<div style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px"><i class="fa-solid fa-file-lines"></i> Свидетельство № С-АБ-9876543/2024</div>'+
-          '<span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;margin-left:6px;background:#dcfce7;color:#166534">Годен</span>'+
-          '<div style="font-size:.85rem;color:#64748b;margin-top:4px">Организация: ФБУ Красноярский ЦСМ</div>'+
         '</div>'+
       '</div>'+
       '<div class="vp-actions" style="justify-content:space-between;margin-top:20px">'+
@@ -2202,19 +2825,15 @@ function renderPreviewModal_changePassword(){
   return modalStage(
     '<div class="vp-modal">'+
       '<h2><i class="fa-solid fa-lock"></i> Смена пароля</h2>'+
-      '<div class="vp-info-box vp-info-yellow">'+
-        'Администратор выдал вам разовый пароль. Для продолжения работы задайте новый пароль.'+
-      '</div>'+
-      '<div class="vp-form-group"><label>Текущий пароль *</label><input type="password" placeholder="Введите текущий пароль"></div>'+
-      '<div class="vp-form-group"><label>Новый пароль *</label><input type="password" placeholder="Введите новый пароль"></div>'+
-      '<div class="vp-form-group"><label>Подтверждение пароля *</label><input type="password" placeholder="Повторите пароль"></div>'+
+      '<div class="vp-info-box vp-info-yellow">Администратор выдал вам разовый пароль. Для продолжения работы задайте новый пароль.</div>'+
+      '<div class="vp-form-group"><label>Текущий пароль *</label><input type="password"></div>'+
+      '<div class="vp-form-group"><label>Новый пароль *</label><input type="password"></div>'+
+      '<div class="vp-form-group"><label>Подтверждение пароля *</label><input type="password"></div>'+
       '<div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#475569;line-height:1.6">'+
         '<strong>Требования к паролю:</strong>'+
         '<ul style="margin:6px 0 0 20px;padding:0">'+
-          '<li>Минимум 8 символов</li>'+
-          '<li>Хотя бы одна строчная и одна заглавная буква</li>'+
-          '<li>Хотя бы одна цифра</li>'+
-          '<li>Хотя бы один спецсимвол (! @ # $ % ^ &amp; * и т.п.)</li>'+
+          '<li>Минимум 8 символов</li><li>Хотя бы одна строчная и одна заглавная</li>'+
+          '<li>Хотя бы одна цифра</li><li>Хотя бы один спецсимвол</li>'+
         '</ul>'+
       '</div>'+
       '<div class="vp-actions">'+
@@ -2229,9 +2848,7 @@ function renderPreviewModal_tempPassword(){
   return modalStage(
     '<div class="vp-modal">'+
       '<h2><i class="fa-solid fa-key"></i> Разовый пароль</h2>'+
-      '<div class="vp-info-box vp-info-yellow">'+
-        'Сообщите пароль пользователю. После первого входа система попросит его сменить.'+
-      '</div>'+
+      '<div class="vp-info-box vp-info-yellow">Сообщите пароль пользователю. После первого входа система попросит его сменить.</div>'+
       '<div class="vp-form-group"><label>Логин</label><input type="text" value="petrov_av" readonly></div>'+
       '<div class="vp-form-group"><label>ФИО</label><input type="text" value="Петров Алексей Владимирович" readonly></div>'+
       '<div class="vp-form-group"><label>Пароль</label>'+
@@ -2256,12 +2873,10 @@ function renderPreviewModal_historyExport(){
         '<div class="vp-form-group"><label>С даты</label><input type="date"></div>'+
         '<div class="vp-form-group"><label>По дату</label><input type="date"></div>'+
       '</div>'+
-      '<div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#475569">'+
-        'Оставьте поля пустыми — выгрузится вся история поверок.'+
-      '</div>'+
+      '<div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#475569">Оставьте поля пустыми — выгрузится вся история.</div>'+
       '<div class="vp-actions">'+
         '<button class="vp-btn vp-btn-secondary" type="button">Отмена</button>'+
-        '<button class="vp-btn vp-btn-success" type="button"><i class="fa-solid fa-file-excel"></i> Excel (CSV)</button>'+
+        '<button class="vp-btn vp-btn-success" type="button"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>'+
         '<button class="vp-btn vp-btn-info" type="button"><i class="fa-solid fa-print"></i> PDF</button>'+
       '</div>'+
     '</div>'
@@ -2272,33 +2887,20 @@ function renderPreviewModal_settings(){
   return modalStage(
     '<div class="vp-modal vp-modal-lg">'+
       '<h2><i class="fa-solid fa-gear"></i> Настройки системы</h2>'+
-      '<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;border-bottom:2px solid #e2e8f0;padding-bottom:10px">'+
-        '<button style="padding:8px 16px;border:none;background:#4f46e5;color:#fff;border-radius:8px;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:inherit"><i class="fa-solid fa-list"></i> Поля формы</button>'+
-        '<button style="padding:8px 16px;border:none;background:transparent;color:#64748b;border-radius:8px;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:inherit"><i class="fa-solid fa-building"></i> Отделы</button>'+
-        '<button style="padding:8px 16px;border:none;background:transparent;color:#64748b;border-radius:8px;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:inherit"><i class="fa-solid fa-filter"></i> Фильтры</button>'+
-        '<button style="padding:8px 16px;border:none;background:transparent;color:#64748b;border-radius:8px;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:inherit"><i class="fa-solid fa-file-export"></i> Экспорт</button>'+
-        '<button style="padding:8px 16px;border:none;background:transparent;color:#64748b;border-radius:8px;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:inherit"><i class="fa-solid fa-users"></i> Пользователи</button>'+
-        '<button style="padding:8px 16px;border:none;background:transparent;color:#64748b;border-radius:8px;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:inherit"><i class="fa-solid fa-gear"></i> Система</button>'+
-        '<button style="padding:8px 16px;border:none;background:transparent;color:#64748b;border-radius:8px;font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:inherit"><i class="fa-solid fa-scroll"></i> Лог</button>'+
+      '<div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Оборудование и данные</div>'+
+      '<div style="display:flex;flex-direction:column;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px">'+
+        '<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;font-size:.95rem;font-weight:500">Поля формы</div>'+
+        '<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;font-size:.95rem;font-weight:500">Отделы</div>'+
+        '<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;font-size:.95rem;font-weight:500">Фильтры</div>'+
+        '<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;font-size:.95rem;font-weight:500">Экспорт</div>'+
+        '<div style="padding:14px 18px;font-size:.95rem;font-weight:500">Типы оборудования</div>'+
       '</div>'+
-      '<h3 style="font-size:1rem;margin-bottom:8px;color:#1e293b">Управление полями формы</h3>'+
-      '<p style="color:#64748b;margin-bottom:12px;font-size:.85rem">Включите/отключите поля, измените порядок, сделайте обязательными.</p>'+
-      '<table class="vp-modal-table">'+
-        '<thead><tr>'+
-          '<th style="width:60px">Порядок</th>'+
-          '<th>Название</th>'+
-          '<th style="width:120px">Тип</th>'+
-          '<th style="width:60px">Обяз.</th>'+
-          '<th style="width:60px">Активно</th>'+
-          '<th style="width:60px"></th>'+
-        '</tr></thead>'+
-        '<tbody>'+
-          '<tr><td><div style="display:flex;flex-direction:column;gap:2px"><button style="padding:2px 6px;font-size:.7rem;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:default">▲</button><button style="padding:2px 6px;font-size:.7rem;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:default">▼</button></div></td><td>Внутренний номер</td><td>Текст</td><td style="text-align:center"><input type="checkbox" checked></td><td style="text-align:center"><input type="checkbox" checked></td><td><button style="padding:4px 8px;font-size:.75rem;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:default"><i class="fa-solid fa-trash"></i></button></td></tr>'+
-          '<tr><td><div style="display:flex;flex-direction:column;gap:2px"><button style="padding:2px 6px;font-size:.7rem;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:default">▲</button><button style="padding:2px 6px;font-size:.7rem;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:default">▼</button></div></td><td>Модель</td><td>Текст</td><td style="text-align:center"><input type="checkbox" checked></td><td style="text-align:center"><input type="checkbox" checked></td><td><button style="padding:4px 8px;font-size:.75rem;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:default"><i class="fa-solid fa-trash"></i></button></td></tr>'+
-          '<tr><td><div style="display:flex;flex-direction:column;gap:2px"><button style="padding:2px 6px;font-size:.7rem;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:default">▲</button><button style="padding:2px 6px;font-size:.7rem;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:default">▼</button></div></td><td>Дата поверки</td><td>Дата</td><td style="text-align:center"><input type="checkbox" checked></td><td style="text-align:center"><input type="checkbox" checked></td><td><button style="padding:4px 8px;font-size:.75rem;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:default"><i class="fa-solid fa-trash"></i></button></td></tr>'+
-        '</tbody>'+
-      '</table>'+
-      '<div class="vp-actions" style="margin-top:20px">'+
+      '<div style="font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Печать и штрихкоды</div>'+
+      '<div style="display:flex;flex-direction:column;background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:16px">'+
+        '<div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;font-size:.95rem;font-weight:500">Принтеры этикеток</div>'+
+        '<div style="padding:14px 18px;font-size:.95rem;font-weight:500">Штрихкоды</div>'+
+      '</div>'+
+      '<div class="vp-actions">'+
         '<button class="vp-btn vp-btn-secondary" type="button">Закрыть</button>'+
       '</div>'+
     '</div>'
@@ -2309,16 +2911,72 @@ function renderPreviewModal_import(){
   return modalStage(
     '<div class="vp-modal">'+
       '<h2><i class="fa-solid fa-download"></i> Импорт данных</h2>'+
-      '<div class="vp-form-group"><label>Файл (.xlsx, .xls, .csv, .json)</label><input type="file"></div>'+
-      '<div class="vp-info-box vp-info-blue" style="margin-bottom:15px">'+
-        'ℹ️ Файл Excel можно загружать <strong>как есть</strong> — заголовки распознаются автоматически («ID», «Внутренний номер», «Модель», «Наименование», «Серийный номер», «Отдел», «Дата поверки», «МПИ», «Ответственный», «Место», «Примечание» и др.).'+
-      '</div>'+
-      '<div style="display:none;margin-bottom:15px;padding:10px;background:#f1f5f9;border-radius:8px;font-size:.85rem;color:#475569">'+
-        '⏳ Загрузка…'+
-      '</div>'+
+      '<div class="vp-form-group"><label>Файл (.xlsx, .csv, .json, .txt)</label><input type="file"></div>'+
+      '<div class="vp-info-box vp-info-blue" style="margin-bottom:15px">ℹ️ Файл Excel можно загружать <strong>как есть</strong> — заголовки распознаются автоматически.</div>'+
+      '<div style="display:none;margin-bottom:15px;padding:10px;background:#f1f5f9;border-radius:8px;font-size:.85rem;color:#475569">⏳ Загрузка…</div>'+
       '<div class="vp-actions">'+
         '<button class="vp-btn vp-btn-secondary" type="button">Отмена</button>'+
         '<button class="vp-btn vp-btn-success" type="button"><i class="fa-solid fa-download"></i> Загрузить</button>'+
+      '</div>'+
+    '</div>'
+  );
+}
+
+function renderPreviewModal_barcodePrint(){
+  return modalStage(
+    '<div class="vp-modal" style="max-width:460px">'+
+      '<h2><i class="fa-solid fa-tag"></i> Печать этикеток</h2>'+
+      '<div style="margin-bottom:14px">'+
+        '<div style="font-size:.82rem;font-weight:600;color:#475569;margin-bottom:6px">Что печатать</div>'+
+        '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;font-size:.88rem">'+
+          '<input type="radio" name="bc-scope-demo"> <span>Только выбранные <b style="color:#4f46e5">3</b></span>'+
+        '</label>'+
+        '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;font-size:.88rem">'+
+          '<input type="radio" name="bc-scope-demo"> <span>Текущая страница <b style="color:#4f46e5">100</b></span>'+
+        '</label>'+
+        '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;font-size:.88rem">'+
+          '<input type="radio" name="bc-scope-demo" checked> <span>Весь фильтр <b style="color:#4f46e5">1038</b></span>'+
+        '</label>'+
+      '</div>'+
+      '<div style="margin-bottom:14px">'+
+        '<div style="font-size:.82rem;font-weight:600;color:#475569;margin-bottom:6px">Принтер</div>'+
+        '<div style="display:flex;flex-direction:column;gap:2px;padding:8px;background:#f8fafc;border-radius:8px;max-height:180px;overflow-y:auto">'+
+          '<label style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:6px;font-size:.88rem">'+
+            '<input type="radio" name="bc-printer-demo" checked> <span>🖨️ PDF 58×40 (Ctrl+P) — Zebra КДЛ <span style="color:#16a34a;font-size:.72rem;font-weight:600">← ваш</span></span>'+
+          '</label>'+
+          '<label style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:6px;font-size:.88rem">'+
+            '<input type="radio" name="bc-printer-demo"> <span>📄 PDF (A4, обычный принтер)</span>'+
+          '</label>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-top:4px">'+
+        '<label style="font-size:.82rem;font-weight:600;color:#475569;min-width:110px">Копий каждой</label>'+
+        '<input type="number" value="1" min="1" max="50" style="width:90px;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem">'+
+      '</div>'+
+      '<div class="vp-actions" style="margin-top:16px">'+
+        '<button class="vp-btn vp-btn-secondary" type="button">Отмена</button>'+
+        '<button class="vp-btn vp-btn-success" type="button"><i class="fa-solid fa-print"></i> Печать</button>'+
+      '</div>'+
+    '</div>'
+  );
+}
+
+function renderPreviewModal_barcodeField(){
+  return modalStage(
+    '<div class="vp-modal" style="max-width:520px">'+
+      '<h2><i class="fa-solid fa-barcode"></i> Поле штрихкода в карточке</h2>'+
+      '<div style="background:#f8fafc;padding:14px;border-radius:10px">'+
+        '<div style="font-size:.85rem;font-weight:600;color:#475569;margin-bottom:6px">Штрихкод</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<input type="text" value="P-001" style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem">'+
+          '<button class="vp-btn vp-btn-secondary" style="flex-shrink:0;padding:9px 14px" type="button"><i class="fa-solid fa-wand-magic-sparkles"></i></button>'+
+          '<button class="vp-btn vp-btn-warning" style="flex-shrink:0;padding:9px 14px" type="button"><i class="fa-solid fa-rotate-left"></i></button>'+
+        '</div>'+
+        '<div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Источник: <b>авто из внутреннего номера</b> (fallback: serial → custom.inventorynumber → id)</div>'+
+      '</div>'+
+      '<div style="margin-top:14px;padding:10px 12px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;font-size:.82rem;color:#0c4a6e">'+
+        '✨ — заполнить из инв. / серийного / ID<br>'+
+        '↩️ — сбросить ручной штрихкод, вернуться к авто'+
       '</div>'+
     '</div>'
   );
@@ -2380,8 +3038,16 @@ function updateTabCounts(){
   var scKeys=getAllItemsForTab("scenarios");
   var ckDone=ckKeys.filter(function(k){var s=getItem(k).s;return s==="pass"||s==="skip"}).length;
   var scDone=scKeys.filter(function(k){var s=getItem(k).s;return s==="pass"||s==="skip"}).length;
-  document.getElementById("tab-count-checklist").textContent=ckDone+"/"+ckKeys.length;
-  document.getElementById("tab-count-scenarios").textContent=scDone+"/"+scKeys.length;
+  var ckEl=document.getElementById("tab-count-checklist");
+  var scEl=document.getElementById("tab-count-scenarios");
+  if(ckEl) ckEl.textContent=ckDone+"/"+ckKeys.length;
+  if(scEl) scEl.textContent=scDone+"/"+scKeys.length;
+  var mini=document.getElementById("header-mini-stats");
+  if(mini){
+    mini.innerHTML='<span>📋 <b>'+ckDone+'/'+ckKeys.length+'</b></span>'+
+                   '<span style="opacity:.4">·</span>'+
+                   '<span>🎬 <b>'+scDone+'/'+scKeys.length+'</b></span>';
+  }
 }
 
 function applyFilters(){
@@ -2422,9 +3088,9 @@ function switchTab(tab){
   state.settings.tab=tab;
   saveState();
   document.querySelectorAll(".tab").forEach(function(t){t.classList.toggle("active",t.dataset.tab===tab)});
-  document.getElementById("tab-checklist").style.display=tab==="checklist"?"":"none";
-  document.getElementById("tab-scenarios").style.display=tab==="scenarios"?"":"none";
-  document.getElementById("tab-visual").style.display=tab==="visual"?"":"none";
+  var tc=document.getElementById("tab-checklist"); if(tc) tc.style.display=tab==="checklist"?"":"none";
+  var ts=document.getElementById("tab-scenarios"); if(ts) ts.style.display=tab==="scenarios"?"":"none";
+  var tv=document.getElementById("tab-visual"); if(tv) tv.style.display=tab==="visual"?"":"none";
 
   var statsBlock = document.getElementById("stats-block");
   var progressBar = document.querySelector(".progress-bar");
@@ -2444,8 +3110,13 @@ function switchTab(tab){
 }
 
 /* ================ UI EVENTS ================ */
-document.getElementById("search").addEventListener("input",function(e){searchQuery=e.target.value;applyFilters()});
 function filterStatus(f){activeFilter=f;applyFilters()}
+var _searchTimeout=null;
+document.getElementById("search").addEventListener("input",function(e){
+  searchQuery=e.target.value;
+  clearTimeout(_searchTimeout);
+  _searchTimeout=setTimeout(applyFilters,150);
+});
 function expandAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(function(s){s.classList.remove("collapsed")})}
 function collapseAll(){document.getElementById("tab-"+activeTab).querySelectorAll(".section").forEach(function(s){s.classList.add("collapsed")})}
 
@@ -2460,7 +3131,7 @@ function toggleTheme(){applyTheme(state.settings.theme==="dark"?"light":"dark")}
 /* ================ EXPORT / IMPORT / SHARE ================ */
 function exportJSON(){
   var result={
-    version:"3.8",
+    version:"4.0.1",
     exported:new Date().toISOString(),
     settings:{theme:state.settings.theme,tab:state.settings.tab},
     items:{}
@@ -2527,7 +3198,7 @@ function importData(parsed){
 }
 
 function shareLink(){
-  var compact={v:5,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
+  var compact={v:8,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
   Object.keys(state.items).forEach(function(k){
     var v=state.items[k];
     var short={};
@@ -2719,7 +3390,7 @@ function exportJiraCSV(){
 
 function exportMarkdown(){
   var date=new Date().toISOString().slice(0,10);
-  var md="# Чек-лист КДЛ v3.8\n\n**Дата:** "+date+"\n\n";
+  var md="# Чек-лист КДЛ v4.0.1\n\n**Дата:** "+date+"\n\n";
   var ckKeys=getAllItemsForTab("checklist");
   var ckStats={pass:0,fail:0,warn:0,skip:0};
   ckKeys.forEach(function(k){var s=getItem(k).s;if(s&&ckStats[s]!==undefined)ckStats[s]++});
@@ -2786,9 +3457,11 @@ function resetAll(){
   pushHistory();
   var keepTheme=state.settings.theme;
   var keepTab=state.settings.tab;
+  var keepCollapsed=state.settings.headerCollapsed;
   state=defaultState();
   state.settings.theme=keepTheme;
   state.settings.tab=keepTab;
+  state.settings.headerCollapsed=keepCollapsed;
   saveState();renderAll();
   toast("Всё сброшено. Снимок сохранён.","warn");
 }
@@ -2807,6 +3480,12 @@ function toast(msg,type){
 document.addEventListener("keydown",function(e){
   var tag=(e.target.tagName||"").toLowerCase();
   var isInput=tag==="input"||tag==="textarea";
+  if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==="h"){
+    if(isInput)return;
+    e.preventDefault();
+    toggleHeaderCollapse();
+    return;
+  }
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!e.shiftKey){
     if(isInput)return;
     e.preventDefault();undo();
@@ -2829,6 +3508,13 @@ loadFromHash();
 pushHistory();
 renderAll();
 updateSnapBadge();
+
+if(state.settings.headerCollapsed){
+  var header=document.getElementById("main-header");
+  if(header) header.classList.add("collapsed");
+}
+updateHeaderCollapseBtn();
+
 if(state.settings.tab==="scenarios")switchTab("scenarios");
 else if(state.settings.tab==="visual")switchTab("visual");
 </script>
