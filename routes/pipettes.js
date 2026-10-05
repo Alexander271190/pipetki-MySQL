@@ -372,12 +372,17 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
     department  = req.user.acting_department || '';
   }
 
-  if (!model) return res.status(400).json({ error: 'Заполните поле «Модель»' });
+    // 🛡️ Валидация model — отсекаем пустые, пробельные и Unicode-пробелы
+  const trimmedModel = String(model || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+  if (!trimmedModel) {
+    return res.status(400).json({ error: 'Заполните поле «Модель»' });
+  }
 
-if (!responsible) {
-  return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
-}
-
+  // 🛡️ Валидация responsible — та же защита
+  const trimmedResponsible = String(responsible || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+  if (!trimmedResponsible) {
+    return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
+  }
 // 🛡️ Дата поверки обязательна
 if (!lastCalibration || String(lastCalibration).trim() === '') {
   return res.status(400).json({ error: 'Заполните поле «Дата последней поверки»' });
@@ -475,12 +480,12 @@ if (String(lastCalibration) > todayLocalStr()) {
          barcode, barcode_source)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        id, serial, manufacturer, model,
+        id, serial, manufacturer, trimmedModel,
         equipmentType || 'pipette', volume, department,
         interval || 12, lastCalibration, cert,
         result || 'pass',
         (active === false || active === 0 || active === 'false' || active === '0') ? 0 : 1,
-        responsible, location, notes,
+        trimmedResponsible, location, notes,
         Object.keys(customData).length ? JSON.stringify(customData) : null,
         barcodeValue,
         barcodeSource,
@@ -497,17 +502,36 @@ if (String(lastCalibration) > todayLocalStr()) {
 
     await conn.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Добавление оборудования', `${id} (${model})`]
+      [req.user.id, req.user.full_name, 'Добавление оборудования', `${id} (${trimmedModel})`]
     );
 
     await conn.commit();
     res.status(201).json({ message: 'Оборудование создано', id });
-  } catch (e) {
+    } catch (e) {
     await conn.rollback();
-    if (e.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'ID уже занят, попробуйте сохранить ещё раз' });
+
+    // 🛡️ Гонки БД: duplicate key, deadlock, lock timeout → 409, а не 500.
+    // Клиент понимает «повтори» вместо «сервер сломался».
+    const RACE_CODES = new Set([
+      'ER_DUP_ENTRY',
+      'ER_LOCK_DEADLOCK',
+      'ER_LOCK_WAIT_TIMEOUT',
+      'ER_TRANSACTION_ROLLBACK',
+      'ER_QUERY_INTERRUPTED',
+    ]);
+    const isRace =
+      RACE_CODES.has(e.code) ||
+      /Duplicate entry|Deadlock|lock wait timeout/i.test(e.message || '');
+
+    if (isRace) {
+      console.warn('Race on create pipette:', e.code || e.message);
+      return res.status(409).json({
+        error: 'ID уже занят, попробуйте сохранить ещё раз',
+        code: 'race'
+      });
     }
-    console.error(e);
+
+    console.error('Create pipette error:', e);
     res.status(500).json({ error: 'Ошибка создания оборудования' });
   } finally {
     conn.release();
