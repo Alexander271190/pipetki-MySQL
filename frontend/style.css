@@ -2,10 +2,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #ffffff;
+  background: #f5f7fb;      /* 🆕 было #ffffff */
   color: #1a1a2e;
-  /* clip вместо hidden — не создаёт scroll-контейнер,
-     поэтому absolute-панель фильтра не клиппится */
   overflow-x: clip;
   max-width: 100vw;
 }
@@ -42,7 +40,7 @@ html {
 .container {
   max-width: 100%;           
   margin: 16px auto;
-  padding: 0 20px;
+  padding: 0 16px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -255,7 +253,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: #fff;
-  min-width: 820px;
+  min-width: 1800px;         
   font-variant-numeric: tabular-nums;
 }
 
@@ -268,7 +266,7 @@ thead {
 }
 
 th {
-  padding: 14px 16px;
+  padding: 12px 10px;        
   text-align: left;
   font-size: .72rem;
   font-weight: 700;
@@ -279,13 +277,12 @@ th {
   user-select: none;
   border-bottom: 1px solid #334155;
 }
-
 th:hover { background: #334155; }
 
 th .sort-arrow { font-size: .75rem; opacity: .8; margin-left: 4px; }
 
 td {
-  padding: 12px 16px;
+  padding: 10px 10px;        
   border-top: 1px solid #f1f5f9;
   font-size: .88rem;
   line-height: 1.35;
