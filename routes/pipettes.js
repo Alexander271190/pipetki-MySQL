@@ -372,10 +372,27 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
     department  = req.user.acting_department || '';
   }
 
-    // 🛡️ Валидация model — отсекаем пустые, пробельные и Unicode-пробелы
+        // 🛡️ Валидация model — отсекаем пустые, пробельные и Unicode-пробелы
   const trimmedModel = String(model || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
   if (!trimmedModel) {
     return res.status(400).json({ error: 'Заполните поле «Модель»' });
+  }
+
+  // 🆕 Валидация длины model — VARCHAR(255) в БД
+  if (trimmedModel.length > 255) {
+    return res.status(400).json({ error: 'Модель слишком длинная (максимум 255 символов)' });
+  }
+
+  // 🆕 Валидация длины serial — VARCHAR(255)
+  const trimmedSerial = String(serial || '').trim();
+  if (trimmedSerial.length > 255) {
+    return res.status(400).json({ error: 'Серийный номер слишком длинный (максимум 255 символов)' });
+  }
+
+  // 🆕 Валидация длины manufacturer — VARCHAR(255)
+  const trimmedManufacturer = String(manufacturer || '').trim();
+  if (trimmedManufacturer.length > 255) {
+    return res.status(400).json({ error: 'Производитель слишком длинный (максимум 255 символов)' });
   }
 
   // 🛡️ Валидация responsible — та же защита
@@ -480,7 +497,7 @@ if (String(lastCalibration) > todayLocalStr()) {
          barcode, barcode_source)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        id, serial, manufacturer, trimmedModel,
+        id, trimmedSerial, trimmedManufacturer, trimmedModel,
         equipmentType || 'pipette', volume, department,
         interval || 12, lastCalibration, cert,
         result || 'pass',
@@ -512,7 +529,7 @@ if (String(lastCalibration) > todayLocalStr()) {
 
       // 🛡️ Гонки БД: duplicate key, deadlock, lock timeout, ER_CHECKREAD → 409, а не 500.
     // Клиент понимает «повтори» вместо «сервер сломался».
-    const RACE_CODES = new Set([
+        const RACE_CODES = new Set([
       'ER_DUP_ENTRY',            
       'ER_LOCK_DEADLOCK',        
       'ER_LOCK_WAIT_TIMEOUT',    
@@ -521,8 +538,24 @@ if (String(lastCalibration) > todayLocalStr()) {
       'ER_CHECKREAD',           
     ]);
 
-    // 🆕 Дополнительная страховка — проверка по errno MySQL
     const RACE_ERRNOS = new Set([1020, 1062, 1205, 1213, 1317, 1105]);
+
+    // 🆕 Ошибки данных — это 400, не 500 и не race
+    const DATA_ERROR_CODES = new Set([
+      'ER_DATA_TOO_LONG',       // 1406 — данные не влезают
+      'ER_TRUNCATED_WRONG_VALUE', // 1292 — неверное значение
+      'ER_BAD_NULL_ERROR',      // 1048 — NULL в NOT NULL
+      'ER_NO_DEFAULT_FOR_FIELD', // 1364 — нет значения для поля
+    ]);
+    const DATA_ERROR_ERRNOS = new Set([1406, 1292, 1048, 1364]);
+
+    if (DATA_ERROR_CODES.has(e.code) || DATA_ERROR_ERRNOS.has(e.errno)) {
+      console.warn('Data error:', e.code, e.errno, e.sqlMessage);
+      return res.status(400).json({
+        error: 'Некорректные данные: ' + (e.sqlMessage || e.message),
+        code: 'data_error'
+      });
+    }
 
     const isRace =
       RACE_CODES.has(e.code) ||
