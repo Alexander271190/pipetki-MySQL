@@ -510,18 +510,24 @@ if (String(lastCalibration) > todayLocalStr()) {
     } catch (e) {
     await conn.rollback();
 
-    // 🛡️ Гонки БД: duplicate key, deadlock, lock timeout → 409, а не 500.
+      // 🛡️ Гонки БД: duplicate key, deadlock, lock timeout, ER_CHECKREAD → 409, а не 500.
     // Клиент понимает «повтори» вместо «сервер сломался».
     const RACE_CODES = new Set([
-      'ER_DUP_ENTRY',
-      'ER_LOCK_DEADLOCK',
-      'ER_LOCK_WAIT_TIMEOUT',
-      'ER_TRANSACTION_ROLLBACK',
-      'ER_QUERY_INTERRUPTED',
+      'ER_DUP_ENTRY',            
+      'ER_LOCK_DEADLOCK',        
+      'ER_LOCK_WAIT_TIMEOUT',    
+      'ER_TRANSACTION_ROLLBACK', 
+      'ER_QUERY_INTERRUPTED',    
+      'ER_CHECKREAD',           
     ]);
+
+    // 🆕 Дополнительная страховка — проверка по errno MySQL
+    const RACE_ERRNOS = new Set([1020, 1062, 1205, 1213, 1317, 1105]);
+
     const isRace =
       RACE_CODES.has(e.code) ||
-      /Duplicate entry|Deadlock|lock wait timeout/i.test(e.message || '');
+      RACE_ERRNOS.has(e.errno) ||
+      /Duplicate entry|Deadlock|lock wait timeout|Record has changed since last read/i.test(e.message || '');
 
     if (isRace) {
       console.warn('Race on create pipette:', e.code || e.message);
