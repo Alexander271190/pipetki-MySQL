@@ -19,16 +19,26 @@ const authenticate = async (req, res, next) => {
     if (!rows.length) return res.status(401).json({ error: 'Пользователь не найден' });
 
     const user = rows[0];
-
-    // Пароль был изменён после выдачи токена → старый токен недействителен
-  if (user.password_changed_at) {
-  const pwdTs = new Date(user.password_changed_at).getTime() / 1000;
-  // decoded.iat может отсутствовать (noTimestamp) — тогда считаем токен устаревшим
-  const iat = decoded.iat || 0;
-  if (pwdTs > iat + 2) {
-    return res.status(401).json({ error: 'Пароль был изменён, войдите заново' });
-  }
-}
+      // Пароль был изменён после выдачи токена → старый токен недействителен.
+    // 🆕 Пропускаем проверку, если пользователь ещё не сменил/не установил пароль —
+    // в этом случае он всё равно будет заблокирован блоками must_set_password /
+    // must_change_password ниже.
+    if (user.password_changed_at
+        && !user.must_set_password
+        && !user.must_change_password) {
+      const pwdTs = new Date(user.password_changed_at).getTime() / 1000;
+      const iat = decoded.iat || 0;
+      if (pwdTs > iat + 2) {
+        return res.status(401).json({ error: 'Пароль был изменён, войдите заново' });
+      }
+    }
+  // 🆕 Админ ещё не установил пароль → блокируем всё, кроме спец-роутов
+    if (user.must_set_password && !req.allowWhenPasswordMustChange) {
+      return res.status(403).json({
+        error: 'Требуется установка пароля администратора',
+        code: 'password_setup_required',
+      });
+    }
 
   // Обязательная смена пароля: блокируем всё, кроме помеченных роутов
     if (user.must_change_password && !req.allowWhenPasswordMustChange) {
