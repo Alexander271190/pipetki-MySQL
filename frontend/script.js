@@ -215,13 +215,17 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     throw new Error('Неавторизован');
   }
 
-  // Обязательная смена пароля: сервер вернул 403 с кодом
+    // Обязательная смена/установка пароля: сервер вернул 403 с кодом
   if (response.status === 403 && !endpoint.startsWith('/auth/')) {
     let body = null;
     try { body = await response.clone().json(); } catch (e) { /* ignore */ }
     if (body && body.code === 'password_change_required') {
-      openChangePasswordModal(true);
+      openChangePasswordModal(true, 'change');
       throw new Error('Требуется смена пароля');
+    }
+    if (body && body.code === 'password_setup_required') {
+      openChangePasswordModal(true, 'setup');
+      throw new Error('Требуется установка пароля');
     }
   }
 
@@ -396,14 +400,9 @@ async function loginUser(e) {
 
   errorEl.textContent = '';
 
-  if (!username || !password) {
-    const missing = [];
-    if (!username) missing.push('Логин');
-    if (!password) missing.push('Пароль');
-
-    errorEl.textContent = missing.length === 1
-      ? `Заполните поле «${missing[0]}»`
-      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
+    // 🆕 Пароль может быть пустым — для админа при первом входе
+  if (!username) {
+    errorEl.textContent = 'Заполните поле «Логин»';
     return;
   }
 
@@ -2987,10 +2986,12 @@ function renderAuthUI() {
     document.body.classList.toggle('can-import', canImportData);
     document.body.classList.toggle('can-export', canExportData);
     document.body.classList.toggle('is-admin', admin);
-    if (currentUser.mustChangePassword) {
-      
+    if (currentUser.mustSetPassword) {
+      // 🆕 Админ ещё не задал пароль — модалка в режиме setup
+      openChangePasswordModal(true, 'setup');
+    } else if (currentUser.mustChangePassword) {
       // Пока не сменит пароль — данные не грузим, показываем модалку
-      openChangePasswordModal(true);
+      openChangePasswordModal(true, 'change');
     } else {
       closeChangePasswordModal();
 
@@ -3047,9 +3048,10 @@ document.getElementById('history-modal').addEventListener('click', e => { if (e.
 document.getElementById('bulk-send-modal').addEventListener('click', e => { if (e.target.id === 'bulk-send-modal') closeBulkSendModal(); });
 document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
 document.getElementById('change-password-modal').addEventListener('click', e => {
-
   if (e.target.id === 'change-password-modal') {
-    const canClose = !currentUser || !currentUser.mustChangePassword || isImpersonating();
+    const mustSetup = currentUser && currentUser.mustSetPassword;
+    const mustChange = currentUser && currentUser.mustChangePassword;
+    const canClose = !mustSetup && !mustChange || isImpersonating();
     if (canClose) {
       closeChangePasswordModal();
     }
@@ -5094,7 +5096,7 @@ window.addEventListener('focus', () => {
 // ============================================================
 // СМЕНА ПАРОЛЯ
 // ============================================================
-function openChangePasswordModal(force) {
+function openChangePasswordModal(force, mode = 'change') {
   const modal = document.getElementById('change-password-modal');
   const notice = document.getElementById('change-password-notice');
   const errEl = document.getElementById('cp-error');
@@ -5109,9 +5111,27 @@ function openChangePasswordModal(force) {
   if (confirmInput) confirmInput.value = '';
   const unameField = document.getElementById('cp-username');
   if (unameField) unameField.value = (currentUser && (currentUser.login || currentUser.fullName)) || '';
-  if (notice) notice.style.display = force ? 'block' : 'none';
 
-  // При impersonate — не блокируем, даём шанс вернуться
+  // 🆕 В setup-режиме поле «Текущий пароль» не нужно
+  const isSetup = mode === 'setup';
+  const currentGroup = currentInput ? currentInput.closest('.form-group') : null;
+  if (currentGroup) currentGroup.style.display = isSetup ? 'none' : '';
+
+  const titleEl = modal ? modal.querySelector('h2') : null;
+  if (titleEl) {
+    titleEl.innerHTML = isSetup
+      ? '<i class="fa-solid fa-key"></i> Установка пароля администратора'
+      : '<i class="fa-solid fa-lock"></i> Смена пароля';
+  }
+  if (notice) {
+    notice.style.display = force ? 'block' : 'none';
+    notice.innerHTML = isSetup
+      ? 'Это первый вход в систему. Задайте пароль администратора, соответствующий требованиям ниже.'
+      : 'Администратор выдал вам разовый пароль. Для продолжения работы задайте новый пароль.';
+  }
+
+  if (modal) modal.dataset.mode = mode;
+
   const isImpersonatingNow = isImpersonating();
   const reallyForce = force && !isImpersonatingNow;
 
@@ -5121,7 +5141,8 @@ function openChangePasswordModal(force) {
   }
 
   if (modal) modal.classList.add('active');
-  if (currentInput) setTimeout(() => currentInput.focus(), 100);
+  const focusTarget = isSetup ? newInput : currentInput;
+  if (focusTarget) setTimeout(() => focusTarget.focus(), 100);
 }
 
 function closeChangePasswordModal() {
@@ -5143,8 +5164,12 @@ function validatePasswordClient(pwd) {
 async function submitChangePassword(e) {
   e.preventDefault();
 
+  const modal = document.getElementById('change-password-modal');
+  const mode = (modal && modal.dataset.mode) || 'change';
+  const isSetup = mode === 'setup';
+
   const errEl = document.getElementById('cp-error');
-  const currentPwd = document.getElementById('cp-current').value;
+  const currentPwd = isSetup ? '' : document.getElementById('cp-current').value;
   const newPwd     = document.getElementById('cp-new').value;
   const confirmPwd = document.getElementById('cp-confirm').value;
 
@@ -5155,13 +5180,13 @@ async function submitChangePassword(e) {
   const resetCpBtn = () => {
     if (cpBtn) cpBtn.disabled = false;
     if (cpBtnIcon) cpBtnIcon.className = 'fa-solid fa-floppy-disk';
-    if (cpBtnText) cpBtnText.textContent = 'Сохранить пароль';
+    if (cpBtnText) cpBtnText.textContent = isSetup ? 'Установить пароль' : 'Сохранить пароль';
   };
 
   errEl.textContent = '';
 
   const missing = [];
-  if (!currentPwd) missing.push('Текущий пароль');
+  if (!isSetup && !currentPwd) missing.push('Текущий пароль');
   if (!newPwd)     missing.push('Новый пароль');
   if (!confirmPwd) missing.push('Подтверждение пароля');
   if (missing.length > 0) {
@@ -5182,27 +5207,25 @@ async function submitChangePassword(e) {
     return;
   }
 
-     
   if (cpBtn) cpBtn.disabled = true;
   if (cpBtnIcon) cpBtnIcon.className = 'fa-solid fa-spinner fa-spin';
   if (cpBtnText) cpBtnText.textContent = 'Сохранение…';
 
   try {
-    const res = await apiRequest('/auth/change-password', 'POST', {
-      currentPassword: currentPwd,
-      newPassword: newPwd,
-      confirmPassword: confirmPwd
-    });
+    const endpoint = isSetup ? '/auth/setup-password' : '/auth/change-password';
+    const payload  = isSetup
+      ? { newPassword: newPwd, confirmPassword: confirmPwd }
+      : { currentPassword: currentPwd, newPassword: newPwd, confirmPassword: confirmPwd };
 
-   currentUser.mustChangePassword = false;
+    const res = await apiRequest(endpoint, 'POST', payload);
 
-    // Обновляем токен: сервер выдал свежий, т.к. старый уже невалиден
-    if (res.token) {
-      authToken = res.token;
-    }
+    currentUser.mustSetPassword = false;
+    currentUser.mustChangePassword = false;
+
+    if (res.token) authToken = res.token;
 
     setSession(currentUser, authToken, getOriginalUser(), getOriginalToken());
-    showToast('Пароль успешно изменён', 'success');
+    showToast(isSetup ? 'Пароль установлен' : 'Пароль успешно изменён', 'success');
     resetCpBtn();
     closeChangePasswordModal();
     renderAuthUI();
