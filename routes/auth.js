@@ -31,6 +31,7 @@ function userPublic(u) {
     actingDepartment: u.acting_department || null,
     extraPermissions: db.safeParse(u.extra_permissions, []),
     mustChangePassword: !!u.must_change_password,
+    mustSetPassword: !!u.must_set_password,
     passwordChangedAt: u.password_changed_at || null
   };
 }
@@ -38,26 +39,33 @@ function userPublic(u) {
 router.post('/login', async (req, res) => {
   const { login, password } = req.body;
 
-  if (!login || !password) {
-    const missing = [];
-    if (!login)    missing.push('Логин');
-    if (!password) missing.push('Пароль');
-    const msg = missing.length === 1
-      ? `Заполните поле «${missing[0]}»`
-      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
-    return res.status(400).json({ error: msg });
+  if (!login) {
+    return res.status(400).json({ error: 'Заполните поле «Логин»' });
   }
-  
+
   try {
-    const [rows] = await db.query('SELECT * FROM users WHERE login = ?', [login]);
+     const [rows] = await db.query('SELECT * FROM users WHERE login = ?', [login]);
     if (!rows.length)
       return res.status(401).json({ error: 'Неверный логин или пароль' });
 
-    const passwordOk = await bcrypt.compare(password, rows[0].password);
-    if (!passwordOk)
-      return res.status(401).json({ error: 'Неверный логин или пароль' });
+    const u = rows[0];
 
-        const u = rows[0];
+    // 🆕 Первый вход админа: пароль ещё не установлен.
+    // Пропускаем bcrypt — сравнивать нечего.
+    if (u.must_set_password) {
+      if (password && password.length > 0) {
+        return res.status(401).json({
+          error: 'Пароль ещё не установлен. Оставьте поле пустым.'
+        });
+      }
+    } else {
+      if (!password) {
+        return res.status(400).json({ error: 'Заполните поле «Пароль»' });
+      }
+      const passwordOk = await bcrypt.compare(password, u.password);
+      if (!passwordOk)
+        return res.status(401).json({ error: 'Неверный логин или пароль' });
+    }
 
     // 🛡️ Если и.о. — подтягиваем данные основного
     if (u.is_acting && u.acting_for_id) {
@@ -265,6 +273,65 @@ router.post('/change-password', allowWhenPasswordMustChange, authenticate, async
 
   res.json({ message: 'Пароль изменён', token: freshToken });
 });
+
+// ============================================================
+// 🆕 УСТАНОВКА ПАРОЛЯ АДМИНИСТРАТОРА (первый вход)
+// ============================================================
+router.post('/setup-password', allowWhenPasswordMustChange, authenticate, async (req, res) => {
+  if (!req.user.must_set_password) {
+    return res.status(400).json({ error: 'Пароль уже установлен' });
+  }
+
+  const { newPassword, confirmPassword } = req.body;
+
+  const missing = [];
+  if (!newPassword)     missing.push('Новый пароль');
+  if (!confirmPassword) missing.push('Подтверждение пароля');
+  if (missing.length > 0) {
+    return res.status(400).json({
+      error: missing.length === 1
+        ? `Заполните поле «${missing[0]}»`
+        : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`
+    });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ error: 'Пароли не совпадают' });
+  }
+
+  const v = validatePassword(newPassword);
+  if (!v.ok) {
+    return res.status(400).json({
+      error: 'Пароль не соответствует требованиям:\n• ' + v.errors.join('\n• ')
+    });
+  }
+
+  const hash = await bcrypt.hash(newPassword, 10);
+  await db.query(
+    `UPDATE users
+     SET password = ?,
+         must_set_password = 0,
+         must_change_password = 0,
+         password_changed_at = ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [hash, new Date(), req.user.id]
+  );
+
+  await db.query(
+    'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+    [req.user.id, req.user.full_name, 'Установка пароля администратора', 'Первый вход']
+  );
+
+  const freshToken = jwt.sign(
+    { id: req.user.id, login: req.user.login, role: req.user.role },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  res.json({ message: 'Пароль установлен', token: freshToken });
+});
+
 
 
 module.exports = router;
