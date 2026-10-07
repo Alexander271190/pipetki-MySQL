@@ -1,5 +1,4 @@
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcryptjs');
 
 // ============================================================
 // ПУЛ СОЕДИНЕНИЙ
@@ -295,7 +294,7 @@ async function initSchema() {
 // ============================================================
 async function seedInitialData() {
   // --- Пользователи ---
-     let seededAny = false;
+  let seededAny = false;
 
     const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
   if (uc[0].c === 0) {
