@@ -323,6 +323,17 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   width: calc(100vw - 40px);       
 }
 
+/* 🆕 Модалка — без горизонтального скролла, если можно сжать содержимое */
+.modal {
+  overflow-x: hidden;
+}
+
+/* 🆕 Если контент не влезает — внутренний скролл контента */
+#settings-section-content {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .modal-lg .field-settings-table,
 .modal-lg .bc-printers-table {
   display: table;
