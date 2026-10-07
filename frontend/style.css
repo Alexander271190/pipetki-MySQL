@@ -318,7 +318,30 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
 .modal-overlay.active { display: flex; }
 .modal { background: #fff; border-radius: 16px; padding: 24px; max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
-.modal-lg { max-width: 900px; }
+.modal-lg {
+  max-width: 1100px;               
+  width: calc(100vw - 40px);       
+}
+
+.modal-lg .field-settings-table,
+.modal-lg .bc-printers-table {
+  display: table;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .modal-lg {
+    max-width: 98vw;
+    width: 98vw;
+  }
+  #settings-section-content {
+    overflow-x: auto;
+  }
+  #settings-section-content .field-settings-table,
+  #settings-section-content .bc-printers-table {
+    min-width: 640px;
+  }
+}
 .modal h2 { margin-bottom: 20px; font-size: 1.3rem; color: #1e293b; }
 
 /* ========== ФОРМЫ ========== */
@@ -449,14 +472,79 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
 
 
 /* ========== ТАБЛИЦА ПОЛЕЙ ========== */
-.field-settings-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-.field-settings-table th { background: #f1f5f9; color: #1e293b; padding: 8px 10px; text-align: left; font-size: .8rem; }
-.field-settings-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-.field-settings-table input[type="text"], .field-settings-table input[type="number"], .field-settings-table select { width: 100%; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: .85rem; font-family: inherit; }
-.field-settings-table textarea { width: 100%; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: .85rem; resize: vertical; }
-.field-settings-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-.field-settings-table .order-btns { display: flex; flex-direction: column; gap: 2px; }
-.field-settings-table .order-btns .btn { width: 100%; padding: 2px 6px; font-size: .7rem; }
+.field-settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+  table-layout: fixed;           
+}
+
+.field-settings-table th {
+  background: #f1f5f9;
+  color: #1e293b;
+  padding: 8px 6px;
+  text-align: left;
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-settings-table td {
+  padding: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+/* 🆕 Все поля внутри ячеек — сжимаемые */
+.field-settings-table input[type="text"],
+.field-settings-table input[type="number"],
+.field-settings-table select,
+.field-settings-table textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;                    
+  padding: 5px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: .82rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.field-settings-table textarea { resize: vertical; }
+
+.field-settings-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4f46e5;
+}
+
+.field-settings-table .order-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.field-settings-table .order-btns .btn {
+  width: 100%;
+  padding: 2px 4px;
+  font-size: .7rem;
+}
+
+/* 🆕 Кнопка-иконка удаления — не растягивается */
+.field-settings-table .btn-icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* ========== ОТДЕЛЫ ========== */
 .dept-list-container { margin: 12px 0; }
@@ -743,9 +831,6 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
     gap: 8px;
    }
 }
-
-/* Вкладки настроек — стили для новых вкладок */
-.field-settings-table input[type="text"] { width: 100%; padding: 6px 8px; }
 
 /* Галочка "только свой отдел" */
 #usr-only-own-dept {
@@ -1896,7 +1981,9 @@ html[data-theme="dark"] .status-wip {
   font-size: .82rem;
   table-layout: fixed;
   margin-bottom: 8px;
+  min-width: 0;
 }
+
 .bc-printers-table th {
   background: #f1f5f9;
   color: #475569;
@@ -1909,15 +1996,21 @@ html[data-theme="dark"] .status-wip {
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
+
 .bc-printers-table td {
   padding: 5px 6px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .bc-printers-table input[type="text"],
 .bc-printers-table input[type="number"],
 .bc-printers-table select {
   width: 100%;
+  max-width: 100%;          
+  min-width: 0;             
   padding: 5px 7px;
   border: 1px solid #d1d5db;
   border-radius: 5px;
@@ -1927,6 +2020,7 @@ html[data-theme="dark"] .status-wip {
   box-sizing: border-box;
   outline: none;
 }
+
 .bc-printers-table input:focus,
 .bc-printers-table select:focus {
   border-color: #6366f1;
