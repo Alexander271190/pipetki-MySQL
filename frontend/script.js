@@ -326,6 +326,7 @@ async function refreshCurrentUser() {
       const newPerms = (user.extraPermissions || []).join(',');
       const permsChanged = oldPerms !== newPerms;
       const mustChangeChanged = !!currentUser.mustChangePassword !== !!user.mustChangePassword;
+      const mustSetChanged    = !!currentUser.mustSetPassword    !== !!user.mustSetPassword;
 
       currentUser = user;
 
@@ -339,7 +340,7 @@ async function refreshCurrentUser() {
       if (!s.token && authToken) s.token = authToken;
       sessionStorage.setItem('pipette_session', JSON.stringify(s));
 
-      if (permsChanged || mustChangeChanged) {
+      if (permsChanged || mustChangeChanged || mustSetChanged) {
         renderAuthUI();
         if (permsChanged) {
           showToast('Ваши права были обновлены администратором', 'success');
