@@ -111,6 +111,7 @@ async function initSchema() {
         is_acting TINYINT DEFAULT 0,
         acting_for_id VARCHAR(255) DEFAULT NULL,
         must_change_password TINYINT DEFAULT 0,
+        must_set_password TINYINT DEFAULT 0,
         password_changed_at TIMESTAMP NULL DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -257,6 +258,7 @@ async function initSchema() {
       { name: 'acting_for_id',       ddl: 'VARCHAR(255) DEFAULT NULL' },
       { name: 'password_changed_at', ddl: 'TIMESTAMP NULL DEFAULT NULL' },
       { name: 'only_own_department', ddl: 'TINYINT DEFAULT 0' },
+      { name: 'must_set_password',   ddl: 'TINYINT DEFAULT 0' },
     ]);
 
     await ensureColumns(conn, 'pipettes', [
@@ -295,32 +297,22 @@ async function seedInitialData() {
   // --- Пользователи ---
      let seededAny = false;
 
-  const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
+    const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
   if (uc[0].c === 0) {
     seededAny = true;
 
-        const crypto = require('crypto');
+    await pool.query(
+      `INSERT INTO users
+         (id, login, password, full_name, position, department, role,
+          extra_permissions, must_change_password, must_set_password)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+      ['admin1', 'admin', '', 'Администратор', 'Администратор системы',
+       null, 'admin', '[]']
+    );
 
-    const adminPwd = process.env.SEED_ADMIN_PASSWORD
-      || crypto.randomBytes(12).toString('base64url');
-
-    const sql = `INSERT INTO users
-      (id, login, password, full_name, position, department, role, extra_permissions, must_change_password)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`;
-
-    const adminHash = await bcrypt.hash(adminPwd, 10);
-
-    await pool.query(sql, [
-      'admin1', 'admin', adminHash,
-      'Администратор', 'Администратор системы',
-      null, 'admin', '[]'
-    ]);
-
-    if (!process.env.SEED_ADMIN_PASSWORD) {
-      console.log('🔑 Разовый пароль администратора (сохраните и смените после первого входа):');
-      console.log(`   admin / ${adminPwd}`);
-      console.log('   Остальных пользователей создайте через «Настройки → Пользователи».');
-    }
+    console.log('👤 Создана учётная запись администратора.');
+    console.log('   Логин: admin');
+    console.log('   Пароль: не задан. При первом входе система попросит установить пароль. Остальных пользователей создайте через «Настройки → Пользователи».');
   }
 
   // --- Отделы ---
