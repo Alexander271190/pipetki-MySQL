@@ -350,7 +350,7 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   }
   #settings-section-content .field-settings-table,
   #settings-section-content .bc-printers-table {
-    min-width: 640px;
+    min-width: 560px;
   }
 }
 .modal h2 { margin-bottom: 20px; font-size: 1.3rem; color: #1e293b; }
@@ -2548,7 +2548,7 @@ html[data-theme="dark"] .row-actions-divider { background: #334155; }
 
 /* На средних экранах — прокрутка таблицы, а не разъезд */
 #settings-section-content .field-settings-table {
-  min-width: 640px;
+  min-width: 560px;
 }
 
 @media (max-width: 900px) {
@@ -2556,6 +2556,6 @@ html[data-theme="dark"] .row-actions-divider { background: #334155; }
     overflow-x: auto;
   }
   #settings-section-content .field-settings-table {
-    min-width: 720px;
+    min-width: 560px;
   }
 }
