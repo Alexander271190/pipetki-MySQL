@@ -2507,3 +2507,55 @@ html[data-theme="dark"] .row-actions-item.item-warning:hover { background: rgba(
 html[data-theme="dark"] .row-actions-item.item-danger { color: #fca5a5; }
 html[data-theme="dark"] .row-actions-item.item-danger:hover { background: rgba(220,38,38,.15); }
 html[data-theme="dark"] .row-actions-divider { background: #334155; }
+
+/* ============================================================
+   ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ В НАСТРОЙКАХ — не разъезжается
+   ============================================================ */
+
+/* Таблица пользователей внутри #settings-section-content */
+#settings-section-content .field-settings-table.users-table-fix {
+  table-layout: auto;
+  width: 100%;
+}
+
+/* Колонка «Действия» — не сжимается, кнопки в ряд */
+#settings-section-content .field-settings-table td.actions {
+  white-space: nowrap;
+  width: 1%;
+  padding: 6px 8px;
+}
+
+/* Кнопки в колонке «Действия» — компактные */
+#settings-section-content .field-settings-table td.actions .btn {
+  padding: 5px 8px;
+  font-size: .78rem;
+  min-width: 32px;
+  margin: 0 1px;
+}
+
+/* Колонка «Права» — по центру, не растягивается */
+#settings-section-content .field-settings-table td.perm-cell {
+  text-align: center;
+  white-space: nowrap;
+  width: 1%;
+}
+
+/* Длинные ФИО/логины переносятся */
+#settings-section-content .field-settings-table td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* На средних экранах — прокрутка таблицы, а не разъезд */
+#settings-section-content .field-settings-table {
+  min-width: 640px;
+}
+
+@media (max-width: 900px) {
+  #settings-section-content {
+    overflow-x: auto;
+  }
+  #settings-section-content .field-settings-table {
+    min-width: 720px;
+  }
+}
