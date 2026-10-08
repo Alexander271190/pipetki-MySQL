@@ -455,9 +455,22 @@
       («ID», «Внутренний номер», «Модель», «Наименование», «Серийный номер», «Отдел»,
       «Дата поверки», «МПИ», «Ответственный», «Место», «Примечание» и др.).
     </div>
-    <div id="import-progress" style="display:none;margin-bottom:15px;padding:10px;background:#f1f5f9;border-radius:8px;font-size:.85rem;color:#475569;">
-      ⏳ Загрузка…
+        <div id="import-progress-wrap" style="display:none;margin-bottom:15px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span id="import-progress-text" style="font-size:.85rem;color:#475569;font-weight:600;">
+          ⏳ Подготовка…
+        </span>
+        <span id="import-progress-percent" style="font-size:.85rem;color:#4f46e5;font-weight:700;">
+          0%
+        </span>
+      </div>
+      <div style="width:100%;height:8px;background:#e2e8f0;border-radius:6px;overflow:hidden;">
+        <div id="import-progress-bar"
+             style="width:0%;height:100%;background:linear-gradient(90deg,#6366f1,#4f46e5);
+                    border-radius:6px;transition:width .25s ease;"></div>
+      </div>
     </div>
+    
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" onclick="closeImportModal()">Отмена</button>
       <button type="button" class="btn btn-success" onclick="handleImport()"><i class="fa-solid fa-download"></i> Загрузить</button>
