@@ -1040,6 +1040,10 @@ let _rowActionsMenu = null;
 async function openUserActions(ev, userId) {
   ev.stopPropagation();
 
+  // 🆕 ВАЖНО: currentTarget доступен ТОЛЬКО синхронно.
+  // Сохраняем его СРАЗУ — до await, иначе станет null.
+  const anchorEl = ev.currentTarget;
+
   const curId = currentUser.id;
   const isSelf = userId === curId;
 
@@ -1083,7 +1087,8 @@ async function openUserActions(ev, userId) {
     });
   }
 
-  renderUserActionsMenu(ev.currentTarget, items);
+  // 🆕 Передаём сохранённый anchorEl (а не ev.currentTarget)
+  renderUserActionsMenu(anchorEl, items);
 }
 
 // Отдельный рендер для меню пользователей (использует тот же .row-actions-menu)
