@@ -6348,9 +6348,19 @@ async function renderUsersSettings() {
     const curId = currentUser.id;
 
     let html = '<h3>Управление пользователями</h3>';
-    html += `<table class="field-settings-table" style="margin-bottom:20px;"><thead><tr>
-      <th>Логин</th><th>ФИО</th><th>Должность</th><th>Отдел</th><th>Роль</th><th>Права</th><th>Действия</th>
-    </tr></thead><tbody>`;
+    html += `<table class="field-settings-table users-table-fix" style="margin-bottom:20px;">
+  <colgroup>
+    <col style="width:14%;">
+    <col style="width:20%;">
+    <col style="width:16%;">
+    <col style="width:14%;">
+    <col style="width:12%;">
+    <col style="width:8%;">
+    <col style="width:1%;">
+  </colgroup>
+  <thead><tr>
+    <th>Логин</th><th>ФИО</th><th>Должность</th><th>Отдел</th><th>Роль</th><th>Права</th><th>Действия</th>
+  </tr></thead><tbody>`;
 
     users.forEach(u => {
       const perms = u.extraPermissions || [];
@@ -6369,7 +6379,7 @@ async function renderUsersSettings() {
           : ''}</td>
         <td>${esc(u.department || '—')}</td>
         <td>${roleLabels[u.role] || u.role}</td>
-        <td style="text-align:center;">${permText}</td>
+        <td class="perm-cell">${permText}</td>
         <td class="actions">
           <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">
             <i class="fa-solid fa-pen"></i>
