@@ -1037,6 +1037,61 @@ function getSortedPipettes() {
 // ============================================================
 let _rowActionsMenu = null;
 
+async function openUserActions(ev, userId) {
+  ev.stopPropagation();
+
+  const curId = currentUser.id;
+  const isSelf = userId === curId;
+
+  // 🆕 Подтягиваем данные пользователя — для красивого имени в confirm
+  let u = {};
+  try {
+    const users = await apiRequest('/users');
+    u = users.find(x => x.id === userId) || {};
+  } catch (e) {
+    console.warn('Не удалось подтянуть данные пользователя:', e.message);
+  }
+
+  const items = [
+    {
+      label: 'Редактировать',
+      action: () => editUserSetting(userId),
+    },
+    {
+      label: 'Настроить видимые поля',
+      action: () => openUserViewModal(userId, u.fullName || ''),
+    },
+  ];
+
+  if (!isSelf) {
+    items.push({ divider: true });
+    items.push({
+      label: 'Войти как этот пользователь',
+      class: 'item-warning',
+      action: () => impersonateUser(userId),
+    });
+    items.push({
+      label: 'Сбросить пароль',
+      class: 'item-warning',
+      action: () => resetUserPassword(userId, u.login || ''),
+    });
+    items.push({ divider: true });
+    items.push({
+      label: 'Удалить пользователя',
+      class: 'item-danger',
+      action: () => deleteUserSetting(userId, u.fullName || ''),
+    });
+  }
+
+  renderUserActionsMenu(ev.currentTarget, items);
+}
+
+// Отдельный рендер для меню пользователей (использует тот же .row-actions-menu)
+function renderUserActionsMenu(anchorEl, items) {
+  // Переиспользуем существующий рендер
+  renderRowActionsMenu(anchorEl, items);
+}
+
 function openRowActions(ev, id) {
   ev.stopPropagation();
 
@@ -3135,6 +3190,51 @@ function toggleHeaderCollapse() {
 })();
 
 // ============================================================
+// 🆕 ХЕЛПЕРЫ ПРОГРЕСС-БАРА ИМПОРТА
+// ============================================================
+let _importProgressTimer = null;
+
+function showImportProgress(percent, text) {
+  const wrap = document.getElementById('import-progress-wrap');
+  const bar = document.getElementById('import-progress-bar');
+  const pct = document.getElementById('import-progress-percent');
+  const txt = document.getElementById('import-progress-text');
+  if (!wrap) return;
+  wrap.style.display = 'block';
+  if (bar) bar.style.width = Math.min(100, Math.max(0, percent)) + '%';
+  if (pct) pct.textContent = Math.round(percent) + '%';
+  if (txt && text) txt.textContent = text;
+}
+
+function hideImportProgress() {
+  const wrap = document.getElementById('import-progress-wrap');
+  if (wrap) wrap.style.display = 'none';
+  if (_importProgressTimer) {
+    clearInterval(_importProgressTimer);
+    _importProgressTimer = null;
+  }
+  showImportProgress(0, '');
+}
+
+function animateImportProgress(from, to, durationMs, text) {
+  if (_importProgressTimer) clearInterval(_importProgressTimer);
+  const start = Date.now();
+  const step = 50;
+  showImportProgress(from, text);
+  _importProgressTimer = setInterval(() => {
+    const elapsed = Date.now() - start;
+    const t = Math.min(1, elapsed / durationMs);
+    const eased = 1 - Math.pow(1 - t, 2);
+    const current = from + (to - from) * eased;
+    showImportProgress(current, text);
+    if (t >= 1) {
+      clearInterval(_importProgressTimer);
+      _importProgressTimer = null;
+    }
+  }, step);
+}
+
+// ============================================================
 // ИМПОРТ ДАННЫХ
 // ============================================================
 async function openImportModal() {
@@ -3147,12 +3247,8 @@ function closeImportModal() {
   document.getElementById('import-modal').classList.remove('active');
   document.getElementById('import-file').value = '';
 
-  // Сбросить прогресс, чтобы при повторном открытии не мигал старый текст
-  const progress = document.getElementById('import-progress');
-  if (progress) {
-    progress.style.display = 'none';
-    progress.textContent = '⏳ Загрузка…';
-  }
+  // 🆕 Сброс прогресс-бара
+  hideImportProgress();
 }
 
 async function handleImport() {
@@ -3162,9 +3258,8 @@ async function handleImport() {
   const fileInput = document.getElementById('import-file');
   const file = fileInput.files[0];
   if (!file) { showToast('Выберите файл', 'error'); return; }
-    
-  // 🛡️ Старый формат .xls (Excel 97-2003) не поддерживается — ExcelJS
-  // читает только .xlsx (Office Open XML). Показываем понятную подсказку.
+
+  // 🛡️ Старый формат .xls не поддерживается
   if (file.name.toLowerCase().endsWith('.xls')) {
     showToast(
       'Формат .xls не поддерживается. Пересохраните файл как .xlsx ' +
@@ -3174,19 +3269,45 @@ async function handleImport() {
     fileInput.value = '';
     return;
   }
-  
-  const progress = document.getElementById('import-progress');
-  if (progress) {
-    progress.style.display = 'block';
-    progress.textContent = '⏳ Загрузка и обработка файла…';
-  }
+
+  // ── 0–20%: чтение файла клиентом ──
+  showImportProgress(0, '⏳ Чтение файла…');
+  animateImportProgress(0, 20, 800, '⏳ Чтение файла…');
 
   const reader = new FileReader();
+
+  reader.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const p = (e.loaded / e.total) * 20;
+      showImportProgress(p, '⏳ Чтение файла…');
+    }
+  };
+
+  reader.onerror = () => {
+    hideImportProgress();
+    showToast('Ошибка чтения файла', 'error');
+  };
+
   reader.onload = async (e) => {
+    // ── 20%: файл прочитан, отправляем на сервер ──
+    showImportProgress(20, '📤 Отправка на сервер…');
+    animateImportProgress(20, 45, 1200, '📤 Отправка на сервер…');
+
     try {
       const dataUrl = e.target.result;
       const base64 = dataUrl.split(',')[1] || dataUrl;
+
+      // Достигли 45% — сервер принял запрос, начинается обработка
+      setTimeout(() => {
+        showImportProgress(45, '⚙️ Обработка данных…');
+        animateImportProgress(45, 90, 15000, '⚙️ Обработка данных…');
+      }, 400);
+
       const res = await apiRequest('/import', 'POST', { file: base64, filename: file.name });
+
+      // ── 100%: успех ──
+      showImportProgress(100, '✅ Импорт завершён');
+      await new Promise(r => setTimeout(r, 400));
 
       let msg = `Импортировано: ${res.added}`;
       if (res.skipped > 0) msg += `, пропущено: ${res.skipped}`;
@@ -3200,16 +3321,20 @@ async function handleImport() {
         console.log('❌ Ошибки:', res.errorDetails);
       }
 
+      hideImportProgress();
       closeImportModal();
       currentPage = 1;
       await loadPipetteData();
     } catch (err) {
-      if (progress) progress.textContent = '❌ ' + (err.message || 'Ошибка импорта');
+      showImportProgress(100, '❌ Ошибка импорта');
+      setTimeout(() => hideImportProgress(), 1500);
       showToast('Ошибка импорта: ' + err.message, 'error');
     }
   };
+
   reader.readAsDataURL(file);
 }
+
 // ============================================================
 // НАСТРОЙКИ
 // ============================================================
@@ -4056,9 +4181,20 @@ async function saveUserSetting() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-async function deleteUserSetting(id) {
-    const ok = await showConfirm(
-    'Удалить пользователя? Действие необратимо.',
+async function deleteUserSetting(id, displayName) {
+  // 🆕 Если имя не передано — подтягиваем
+  let who = displayName;
+  if (!who) {
+    try {
+      const users = await apiRequest('/users');
+      const u = users.find(x => x.id === id);
+      if (u) who = u.fullName || u.login;
+    } catch (e) {}
+  }
+  if (!who) who = id;
+
+  const ok = await showConfirm(
+    `Удалить пользователя «${who}»?\nДействие необратимо.`,
     { icon: '👤', title: 'Удаление пользователя', okText: 'Удалить', okClass: 'btn-danger' }
   );
   if (!ok) return;
@@ -5239,11 +5375,23 @@ async function submitChangePassword(e) {
 async function resetUserPassword(userId, login) {
   if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
 
+  // 🆕 Если логин не передан — подтягиваем из БД
+  let displayName = login;
+  if (!displayName) {
+    try {
+      const users = await apiRequest('/users');
+      const u = users.find(x => x.id === userId);
+      if (u) displayName = u.login;
+    } catch (e) {}
+  }
+  if (!displayName) displayName = userId;
+
   const ok = await showConfirm(
-    `Сбросить пароль пользователя «${login}»?\n\n` +
+    `Сбросить пароль пользователя «${displayName}»?\n\n` +
     `Будет сгенерирован разовый пароль. Пользователь обязан сменить его при следующем входе.`,
     { icon: '🔑', title: 'Сброс пароля', okText: 'Сбросить', okClass: 'btn-warning' }
   );
+  
   if (!ok) return;
 
   try {
@@ -6380,25 +6528,12 @@ async function renderUsersSettings() {
         <td>${esc(u.department || '—')}</td>
         <td>${roleLabels[u.role] || u.role}</td>
         <td class="perm-cell">${permText}</td>
-        <td class="actions">
-          <button class="btn btn-secondary btn-sm" onclick="editUserSetting('${u.id}')" title="Редактировать">
-            <i class="fa-solid fa-pen"></i>
+                <td class="actions">
+          <button class="row-actions-btn"
+                  onclick="openUserActions(event, '${u.id}')"
+                  title="Действия">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
           </button>
-           <button class="btn btn-primary btn-sm"
-                  onclick="openUserViewModal('${u.id}', '${esc(u.fullName)}')"
-                  title="Настроить видимые поля формы">
-            <i class="fa-solid fa-list-check"></i>
-          </button>
-          ${u.id !== curId ? `
-            <button class="btn btn-info btn-sm" onclick="impersonateUser('${u.id}')" title="Войти как">
-              <i class="fa-solid fa-magnifying-glass"></i>
-            </button>
-            <button class="btn btn-warning btn-sm" onclick="resetUserPassword('${u.id}', '${esc(u.login)}')" title="Сбросить пароль">
-              <i class="fa-solid fa-key"></i>
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteUserSetting('${u.id}')" title="Удалить">
-              <i class="fa-solid fa-trash"></i>
-            </button>` : ''}
         </td>
       </tr>`;
     });
