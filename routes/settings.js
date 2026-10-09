@@ -579,6 +579,7 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
           ...cur,
           visibleFields: nextVisibleFields,
           snapshotAtSave: [...visibleFields],
+          _virtualsInitialized: true,
         };
 
         await conn.query(
