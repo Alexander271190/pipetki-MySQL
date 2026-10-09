@@ -1631,17 +1631,36 @@ const labels = {
     const cellsHtml = columns.map(colId => {
       switch (colId) {
         case 'id': {
-          let replLine = '';
-          if (p.replaced_by && p.replacement) {
-            replLine = `<br><small style="color:#0ea5e9;">↔ замена: ${esc(p.replaced_by)}</small>`;
-          } else if (p.replaced_by) {
-            replLine = `<br><small style="color:#dc2626;">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
-          }
-          if (p.replacing && p.replacedFor) {
-            replLine = `<br><small style="color:#f59e0b;">↔ заменяет: ${esc(p.replacing)}</small>`;
-          }
-          return `<td><strong>${esc(p.id)}</strong>${replLine}</td>`;
-        }
+  // Точка-индикатор статуса рядом с ID
+  const dotMap = {
+    ok:        { color: '#16a34a', title: 'В норме' },
+    danger:    { color: '#dc2626', title: 'Просрочена' },
+    fail:      { color: '#dc2626', title: 'Брак' },
+    warn:      { color: '#eab308', title: 'Скоро поверка' },
+    sent:      { color: '#0ea5e9', title: 'На поверке' },
+    wip:       { color: '#eab308', title: 'В процессе поверки' },
+    inactive:  { color: '#94a3b8', title: 'Неактивна' },
+    unknown:   { color: '#94a3b8', title: 'Дата не задана' },
+  };
+
+  const d = dotMap[status];
+  const statusDot = d
+    ? `<span class="status-dot-inline" style="background:${d.color};" title="${d.title}"></span>`
+    : '';
+
+  // Подписи «замена»
+  let replLine = '';
+  if (p.replaced_by && p.replacement) {
+    replLine = `<br><small style="color:#0ea5e9;">↔ замена: ${esc(p.replaced_by)}</small>`;
+  } else if (p.replaced_by) {
+    replLine = `<br><small style="color:#dc2626;">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
+  }
+  if (p.replacing && p.replacedFor) {
+    replLine = `<br><small style="color:#f59e0b;">↔ заменяет: ${esc(p.replacing)}</small>`;
+  }
+
+  return `<td><span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}</td>`;
+}
       
   case 'type': {
   const t = _equipmentTypes.find(x => x.value === p.equipment_type);
