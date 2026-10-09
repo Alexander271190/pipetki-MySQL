@@ -112,6 +112,12 @@
       onclick="openBulkReturnModal()">
 <i class="fa-solid fa-box-open"></i> Вернулись с поверки (<span id="bulk-return-counter">0</span>)
 </button>  
+ <button class="btn btn-secondary btn-bulk-responsible" 
+      id="btn-bulk-responsible" 
+      style="display:none;" 
+      onclick="openBulkResponsibleModal()">
+<i class="fa-solid fa-user-pen"></i> Сменить ответственного (<span id="bulk-responsible-counter">0</span>)
+</button>     
 <button class="btn btn-warning btn-import" onclick="openImportModal()"><i class="fa-solid fa-download"></i> Импорт</button>
 <button class="btn btn-info btn-print-labels" onclick="openBarcodePrintModal()" title="Печать этикеток">
   <i class="fa-solid fa-tag"></i> Печать этикеток
@@ -373,6 +379,39 @@
           Отмена
         </button>
         <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Применить ко всем</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- МОДАЛКА МАССОВОЙ СМЕНЫ ОТВЕТСТВЕННОГО -->
+<div class="modal-overlay" id="bulk-responsible-modal">
+  <div class="modal">
+    <h2><i class="fa-solid fa-user-pen"></i> Смена ответственного</h2>
+
+    <div style="margin-bottom:15px;padding:12px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;font-size:.9rem;">
+      <strong>Выбрано единиц:</strong> <span id="bulk-responsible-count">0</span>
+    </div>
+
+    <div style="margin-bottom:15px;padding:10px 12px;background:#fef9c3;border-left:3px solid #eab308;border-radius:8px;font-size:.82rem;color:#854d0e;">
+      ℹ️ Отдел не меняется — меняется только ответственный. Для перевода в другой отдел используйте кнопку «Передать» в строке.
+    </div>
+
+    <form id="bulk-responsible-form" onsubmit="saveBulkResponsible(event)" novalidate>
+      <div class="form-group">
+        <label>Новый ответственный *</label>
+        <select id="bulk-responsible-select" required>
+          <option value="">— выберите —</option>
+        </select>
+      </div>
+
+      <div id="bulk-responsible-error" class="auth-error" style="margin-top:8px;"></div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeBulkResponsibleModal()">Отмена</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i> Применить
+        </button>
       </div>
     </form>
   </div>
