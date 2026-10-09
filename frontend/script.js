@@ -1679,9 +1679,10 @@ function updateSelectAllCheckbox() {
 function updateBulkCalButton() {
   const btnSend = document.getElementById('btn-bulk-cal');
   const btnReturn = document.getElementById('btn-bulk-return');
+  const btnResponsible = document.getElementById('btn-bulk-responsible');
   const counterSend = document.getElementById('bulk-counter');
   const counterReturn = document.getElementById('bulk-return-counter');
-  if (!btnSend && !btnReturn) return;
+  const counterResponsible = document.getElementById('bulk-responsible-counter');
 
   const visibleSelected = [...selectedPipettes].filter(id => pipettes.some(p => p.id === id));
 
@@ -1711,6 +1712,16 @@ function updateBulkCalButton() {
       if (counterReturn) counterReturn.textContent = toReturn.length;
     } else {
       btnReturn.style.display = 'none';
+    }
+  }
+
+  // 🆕 Кнопка «Сменить ответственного»
+  if (btnResponsible) {
+    if (canBulkChangeResponsible() && visibleSelected.length > 0) {
+      btnResponsible.style.display = 'inline-flex';
+      if (counterResponsible) counterResponsible.textContent = visibleSelected.length;
+    } else {
+      btnResponsible.style.display = 'none';
     }
   }
 }
@@ -5044,6 +5055,129 @@ async function saveBulkReturn(e) {
 }
 
 // ============================================================
+// МАССОВАЯ СМЕНА ОТВЕТСТВЕННОГО
+// ============================================================
+let _bulkResponsibleIds = [];
+
+async function openBulkResponsibleModal() {
+  await refreshCurrentUser();
+  if (!canBulkChangeResponsible()) {
+    showToast('Нет прав на смену ответственного', 'error');
+    return;
+  }
+
+  // 1. Собираем выбранные
+  const selected = [...selectedPipettes].filter(id =>
+    pipettes.some(p => p.id === id)
+  );
+
+  if (selected.length === 0) {
+    showToast('Не выбрано ни одной единицы', 'error');
+    return;
+  }
+
+  _bulkResponsibleIds = [...selected];
+
+  // 2. Счётчик
+  document.getElementById('bulk-responsible-count').textContent = selected.length;
+
+  // 3. Ошибка — сброс
+  document.getElementById('bulk-responsible-error').textContent = '';
+
+  // 4. Селект: собираем уникальные ФИО
+  const sel = document.getElementById('bulk-responsible-select');
+  sel.innerHTML = '<option value="">— выберите —</option>';
+
+  const names = new Set();
+
+  // 4.1. Из списка _responsibles (если загружен)
+  if (Array.isArray(_responsibles)) {
+    for (const u of _responsibles) {
+      if (u.fullName) names.add(u.fullName);
+    }
+  }
+
+  // 4.2. Плюс все ответственные, которые уже есть в пипетках
+  for (const p of pipettes) {
+    if (p.responsible) names.add(p.responsible);
+  }
+
+  // 4.3. Сортируем и добавляем
+  const sorted = [...names].sort((a, b) => a.localeCompare(b, 'ru'));
+  for (const name of sorted) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  }
+
+  // 5. Открыть модалку
+  document.getElementById('bulk-responsible-modal').classList.add('active');
+}
+
+function closeBulkResponsibleModal() {
+  document.getElementById('bulk-responsible-modal').classList.remove('active');
+  _bulkResponsibleIds = [];
+}
+
+async function saveBulkResponsible(e) {
+  e.preventDefault();
+  await refreshCurrentUser();
+  if (!canBulkChangeResponsible()) {
+    showToast('Нет прав на смену ответственного', 'error');
+    return;
+  }
+
+  const newResp = document.getElementById('bulk-responsible-select').value.trim();
+  const errEl = document.getElementById('bulk-responsible-error');
+  errEl.textContent = '';
+
+  if (!newResp) {
+    errEl.textContent = 'Выберите ответственного';
+    return;
+  }
+
+  const ids = _bulkResponsibleIds.filter(id =>
+    pipettes.some(p => p.id === id)
+  );
+
+  if (ids.length === 0) {
+    errEl.textContent = 'Ничего не выбрано';
+    return;
+  }
+
+  // Подтверждение
+  const ok = await showConfirm(
+    `Назначить «${newResp}» ответственным за ${ids.length} единиц оборудования?\n\n` +
+    `Отдел не меняется.`,
+    { icon: '👤', title: 'Смена ответственного', okText: 'Применить', okClass: 'btn-primary' }
+  );
+  if (!ok) return;
+
+  try {
+    const res = await apiRequest('/pipettes/bulk-change-responsible', 'POST', {
+      ids,
+      newResponsible: newResp,
+    });
+
+    let msg = `Ответственный изменён у ${res.successful} единиц`;
+    if (res.skipped > 0) msg += `. Пропущено: ${res.skipped}`;
+    showToast(msg, res.successful > 0 ? 'success' : 'error');
+
+    clearSelection();
+    closeBulkResponsibleModal();
+    await loadPipetteData();
+  } catch (e) {
+    errEl.textContent = e.message || 'Ошибка';
+  }
+}
+
+// Закрытие модалки по клику на overlay
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'bulk-responsible-modal') closeBulkResponsibleModal();
+});
+
+// ============================================================
 // УПРАВЛЕНИЕ ТИПАМИ ОБОРУДОВАНИЯ
 // ============================================================
 
@@ -5795,6 +5929,7 @@ function toggleTheme() {
   { key: 'delete_pipette',    group: 'Оборудование',      label: '🗑️ Удаление оборудования' },
   { key: 'quick_calibration', group: 'Оборудование',      label: '✓ Быстрая поверка' },
   { key: 'transfer_pipette',  group: 'Оборудование',      label: '🔀 Передача в другой отдел' },
+  { key: 'bulk_change_responsible', group: 'Оборудование', label: '👤 Массовая смена ответственного' },
 
   { key: 'bulk_send',         group: 'Поверки',           label: '📦 Отправка на поверку' },
   { key: 'bulk_return',       group: 'Поверки',           label: '📥 Возврат с поверки' },
@@ -5822,6 +5957,7 @@ function canEditPipette()   { return hasPermission('edit_pipette')      || hasPe
 function canDeletePipette() { return hasPermission('delete_pipette')    || hasPermission('manage_pipettes'); }
 function canQuickCal()      { return hasPermission('quick_calibration') || hasPermission('manage_pipettes'); }
 function canTransferPipette() { return hasPermission('transfer_pipette') || hasPermission('manage_pipettes'); }
+function canBulkChangeResponsible() { return hasPermission('bulk_change_responsible') || hasPermission('manage_pipettes'); }
 function canBulkSend()      { return hasPermission('bulk_send')         || hasPermission('manage_pipettes'); }
 function canBulkReturn()    { return hasPermission('bulk_return')       || hasPermission('manage_pipettes'); }
 function canImport()        { return hasPermission('import_data'); }
@@ -6682,6 +6818,7 @@ function applyPermPreset(preset) {
     user: ['view_history', 'print_labels', 'export_data'],
      senior: [
       'add_pipette', 'edit_pipette', 'quick_calibration', 'transfer_pipette',
+      'bulk_change_responsible',
       'bulk_send', 'bulk_return',
       'export_data', 'scan_barcode', 'print_labels',
       'view_history',
