@@ -754,6 +754,26 @@ function calcStatus(p) {
   return 'ok';
 }
 
+function calcStatusByDate(p) {
+  // Брак и "в процессе" — дата не показательна
+  if (p.last_result === 'fail') return null;
+  if (p.last_result === 'wip')  return null;
+
+  // Нет даты или интервала — не классифицируем
+  if (!p.last_calibration || !p.interval) return null;
+
+  const last = parseLocalDate(p.last_calibration);
+  if (!last) return null;
+
+  const next = addMonths(last, p.interval);
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const daysLeft = Math.ceil((next - now) / 86400000);
+
+  if (daysLeft < 0) return 'danger';
+  if (daysLeft <= settings.warnDays) return 'warn';
+  return 'ok';
+}
+
 function getNextDate(p) {
   if (!p.last_calibration || !p.interval) return null;
   const d = parseLocalDate(p.last_calibration);
@@ -1411,19 +1431,118 @@ function render() {
     paginationEl.style.display = filtered.length > pageSize ? 'flex' : 'none';
   }
 
- let ok = 0, warn = 0, danger = 0, sent = 0, wip = 0;
+ // ── Подсчёт индикаторов ──
+// Правило: если можно классифицировать по дате поверки (независимо
+// от того, активна единица или нет) — идёт в основной индикатор.
+// Иначе — в тултип.
+
+const counters = {
+  // Основные индикаторы
+  ok: 0,
+  warn: 0,
+  danger: 0,
+
+  // Не вошло в индикаторы — для тултипа
+  sent: 0,              // 📦 на поверке
+  wipActive: 0,         // ⏳ в процессе (активные)
+  wipInactive: 0,       // ⏳ в процессе (неактивные)
+  failInactive: 0,      // ❌ брак (неактивные)
+  noDateActive: 0,      // ❓ без даты (активные)
+  noDateInactive: 0,    // ❓ без даты (неактивные)
+};
+
 pipettes.forEach(p => {
   const s = calcStatus(p);
-  if (s === 'ok') ok++;
-  else if (s === 'warn') warn++;
-  else if (s === 'danger' || s === 'fail') danger++;
-  else if (s === 'sent') sent++;
-  else if (s === 'wip') wip++;
+
+  // 📦 Отправлена на поверку — всегда вне индикаторов
+  if (s === 'sent') { counters.sent++; return; }
+
+  // ⏳ В процессе поверки
+  if (s === 'wip') {
+    if (!p.active) counters.wipInactive++;
+    else           counters.wipActive++;
+    return;
+  }
+
+  // ❌ Брак
+  if (s === 'fail') {
+    if (!p.active) counters.failInactive++;
+    else           counters.danger++;   // активный брак → в «Просрочены»
+    return;
+  }
+
+  // Пробуем классифицировать по дате
+  const sByDate = calcStatusByDate(p);
+
+  if (sByDate === null) {
+    // Нельзя определить — в тултип
+    if (!p.active) counters.noDateInactive++;
+    else           counters.noDateActive++;
+    return;
+  }
+
+  // Однозначно классифицировано → в основной индикатор
+  if (sByDate === 'ok')          counters.ok++;
+  else if (sByDate === 'warn')   counters.warn++;
+  else if (sByDate === 'danger') counters.danger++;
 });
-  document.getElementById('stat-ok').textContent = ok;
-  document.getElementById('stat-warn').textContent = warn;
-  document.getElementById('stat-danger').textContent = danger;
-  document.getElementById('stat-total').textContent = pipettes.length;
+
+// Обновляем индикаторы в шапке
+document.getElementById('stat-ok').textContent     = counters.ok;
+document.getElementById('stat-warn').textContent   = counters.warn;
+document.getElementById('stat-danger').textContent = counters.danger;
+document.getElementById('stat-total').textContent  = pipettes.length;
+
+// 🆕 Тултип на «Всего» — что не вошло в индикаторы
+const totalEl = document.getElementById('stat-total');
+if (totalEl) {
+  const lines = [];
+
+  lines.push(`Всего: ${pipettes.length}`);
+  lines.push('');
+  lines.push('В индикаторах:');
+  lines.push(`  🟢 В норме:                ${counters.ok}`);
+  lines.push(`  🟡 Скоро поверка:          ${counters.warn}`);
+  lines.push(`  🔴 Просрочены:             ${counters.danger}`);
+  lines.push(`  ─────────────────────────────`);
+  lines.push(`  Сумма:                     ${counters.ok + counters.warn + counters.danger}`);
+
+  const hidden =
+    counters.sent +
+    counters.wipActive +
+    counters.wipInactive +
+    counters.failInactive +
+    counters.noDateActive +
+    counters.noDateInactive;
+
+  if (hidden > 0) {
+    lines.push('');
+    lines.push('Не вошло в индикаторы:');
+    if (counters.sent > 0)
+      lines.push(`  📦 На поверке:              ${counters.sent}`);
+    if (counters.wipActive > 0)
+      lines.push(`  ⏳ В процессе:              ${counters.wipActive}`);
+    if (counters.wipInactive > 0)
+      lines.push(`  ⏳ В процессе (неактив):    ${counters.wipInactive}`);
+    if (counters.failInactive > 0)
+      lines.push(`  ❌ Брак (неактив):          ${counters.failInactive}`);
+    if (counters.noDateActive > 0)
+      lines.push(`  ❓ Без даты (актив):        ${counters.noDateActive}`);
+    if (counters.noDateInactive > 0)
+      lines.push(`  ❓ Без даты (неактив):      ${counters.noDateInactive}`);
+    lines.push(`  ─────────────────────────────`);
+    lines.push(`  Сумма вне индикаторов:     ${hidden}`);
+  }
+
+  const mainSum = counters.ok + counters.warn + counters.danger;
+  lines.push('');
+  lines.push('Проверка:');
+  lines.push(`  ${mainSum} (в индикаторах) + ${hidden} (вне) = ${mainSum + hidden}`);
+  lines.push(`  Всего единиц: ${pipettes.length}`);
+  lines.push(`  ${mainSum + hidden === pipettes.length ? '✅ Всё сходится' : '❌ Ошибка подсчёта'}`);
+
+  totalEl.title = lines.join('\n');
+}
 
   const banner = document.getElementById('alert-banner');
   if (danger > 0) {
