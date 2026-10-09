@@ -2559,3 +2559,12 @@ html[data-theme="dark"] .row-actions-divider { background: #334155; }
     min-width: 560px;
   }
 }
+
+/* 🆕 Карточка «Всего» — подсказка при наведении */
+.stat-card .num[title] {
+  cursor: help;
+  transition: opacity .15s;
+}
+.stat-card .num[title]:hover {
+  opacity: .75;
+}
