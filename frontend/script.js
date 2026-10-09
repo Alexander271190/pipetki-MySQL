@@ -969,7 +969,33 @@ function getActiveTableColumns() {
     }
   }
 
-    // Никаких принудительных колонок — только то, что пользователь включил
+  // 🆕 Виртуальные колонки — их нет в field_config, но они есть в visibleFields
+  const VIRTUAL_IDS = ['status', 'nextCalibration'];
+
+  for (const vid of VIRTUAL_IDS) {
+    if (!visible.has(vid)) continue;
+    if (added.has(vid)) continue;
+
+    const def = allOrdered.find(c => c.id === vid);
+    if (!def) continue;
+
+    // «Следующая» должна идти сразу после «Поверка»,
+    // а если её нет — после «Дата поверки».
+    if (vid === 'nextCalibration') {
+      const lastCalIdx = cols.indexOf('lastCalibration');
+      if (lastCalIdx !== -1) {
+        cols.splice(lastCalIdx + 1, 0, vid);
+      } else {
+        cols.push(vid);
+      }
+    } else {
+      // «Статус» — в конец
+      cols.push(vid);
+    }
+    added.add(vid);
+  }
+
+  // Никаких принудительных колонок — только то, что пользователь включил
   // в «Настроить видимые поля». Если пользователь ничего не выбрал —
   // показываем дефолт, чтобы таблица не была совсем пустой.
   if (cols.length === 0) {
