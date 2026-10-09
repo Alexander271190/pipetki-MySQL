@@ -605,17 +605,31 @@ if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
     .filter(f => f.enabled)
     .map(f => f.id);
 
+  // 🆕 Виртуальные колонки — их нет в field_config, но их надо сохранять
+  const VIRTUAL_IDS = ['status', 'nextCalibration'];
+
   const hasUserSettings =
     Array.isArray(myPrefs.visibleFields) &&
     myPrefs.visibleFields.length > 0;
 
-  if (!hasUserSettings) {
-    // Настроек нет ИЛИ пустой массив — показываем все активные
-    myPrefs.visibleFields = [...activeFieldIds];
+    if (!hasUserSettings) {
+    // Настроек нет — показываем все активные + виртуальные
+    myPrefs.visibleFields = [...activeFieldIds, ...VIRTUAL_IDS];
   } else {
-    // Настройки есть — фильтруем только глобально отключённые
-    const activeSet = new Set(activeFieldIds);
-    myPrefs.visibleFields = myPrefs.visibleFields.filter(id => activeSet.has(id));
+    // Настройки есть — сохраняем только валидные (активные + виртуальные)
+    const allowedSet = new Set([...activeFieldIds, ...VIRTUAL_IDS]);
+    const visibleSet = new Set(myPrefs.visibleFields);
+
+    // 🆕 Виртуальные добавляем ТОЛЬКО если пользователь ещё не открывал
+    // модалку «Настроить видимые поля» после внедрения виртуальных.
+    // Если он их видел и явно выключил — не навязываем обратно.
+    if (!myPrefs._virtualsInitialized) {
+      for (const vid of VIRTUAL_IDS) {
+        if (!visibleSet.has(vid)) visibleSet.add(vid);
+      }
+    }
+
+    myPrefs.visibleFields = [...visibleSet].filter(id => allowedSet.has(id));
   }
 }
 
@@ -7215,8 +7229,32 @@ async function openUserViewModal(userId, userName) {
     showToast('Ошибка загрузки полей: ' + e.message, 'error');
   }
 
+   const VIRTUAL_IDS = ['status', 'nextCalibration'];
+
   const allEnabled = _cachedFields.filter(f => f.enabled).map(f => f.id);
-  if (_userViewVisibleFields.length === 0) _userViewVisibleFields = [...allEnabled];
+  const allAvailable = [...allEnabled, ...VIRTUAL_IDS];
+
+    if (_userViewVisibleFields.length === 0) {
+    // Настроек нет — показываем всё
+    _userViewVisibleFields = [...allAvailable];
+  } else {
+    // Настройки есть — оставляем только валидные
+    const validSet = new Set(allAvailable);
+    _userViewVisibleFields = _userViewVisibleFields.filter(id => validSet.has(id));
+
+    // 🆕 Если пользователь ещё не открывал модалку после внедрения виртуальных,
+    // добавляем их как «включённые по умолчанию». Если маркер есть — уважаем
+    // его выбор (даже если виртуальные выключены).
+    const hadUserPrefs = myPrefs._virtualsInitialized;
+
+    if (!hadUserPrefs) {
+      for (const vid of VIRTUAL_IDS) {
+        if (!_userViewVisibleFields.includes(vid)) {
+          _userViewVisibleFields.push(vid);
+        }
+      }
+    }
+  }
 
   renderUserViewContent();
   document.getElementById('user-view-modal').classList.add('active');
@@ -7231,25 +7269,54 @@ function closeUserViewModal() {
 function renderUserViewContent() {
   const c = document.getElementById('user-view-content');
   if (!c) return;
-  const allFields = _cachedFields.filter(f => f.enabled).sort((a, b) => (a.order || 0) - (b.order || 0));
-  if (allFields.length === 0) {
-    c.innerHTML = '<div class="prefs-empty">Нет активных полей формы</div>';
-    return;
-  }
+
+  const allFields = _cachedFields
+    .filter(f => f.enabled)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // 🆕 Виртуальные колонки — их нет в field_config, но они есть в таблице
+  const VIRTUAL_TABLE_COLUMNS = [
+    { id: 'nextCalibration', label: 'Следующая поверка', hint: 'Считается из «Дата поверки» + МПИ' },
+    { id: 'status',          label: 'Статус',            hint: 'Считается из даты, МПИ, результата, активности' },
+  ];
+
   const visibleSet = new Set(_userViewVisibleFields);
-  c.innerHTML = `
-    <div class="prefs-list">
-      ${allFields.map(f => `
-        <label class="prefs-item">
-          <input type="checkbox" ${visibleSet.has(f.id) ? 'checked' : ''} onchange="toggleUserViewField('${f.id}', this.checked)">
-          <span class="prefs-label">${esc(f.label)}</span>
-        </label>
-      `).join('')}
+
+  let html = '<div class="prefs-list">';
+
+  if (allFields.length > 0) {
+    html += allFields.map(f => `
+      <label class="prefs-item">
+        <input type="checkbox" ${visibleSet.has(f.id) ? 'checked' : ''} onchange="toggleUserViewField('${f.id}', this.checked)">
+        <span class="prefs-label">${esc(f.label)}</span>
+      </label>
+    `).join('');
+  }
+
+  html += '</div>';
+
+  // 🆕 Секция виртуальных колонок
+  html += `
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed #e2e8f0;">
+      <div style="font-weight:600;font-size:.82rem;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">
+        Виртуальные колонки
+      </div>
+      <div class="prefs-list">
+        ${VIRTUAL_TABLE_COLUMNS.map(v => `
+          <label class="prefs-item" title="${esc(v.hint)}">
+            <input type="checkbox" ${visibleSet.has(v.id) ? 'checked' : ''} onchange="toggleUserViewField('${v.id}', this.checked)">
+            <span class="prefs-label">${esc(v.label)} <small style="color:#94a3b8;font-weight:400;">— ${esc(v.hint)}</small></span>
+          </label>
+        `).join('')}
+      </div>
     </div>
+  `;
+
+  html += `
     <div class="prefs-hint">
       <i class="fa-solid fa-circle-info"></i>
       Отключённые поля не будут видны этому пользователю в форме добавления и редактирования.
-      Остальные настройки — в форме редактирования пользователя.
+      Виртуальные колонки влияют только на таблицу.
     </div>
 
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e2e8f0;">
@@ -7270,14 +7337,19 @@ function renderUserViewContent() {
       </small>
     </div>
   `;
+
+  c.innerHTML = html;
 }
 
 async function applyFieldsToAll(mode) {
+  const VIRTUAL_IDS = new Set(['status', 'nextCalibration']);
+
   const selected = _userViewVisibleFields.filter(id => {
+    if (VIRTUAL_IDS.has(id)) return true;
     const f = _cachedFields.find(x => x.id === id);
     return f && f.enabled;
   });
-
+  
   if (selected.length === 0) {
     showToast('Выберите хотя бы одно поле', 'error');
     return;
@@ -7324,17 +7396,22 @@ async function saveUserView() {
   let existing = {};
   try { existing = await apiRequest(`/settings/user-preferences/${_userViewUserId}`); } catch (e) {}
 
-  const merged = { ...existing, visibleFields: _userViewVisibleFields };
+    const merged = {
+    ...existing,
+    visibleFields: _userViewVisibleFields,
+    _virtualsInitialized: true,   // 🆕 пользователь видел модалку с виртуальными
+  };
 
   try {
     await apiRequest(`/settings/user-preferences/${_userViewUserId}`, 'PUT', merged);
     showToast('Поля формы сохранены', 'success');
     closeUserViewModal();
 
-    // 🆕 Если настройки сохранили СЕБЕ — сразу обновить myPrefs и перерисовать
+       // 🆕 Если настройки сохранили СЕБЕ — сразу обновить myPrefs и перерисовать
     if (_userViewUserId === currentUser.id) {
       myPrefs.visibleFields = [..._userViewVisibleFields];
       myPrefs._loaded = true;
+      myPrefs._virtualsInitialized = true;   // 🆕 синхронизируем маркер локально
       render();
     }
   } catch (e) {
