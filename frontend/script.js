@@ -1527,9 +1527,9 @@ if (totalEl) {
     if (counters.failInactive > 0)
       lines.push(`  ❌ Брак (неактив):          ${counters.failInactive}`);
     if (counters.noDateActive > 0)
-      lines.push(`  ❓ Без даты (актив):        ${counters.noDateActive}`);
+     lines.push(`  ❓ Без даты/МПИ (актив):    ${counters.noDateActive}`);
     if (counters.noDateInactive > 0)
-      lines.push(`  ❓ Без даты (неактив):      ${counters.noDateInactive}`);
+      lines.push(`  ❓ Без даты/МПИ (неактив):  ${counters.noDateInactive}`);
     lines.push(`  ─────────────────────────────`);
     lines.push(`  Сумма вне индикаторов:     ${hidden}`);
   }
@@ -1541,20 +1541,19 @@ if (totalEl) {
   lines.push(`  Всего единиц: ${pipettes.length}`);
   lines.push(`  ${mainSum + hidden === pipettes.length ? '✅ Всё сходится' : '❌ Ошибка подсчёта'}`);
 
-  totalEl.title = lines.join('\n');
+    totalEl.title = lines.join('\n');
 }
 
   const banner = document.getElementById('alert-banner');
-  if (danger > 0) {
-    document.getElementById('alert-text').textContent = `У ${danger} ${danger === 1 ? 'единицы' : 'единиц'} проблема с поверкой!`;
+  if (counters.danger > 0) {
+    document.getElementById('alert-text').textContent = `У ${counters.danger} ${counters.danger === 1 ? 'единицы' : 'единиц'} проблема с поверкой!`;
     banner.classList.add('show');
-  } else if (warn > 0) {
-    document.getElementById('alert-text').textContent = `У ${warn} ${warn === 1 ? 'единицы' : 'единиц'} подходит срок поверки в течение ${settings.warnDays} дн.`;
+  } else if (counters.warn > 0) {
+    document.getElementById('alert-text').textContent = `У ${counters.warn} ${counters.warn === 1 ? 'единицы' : 'единиц'} подходит срок поверки в течение ${settings.warnDays} дн.`;
     banner.classList.add('show');
   } else {
     banner.classList.remove('show');
   }
-
   const tbody = document.getElementById('pipettes-body');
   const empty = document.getElementById('empty-state');
   const table = document.getElementById('pipettes-table');
