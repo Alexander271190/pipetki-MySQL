@@ -10,14 +10,15 @@ const router = express.Router();
 // Доступно всем авторизованным пользователям
 // ============================================================
 router.get('/responsibles', authenticate, async (req, res, next) => {
-  // 🆕 Доступ: админ, ст. лаборант, или владелец права transfer_pipette / manage_pipettes
+  // 🆕 Доступ: админ, ст. лаборант, или владелец одного из прав
   const allowed =
     req.user.role === 'admin' ||
     req.user.role === 'senior_lab' ||
     (db.safeParse(req.user.extra_permissions, []) || []).some(p =>
-      p === 'transfer_pipette' || p === 'manage_pipettes'
+      p === 'transfer_pipette' ||
+      p === 'manage_pipettes' ||
+      p === 'bulk_change_responsible'
     );
-
   if (!allowed) {
     return res.status(403).json({ error: 'Недостаточно прав' });
   }
