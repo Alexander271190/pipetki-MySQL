@@ -847,29 +847,16 @@ function getAllTableColumns() {
     }
   }
 
-  // 2. Виртуальные колонки
-  if (!added.has('nextCalibration')) {
-    const def = SYSTEM_TABLE_COLUMNS.find(c => c.id === 'nextCalibration');
-    const idx = result.findIndex(c => c.id === 'lastCalibration');
-    if (idx !== -1) result.splice(idx + 1, 0, def);
-    else result.push(def);
-    added.add('nextCalibration');
-  }
-  if (!added.has('status')) {
-    result.push(SYSTEM_TABLE_COLUMNS.find(c => c.id === 'status'));
-    added.add('status');
-  }
-
-    // 3. Остальные системные — добавляем в конец.
-  //    🆕 Расширяем SYSTEM_TABLE_COLUMNS определениями для системных полей,
-  //    которых там нет: interval, notes, result, active.
-  //    Иначе findColumn() вернёт undefined, и колонка не отрисуется,
-  //    хотя она есть в visibleFields.
+    // 2. Виртуальные и дополнительные системные колонки — добавляем их
+  //    в СПРАВОЧНИК, чтобы findColumn() мог их найти, если они включены
+  //    в visibleFields. Но в саму таблицу они попадут только по решению
+  //    getActiveTableColumns().
   const SYSTEM_EXTRA_COLUMNS = [
-    { id: 'interval', label: 'МПИ',         sortable: true,  field: 'interval' },
-    { id: 'notes',    label: 'Примечание',  sortable: false, field: 'notes' },
-    { id: 'result',   label: 'Результат',   sortable: false, field: 'last_result' },
-    { id: 'active',   label: 'Активность',  sortable: false, field: 'active' },
+    { id: 'interval',        label: 'МПИ',         sortable: true,  field: 'interval' },
+    { id: 'notes',           label: 'Примечание',  sortable: false, field: 'notes' },
+    { id: 'result',          label: 'Результат',   sortable: false, field: 'last_result' },
+    { id: 'active',          label: 'Активность',  sortable: false, field: 'active' },
+    { id: 'nextCalibration', label: 'Следующая',   sortable: true,  field: 'nextCalibration' },
   ];
 
   const allSystemDefs = [...SYSTEM_TABLE_COLUMNS, ...SYSTEM_EXTRA_COLUMNS];
@@ -968,21 +955,10 @@ function getActiveTableColumns() {
     }
   }
 
-  // Виртуальные колонки — всегда
-  // «Следующая» — после «Поверка»
-  if (!added.has('nextCalibration')) {
-    const idx = cols.indexOf('lastCalibration');
-    if (idx !== -1) cols.splice(idx + 1, 0, 'nextCalibration');
-    else cols.push('nextCalibration');
-  }
-
-  // «Статус» — в конец
-  if (!added.has('status')) {
-    cols.push('status');
-  }
-
-  // Страховка: если ничего не собралось — дефолтный набор
-  if (cols.length <= 2) {
+    // Никаких принудительных колонок — только то, что пользователь включил
+  // в «Настроить видимые поля». Если пользователь ничего не выбрал —
+  // показываем дефолт, чтобы таблица не была совсем пустой.
+  if (cols.length === 0) {
     return getDefaultTableColumns();
   }
 
@@ -2415,6 +2391,52 @@ async function savePipette(e) {
 
      data[fieldId] = value;
   }
+
+    // 🆕 Поля, скрытые в форме, но обязательные для сервера.
+  // Подставляем безопасные значения, чтобы сохранение не падало.
+  const hiddenDefaults = {
+    lastCalibration: todayStr(),
+    interval: 12,
+    result: 'pass',
+    active: 'true',
+    equipmentType: 'pipette',
+  };
+
+  for (const [fieldId, defaultValue] of Object.entries(hiddenDefaults)) {
+    if (data[fieldId] === undefined) {
+      if (editId) {
+        // При редактировании — берём текущее значение из БД
+        const original = pipettes.find(x => x.id === editId);
+        if (original) {
+          if (fieldId === 'lastCalibration') data[fieldId] = original.last_calibration || defaultValue;
+          else if (fieldId === 'interval')   data[fieldId] = original.interval || defaultValue;
+          else if (fieldId === 'result')     data[fieldId] = original.last_result || defaultValue;
+          else if (fieldId === 'active')     data[fieldId] = original.active ? 'true' : 'false';
+          else if (fieldId === 'equipmentType') data[fieldId] = original.equipment_type || defaultValue;
+        }
+      } else {
+        // При создании — дефолт
+        data[fieldId] = defaultValue;
+      }
+    }
+  }
+
+  // 🆕 department и responsible при создании — из текущего пользователя
+  if (!editId) {
+    if (data.department === undefined && currentUser && !currentUser.isActing) {
+      if (currentUser.role !== 'admin' && currentUser.onlyOwnDepartment && currentUser.department) {
+        data.department = currentUser.department;
+      }
+    }
+    if (data.responsible === undefined && currentUser) {
+      if (currentUser.isActing && currentUser.actingForName) {
+        data.responsible = currentUser.actingForName;
+      } else if (!currentUser.isActing) {
+        data.responsible = currentUser.fullName || '';
+      }
+    }
+  }
+
 
     const barcodeInput = container.querySelector('[data-field-id="barcode"]');
   if (barcodeInput) {
