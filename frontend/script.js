@@ -619,8 +619,15 @@ if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
   }
 }
 
-    // 🛡️ Список ответственных нужен только тем, кто может редактировать
-    if (currentUser.role === 'admin' || isSeniorLab()) {
+   // 🛡️ Список ответственных — для тех, кому он реально нужен
+    // (админ, ст. лаборант, владелец transfer_pipette / bulk_change_responsible)
+    const needsResponsibles =
+      currentUser.role === 'admin' ||
+      isSeniorLab() ||
+      canTransferPipette() ||
+      canBulkChangeResponsible();
+
+    if (needsResponsibles) {
       try {
         _responsibles = await apiRequest('/users/responsibles');
       } catch (e) {
@@ -3119,6 +3126,7 @@ document.getElementById('quick-cal-modal').addEventListener('click', e => { if (
 document.getElementById('history-modal').addEventListener('click', e => { if (e.target.id === 'history-modal') closeHistoryModal(); });
 document.getElementById('bulk-send-modal').addEventListener('click', e => { if (e.target.id === 'bulk-send-modal') closeBulkSendModal(); });
 document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
+document.getElementById('bulk-responsible-modal').addEventListener('click', e => { if (e.target.id === 'bulk-responsible-modal') closeBulkResponsibleModal(); });
 document.getElementById('change-password-modal').addEventListener('click', e => {
   if (e.target.id === 'change-password-modal') {
     const mustSetup = currentUser && currentUser.mustSetPassword;
@@ -5172,10 +5180,6 @@ async function saveBulkResponsible(e) {
   }
 }
 
-// Закрытие модалки по клику на overlay
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'bulk-responsible-modal') closeBulkResponsibleModal();
-});
 
 // ============================================================
 // УПРАВЛЕНИЕ ТИПАМИ ОБОРУДОВАНИЯ
