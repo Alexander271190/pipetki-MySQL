@@ -239,75 +239,7 @@ html {
   padding: 6px 8px;
   border-radius: 9px;
 }
-/* ========== ТАБЛИЦА ========== */
-.table-wrapper {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
-  box-sizing: border-box;
-}
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  min-width: 1800px;         
-  font-variant-numeric: tabular-nums;
-}
-
-thead {
-  background: #1e293b;
-  color: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
-
-th {
-  padding: 12px 10px;        
-  text-align: left;
-  font-size: .72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .6px;
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
-  border-bottom: 1px solid #334155;
-}
-th:hover { background: #334155; }
-
-th .sort-arrow { font-size: .75rem; opacity: .8; margin-left: 4px; }
-
-td {
-  padding: 10px 10px;        
-  border-top: 1px solid #f1f5f9;
-  font-size: .88rem;
-  line-height: 1.35;
-  vertical-align: middle;
-  color: #1e293b;
-}
-
-tbody tr { transition: background .15s; }
-tbody tr:nth-child(even) { background: #f8fafc; }
-tbody tr:hover { background: #eef2ff; }
-
-td strong { font-size: .92rem; color: #1e293b; font-weight: 700; letter-spacing: -.2px; }
-td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height: 1.3; margin-top: 2px; }
-
-/* ========== СТАТУСЫ ========== */
-.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: .8rem; font-weight: 600; white-space: nowrap; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; }
-.status-ok .status-dot { background: #16a34a; }
-.status-warn .status-dot { background: #eab308; }
-.status-danger .status-dot { background: #dc2626; }
-.status-inactive .status-dot { background: #94a3b8; }
-.status-ok { background: #dcfce7; color: #166534; }
-.status-warn { background: #fef9c3; color: #854d0e; }
-.status-danger { background: #fee2e2; color: #991b1b; }
-.status-inactive { background: #f1f5f9; color: #64748b; }
 
 /* ========== ДЕЙСТВИЯ И ПУСТЫЕ СОСТОЯНИЯ ========== */
 .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -881,13 +813,6 @@ td small { display: inline-block; font-size: .72rem; color: #94a3b8; line-height
   accent-color: #fbbf24;
 }
 
-tbody tr:has(.row-checkbox:checked) {
-  background: #eef2ff;
-}
-
-tbody tr:has(.row-checkbox:checked):hover {
-  background: #e0e7ff;
-}
 
 /* ========== КНОПКА «ВЕРНУЛИСЬ С ПОВЕРКИ» ========== */
 #btn-bulk-return {
@@ -905,20 +830,6 @@ tbody tr:has(.row-checkbox:checked):hover {
   50%      { box-shadow: 0 1px 2px rgba(22,163,74,.3), 0 5px 20px rgba(22,163,74,.55); }
 }
 
-/* ========== СТАТУС «НА ПОВЕРКЕ» ========== */
-.status-sent {
-  background: #e0f2fe;
-  color: #0369a1;
-  font-weight: 600;
-}
-.status-sent .status-dot {
-  background: #0ea5e9;
-  animation: pulse-dot 1.8s infinite;
-}
-@keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(14,165,233,.5); }
-  50%      { box-shadow: 0 0 0 6px rgba(14,165,233,0); }
-}
 
 /* ========== ИНПУТ СВИДЕТЕЛЬСТВА В МОДАЛКЕ ВОЗВРАТА ========== */
 .bulk-return-cert-input {
@@ -950,14 +861,6 @@ tbody tr:has(.row-checkbox:checked):hover {
     width: 20px;
     height: 20px;
   }
-}
-.status-fail {
-  background: #fee2e2;
-  color: #991b1b;
-  font-weight: 700;
-}
-.status-fail .status-dot {
-  background: #dc2626;
 }
 
 /* ========== МОДАЛКА ПОДТВЕРЖДЕНИЯ ========== */
@@ -1044,32 +947,6 @@ tbody tr:has(.row-checkbox:checked):hover {
   .prefs-list { grid-template-columns: 1fr; }
 }
 
-/* ========== БЕЙДЖ ТИПА ОБОРУДОВАНИЯ ========== */
-.badge-type {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 8px;
-  font-size: .75rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.badge-pipette { background: #e0f2fe; color: #0369a1; }
-.badge-other   { background: #f3e8ff; color: #6d28d9; }
-
-/* ========== СТАТУС «В ПРОЦЕССЕ» ========== */
-.status-wip {
-  background: #fef9c3;
-  color: #854d0e;
-  font-weight: 600;
-}
-.status-wip .status-dot {
-  background: #eab308;
-  animation: pulse-wip 1.8s infinite;
-}
-@keyframes pulse-wip {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,.5); }
-  50%      { box-shadow: 0 0 0 6px rgba(234,179,8,0); }
-}
 /* ── Ролевая видимость элементов ───────────────────────── */
 .admin-only,
 .senior-only { display: none; }
@@ -1079,15 +956,6 @@ body.is-admin .senior-only,
 body.can-manage .admin-only,
 body.can-manage .senior-only { display: inline-flex; }
 
-/* ========== СТАТУС «НЕ ЗАДАНО» ========== */
-.status-unknown {
-  background: #f1f5f9;
-  color: #64748b;
-  font-weight: 600;
-}
-.status-unknown .status-dot {
-  background: #94a3b8;
-}
 
 /* ========== ПАГИНАЦИЯ ========== */
 .pagination {
@@ -1125,24 +993,6 @@ body.can-manage .senior-only { display: inline-flex; }
 
 .pagination-info { font-size: .9rem; color: #475569; }
 .pagination-info strong { color: #1e293b; }
-
-/* 🆕 Подсветка строк */
-tbody tr.row-danger { background: #fff5f5; }
-tbody tr.row-danger:hover { background: #fee2e2; }
-tbody tr.row-fail { background: #fff5f5; }
-tbody tr.row-fail:hover { background: #fee2e2; }
-tbody tr.row-warn { background: #fffdf5; }
-tbody tr.row-warn:hover { background: #fef9c3; }
-tbody tr.row-danger:nth-child(even),
-tbody tr.row-fail:nth-child(even) { background: #fff0f0; }
-tbody tr.row-warn:nth-child(even) { background: #fffbea; }
-
-/* 🛡️ Отмеченные галочкой приоритетнее подсветки статуса */
-tbody tr.row-danger:has(.row-checkbox:checked),
-tbody tr.row-fail:has(.row-checkbox:checked),
-tbody tr.row-warn:has(.row-checkbox:checked) {
-  background: #eef2ff;
-}
 
 /* ============================================================
    ТЁМНАЯ ТЕМА
@@ -1223,95 +1073,6 @@ html[data-theme="dark"] .table-wrapper {
   box-shadow: 0 4px 12px rgba(0, 0, 0, .4);
 }
 
-html[data-theme="dark"] table {
-  background: #1e293b;
-  color: #e2e8f0;
-}
-
-html[data-theme="dark"] thead {
-  background: #0f172a;
-}
-
-html[data-theme="dark"] th {
-  color: #e2e8f0;
-  border-bottom-color: #334155;
-}
-
-html[data-theme="dark"] th:hover {
-  background: #1e293b;
-}
-
-html[data-theme="dark"] td {
-  border-top-color: #334155;
-  color: #e2e8f0;
-  background: transparent;
-}
-
-html[data-theme="dark"] tbody tr:nth-child(even),
-html[data-theme="dark"] tbody tr:nth-child(even) td {
-  background: #1e293b;
-}
-
-html[data-theme="dark"] tbody tr:hover,
-html[data-theme="dark"] tbody tr:hover td {
-  background: #273449;
-}
-
-html[data-theme="dark"] td strong {
-  color: #e2e8f0;
-}
-
-html[data-theme="dark"] td small {
-  color: #94a3b8;
-}
-
-/* ── Подсветка строк в тёмной теме ── */
-html[data-theme="dark"] tbody tr.row-danger,
-html[data-theme="dark"] tbody tr.row-danger td {
-  background: rgba(220, 38, 38, .1);
-}
-html[data-theme="dark"] tbody tr.row-danger:hover,
-html[data-theme="dark"] tbody tr.row-danger:hover td {
-  background: rgba(220, 38, 38, .2);
-}
-
-html[data-theme="dark"] tbody tr.row-fail,
-html[data-theme="dark"] tbody tr.row-fail td {
-  background: rgba(220, 38, 38, .1);
-}
-html[data-theme="dark"] tbody tr.row-fail:hover,
-html[data-theme="dark"] tbody tr.row-fail:hover td {
-  background: rgba(220, 38, 38, .2);
-}
-
-html[data-theme="dark"] tbody tr.row-warn,
-html[data-theme="dark"] tbody tr.row-warn td {
-  background: rgba(234, 179, 8, .08);
-}
-html[data-theme="dark"] tbody tr.row-warn:hover,
-html[data-theme="dark"] tbody tr.row-warn:hover td {
-  background: rgba(234, 179, 8, .18);
-}
-
-html[data-theme="dark"] tbody tr.row-danger:nth-child(even),
-html[data-theme="dark"] tbody tr.row-danger:nth-child(even) td,
-html[data-theme="dark"] tbody tr.row-fail:nth-child(even),
-html[data-theme="dark"] tbody tr.row-fail:nth-child(even) td {
-  background: rgba(220, 38, 38, .12);
-}
-html[data-theme="dark"] tbody tr.row-warn:nth-child(even),
-html[data-theme="dark"] tbody tr.row-warn:nth-child(even) td {
-  background: rgba(234, 179, 8, .1);
-}
-
-html[data-theme="dark"] tbody tr:has(.row-checkbox:checked),
-html[data-theme="dark"] tbody tr:has(.row-checkbox:checked) td {
-  background: rgba(99, 102, 241, .15);
-}
-html[data-theme="dark"] tbody tr:has(.row-checkbox:checked):hover,
-html[data-theme="dark"] tbody tr:has(.row-checkbox:checked):hover td {
-  background: rgba(99, 102, 241, .25);
-}
 
 /* ── Пагинация ── */
 html[data-theme="dark"] .pagination {
@@ -1572,50 +1333,6 @@ html[data-theme="dark"] .modal-overlay {
   font-size: 15px;
   line-height: 1;
   padding: 4px 10px;
-}
-
-/* ── Бейджи типов ── */
-html[data-theme="dark"] .badge-pipette {
-  background: #0c4a6e;
-  color: #7dd3fc;
-}
-
-html[data-theme="dark"] .badge-other {
-  background: #4c1d95;
-  color: #c4b5fd;
-}
-
-/* ── Статусы ── */
-html[data-theme="dark"] .status-ok {
-  background: #14532d;
-  color: #86efac;
-}
-
-html[data-theme="dark"] .status-warn {
-  background: #422006;
-  color: #fcd34d;
-}
-
-html[data-theme="dark"] .status-danger,
-html[data-theme="dark"] .status-fail {
-  background: #450a0a;
-  color: #fca5a5;
-}
-
-html[data-theme="dark"] .status-inactive,
-html[data-theme="dark"] .status-unknown {
-  background: #334155;
-  color: #cbd5e1;
-}
-
-html[data-theme="dark"] .status-sent {
-  background: #0c4a6e;
-  color: #7dd3fc;
-}
-
-html[data-theme="dark"] .status-wip {
-  background: #422006;
-  color: #fcd34d;
 }
 
 /* ============================================================
@@ -2385,30 +2102,6 @@ html[data-theme="dark"] .camera-scan-status { color: #94a3b8; }
 /* ============================================================
    КНОПКА ⋮ И МЕНЮ ДЕЙСТВИЙ В СТРОКЕ
    ============================================================ */
-.row-actions-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #475569;
-  cursor: pointer;
-  transition: all .15s;
-  font-size: .95rem;
-}
-.row-actions-btn:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #4f46e5;
-}
-.row-actions-btn:active {
-  background: #e0e7ff;
-}
-
 .row-actions-menu {
   position: fixed;
   z-index: 1000;
@@ -2483,16 +2176,6 @@ html[data-theme="dark"] .settings-back-btn:hover {
   color: #e2e8f0;
 }
 
-html[data-theme="dark"] .row-actions-btn {
-  background: #1e293b;
-  border-color: #334155;
-  color: #94a3b8;
-}
-html[data-theme="dark"] .row-actions-btn:hover {
-  background: #273449;
-  border-color: #4f46e5;
-  color: #818cf8;
-}
 
 html[data-theme="dark"] .row-actions-menu {
   background: #1e293b;
@@ -2568,3 +2251,466 @@ html[data-theme="dark"] .row-actions-divider { background: #334155; }
 .stat-card .num[title]:hover {
   opacity: .75;
 }
+
+/* ============================================================
+   РЕДИЗАЙН ТАБЛИЦЫ — чёткая сетка, компактность, минимализм
+   ============================================================ */
+
+/* ── Обёртка ── */
+.table-wrapper {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  background: #fff;
+  overflow-x: auto;
+}
+
+/* ── Сама таблица ── */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100%;
+  min-width: 1100px;
+  font-variant-numeric: tabular-nums;
+  font-size: .82rem;
+  background: #fff;
+  table-layout: auto;
+}
+
+/* ── Заголовки ── */
+thead {
+  background: #f3f4f6;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: .72rem;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  border-bottom: 2px solid #9ca3af;
+  transition: background .15s;
+}
+
+th:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+/* ── Ячейки ── */
+td {
+  padding: 7px 10px;
+  font-size: .82rem;
+  line-height: 1.35;
+  vertical-align: middle;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+/* ── Чекбокс-колонка ── */
+td.col-checkbox,
+th.col-checkbox {
+  padding: 6px 8px;
+  text-align: center;
+  border-left: none;
+}
+
+/* ── Зебра ── */
+tbody tr:nth-child(even) td {
+  background: #fafbfc;
+}
+
+/* ── Hover строки ── */
+tbody tr:hover td {
+  background: #eff6ff;
+}
+
+/* ── Выбранная строка ── */
+tbody tr:has(.row-checkbox:checked) td {
+  background: #dbeafe !important;
+  border-color: #93c5fd;
+}
+
+tbody tr:has(.row-checkbox:checked):hover td {
+  background: #bfdbfe !important;
+}
+
+/* ── Полоска слева у проблемных строк (фон не меняется) ── */
+tbody tr.row-danger td:first-child,
+tbody tr.row-fail td:first-child {
+  border-left: 3px solid #dc2626;
+}
+tbody tr.row-warn td:first-child {
+  border-left: 3px solid #eab308;
+}
+
+/* Фон — как у обычных */
+tbody tr.row-danger td,
+tbody tr.row-fail td,
+tbody tr.row-warn td {
+  background: #fff;
+}
+tbody tr.row-danger:nth-child(even) td,
+tbody tr.row-fail:nth-child(even) td,
+tbody tr.row-warn:nth-child(even) td {
+  background: #fafbfc;
+}
+
+/* ── ID ── */
+td strong {
+  font-size: .84rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -.1px;
+}
+
+/* ── Мелкие подписи ── */
+td small {
+  display: block;
+  font-size: .7rem;
+  color: #6b7280;
+  line-height: 1.25;
+  margin-top: 1px;
+}
+
+/* ── Статус-бейдж ── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: .72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.status-ok {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+.status-ok .status-dot { background: #16a34a; }
+
+.status-warn {
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #fde047;
+}
+.status-warn .status-dot { background: #eab308; }
+
+.status-danger,
+.status-fail {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+.status-danger .status-dot,
+.status-fail .status-dot { background: #dc2626; }
+
+.status-inactive,
+.status-unknown {
+  background: #f3f4f6;
+  color: #4b5563;
+  border-color: #d1d5db;
+}
+.status-inactive .status-dot,
+.status-unknown .status-dot { background: #94a3b8; }
+
+.status-sent {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+.status-sent .status-dot {
+  background: #0ea5e9;
+  animation: pulse-dot 1.8s infinite;
+}
+
+.status-wip {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+.status-wip .status-dot {
+  background: #eab308;
+  animation: pulse-wip 1.8s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(14,165,233,.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(14,165,233,0); }
+}
+@keyframes pulse-wip {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234,179,8,.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(234,179,8,0); }
+}
+
+/* ── Бейдж типа ── */
+.badge-type {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: .72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.badge-pipette {
+  background: #e0f2fe;
+  color: #075985;
+  border-color: #7dd3fc;
+}
+.badge-other {
+  background: #f3e8ff;
+  color: #581c87;
+  border-color: #c4b5fd;
+}
+
+/* ── Кнопка ⋮ ── */
+.row-actions-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  transition: all .15s;
+  font-size: .8rem;
+}
+.row-actions-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+.row-actions-btn:active {
+  background: #bfdbfe;
+}
+
+/* ── Чекбоксы ── */
+.col-checkbox input[type="checkbox"],
+.row-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2563eb;
+  border-radius: 3px;
+}
+
+/* ── Скроллбар ── */
+.table-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  border: 2px solid #f3f4f6;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================================
+   ТЁМНАЯ ТЕМА
+   ============================================================ */
+html[data-theme="dark"] .table-wrapper {
+  border-color: #334155;
+  background: #1e293b;
+}
+html[data-theme="dark"] table {
+  background: #1e293b;
+}
+html[data-theme="dark"] thead {
+  background: #334155;
+}
+html[data-theme="dark"] th {
+  background: #334155;
+  color: #cbd5e1;
+  border-color: #475569;
+  border-bottom: 2px solid #64748b;
+}
+html[data-theme="dark"] th:hover {
+  background: #475569;
+  color: #f1f5f9;
+}
+html[data-theme="dark"] td {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+html[data-theme="dark"] tbody tr:nth-child(even) td {
+  background: #263449;
+}
+html[data-theme="dark"] tbody tr:hover td {
+  background: #334155;
+}
+html[data-theme="dark"] tbody tr:has(.row-checkbox:checked) td {
+  background: #1e3a5f !important;
+  border-color: #3b82f6;
+}
+html[data-theme="dark"] tbody tr:has(.row-checkbox:checked):hover td {
+  background: #1e4976 !important;
+}
+
+/* Проблемные строки — фон как у обычных, полоска слева остаётся */
+html[data-theme="dark"] tbody tr.row-danger td,
+html[data-theme="dark"] tbody tr.row-fail td,
+html[data-theme="dark"] tbody tr.row-warn td {
+  background: #1e293b;
+}
+html[data-theme="dark"] tbody tr.row-danger:nth-child(even) td,
+html[data-theme="dark"] tbody tr.row-fail:nth-child(even) td,
+html[data-theme="dark"] tbody tr.row-warn:nth-child(even) td {
+  background: #263449;
+}
+
+html[data-theme="dark"] td strong {
+  color: #f1f5f9;
+}
+html[data-theme="dark"] td small {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .status-ok {
+  background: rgba(22, 163, 74, .2);
+  color: #86efac;
+  border-color: #15803d;
+}
+html[data-theme="dark"] .status-warn {
+  background: rgba(234, 179, 8, .2);
+  color: #fcd34d;
+  border-color: #a16207;
+}
+html[data-theme="dark"] .status-danger,
+html[data-theme="dark"] .status-fail {
+  background: rgba(220, 38, 38, .2);
+  color: #fca5a5;
+  border-color: #b91c1c;
+}
+html[data-theme="dark"] .status-inactive,
+html[data-theme="dark"] .status-unknown {
+  background: rgba(71, 85, 105, .5);
+  color: #cbd5e1;
+  border-color: #475569;
+}
+html[data-theme="dark"] .status-sent {
+  background: rgba(59, 130, 246, .2);
+  color: #93c5fd;
+  border-color: #1d4ed8;
+}
+html[data-theme="dark"] .status-wip {
+  background: rgba(251, 191, 36, .2);
+  color: #fcd34d;
+  border-color: #b45309;
+}
+
+html[data-theme="dark"] .badge-pipette {
+  background: rgba(14, 165, 233, .2);
+  color: #7dd3fc;
+  border-color: #0369a1;
+}
+html[data-theme="dark"] .badge-other {
+  background: rgba(139, 92, 246, .2);
+  color: #c4b5fd;
+  border-color: #6d28d9;
+}
+
+html[data-theme="dark"] .row-actions-btn {
+  background: #1e293b;
+  border-color: #475569;
+  color: #94a3b8;
+}
+html[data-theme="dark"] .row-actions-btn:hover {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+html[data-theme="dark"] .col-checkbox input[type="checkbox"],
+html[data-theme="dark"] .row-checkbox {
+  accent-color: #3b82f6;
+}
+
+html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-color: #1e293b;
+}
+html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ============================================================
+   ТОЧКА-ИНДИКАТОР СТАТУСА РЯДОМ С ID
+   ============================================================ */
+
+.id-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot-inline {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .9);
+  cursor: help;
+  transition: transform .15s;
+}
+
+.status-dot-inline:hover {
+  transform: scale(1.25);
+}
+
+/* Пульсация — только для тревожных статусов */
+.status-dot-inline[style*="#dc2626"],
+.status-dot-inline[style*="#0ea5e9"] {
+  animation: dot-pulse 2s infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 0 currentColor;
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 0 5px transparent;
+  }
+}
+
+html[data-theme="dark"] .status-dot-inline {
+  box-shadow: 0 0 0 2px rgba(30, 41, 59, .9);
+}
+
