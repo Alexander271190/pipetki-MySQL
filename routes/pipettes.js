@@ -1154,6 +1154,105 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
 });
 
 // ============================================================
+// МАССОВАЯ СМЕНА ОТВЕТСТВЕННОГО
+// Меняет только поле responsible. Отдел не трогает.
+// ============================================================
+router.post(
+  '/bulk-change-responsible',
+  authenticate,
+  requireAnyPermission(['bulk_change_responsible', 'manage_pipettes']),
+  async (req, res) => {
+    // ── 1. Валидация тела ──
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+    }
+
+    const { ids, newResponsible } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Не выбрано ни одной единицы оборудования' });
+    }
+    if (!newResponsible || !String(newResponsible).trim()) {
+      return res.status(400).json({ error: 'Укажите нового ответственного' });
+    }
+    if (ids.length > 500) {
+      return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 500)' });
+    }
+
+    const resp = String(newResponsible).trim();
+
+    // ── 2. Транзакция ──
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const successful = [];
+      const skipped = [];
+
+      for (const id of ids) {
+        // 2.1. Блокируем строку
+        const [rows] = await conn.query(
+          'SELECT id, department, responsible FROM pipettes WHERE id = ? FOR UPDATE',
+          [id]
+        );
+
+        // 2.2. Не найдено
+        if (!rows.length) { skipped.push(id); continue; }
+
+        // 2.3. Нет доступа по отделу
+        if (!canAccessDepartment(req.user, rows[0].department)) {
+          skipped.push(id);
+          continue;
+        }
+
+        // 2.4. Уже этот ответственный — пропускаем
+        if (rows[0].responsible === resp) {
+          skipped.push(id);
+          continue;
+        }
+
+        // 2.5. Обновляем
+        await conn.query(
+          `UPDATE pipettes
+           SET responsible = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [resp, id]
+        );
+        successful.push(id);
+      }
+
+      // ── 3. Аудит ──
+      if (successful.length > 0) {
+        await conn.query(
+          'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+          [
+            req.user.id,
+            req.user.full_name,
+            'Массовая смена ответственного',
+            `${successful.length} шт. → «${resp}»`
+          ]
+        );
+      }
+
+      await conn.commit();
+
+      res.status(201).json({
+        message: `Ответственный изменён у ${successful.length} единиц`,
+        successful: successful.length,
+        skipped: skipped.length,
+        skippedIds: skipped,
+      });
+    } catch (e) {
+      await conn.rollback();
+      console.error('bulk-change-responsible error:', e);
+      res.status(500).json({ error: 'Ошибка массовой смены ответственного' });
+    } finally {
+      conn.release();
+    }
+  }
+);
+
+// ============================================================
 // ПЕРЕДАЧА В ДРУГОЙ ОТДЕЛ
 // ============================================================
 router.post('/:id/transfer', authenticate, requireAnyPermission(['transfer_pipette', 'manage_pipettes']), async (req, res) => {
