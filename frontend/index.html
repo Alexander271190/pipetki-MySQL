@@ -6,8 +6,6 @@
   <title> Клинико-диагностиченская лаборатория </title>
    <link rel="stylesheet" href="fontawesome/css/all.min.css">
   <link rel="stylesheet" href="style.css">
-   <script src="vendor/jsQR.min.js" defer></script>
-  <script src="vendor/zxing.min.js" defer></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -807,34 +805,6 @@
   </div>
 </div>
   
-<!-- МОДАЛКА СКАНИРОВАНИЯ КАМЕРОЙ -->
-<div class="modal-overlay" id="camera-scan-modal">
-  <div class="modal modal-compact">
-    <h2><i class="fa-solid fa-camera"></i> Сканирование камерой</h2>
-
-    <div class="camera-scan-wrap">
-      <video id="camera-scan-video" autoplay playsinline muted></video>
-      <div class="camera-scan-frame">
-        <div class="camera-scan-corner tl"></div>
-        <div class="camera-scan-corner tr"></div>
-        <div class="camera-scan-corner bl"></div>
-        <div class="camera-scan-corner br"></div>
-      </div>
-      <div class="camera-scan-laser"></div>
-    </div>
-
-    <div id="camera-scan-status" class="camera-scan-status">
-      Наведите камеру на штрих-код…
-    </div>
-
-    <div class="form-actions" style="margin-top:14px;">
-      <button type="button" class="btn btn-secondary" onclick="closeCameraScan()">Отмена</button>
-      <button type="button" class="btn btn-primary" onclick="toggleCameraTorch()" id="camera-torch-btn" style="display:none;">
-        <i class="fa-solid fa-lightbulb"></i> Фонарик
-      </button>
-    </div>
-  </div>
-</div>
 
   <!-- МОДАЛКА ГОРЯЧИХ КЛАВИШ -->
 <div class="modal-overlay" id="hotkeys-modal">
