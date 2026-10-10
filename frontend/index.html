@@ -124,9 +124,14 @@
     <i class="fa-solid fa-barcode"></i> Сканировать
   </button>
 
-  <!-- Добавить -->
+   <!-- Добавить -->
   <button class="btn btn-primary btn-add-pipette" onclick="openModal()">
     <i class="fa-solid fa-plus"></i> Добавить
+  </button>
+
+  <!-- 🆕 Добавить серию -->
+  <button class="btn btn-primary btn-add-pipette" onclick="openBulkCreateModal()" title="Добавить несколько единиц за раз">
+    <i class="fa-solid fa-layer-group"></i> Серия
   </button>
 
   <!-- Ещё ▼ -->
@@ -214,6 +219,48 @@
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
         <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+  <!-- 🆕 МОДАЛКА ДОБАВЛЕНИЯ СЕРИИ -->
+<div class="modal-overlay" id="bulk-create-modal">
+  <div class="modal modal-lg">
+    <h2><i class="fa-solid fa-layer-group"></i> Добавить серию оборудования</h2>
+
+    <div style="margin-bottom:15px;padding:12px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;font-size:.85rem;color:#0c4a6e;">
+      ℹ️ Укажите количество и заполните шаблон — система создаст несколько единиц с разными ID.
+      ID присваиваются автоматически по префиксу выбранного типа.
+    </div>
+
+    <form id="bulk-create-form" onsubmit="saveBulkCreate(event)" novalidate>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Сколько единиц *</label>
+          <input type="number" id="bc-count" value="5" min="1" max="100" required>
+        </div>
+        <div class="form-group">
+          <label>Серийные номера</label>
+          <input type="text" id="bc-serial-start" placeholder="напр. SN-0001 (увеличится в конце)">
+        </div>
+      </div>
+
+      <div style="font-size:.78rem;color:#64748b;margin:-8px 0 12px;padding-left:2px;">
+        Если указать серийный номер с числом в конце — он будет увеличиваться
+        (SN-0001 → SN-0002 → …). Оставьте пустым, чтобы заполнить позже.
+      </div>
+
+      <div id="bc-form-fields"></div>
+
+      <div id="bc-error" class="auth-error" style="margin-top:12px;"></div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeBulkCreateModal()">Отмена</button>
+        <button type="submit" class="btn btn-success">
+          <i class="fa-solid fa-layer-group"></i> Создать
+        </button>
       </div>
     </form>
   </div>
