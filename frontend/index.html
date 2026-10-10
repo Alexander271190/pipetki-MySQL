@@ -100,70 +100,81 @@
     </button>
   </div>
 
-  <!-- Строка 1: Поиск + Фильтр -->
-  <div class="toolbar-row toolbar-row-search">
-    <input type="text" id="search" placeholder="🔍 Поиск по номеру, модели, отделу, ответственному…">
-    <div style="position:relative;display:inline-block;">
-      <button class="btn btn-secondary" id="filter-btn" onclick="toggleFilterPanel(event)">
-        <i class="fa-solid fa-filter"></i> Фильтр
-      </button>
-      <div class="filter-panel" id="filter-panel">
-        <div id="filter-fields-container"></div>
-        <div class="filter-actions">
-          <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
-            <i class="fa-solid fa-rotate-left"></i> Сбросить
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="applyFilters()">
-            <i class="fa-solid fa-check"></i> Применить
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Поиск -->
+  <input type="text" id="search" placeholder="🔍 Поиск по номеру, модели, отделу, ответственному…">
 
-  <!-- Строка 2: Действия -->
-  <div class="toolbar-row toolbar-row-actions">
-    <button class="btn btn-info btn-scan-barcode" onclick="handleScanButton()" title="Сканировать штрихкод">
-      <i class="fa-solid fa-barcode"></i> Сканировать
-    </button>
-    <button class="btn btn-primary btn-add-pipette" onclick="openModal()">
-      <i class="fa-solid fa-plus"></i> Добавить
-    </button>
+  <!-- Сканировать -->
+  <button class="btn btn-info btn-scan-barcode" onclick="handleScanButton()" title="Сканировать штрихкод">
+    <i class="fa-solid fa-barcode"></i> Сканировать
+  </button>
 
-    <!-- Ещё ▼ -->
-    <div class="dropdown" id="more-dropdown" style="position:relative;display:inline-block;">
-      <button class="btn btn-secondary" onclick="toggleMoreMenu(event)">
-        <i class="fa-solid fa-ellipsis"></i> Ещё <i class="fa-solid fa-caret-down"></i>
-      </button>
-      <div id="more-menu" class="dropdown-menu">
-        <button class="dropdown-item btn-export" onclick="exportToXlsx(); closeMoreMenu();">
-          <i class="fa-solid fa-file-excel"></i> Экспорт в Excel
+  <!-- Фильтр -->
+  <div style="position:relative;display:inline-block;">
+    <button class="btn btn-secondary" id="filter-btn" onclick="toggleFilterPanel(event)">
+      <i class="fa-solid fa-filter"></i> Фильтр
+    </button>
+    <div class="filter-panel" id="filter-panel">
+      <div id="filter-fields-container"></div>
+      <div class="filter-actions">
+        <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
+          <i class="fa-solid fa-rotate-left"></i> Сбросить
         </button>
-        <button class="dropdown-item btn-export" onclick="exportToPDF(); closeMoreMenu();">
-          <i class="fa-solid fa-print"></i> Экспорт в PDF
-        </button>
-        <div class="dropdown-divider"></div>
-        <button class="dropdown-item btn-print-labels" onclick="openBarcodePrintModal(); closeMoreMenu();">
-          <i class="fa-solid fa-tag"></i> Печать этикеток
-        </button>
-        <button class="dropdown-item btn-import" onclick="openImportModal(); closeMoreMenu();">
-          <i class="fa-solid fa-download"></i> Импорт данных
-        </button>
-        <div class="dropdown-divider"></div>
-        <button class="dropdown-item btn-settings" onclick="openSettingsModal(); closeMoreMenu();">
-          <i class="fa-solid fa-gear"></i> Настройки
-        </button>
-        <div class="dropdown-divider"></div>
-        <button class="dropdown-item" onclick="toggleCompactMode(); closeMoreMenu();">
-          <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
-        </button>
-        <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
-          <i class="fa-solid fa-keyboard"></i> Горячие клавиши
+        <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+          <i class="fa-solid fa-check"></i> Применить
         </button>
       </div>
     </div>
   </div>
 
+  <!-- Добавить оборудование -->
+  <button class="btn btn-primary btn-add-pipette" onclick="openModal()">
+    <i class="fa-solid fa-plus"></i> Добавить оборудование
+  </button>
+
+  <!-- Импорт -->
+  <button class="btn btn-warning btn-import" onclick="openImportModal()">
+    <i class="fa-solid fa-download"></i> Импорт
+  </button>
+
+  <!-- Печать этикеток -->
+  <button class="btn btn-info btn-print-labels" onclick="openBarcodePrintModal()">
+    <i class="fa-solid fa-tag"></i> Печать этикеток
+  </button>
+
+  <!-- Настройки -->
+  <button class="btn btn-warning btn-settings" onclick="openSettingsModal()">
+    <i class="fa-solid fa-gear"></i> Настройки
+  </button>
+
+  <!-- Экспорт ▼ -->
+  <div class="dropdown" id="export-dropdown" style="position:relative;display:inline-block;">
+    <button class="btn btn-secondary" onclick="toggleExportMenu(event)">
+      <i class="fa-solid fa-upload"></i> Экспорт <i class="fa-solid fa-caret-down"></i>
+    </button>
+    <div id="export-menu" class="dropdown-menu">
+      <button class="dropdown-item btn-export" onclick="exportToXlsx(); closeExportMenu();">
+        <i class="fa-solid fa-file-excel"></i> Экспорт в Excel
+      </button>
+      <button class="dropdown-item btn-export" onclick="exportToPDF(); closeExportMenu();">
+        <i class="fa-solid fa-print"></i> Экспорт в PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Ещё ▼ -->
+  <div class="dropdown" id="more-dropdown" style="position:relative;display:inline-block;">
+    <button class="btn btn-secondary" onclick="toggleMoreMenu(event)">
+      <i class="fa-solid fa-ellipsis"></i> Ещё <i class="fa-solid fa-caret-down"></i>
+    </button>
+    <div id="more-menu" class="dropdown-menu">
+      <button class="dropdown-item" onclick="toggleCompactMode(); closeMoreMenu();">
+        <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
+      </button>
+      <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
+        <i class="fa-solid fa-keyboard"></i> Горячие клавиши
+      </button>
+    </div>
+  </div>
 </div>
     <div class="table-wrapper">
       <table id="pipettes-table">
