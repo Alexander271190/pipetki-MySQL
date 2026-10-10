@@ -2351,6 +2351,275 @@ async function generateFormFields(data = null) {
 }
 
 // ============================================================
+// 🆕 МАССОВОЕ ДОБАВЛЕНИЕ СЕРИИ
+// ============================================================
+async function openBulkCreateModal() {
+  await refreshCurrentUser();
+  if (!canAddPipette()) {
+    showToast('Нет прав на добавление оборудования', 'error');
+    return;
+  }
+
+  // Сброс формы
+  document.getElementById('bc-count').value = 5;
+  document.getElementById('bc-serial-start').value = '';
+  document.getElementById('bc-error').textContent = '';
+  document.getElementById('bc-form-fields').innerHTML = '<p style="color:#94a3b8;padding:10px;">Загрузка полей…</p>';
+
+  document.getElementById('bulk-create-modal').classList.add('active');
+
+  // Шаблон по умолчанию — те же поля, что в обычной форме
+  const defaultData = {
+    lastCalibration: todayStr(),
+    interval: 12,
+    result: 'pass',
+    active: 'true',
+  };
+
+  if (currentUser.role !== 'admin' && currentUser.isActing && currentUser.actingForName) {
+    defaultData.responsible = currentUser.actingForName;
+    if (currentUser.actingDepartment) {
+      defaultData.department = currentUser.actingDepartment;
+    }
+  } else if (currentUser.role !== 'admin') {
+    defaultData.responsible = currentUser.fullName || '';
+    if (currentUser.onlyOwnDepartment && currentUser.department) {
+      defaultData.department = currentUser.department;
+    }
+  }
+
+  // Рендерим форму в отдельный контейнер
+  await generateBulkFormFields(defaultData);
+}
+
+function closeBulkCreateModal() {
+  document.getElementById('bulk-create-modal').classList.remove('active');
+}
+
+// Обёртка generateFormFields, но в контейнер #bc-form-fields
+async function generateBulkFormFields(data) {
+  const container = document.getElementById('bc-form-fields');
+  container.innerHTML = '<p style="color:#94a3b8;padding:10px;">Загрузка полей…</p>';
+
+  try {
+    const allFields = await apiRequest('/settings/fields');
+    const fields = getActiveFormFields(allFields)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // ID не нужен — он генерируется автоматически для каждой
+    const filtered = fields.filter(f => f.id !== 'id');
+
+    container.innerHTML = '';
+
+    // Переиспользуем логику generateFormFields, но в свой контейнер.
+    // Простой вызов: подменим ID контейнера через временный элемент.
+    const tempContainer = document.getElementById('form-fields-container');
+    const original = tempContainer;
+    // Подменяем ссылку — generateFormFields использует getElementById
+    // Проще: рендерим напрямую по тому же коду
+
+    for (const f of filtered) {
+      const div = document.createElement('div');
+      div.className = 'form-group';
+
+      const label = document.createElement('label');
+      label.textContent = f.label + (f.required ? ' *' : '');
+      div.appendChild(label);
+
+      let val = (data && data[f.id] !== undefined && data[f.id] !== null)
+        ? data[f.id]
+        : (f.default || '');
+
+      let input;
+
+      if (f.type === 'textarea') {
+        input = document.createElement('textarea');
+        input.rows = 2;
+        input.placeholder = f.label;
+        input.value = val;
+      } else if (f.type === 'select') {
+        input = document.createElement('select');
+        let opts = [];
+
+        if (f.id === 'department') {
+          let deps = departmentsList;
+          if (currentUser.isActing && currentUser.actingDepartment) {
+            deps = [currentUser.actingDepartment];
+          } else if (currentUser.role !== 'admin'
+              && currentUser.onlyOwnDepartment
+              && currentUser.department) {
+            deps = [currentUser.department];
+          }
+          opts = deps.length ? deps : (f.options || []);
+        } else if (f.id === 'equipmentType') {
+          opts = _equipmentTypes.length > 0
+            ? _equipmentTypes.map(t => ({ value: t.value, label: t.label }))
+            : [{ value: 'pipette', label: 'Пипетка' }];
+        } else if (f.id === 'result') {
+          opts = [
+            { value: 'pass', label: '✅ Годен' },
+            { value: 'fail', label: '❌ Брак' },
+            { value: 'wip', label: '⏳ В процессе' },
+          ];
+        } else if (f.id === 'active') {
+          opts = [
+            { value: 'true', label: '✅ В работе' },
+            { value: 'false', label: '⛔ Не используется' },
+          ];
+        } else if (f.id === 'responsible') {
+          if (currentUser.role === 'admin') {
+            opts = _responsibles.map(u => ({ value: u.fullName, label: u.fullName }));
+            if (!f.required) opts = [{ value: '', label: '— не указан —' }, ...opts];
+          } else if (currentUser.isActing && currentUser.actingForName) {
+            opts = [{ value: currentUser.actingForName, label: currentUser.actingForName + ' (основной)' }];
+          } else {
+            const self = currentUser.fullName || '';
+            opts = self ? [{ value: self, label: self }] : [{ value: '', label: '— не указан —' }];
+          }
+        } else {
+          opts = f.options || [];
+        }
+
+        const valStr = (val == null) ? '' : String(val);
+        const hasEmpty = opts.some(o => String(typeof o === 'object' ? o.value : o) === '');
+        if (!f.required && !hasEmpty && opts.length > 0) {
+          opts = [{ value: '', label: '— не указан —' }, ...opts];
+        }
+        if (opts.length === 0) opts = [{ value: '', label: '—' }];
+
+        opts.forEach(opt => {
+          const optValue = (typeof opt === 'object') ? opt.value : opt;
+          const optLabel = (typeof opt === 'object') ? opt.label : (opt || '—');
+          const option = document.createElement('option');
+          option.value = optValue;
+          option.textContent = optLabel;
+          if (String(val) === String(optValue)) option.selected = true;
+          input.appendChild(option);
+        });
+      } else {
+        input = document.createElement('input');
+        input.type = f.type === 'date' ? 'date'
+          : f.type === 'number' ? 'number'
+          : 'text';
+        input.placeholder = f.label;
+
+        if (f.type === 'date' && val) {
+          const s = String(val).trim();
+          const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          input.value = m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+        } else {
+          input.value = val;
+        }
+      }
+
+      input.id = `bc-${f.id}`;
+      input.dataset.fieldId = f.id;
+      if (f.required) input.required = true;
+
+      if (f.id === 'department' && currentUser.isActing) {
+        input.disabled = true;
+        input.style.background = '#f1f5f9';
+      }
+      if (f.id === 'responsible' && currentUser.role !== 'admin') {
+        input.disabled = true;
+        input.style.background = '#f1f5f9';
+      }
+
+      div.appendChild(input);
+      container.appendChild(div);
+    }
+
+    // 🆕 Автоподстановка МПИ из типа
+    const eqSelect = document.getElementById('bc-equipmentType');
+    const ivInput  = document.getElementById('bc-interval');
+    if (eqSelect && ivInput) {
+      const apply = () => {
+        const t = _equipmentTypes.find(x => x.value === eqSelect.value);
+        const num = t && Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0
+          ? parseInt(t.interval, 10)
+          : 12;
+        ivInput.value = String(num);
+      };
+      eqSelect.addEventListener('change', apply);
+      apply();
+    }
+  } catch (e) {
+    container.innerHTML = `<p style="color:#dc2626;padding:10px;">Ошибка загрузки полей: ${esc(e.message)}</p>`;
+  }
+}
+
+async function saveBulkCreate(e) {
+  e.preventDefault();
+  await refreshCurrentUser();
+  if (!canAddPipette()) { showToast('Нет прав', 'error'); return; }
+
+  const errEl = document.getElementById('bc-error');
+  errEl.textContent = '';
+
+  const count = parseInt(document.getElementById('bc-count').value, 10);
+  if (!Number.isFinite(count) || count < 1 || count > 100) {
+    errEl.textContent = 'Количество должно быть от 1 до 100';
+    return;
+  }
+
+  const serialStart = document.getElementById('bc-serial-start').value.trim();
+
+  // Собираем шаблон из полей формы
+  const template = {};
+  document.querySelectorAll('#bc-form-fields [data-field-id]').forEach(input => {
+    const fieldId = input.dataset.fieldId;
+    const value = (input.value || '').trim();
+    template[fieldId] = value;
+  });
+
+  // Валидация модели
+  if (!template.model || !template.model.trim()) {
+    errEl.textContent = 'Заполните поле «Модель»';
+    return;
+  }
+  if (!template.lastCalibration) {
+    errEl.textContent = 'Заполните поле «Дата последней поверки»';
+    return;
+  }
+
+  // Подтверждение для больших серий
+  if (count >= 20) {
+    const ok = await showConfirm(
+      `Создать ${count} единиц оборудования одной операцией?`,
+      { icon: '📦', title: 'Массовое создание', okText: 'Создать', okClass: 'btn-primary' }
+    );
+    if (!ok) return;
+  }
+
+  // Блокируем кнопку
+  const btn = e.target.querySelector('button[type="submit"]');
+  const origHtml = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Создание…'; }
+
+  try {
+    const res = await apiRequest('/pipettes/bulk-create', 'POST', {
+      count,
+      template,
+      serialStart: serialStart || null,
+    });
+
+    showToast(`Создано ${res.count} единиц`, 'success');
+    closeBulkCreateModal();
+    currentPage = 1;
+    await loadPipetteData();
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка создания';
+  } finally {
+    if (btn && origHtml) { btn.disabled = false; btn.innerHTML = origHtml; }
+  }
+}
+
+// Закрытие по клику на оверлей
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'bulk-create-modal') closeBulkCreateModal();
+});
+
+// ============================================================
 // МОДАЛКА ПИПЕТКИ
 // ============================================================
 async function openModal(id) {
