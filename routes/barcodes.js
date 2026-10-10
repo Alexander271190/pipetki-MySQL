@@ -4,13 +4,73 @@
 const express = require('express');
 const net = require('net');
 const path = require('path');
+const fs = require('fs');
 const bwipjs = require('bwip-js');
 const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
 const db = require('../db');
 const { authenticate, requireRole, requirePermission } = require('../middleware/auth');
-const FONT_REGULAR = path.join(__dirname, '..', 'frontend', 'fonts', 'DejaVuSans.ttf');
-const FONT_BOLD    = path.join(__dirname, '..', 'frontend', 'fonts', 'DejaVuSans-Bold.ttf');
+
+// 🆕 Реестр шрифтов с кириллицей.
+// Файлы лежат в frontend/fonts/. Ключ хранится в system_settings.barcode_font.
+// Если у выбранного шрифта нет файла — fallback на DejaVu, затем на любой
+// доступный, затем на Helvetica (кириллица сломается, но PDF сгенерится).
+const FONT_DIR = path.join(__dirname, '..', 'frontend', 'fonts');
+
+const FONTS = {
+  dejavu:   { name: 'DejaVu Sans',             regular: 'DejaVuSans.ttf',                    bold: 'DejaVuSans-Bold.ttf' },
+  ptsans:   { name: 'PT Sans',                 regular: 'PTSans-Regular.ttf',                bold: 'PTSans-Bold.ttf' },
+  roboto:   { name: 'Roboto',                  regular: 'Roboto-Regular.ttf',                bold: 'Roboto-Bold.ttf' },
+  opensans: { name: 'Open Sans SemiCondensed', regular: 'OpenSans_SemiCondensed-Regular.ttf', bold: 'OpenSans-Bold.ttf' },
+};
+
+function fontFilesExist(def) {
+  if (!def) return false;
+  try {
+    return fs.existsSync(path.join(FONT_DIR, def.regular));
+  } catch (e) {
+    return false;
+  }
+}
+
+// Возвращает { key, def, regPath, boldPath } для доступного шрифта.
+function resolveFont(selectedKey) {
+  const candidates = [];
+  if (selectedKey && FONTS[selectedKey]) candidates.push(selectedKey);
+  if (selectedKey !== 'dejavu' && FONTS.dejavu) candidates.push('dejavu');
+  for (const k of Object.keys(FONTS)) {
+    if (!candidates.includes(k)) candidates.push(k);
+  }
+
+  for (const key of candidates) {
+    const def = FONTS[key];
+    if (fontFilesExist(def)) {
+      return {
+        key,
+        def,
+        regPath:  path.join(FONT_DIR, def.regular),
+        boldPath: path.join(FONT_DIR, def.bold),
+      };
+    }
+  }
+  return null;
+}
+
+// Регистрирует шрифт в PDF-документе. Возвращает true, если получилось.
+function registerFontOnDoc(doc, font) {
+  if (!font) return false;
+  try {
+    doc.registerFont('Reg', font.regPath);
+    doc.registerFont('Bold',
+      fs.existsSync(font.boldPath) ? font.boldPath : font.regPath
+    );
+    doc.font('Reg');
+    return true;
+  } catch (e) {
+    console.warn(`⚠️ Не удалось зарегистрировать шрифт ${font.key}:`, e.message);
+    return false;
+  }
+}
 
 const router = express.Router();
 
@@ -64,6 +124,7 @@ async function getSettings() {
     'barcode_type', 'barcode_label_fields', 'barcode_mode',
     'barcode_label_size', 'barcode_fallback_to_pdf', 'barcode_default_copies',
     'barcode_zebra_language', 'barcode_agent_port', 'barcode_max_length',
+    'barcode_font',
   ];
   const ph = keys.map(() => '?').join(',');
   const [rows] = await db.query(
@@ -169,6 +230,23 @@ function sendZplToPrinter(zpl, ip, port, timeoutMs = 4000) {
     });
   });
 }
+
+// ═══════════════════════════════════════════════════════════
+// GET /api/barcodes/fonts — список доступных шрифтов этикеток
+// ВАЖНО: должен идти ДО /:id/png, иначе Express примет «fonts» за id
+// ═══════════════════════════════════════════════════════════
+router.get('/fonts', authenticate, async (req, res) => {
+  try {
+    const available = Object.entries(FONTS)
+      .filter(([key, def]) => fontFilesExist(def))
+      .map(([key, def]) => ({ value: key, label: def.name }));
+
+    res.json(available);
+  } catch (e) {
+    console.error('fonts error:', e);
+    res.status(500).json({ error: 'Ошибка получения списка шрифтов' });
+  }
+});
 
 // ═══════════════════════════════════════════════════════════
 // GET /api/barcodes/:id/png?type=code128|qr
@@ -341,21 +419,22 @@ router.get('/labels.pdf', authenticate, requirePermission('print_labels'), async
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     const zebraSize = LABEL_SIZES[s.barcode_label_size] || LABEL_SIZES['58x40'];
-const doc = layout === 'zebra'
-  ? new PDFDocument({ size: [zebraSize.widthPt, zebraSize.heightPt], margins: { top: 4, bottom: 4, left: 4, right: 4 }, autoFirstPage: false })
-  : new PDFDocument({ size: 'A4', margin: 20 });
+    const doc = layout === 'zebra'
+      ? new PDFDocument({ size: [zebraSize.widthPt, zebraSize.heightPt], margins: { top: 4, bottom: 4, left: 4, right: 4 }, autoFirstPage: false })
+      : new PDFDocument({ size: 'A4', margin: 20 });
 
-try {
-  doc.registerFont('Reg', FONT_REGULAR);
-  doc.registerFont('Bold', FONT_BOLD);
-  doc.font('Reg');
-  console.log('✅ PDF: используется DejaVu Sans (кириллица OK)');
-} catch (e) {
-  console.warn('⚠️ PDF: не удалось загрузить DejaVu, используется Helvetica.', e.message);
-  console.warn('   Положите DejaVuSans.ttf и DejaVuSans-Bold.ttf в frontend/fonts/');
-}
+    // 🆕 Шрифт с кириллицей. Fallback: выбранный → DejaVu → любой доступный.
+    const font = resolveFont(s.barcode_font);
+    const fontOk = registerFontOnDoc(doc, font);
 
-doc.pipe(res);
+    if (fontOk) {
+      console.log(`✅ PDF: используется ${font.def.name} (${font.key})`);
+    } else {
+      console.warn('⚠️ PDF: ни одного шрифта с кириллицей не найдено, используется Helvetica.');
+      console.warn('   Положите .ttf файлы в frontend/fonts/');
+    }
+
+    doc.pipe(res);
 
     function getFieldLine(p, f) {
       switch (f) {
