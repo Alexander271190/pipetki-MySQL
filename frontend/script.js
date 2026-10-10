@@ -7545,6 +7545,23 @@ async function openCameraScan(targetInputId = null) {
     video.srcObject = _cameraStream;
     await video.play();
 
+       // ── Принудительный автофокус ──
+    const _track = _cameraStream.getVideoTracks()[0];
+    if (_track) {
+      const caps = _track.getCapabilities ? _track.getCapabilities() : {};
+      if (caps.focusMode && Array.isArray(caps.focusMode)
+          && caps.focusMode.includes('continuous')) {
+        try {
+          await _track.applyConstraints({ focusMode: 'continuous' });
+          console.log('✅ Автофокус: continuous');
+        } catch (e) {
+          console.warn('⚠️ Автофокус не удалось включить:', e.message);
+        }
+      } else {
+        console.log('ℹ️ Автофокус не поддерживается этой камерой');
+      }
+    }
+
     if (status) status.textContent = 'Наведите камеру на штрих-код…';
 
     checkTorchSupport();
@@ -7617,11 +7634,42 @@ function startCameraDecoding(video) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  try {
-    _cameraZxingReader = new ZXing.BrowserMultiFormatReader();
-  } catch (e) {
-    console.warn('ZXing не загружен, будут только QR-коды:', e.message);
-    _cameraZxingReader = null;
+  // ── Проверка: ZXing загружен? ──
+  // Если нет — работаем только через jsQR (QR-коды). Камера не падает.
+  const hasZXing = (typeof ZXing !== 'undefined'
+                    && ZXing.MultiFormatReader
+                    && ZXing.HybridBinarizer
+                    && ZXing.BinaryBitmap);
+
+  if (!hasZXing) {
+    console.warn('⚠️ ZXing не загружен — доступно только сканирование QR через jsQR');
+  }
+
+  // ── Hints: только нужные форматы → ускорение в 2–3 раза ──
+  const hints = new Map();
+  if (hasZXing) {
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+      ZXing.BarcodeFormat.CODE_128,
+      ZXing.BarcodeFormat.EAN_13,
+      ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.CODE_39,
+      ZXing.BarcodeFormat.QR_CODE,
+    ]);
+  }
+  // Раскомментируй, если этикетки мятые/тусклые (замедлит на ~30%):
+  // hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+   // ── ZXing MultiFormatReader ──
+  let multiReader = null;
+  if (hasZXing) {
+    try {
+      multiReader = new ZXing.MultiFormatReader();
+      multiReader.setHints(hints);
+      _cameraZxingReader = multiReader;   // для closeCameraScan()
+    } catch (e) {
+      console.warn('⚠️ MultiFormatReader не создался:', e.message);
+      _cameraZxingReader = null;
+    }
   }
 
   const tick = () => {
@@ -7631,6 +7679,7 @@ function startCameraDecoding(video) {
       const w = video.videoWidth;
       const h = video.videoHeight;
 
+      // Уменьшаем кадр для скорости (640px по длинной стороне — оптимум)
       const maxSide = 640;
       const scale = Math.min(1, maxSide / Math.max(w, h));
       const cw = Math.floor(w * scale);
@@ -7644,6 +7693,7 @@ function startCameraDecoding(video) {
       ctx.drawImage(video, 0, 0, cw, ch);
       const imageData = ctx.getImageData(0, 0, cw, ch);
 
+      // ── Быстрый путь: jsQR (только QR) ──
       if (window.jsQR) {
         const qr = jsQR(imageData.data, cw, ch, { inversionAttempts: 'dontInvert' });
         if (qr && qr.data) {
@@ -7652,14 +7702,20 @@ function startCameraDecoding(video) {
         }
       }
 
-      if (_cameraZxingReader) {
+      // ── Основной путь: ZXing (Code128, EAN, Code39, QR) ──
+      if (multiReader) {
         try {
-          _cameraZxingReader.decodeFromCanvas(canvas)
-            .then(result => {
-              if (result && result.text) handleCameraResult(result.text);
-            })
-            .catch(() => {});
-        } catch (e) {}
+          const luminance = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+          const binarizer = new ZXing.HybridBinarizer(luminance);
+          const bitmap = new ZXing.BinaryBitmap(binarizer);
+          const result = multiReader.decode(bitmap, hints);
+          if (result && result.getText()) {
+            handleCameraResult(result.getText());
+            return;
+          }
+        } catch (e) {
+          // NotFoundException — норма, кадр без кода. Продолжаем.
+        }
       }
     }
 
@@ -7668,7 +7724,6 @@ function startCameraDecoding(video) {
 
   _cameraRafId = requestAnimationFrame(tick);
 }
-
 function handleCameraResult(code) {
   const clean = String(code || '').trim();
   if (!clean) return;
