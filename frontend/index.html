@@ -80,62 +80,91 @@
   <span id="alert-text"></span>
 </div>
 
-    <div class="toolbar" id="toolbar">
-  <input type="text" id="search" placeholder="🔍 Поиск по номеру, модели, отделу, ответственному…" style="flex:1;min-width:200px">
+<!-- ТУЛБАР -->
+<div class="toolbar" id="toolbar">
+
+  <!-- Строка массовых операций (появляется при выбранных) -->
+  <div class="toolbar-bulk" id="toolbar-bulk" style="display:none;">
+    <span class="bulk-label">⚡ Выбрано: <b id="bulk-total">0</b></span>
+    <button class="btn btn-info btn-bulk-cal" id="btn-bulk-cal" onclick="openBulkSendModal()">
+      <i class="fa-solid fa-box"></i> Отправить (<span id="bulk-counter">0</span>)
+    </button>
+    <button class="btn btn-success btn-bulk-return" id="btn-bulk-return" onclick="openBulkReturnModal()">
+      <i class="fa-solid fa-box-open"></i> Вернуть (<span id="bulk-return-counter">0</span>)
+    </button>
+    <button class="btn btn-secondary btn-bulk-responsible" id="btn-bulk-responsible" onclick="openBulkResponsibleModal()">
+      <i class="fa-solid fa-user-pen"></i> Ответственный (<span id="bulk-responsible-counter">0</span>)
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="clearSelection()">
+      <i class="fa-solid fa-xmark"></i> Снять
+    </button>
+  </div>
+
+  <!-- Строка 1: Поиск + Фильтр -->
+  <div class="toolbar-row toolbar-row-search">
+    <input type="text" id="search" placeholder="🔍 Поиск по номеру, модели, отделу, ответственному…">
+    <div style="position:relative;display:inline-block;">
+      <button class="btn btn-secondary" id="filter-btn" onclick="toggleFilterPanel(event)">
+        <i class="fa-solid fa-filter"></i> Фильтр
+      </button>
+      <div class="filter-panel" id="filter-panel">
+        <div id="filter-fields-container"></div>
+        <div class="filter-actions">
+          <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
+            <i class="fa-solid fa-rotate-left"></i> Сбросить
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+            <i class="fa-solid fa-check"></i> Применить
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Строка 2: Действия -->
+  <div class="toolbar-row toolbar-row-actions">
     <button class="btn btn-info btn-scan-barcode" onclick="handleScanButton()" title="Сканировать штрихкод">
-    <i class="fa-solid fa-barcode"></i> Сканировать
-  </button>
-  <div style="position:relative;display:inline-block;">
-   <button class="btn btn-secondary" id="filter-btn" onclick="toggleFilterPanel(event)"><i class="fa-solid fa-filter"></i> Фильтр</button>
+      <i class="fa-solid fa-barcode"></i> Сканировать
+    </button>
+    <button class="btn btn-primary btn-add-pipette" onclick="openModal()">
+      <i class="fa-solid fa-plus"></i> Добавить
+    </button>
 
-    <div class="filter-panel" id="filter-panel">
-      <div id="filter-fields-container"></div>
-
-      <div class="filter-actions">
-        <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
-          <i class="fa-solid fa-rotate-left"></i> Сбросить
+    <!-- Ещё ▼ -->
+    <div class="dropdown" id="more-dropdown" style="position:relative;display:inline-block;">
+      <button class="btn btn-secondary" onclick="toggleMoreMenu(event)">
+        <i class="fa-solid fa-ellipsis"></i> Ещё <i class="fa-solid fa-caret-down"></i>
+      </button>
+      <div id="more-menu" class="dropdown-menu">
+        <button class="dropdown-item btn-export" onclick="exportToXlsx(); closeMoreMenu();">
+          <i class="fa-solid fa-file-excel"></i> Экспорт в Excel
         </button>
-        <button class="btn btn-primary btn-sm" onclick="applyFilters()">
-          <i class="fa-solid fa-check"></i> Применить
+        <button class="dropdown-item btn-export" onclick="exportToPDF(); closeMoreMenu();">
+          <i class="fa-solid fa-print"></i> Экспорт в PDF
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item btn-print-labels" onclick="openBarcodePrintModal(); closeMoreMenu();">
+          <i class="fa-solid fa-tag"></i> Печать этикеток
+        </button>
+        <button class="dropdown-item btn-import" onclick="openImportModal(); closeMoreMenu();">
+          <i class="fa-solid fa-download"></i> Импорт данных
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item btn-settings" onclick="openSettingsModal(); closeMoreMenu();">
+          <i class="fa-solid fa-gear"></i> Настройки
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" onclick="toggleCompactMode(); closeMoreMenu();">
+          <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
+        </button>
+        <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
+          <i class="fa-solid fa-keyboard"></i> Горячие клавиши
         </button>
       </div>
     </div>
   </div>
 
-  <button class="btn btn-primary btn-add-pipette" onclick="openModal()"><i class="fa-solid fa-plus"></i> Добавить оборудование</button>
-<button class="btn btn-info btn-bulk-cal" 
-      id="btn-bulk-cal" 
-      style="display:none;" 
-      onclick="openBulkSendModal()">
-<i class="fa-solid fa-box"></i> Отправить на поверку (<span id="bulk-counter">0</span>)
-</button>
-<button class="btn btn-success btn-bulk-return" 
-      id="btn-bulk-return" 
-      style="display:none;" 
-      onclick="openBulkReturnModal()">
-<i class="fa-solid fa-box-open"></i> Вернулись с поверки (<span id="bulk-return-counter">0</span>)
-</button>  
- <button class="btn btn-secondary btn-bulk-responsible" 
-      id="btn-bulk-responsible" 
-      style="display:none;" 
-      onclick="openBulkResponsibleModal()">
-<i class="fa-solid fa-user-pen"></i> Сменить ответственного (<span id="bulk-responsible-counter">0</span>)
-</button>     
-<button class="btn btn-warning btn-import" onclick="openImportModal()"><i class="fa-solid fa-download"></i> Импорт</button>
-<button class="btn btn-info btn-print-labels" onclick="openBarcodePrintModal()" title="Печать этикеток">
-  <i class="fa-solid fa-tag"></i> Печать этикеток
-</button>     
-<button class="btn btn-warning btn-settings" onclick="openSettingsModal()"><i class="fa-solid fa-gear"></i> Настройки</button>
-
-<div class="dropdown btn-export" id="export-dropdown" style="position:relative;display:inline-block;">
-  <button class="btn btn-secondary" onclick="toggleExportMenu(event)"><i class="fa-solid fa-upload"></i> Экспорт <i class="fa-solid fa-caret-down"></i></button>
-  <div id="export-menu" class="dropdown-menu">
-  <button class="dropdown-item" onclick="exportToXlsx(); closeExportMenu();"><i class="fa-solid fa-file-excel"></i> Excel (.xlsx)</button>
-  <button class="dropdown-item" onclick="exportToPDF(); closeExportMenu();"><i class="fa-solid fa-print"></i> PDF</button>
 </div>
-</div>
-</div>
-
     <div class="table-wrapper">
       <table id="pipettes-table">
         <thead>
@@ -777,6 +806,7 @@
     </div>
   </div>
 </div>
+  
 <!-- МОДАЛКА СКАНИРОВАНИЯ КАМЕРОЙ -->
 <div class="modal-overlay" id="camera-scan-modal">
   <div class="modal modal-compact">
@@ -802,6 +832,28 @@
       <button type="button" class="btn btn-primary" onclick="toggleCameraTorch()" id="camera-torch-btn" style="display:none;">
         <i class="fa-solid fa-lightbulb"></i> Фонарик
       </button>
+    </div>
+  </div>
+</div>
+
+  <!-- МОДАЛКА ГОРЯЧИХ КЛАВИШ -->
+<div class="modal-overlay" id="hotkeys-modal">
+  <div class="modal" style="max-width: 520px;">
+    <h2><i class="fa-solid fa-keyboard"></i> Горячие клавиши</h2>
+
+    <table class="hotkeys-table">
+      <tr><td><kbd>/</kbd></td><td>Фокус в поиск</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Закрыть модалку / фильтр</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>N</kbd></td><td>Добавить оборудование</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>F</kbd></td><td>Открыть фильтр</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>E</kbd></td><td>Экспорт в Excel</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + <kbd>P</kbd></td><td>Печать этикеток</td></tr>
+      <tr><td><kbd>F5</kbd></td><td>Обновить данные</td></tr>
+      <tr><td><kbd>Shift</kbd> + <kbd>?</kbd></td><td>Эта справка</td></tr>
+    </table>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeHotkeysHelp()">Закрыть</button>
     </div>
   </div>
 </div>
