@@ -1884,6 +1884,8 @@ function updateBulkCalButton() {
       btnResponsible.style.display = 'none';
     }
   }
+    // 🆕 Обновляем видимость строки массовых операций
+  updateBulkToolbar();
 }
 
 function clearSelection() {
@@ -3277,6 +3279,11 @@ function renderAuthUI() {
         _dataLoadedForUser = currentUser.id;
         loadPipetteData();
       }
+    }
+    
+        // 🆕 Пересчитываем видимость «Ещё ▼» после логина (без F5)
+    if (typeof updateMoreMenuVisibility === 'function') {
+      setTimeout(updateMoreMenuVisibility, 0);
     }
     
     } else {
@@ -7724,4 +7731,199 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.title = 'Сканировать USB-сканером';
     }
   });
+});
+// ============================================================
+// МЕНЮ «ЕЩЁ ▼»
+// ============================================================
+function toggleMoreMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('more-menu');
+  if (menu) menu.classList.toggle('show');
+}
+
+function closeMoreMenu() {
+  const menu = document.getElementById('more-menu');
+  if (menu) menu.classList.remove('show');
+}
+
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('more-dropdown');
+  if (dd && !dd.contains(e.target)) closeMoreMenu();
+});
+
+// Скрыть «Ещё ▼», если внутри нет ни одной доступной кнопки
+function updateMoreMenuVisibility() {
+  const dd = document.getElementById('more-dropdown');
+  if (!dd) return;
+  const hasVisible = Array.from(dd.querySelectorAll('.dropdown-item'))
+    .some(el => el.style.display !== 'none');
+  dd.style.display = hasVisible ? 'inline-block' : 'none';
+}
+
+// ============================================================
+// СТРОКА МАССОВЫХ ОПЕРАЦИЙ — показ/скрытие
+// ============================================================
+function updateBulkToolbar() {
+  const row = document.getElementById('toolbar-bulk');
+  if (!row) return;
+
+  const totalEl = document.getElementById('bulk-total');
+  if (totalEl) totalEl.textContent = selectedPipettes.size;
+
+  const hasAny = selectedPipettes.size > 0;
+  row.style.display = hasAny ? 'flex' : 'none';
+}
+
+// ============================================================
+// КОМПАКТНЫЙ РЕЖИМ
+// ============================================================
+function toggleCompactMode() {
+  const isCompact = document.body.classList.toggle('compact-mode');
+  try {
+    localStorage.setItem('pipette_compact_mode', isCompact ? '1' : '0');
+  } catch (e) {}
+}
+
+// Восстановление при загрузке
+(function initCompactMode() {
+  try {
+    if (localStorage.getItem('pipette_compact_mode') === '1') {
+      document.body.classList.add('compact-mode');
+    }
+  } catch (e) {}
+})();
+
+// ============================================================
+// МОДАЛКА ГОРЯЧИХ КЛАВИШ
+// ============================================================
+function openHotkeysHelp() {
+  const modal = document.getElementById('hotkeys-modal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeHotkeysHelp() {
+  const modal = document.getElementById('hotkeys-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+// Закрытие по клику на оверлей
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'hotkeys-modal') closeHotkeysHelp();
+});
+
+// ============================================================
+// ГОРЯЧИЕ КЛАВИШИ
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target.tagName || '').toUpperCase();
+  const isInput = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT');
+
+  // В полях ввода — перехватываем только Esc
+  if (isInput) {
+    if (e.key === 'Escape') {
+      e.target.blur();
+      const panel = document.getElementById('filter-panel');
+      if (panel) panel.classList.remove('show');
+    }
+    return;
+  }
+
+     // Esc — закрыть модалку хоткеев / фильтр
+    if (e.key === 'Escape') {
+    const confirmModal = document.getElementById('confirm-modal');
+    if (confirmModal && confirmModal.classList.contains('active')) return;
+
+    const hotkeysModal = document.getElementById('hotkeys-modal');
+    if (hotkeysModal && hotkeysModal.classList.contains('active')) {
+      closeHotkeysHelp();
+      return;
+    }
+    const panel = document.getElementById('filter-panel');
+    if (panel && panel.classList.contains('show')) {
+      panel.classList.remove('show');
+    }
+    return;
+  }
+
+  // Shift + ? — справка
+  if (e.key === '?' && e.shiftKey) {
+    e.preventDefault();
+    openHotkeysHelp();
+    return;
+  }
+
+  // / — фокус в поиск
+  if (e.key === '/' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    const search = document.getElementById('search');
+    if (search) search.focus();
+    return;
+  }
+
+  // F5 — обновить данные без перезагрузки страницы
+  if (e.key === 'F5') {
+    e.preventDefault();
+    if (typeof loadPipetteData === 'function') {
+      loadPipetteData();
+      if (typeof showToast === 'function') showToast('Данные обновлены', 'success');
+    }
+    return;
+  }
+
+  // Дальше — только с Ctrl
+  if (!e.ctrlKey && !e.metaKey) return;
+
+  // Ctrl + N — добавить
+  if (e.key === 'n' || e.key === 'N' || e.key === 'т' || e.key === 'Т') {
+    e.preventDefault();
+    if (typeof canAddPipette === 'function' && canAddPipette()) {
+      openModal();
+    }
+    return;
+  }
+
+  // Ctrl + F — фильтр
+  if (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А') {
+    e.preventDefault();
+    const panel = document.getElementById('filter-panel');
+    if (panel && !panel.classList.contains('show')) {
+      toggleFilterPanel(e);
+    } else if (panel) {
+      panel.classList.remove('show');
+    }
+    return;
+  }
+
+  // Ctrl + E — экспорт Excel
+  if (e.key === 'e' || e.key === 'E' || e.key === 'у' || e.key === 'У') {
+    e.preventDefault();
+    if (typeof canExport === 'function' && canExport()) {
+      exportToXlsx();
+    }
+    return;
+  }
+
+  // Ctrl + P — печать этикеток
+  if (e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З') {
+    e.preventDefault();
+    if (typeof canPrintLabels === 'function' && canPrintLabels()) {
+      openBarcodePrintModal();
+    }
+    return;
+  }
+});
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ — скрытие «Ещё ▼» если пусто
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Скрываем «Ещё ▼» если все пункты недоступны по правам
+  // (например, у пользователя нет ни импорта, ни настроек, ни экспорта)
+  setTimeout(() => {
+    try {
+      if (typeof updateMoreMenuVisibility === 'function') {
+        updateMoreMenuVisibility();
+      }
+    } catch (e) {}
+  }, 100);
 });
