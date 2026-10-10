@@ -2,38 +2,6 @@
 // КОНФИГУРАЦИЯ API
 // ============================================================
 const API_URL = '/api';
-// 🆕 Накапливающий логгер — все сообщения видны, старые не теряются
-function camLog(msg, type) {
-  console.log('[CAM]', msg);
-  const el = document.getElementById('camera-scan-status');
-  if (!el) return;
-
-  // Первый вызов — очищаем накопленное
-  if (!el.dataset.logStarted) {
-    el.dataset.logStarted = '1';
-    el.dataset.fullLog = '';
-  }
-
-  // Добавляем строку с цветом через html
-  const color = type === 'error' ? '#dc2626'
-              : type === 'warn'  ? '#d97706'
-              : type === 'ok'    ? '#16a34a'
-              : '#475569';
-  el.dataset.fullLog += `<div style="color:${color};font-weight:600;font-size:12px;">${msg}</div>`;
-  el.innerHTML = el.dataset.fullLog;
-
-  // Автоскролл вниз
-  el.scrollTop = el.scrollHeight;
-}
-
-// 🆕 Сброс лога — перед открытием новой модалки
-function camLogReset() {
-  const el = document.getElementById('camera-scan-status');
-  if (!el) return;
-  el.dataset.logStarted = '';
-  el.dataset.fullLog = '';
-  el.innerHTML = '';
-}
 let authToken = null;
 let currentUser = null;
 let _lastPermsCheck = 0;
@@ -3269,12 +3237,12 @@ function renderAuthUI() {
       btnStop.style.display = isImpersonating() ? 'inline-flex' : 'none';
     }
 
-        const admin           = isAdmin();
+    const admin           = isAdmin();
     const canAdd          = canAddPipette();
     const canImportData   = canImport();
     const canExportData   = canExport();
     const canSettings     = canManageSettings();
-    const canScan         = canScanBarcode();
+    const canScan         = canScanBarcode() && !isMobileDevice();  // 🆕 на телефоне кнопка скрыта
     const canPrint        = canPrintLabels();
 
     document.querySelectorAll('.btn-add-pipette').forEach(el =>
@@ -7534,333 +7502,6 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// 🆕 СКАНИРОВАНИЕ ШТРИХ-КОДОВ КАМЕРОЙ ТЕЛЕФОНА
-// ============================================================
-let _cameraStream = null;
-let _cameraRafId = null;
-let _cameraZxingReader = null;
-let _cameraTorchOn = false;
-let _cameraTargetInput = null;
-let _cameraLastResult = '';
-let _cameraLastTime = 0;
-
-async function openCameraScan(targetInputId = null) {
-  _cameraTargetInput = targetInputId;
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast('Браузер не поддерживает доступ к камере', 'error');
-    return;
-  }
-
-  const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
-  if (location.protocol !== 'https:' && !isLocal) {
-    showToast('Камера работает только по HTTPS. Обратитесь к администратору.', 'error');
-    return;
-  }
-
-  // ── Сброс лога перед новой сессией ──
-  camLogReset();
-  camLog('1. Старт…', 'warn');
-
-  const modal = document.getElementById('camera-scan-modal');
-  if (modal) modal.classList.add('active');
-
-  try {
-      _cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { exact: 'environment' },   // ← exact, не ideal
-        width:  { ideal: 1920 },
-        height: { ideal: 1080 },
-        aspectRatio: { ideal: 16/9 },           // ← заставляем горизонтальный поток
-      },
-      audio: false,
-    });
-
-    camLog('2. Поток получен', 'warn');
-
-    const video = document.getElementById('camera-scan-video');
-    video.srcObject = _cameraStream;
-    await video.play();
-
-    camLog('3. Видео: ' + video.videoWidth + '×' + video.videoHeight, 'warn');
-
-    // ── Автофокус ──
-    const _track = _cameraStream.getVideoTracks()[0];
-    if (_track) {
-      const caps = _track.getCapabilities ? _track.getCapabilities() : {};
-      if (caps.focusMode && Array.isArray(caps.focusMode)
-          && caps.focusMode.includes('continuous')) {
-        try {
-          await _track.applyConstraints({ focusMode: 'continuous' });
-          camLog('4. Автофокус: continuous', 'ok');
-        } catch (e) {
-          camLog('4. Автофокус не включился', 'warn');
-        }
-      } else {
-        camLog('4. Автофокус не поддерживается', 'warn');
-      }
-    }
-
-    camLog('5. Запуск сканера…', 'warn');
-
-    // 🆕 Фонарик — асинхронно, НЕ блокирует сканирование
-    checkTorchSupport();
-
-    // 🆕 Сканирование стартует сразу
-    startCameraDecoding(video);
-  } catch (e) {
-    console.error('Camera error:', e);
-    let msg = 'Не удалось открыть камеру';
-    if (e.name === 'NotAllowedError')       msg = 'Доступ к камере запрещён';
-    else if (e.name === 'NotFoundError')    msg = 'Камера не найдена';
-    else if (e.name === 'NotReadableError') msg = 'Камера занята другим приложением';
-    camLog('❌ ' + msg, 'error');
-    showToast(msg, 'error');
-  }
-}
-
-function closeCameraScan() {
-  if (_cameraStream) {
-    _cameraStream.getTracks().forEach(t => t.stop());
-    _cameraStream = null;
-  }
-  if (_cameraRafId) {
-    cancelAnimationFrame(_cameraRafId);
-    _cameraRafId = null;
-  }
-  if (_cameraZxingReader) {
-    try { _cameraZxingReader.reset(); } catch (e) {}
-    _cameraZxingReader = null;
-  }
-  _cameraTorchOn = false;
-  _cameraLastResult = '';
-  _cameraTargetInput = null;
-
-  const video = document.getElementById('camera-scan-video');
-  if (video) video.srcObject = null;
-
-  const modal = document.getElementById('camera-scan-modal');
-  if (modal) modal.classList.remove('active');
-
-  const torchBtn = document.getElementById('camera-torch-btn');
-  if (torchBtn) torchBtn.style.display = 'none';
-}
-
-async function checkTorchSupport() {
-  const torchBtn = document.getElementById('camera-torch-btn');
-  if (!torchBtn || !_cameraStream) return;
-
-  const track = _cameraStream.getVideoTracks()[0];
-  if (!track) return;
-
-  // Samsung A54 отдаёт caps.torch не сразу. Проверяем с задержками.
-  for (let i = 1; i <= 8; i++) {
-    const caps = track.getCapabilities ? track.getCapabilities() : {};
-
-    if (caps.torch) {
-      // «Разбудить» фонарик — на некоторых Samsung нужен applyConstraints(false)
-      try { await track.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
-      torchBtn.style.display = 'inline-flex';
-      camLog('6. Фонарик: доступен ✓', 'ok');
-      return;
-    }
-    await new Promise(r => setTimeout(r, 250));
-  }
-
-  // Показываем кнопку всё равно — вдруг caps соврал
-  torchBtn.style.display = 'inline-flex';
-  camLog('6. Фонарик: не подтверждён (кнопка показана)', 'warn');
-}
-
-async function toggleCameraTorch() {
-  if (!_cameraStream) return;
-  const track = _cameraStream.getVideoTracks()[0];
-  if (!track) return;
-
-  _cameraTorchOn = !_cameraTorchOn;
-  try {
-    await track.applyConstraints({ advanced: [{ torch: _cameraTorchOn }] });
-  } catch (e) {
-    console.warn('Torch error:', e);
-    showToast('Фонарик не поддерживается', 'warn');
-    _cameraTorchOn = false;
-  }
-}
-
-function startCameraDecoding(video) {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-  // ── Проверка: ZXing загружен? ──
-  const hasZXing = (typeof ZXing !== 'undefined'
-                    && ZXing.MultiFormatReader
-                    && ZXing.HybridBinarizer
-                    && ZXing.BinaryBitmap);
-
-  camLog(hasZXing ? '7. ZXing загружен ✓' : '7. ZXing НЕ загружен ✗', hasZXing ? 'ok' : 'error');
-
-  // ── Hints: только нужные форматы → ускорение в 2–3 раза ──
-  const hints = new Map();
-   if (hasZXing) {
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-      ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.EAN_13,
-      ZXing.BarcodeFormat.EAN_8,
-      ZXing.BarcodeFormat.CODE_39,
-      ZXing.BarcodeFormat.QR_CODE,
-    ]);
-    // 🆕 TRY_HARDER — для мятых/затёртых этикеток
-    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-  }
-
-   // ── ZXing MultiFormatReader ──
-  let multiReader = null;
-  if (hasZXing) {
-    try {
-      multiReader = new ZXing.MultiFormatReader();
-      multiReader.setHints(hints);
-      _cameraZxingReader = multiReader;   // для closeCameraScan()
-    } catch (e) {
-      console.warn('⚠️ MultiFormatReader не создался:', e.message);
-      _cameraZxingReader = null;
-    }
-  }
-    let _frameCounter = 0;
-
-  const tick = () => {
-    if (!_cameraStream) return;
-
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      const w = video.videoWidth;
-      const h = video.videoHeight;
-
-      // 🆕 Если камера отдаёт вертикальный поток (портрет) —
-      // поворачиваем кадр на 90°, чтобы штрихкод был горизонтально
-      const isPortrait = h > w;
-
-      // Размер уменьшенного кадра
-      const maxSide = 1280;
-
-      let canvasW, canvasH;
-
-      if (isPortrait) {
-        // Поворот: конечный кадр горизонтальный
-        const scale = Math.min(1, maxSide / Math.max(w, h));
-        canvasW = Math.floor(h * scale);   // высота становится шириной
-        canvasH = Math.floor(w * scale);
-      } else {
-        const scale = Math.min(1, maxSide / Math.max(w, h));
-        canvasW = Math.floor(w * scale);
-        canvasH = Math.floor(h * scale);
-      }
-
-      if (canvas.width !== canvasW || canvas.height !== canvasH) {
-        canvas.width = canvasW;
-        canvas.height = canvasH;
-      }
-
-      // Рисуем кадр
-                if (isPortrait) {
-        // 🆕 Поворот на 90° ПРОТИВ часовой — Samsung A54 отдаёт видео
-        // с наклоном вправо, поэтому нужен -π/2, а не π/2.
-        ctx.save();
-        ctx.translate(0, canvasH);
-        ctx.rotate(-Math.PI / 2);
-        ctx.drawImage(video, 0, 0, canvasH, canvasW);
-        ctx.restore();
-      } else {
-        ctx.drawImage(video, 0, 0, canvasW, canvasH);
-      }
-      
-      const imageData = ctx.getImageData(0, 0, canvasW, canvasH);
-
-      // ── jsQR (только QR) ──
-      if (window.jsQR) {
-        const qr = jsQR(imageData.data, canvasW, canvasH, { inversionAttempts: 'dontInvert' });
-        if (qr && qr.data) {
-          handleCameraResult(qr.data);
-          return;
-        }
-      }
-
-      // ── ZXing — каждый 2-й кадр ──
-      if (multiReader) {
-          try {
-            const luminance = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-            const binarizer = new ZXing.HybridBinarizer(luminance);
-            const bitmap = new ZXing.BinaryBitmap(binarizer);
-            const result = multiReader.decode(bitmap, hints);
-            if (result && result.getText()) {
-              handleCameraResult(result.getText());
-              return;
-            }
-          } catch (e) {
-            // NotFoundException — норма
-          }
-        }
-      
-    }
-
-    _cameraRafId = requestAnimationFrame(tick);
-  };
-
-  _cameraRafId = requestAnimationFrame(tick);
-}
-function handleCameraResult(code) {
-  const clean = String(code || '').trim();
-  if (!clean) return;
-
-  const now = Date.now();
-  if (clean === _cameraLastResult && now - _cameraLastTime < 2000) return;
-  _cameraLastResult = clean;
-  _cameraLastTime = now;
-
-  if (navigator.vibrate) navigator.vibrate(80);
-
-  camLog('🎉 НАЙДЕНО: ' + clean, 'ok');
-  let targetEl = null;
-  if (_cameraTargetInput) targetEl = document.getElementById(_cameraTargetInput);
-
-  if (targetEl) {
-    targetEl.value = clean;
-    targetEl.dispatchEvent(new Event('input', { bubbles: true }));
-    showToast('Код вставлен', 'success');
-    closeCameraScan();
-    return;
-  }
-
-  const scannerInput = document.getElementById('barcode-input');
-  const scannerModal = document.getElementById('barcode-scanner-modal');
-  if (scannerInput && scannerModal && scannerModal.classList.contains('active')) {
-    scannerInput.value = clean;
-    scannerInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    closeCameraScan();
-    return;
-  }
-
-  const searchInput = document.getElementById('search');
-  if (searchInput) {
-    searchInput.value = clean;
-    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-    showToast('Код вставлен в поиск', 'success');
-  } else {
-    showToast('Код: ' + clean, 'success');
-  }
-
-  closeCameraScan();
-}
-
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'camera-scan-modal') closeCameraScan();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    const m = document.getElementById('camera-scan-modal');
-    if (m && m.classList.contains('active')) closeCameraScan();
-  }
-});
-
-// ============================================================
 // 🆕 УМНАЯ КНОПКА «СКАНИРОВАТЬ»
 // Десктоп → USB-сканер, Телефон/планшет → камера
 // ============================================================
@@ -7875,25 +7516,17 @@ function isMobileDevice() {
 }
 
 function handleScanButton() {
-  if (isMobileDevice()) {
-    openCameraScan();
-  } else {
-    openBarcodeScannerModal();
-  }
+  // 🆕 Кнопка «Сканировать» показывается только на ПК (см. renderAuthUI).
+  // На телефоне она скрыта, поэтому всегда открываем USB-сканер.
+  openBarcodeScannerModal();
 }
 
-// 🆕 Подмена иконки кнопки «Сканировать» под устройство
+// 🆕 Кнопка «Сканировать» — всегда иконка штрихкода (USB-сканер)
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.btn-scan-barcode, [onclick*="handleScanButton"]').forEach(btn => {
     const icon = btn.querySelector('i');
-    if (!icon) return;
-    if (isMobileDevice()) {
-      icon.className = 'fa-solid fa-camera';
-      btn.title = 'Сканировать камерой';
-    } else {
-      icon.className = 'fa-solid fa-barcode';
-      btn.title = 'Сканировать USB-сканером';
-    }
+    if (icon) icon.className = 'fa-solid fa-barcode';
+    btn.title = 'Сканировать USB-сканером';
   });
 });
 // ============================================================
