@@ -577,6 +577,237 @@ if (String(lastCalibration) > todayLocalStr()) {
   }
 });
 
+// ============================================================
+// 🆕 МАССОВОЕ СОЗДАНИЕ СЕРИИ
+// ============================================================
+router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', 'manage_pipettes']), async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+
+  const { count, template, serialStart } = req.body;
+
+  // ── 1. Валидация ──
+  const n = parseInt(count, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 100) {
+    return res.status(400).json({ error: 'Количество должно быть от 1 до 100' });
+  }
+  if (!template || typeof template !== 'object') {
+    return res.status(400).json({ error: 'Не передан шаблон' });
+  }
+
+  const trimmedModel = String(template.model || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+  if (!trimmedModel) {
+    return res.status(400).json({ error: 'Заполните поле «Модель»' });
+  }
+  if (trimmedModel.length > 255) {
+    return res.status(400).json({ error: 'Модель слишком длинная (максимум 255 символов)' });
+  }
+
+  const equipmentType = String(template.equipmentType || 'pipette').trim() || 'pipette';
+  const lastCalibration = String(template.lastCalibration || '').trim();
+  if (!lastCalibration) {
+    return res.status(400).json({ error: 'Заполните поле «Дата последней поверки»' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(lastCalibration)) {
+    return res.status(400).json({ error: 'Некорректный формат даты поверки' });
+  }
+  if (lastCalibration > todayLocalStr()) {
+    return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
+  }
+
+  // ── 2. Сборка шаблона ──
+  let department  = String(template.department  || '').trim();
+  let responsible = String(template.responsible || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+
+  // 🛡️ И.о. — принудительно ответственный и отдел основного
+  if (req.user.is_acting) {
+    responsible = req.user.acting_full_name  || '';
+    department  = req.user.acting_department || '';
+  }
+
+  if (!responsible) {
+    return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
+  }
+
+  // 🛡️ only_own_department
+  if (req.user.only_own_department && req.user.role !== 'admin') {
+    if (!req.user.department) {
+      return res.status(403).json({ error: 'У вас не указан отдел' });
+    }
+    if (department && department !== req.user.department) {
+      return res.status(403).json({ error: 'Можно создавать только в своём отделе' });
+    }
+    department = req.user.department;
+  }
+
+  // ── 3. Парсинг стартового серийного номера ──
+  // SN-0001 → base = "SN-", num = 1, width = 4
+  function parseSerialStart(s) {
+    const str = String(s || '').trim();
+    if (!str) return null;
+    const m = str.match(/^(.*?)(\d+)$/);
+    if (!m) return { base: str, num: 0, width: 0, hasNum: false };
+    return {
+      base: m[1],
+      num: parseInt(m[2], 10),
+      width: m[2].length,
+      hasNum: true,
+    };
+  }
+
+  const serialPattern = parseSerialStart(serialStart);
+
+  function makeSerial(i) {
+    if (!serialPattern) return '';
+    if (!serialPattern.hasNum) {
+      // Без числа в конце — ко всем добавляем " (i)"
+      return `${serialPattern.base} (${i + 1})`;
+    }
+    const num = serialPattern.num + i;
+    const numStr = String(num).padStart(serialPattern.width, '0');
+    return `${serialPattern.base}${numStr}`;
+  }
+
+  // ── 4. Сборка custom_data шаблона ──
+  const STANDARD_KEYS = new Set([
+    'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume',
+    'department', 'interval', 'lastCalibration', 'cert', 'result', 'active',
+    'responsible', 'location', 'notes',
+  ]);
+  const templateCustom = {};
+  for (const [k, v] of Object.entries(template)) {
+    if (!STANDARD_KEYS.has(k) && v !== undefined && v !== null && v !== '') {
+      templateCustom[k] = v;
+    }
+  }
+
+  const intervalNum = parseInt(template.interval, 10) || 12;
+  const result = ['pass', 'fail', 'wip'].includes(template.result) ? template.result : 'pass';
+  const active = (template.active === false || template.active === 0 || template.active === 'false' || template.active === '0') ? 0 : 1;
+  const serialTemplate = String(template.serial || '').trim();
+
+  // ── 5. Транзакция: создаём N пипеток ──
+  const conn = await db.getConnection();
+  const createdIds = [];
+
+  try {
+    await conn.beginTransaction();
+
+    // Префикс типа
+    let prefix = null;
+    const [typeRows] = await conn.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    if (typeRows.length && typeRows[0].setting_value) {
+      const types = db.safeParse(typeRows[0].setting_value, []);
+      const found = types.find(t => t.value === equipmentType);
+      if (found && found.prefix && found.prefix.trim()) {
+        prefix = found.prefix.trim().toUpperCase();
+      }
+    }
+    if (!prefix) {
+      const fallback = {
+        pipette: 'P', analyzer: 'A', thermometer: 'T',
+        scales: 'S', photometer: 'F', microscope: 'M',
+      };
+      prefix = fallback[equipmentType] || 'EQ';
+    }
+
+    for (let i = 0; i < n; i++) {
+      // ID — через ту же функцию, что и одиночное создание
+      const id = await db.generatePipetteId(prefix, conn);
+
+      // Серийник: если задан шаблон-число — инкрементим,
+      // иначе подставляем общий serialTemplate (может быть пустым)
+      const serial = serialPattern
+        ? makeSerial(i)
+        : serialTemplate;
+
+      // custom_data — копия шаблона для каждой
+      const customData = Object.keys(templateCustom).length
+        ? JSON.stringify(templateCustom)
+        : null;
+
+      // Автобаркод — как в одиночном POST
+      const computed = computeBarcodeValue({ id, serial, custom_data: templateCustom });
+
+      await conn.query(
+        `INSERT INTO pipettes
+          (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
+           last_calibration, cert, last_result, active, responsible, location, notes,
+           custom_data, barcode, barcode_source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          serial,
+          String(template.manufacturer || '').trim(),
+          trimmedModel,
+          equipmentType,
+          String(template.volume || '').trim(),
+          department,
+          intervalNum,
+          lastCalibration,
+          String(template.cert || '').trim(),
+          result,
+          active,
+          responsible,
+          String(template.location || '').trim(),
+          String(template.notes || '').trim(),
+          customData,
+          computed.value,
+          computed.source,
+        ]
+      );
+
+      // История поверок для каждой
+      if (lastCalibration) {
+        await conn.query(
+          `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
+           VALUES (?, ?, ?, ?, ?)`,
+          [id, lastCalibration, String(template.cert || '').trim(), result, 'Первичная поверка (серия)']
+        );
+      }
+
+      createdIds.push(id);
+    }
+
+    // Одна запись в аудит-лог
+    const rangeText = createdIds.length > 1
+      ? `${createdIds[0]} … ${createdIds[createdIds.length - 1]}`
+      : createdIds[0];
+    await conn.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [
+        req.user.id,
+        req.user.full_name,
+        'Массовое добавление оборудования',
+        `${n} шт. (${rangeText}), тип: ${equipmentType}, модель: ${trimmedModel}`
+      ]
+    );
+
+    await conn.commit();
+
+    res.status(201).json({
+      message: `Создано ${n} единиц`,
+      count: n,
+      ids: createdIds,
+    });
+  } catch (e) {
+    await conn.rollback();
+    console.error('Bulk-create error:', e);
+
+    if (e.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'Конфликт ID, попробуйте ещё раз', code: 'race' });
+    }
+
+    res.status(500).json({ error: 'Ошибка массового добавления: ' + e.message });
+  } finally {
+    conn.release();
+  }
+});
+
+
 // Обновление
     router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_pipettes']), async (req, res) => {
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
@@ -1437,236 +1668,5 @@ router.get('/:id/calibration', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Ошибка загрузки истории' });
   }
 });
-
-// ============================================================
-// 🆕 МАССОВОЕ СОЗДАНИЕ СЕРИИ
-// ============================================================
-router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', 'manage_pipettes']), async (req, res) => {
-  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
-    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
-  }
-
-  const { count, template, serialStart } = req.body;
-
-  // ── 1. Валидация ──
-  const n = parseInt(count, 10);
-  if (!Number.isFinite(n) || n < 1 || n > 100) {
-    return res.status(400).json({ error: 'Количество должно быть от 1 до 100' });
-  }
-  if (!template || typeof template !== 'object') {
-    return res.status(400).json({ error: 'Не передан шаблон' });
-  }
-
-  const trimmedModel = String(template.model || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
-  if (!trimmedModel) {
-    return res.status(400).json({ error: 'Заполните поле «Модель»' });
-  }
-  if (trimmedModel.length > 255) {
-    return res.status(400).json({ error: 'Модель слишком длинная (максимум 255 символов)' });
-  }
-
-  const equipmentType = String(template.equipmentType || 'pipette').trim() || 'pipette';
-  const lastCalibration = String(template.lastCalibration || '').trim();
-  if (!lastCalibration) {
-    return res.status(400).json({ error: 'Заполните поле «Дата последней поверки»' });
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(lastCalibration)) {
-    return res.status(400).json({ error: 'Некорректный формат даты поверки' });
-  }
-  if (lastCalibration > todayLocalStr()) {
-    return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
-  }
-
-  // ── 2. Сборка шаблона ──
-  let department  = String(template.department  || '').trim();
-  let responsible = String(template.responsible || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
-
-  // 🛡️ И.о. — принудительно ответственный и отдел основного
-  if (req.user.is_acting) {
-    responsible = req.user.acting_full_name  || '';
-    department  = req.user.acting_department || '';
-  }
-
-  if (!responsible) {
-    return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
-  }
-
-  // 🛡️ only_own_department
-  if (req.user.only_own_department && req.user.role !== 'admin') {
-    if (!req.user.department) {
-      return res.status(403).json({ error: 'У вас не указан отдел' });
-    }
-    if (department && department !== req.user.department) {
-      return res.status(403).json({ error: 'Можно создавать только в своём отделе' });
-    }
-    department = req.user.department;
-  }
-
-  // ── 3. Парсинг стартового серийного номера ──
-  // SN-0001 → base = "SN-", num = 1, width = 4
-  function parseSerialStart(s) {
-    const str = String(s || '').trim();
-    if (!str) return null;
-    const m = str.match(/^(.*?)(\d+)$/);
-    if (!m) return { base: str, num: 0, width: 0, hasNum: false };
-    return {
-      base: m[1],
-      num: parseInt(m[2], 10),
-      width: m[2].length,
-      hasNum: true,
-    };
-  }
-
-  const serialPattern = parseSerialStart(serialStart);
-
-  function makeSerial(i) {
-    if (!serialPattern) return '';
-    if (!serialPattern.hasNum) {
-      // Без числа в конце — ко всем добавляем " (i)"
-      return `${serialPattern.base} (${i + 1})`;
-    }
-    const num = serialPattern.num + i;
-    const numStr = String(num).padStart(serialPattern.width, '0');
-    return `${serialPattern.base}${numStr}`;
-  }
-
-  // ── 4. Сборка custom_data шаблона ──
-  const STANDARD_KEYS = new Set([
-    'id', 'serial', 'manufacturer', 'model', 'equipmentType', 'volume',
-    'department', 'interval', 'lastCalibration', 'cert', 'result', 'active',
-    'responsible', 'location', 'notes',
-  ]);
-  const templateCustom = {};
-  for (const [k, v] of Object.entries(template)) {
-    if (!STANDARD_KEYS.has(k) && v !== undefined && v !== null && v !== '') {
-      templateCustom[k] = v;
-    }
-  }
-
-  const intervalNum = parseInt(template.interval, 10) || 12;
-  const result = ['pass', 'fail', 'wip'].includes(template.result) ? template.result : 'pass';
-  const active = (template.active === false || template.active === 0 || template.active === 'false' || template.active === '0') ? 0 : 1;
-  const serialTemplate = String(template.serial || '').trim();
-
-  // ── 5. Транзакция: создаём N пипеток ──
-  const conn = await db.getConnection();
-  const createdIds = [];
-
-  try {
-    await conn.beginTransaction();
-
-    // Префикс типа
-    let prefix = null;
-    const [typeRows] = await conn.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    if (typeRows.length && typeRows[0].setting_value) {
-      const types = db.safeParse(typeRows[0].setting_value, []);
-      const found = types.find(t => t.value === equipmentType);
-      if (found && found.prefix && found.prefix.trim()) {
-        prefix = found.prefix.trim().toUpperCase();
-      }
-    }
-    if (!prefix) {
-      const fallback = {
-        pipette: 'P', analyzer: 'A', thermometer: 'T',
-        scales: 'S', photometer: 'F', microscope: 'M',
-      };
-      prefix = fallback[equipmentType] || 'EQ';
-    }
-
-    for (let i = 0; i < n; i++) {
-      // ID — через ту же функцию, что и одиночное создание
-      const id = await db.generatePipetteId(prefix, conn);
-
-      // Серийник: если задан шаблон-число — инкрементим,
-      // иначе подставляем общий serialTemplate (может быть пустым)
-      const serial = serialPattern
-        ? makeSerial(i)
-        : serialTemplate;
-
-      // custom_data — копия шаблона для каждой
-      const customData = Object.keys(templateCustom).length
-        ? JSON.stringify(templateCustom)
-        : null;
-
-      // Автобаркод — как в одиночном POST
-      const computed = computeBarcodeValue({ id, serial, custom_data: templateCustom });
-
-      await conn.query(
-        `INSERT INTO pipettes
-          (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
-           last_calibration, cert, last_result, active, responsible, location, notes,
-           custom_data, barcode, barcode_source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          serial,
-          String(template.manufacturer || '').trim(),
-          trimmedModel,
-          equipmentType,
-          String(template.volume || '').trim(),
-          department,
-          intervalNum,
-          lastCalibration,
-          String(template.cert || '').trim(),
-          result,
-          active,
-          responsible,
-          String(template.location || '').trim(),
-          String(template.notes || '').trim(),
-          customData,
-          computed.value,
-          computed.source,
-        ]
-      );
-
-      // История поверок для каждой
-      if (lastCalibration) {
-        await conn.query(
-          `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
-           VALUES (?, ?, ?, ?, ?)`,
-          [id, lastCalibration, String(template.cert || '').trim(), result, 'Первичная поверка (серия)']
-        );
-      }
-
-      createdIds.push(id);
-    }
-
-    // Одна запись в аудит-лог
-    const rangeText = createdIds.length > 1
-      ? `${createdIds[0]} … ${createdIds[createdIds.length - 1]}`
-      : createdIds[0];
-    await conn.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [
-        req.user.id,
-        req.user.full_name,
-        'Массовое добавление оборудования',
-        `${n} шт. (${rangeText}), тип: ${equipmentType}, модель: ${trimmedModel}`
-      ]
-    );
-
-    await conn.commit();
-
-    res.status(201).json({
-      message: `Создано ${n} единиц`,
-      count: n,
-      ids: createdIds,
-    });
-  } catch (e) {
-    await conn.rollback();
-    console.error('Bulk-create error:', e);
-
-    if (e.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'Конфликт ID, попробуйте ещё раз', code: 'race' });
-    }
-
-    res.status(500).json({ error: 'Ошибка массового добавления: ' + e.message });
-  } finally {
-    conn.release();
-  }
-});
-
 
 module.exports = router;
