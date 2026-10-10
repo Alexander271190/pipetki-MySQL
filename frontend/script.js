@@ -4579,6 +4579,12 @@ async function renderBarcodesSettings() {
             </select>
           </div>
           <div class="bc-cell">
+            <label>Шрифт этикеток</label>
+            <select id="bc-font">
+              <option value="">— загрузка —</option>
+            </select>
+          </div>
+          <div class="bc-cell">
             <label>Копий</label>
             <input type="number" id="bc-default-copies" value="1" min="1" max="50">
           </div>
@@ -6781,6 +6787,27 @@ async function loadBarcodeSettings() {
     const s = await apiRequest('/settings/system');
     const sizeEl = document.getElementById('bc-label-size');
     if (sizeEl) sizeEl.value = s.barcode_label_size || '58x40';
+        // 🆕 Подгружаем список шрифтов, реально лежащих на диске
+    const fontEl = document.getElementById('bc-font');
+    if (fontEl) {
+      try {
+        const list = await apiRequest('/barcodes/fonts');
+        if (Array.isArray(list) && list.length > 0) {
+          fontEl.innerHTML = list
+            .map(f => `<option value="${esc(f.value)}">${esc(f.label)}</option>`)
+            .join('');
+          const current = s.barcode_font || 'dejavu';
+          fontEl.value = list.some(f => f.value === current)
+            ? current
+            : list[0].value;
+        } else {
+          fontEl.innerHTML = '<option value="">— нет доступных шрифтов —</option>';
+        }
+      } catch (e) {
+        console.warn('loadBarcodeSettings fonts:', e);
+        fontEl.innerHTML = '<option value="">— ошибка загрузки —</option>';
+      }
+    }
     const typeEl = document.getElementById('bc-type');
     if (typeEl) typeEl.value = s.barcode_type || 'code128';
     const copiesEl = document.getElementById('bc-default-copies');
@@ -6819,6 +6846,7 @@ async function loadBarcodeSettings() {
 async function saveBarcodeSettings() {
   const fields = Array.from(document.querySelectorAll('.bc-field-cb:checked')).map(cb => cb.value);
   if (fields.length === 0) { showToast('Выберите хотя бы одно поле', 'error'); return; }
+  const fontEl = document.getElementById('bc-font');
   const payload = {
     barcode_label_size: document.getElementById('bc-label-size').value,
     barcode_type: document.getElementById('bc-type').value,
@@ -6827,6 +6855,7 @@ async function saveBarcodeSettings() {
     barcode_max_length: document.getElementById('bc-max-length').value,
     barcode_fallback_to_pdf: document.getElementById('bc-fallback-to-pdf').checked ? '1' : '0',
     barcode_label_fields: JSON.stringify(fields),
+    barcode_font: fontEl && fontEl.value ? fontEl.value : 'dejavu',
   };
   try {
     await apiRequest('/settings/system', 'PUT', payload);
