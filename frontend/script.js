@@ -7566,11 +7566,12 @@ async function openCameraScan(targetInputId = null) {
   if (modal) modal.classList.add('active');
 
   try {
-    _cameraStream = await navigator.mediaDevices.getUserMedia({
+      _cameraStream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: { ideal: 'environment' },
-        width:  { ideal: 1280 },
-        height: { ideal: 720 },
+        facingMode: { exact: 'environment' },   // ← exact, не ideal
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 },
+        aspectRatio: { ideal: 16/9 },           // ← заставляем горизонтальный поток
       },
       audio: false,
     });
@@ -7724,7 +7725,7 @@ function startCameraDecoding(video) {
       _cameraZxingReader = null;
     }
   }
-  let _frameCounter = 0;
+    let _frameCounter = 0;
 
   const tick = () => {
     if (!_cameraStream) return;
@@ -7733,30 +7734,57 @@ function startCameraDecoding(video) {
       const w = video.videoWidth;
       const h = video.videoHeight;
 
-      // Уменьшаем кадр для скорости (640px по длинной стороне — оптимум)
-     const maxSide = 800;
-      const scale = Math.min(1, maxSide / Math.max(w, h));
-      const cw = Math.floor(w * scale);
-      const ch = Math.floor(h * scale);
+      // 🆕 Если камера отдаёт вертикальный поток (портрет) —
+      // поворачиваем кадр на 90°, чтобы штрихкод был горизонтально
+      const isPortrait = h > w;
 
-      if (canvas.width !== cw || canvas.height !== ch) {
-        canvas.width = cw;
-        canvas.height = ch;
+      // Размер уменьшенного кадра
+      const maxSide = 900;
+
+      let canvasW, canvasH;
+
+      if (isPortrait) {
+        // Поворот: конечный кадр горизонтальный
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        canvasW = Math.floor(h * scale);   // высота становится шириной
+        canvasH = Math.floor(w * scale);
+      } else {
+        const scale = Math.min(1, maxSide / Math.max(w, h));
+        canvasW = Math.floor(w * scale);
+        canvasH = Math.floor(h * scale);
       }
 
-      ctx.drawImage(video, 0, 0, cw, ch);
-      const imageData = ctx.getImageData(0, 0, cw, ch);
+      if (canvas.width !== canvasW || canvas.height !== canvasH) {
+        canvas.width = canvasW;
+        canvas.height = canvasH;
+      }
 
-      // ── Быстрый путь: jsQR (только QR) ──
+      // Рисуем кадр
+           if (isPortrait) {
+        // 🆕 Поворот на 90° по часовой.
+        // ВАЖНО: после rotate(π/2) оси меняются местами —
+        // размеры назначения тоже меняются: (canvasH, canvasW).
+        ctx.save();
+        ctx.translate(canvasW, 0);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(video, 0, 0, canvasH, canvasW);   // ← h,w → canvasH,canvasW
+        ctx.restore();
+      } else {
+        ctx.drawImage(video, 0, 0, canvasW, canvasH);
+      }
+
+      const imageData = ctx.getImageData(0, 0, canvasW, canvasH);
+
+      // ── jsQR (только QR) ──
       if (window.jsQR) {
-        const qr = jsQR(imageData.data, cw, ch, { inversionAttempts: 'dontInvert' });
+        const qr = jsQR(imageData.data, canvasW, canvasH, { inversionAttempts: 'dontInvert' });
         if (qr && qr.data) {
           handleCameraResult(qr.data);
           return;
         }
       }
 
-           // ── ZXing — каждый 2-й кадр (в 2 раза быстрее) ──
+      // ── ZXing — каждый 2-й кадр ──
       if (multiReader) {
         _frameCounter++;
         if (_frameCounter % 2 === 0) {
