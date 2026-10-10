@@ -2,6 +2,38 @@
 // КОНФИГУРАЦИЯ API
 // ============================================================
 const API_URL = '/api';
+// 🆕 Накапливающий логгер — все сообщения видны, старые не теряются
+function camLog(msg, type) {
+  console.log('[CAM]', msg);
+  const el = document.getElementById('camera-scan-status');
+  if (!el) return;
+
+  // Первый вызов — очищаем накопленное
+  if (!el.dataset.logStarted) {
+    el.dataset.logStarted = '1';
+    el.dataset.fullLog = '';
+  }
+
+  // Добавляем строку с цветом через html
+  const color = type === 'error' ? '#dc2626'
+              : type === 'warn'  ? '#d97706'
+              : type === 'ok'    ? '#16a34a'
+              : '#475569';
+  el.dataset.fullLog += `<div style="color:${color};font-weight:600;font-size:12px;">${msg}</div>`;
+  el.innerHTML = el.dataset.fullLog;
+
+  // Автоскролл вниз
+  el.scrollTop = el.scrollHeight;
+}
+
+// 🆕 Сброс лога — перед открытием новой модалки
+function camLogReset() {
+  const el = document.getElementById('camera-scan-status');
+  if (!el) return;
+  el.dataset.logStarted = '';
+  el.dataset.fullLog = '';
+  el.innerHTML = '';
+}
 let authToken = null;
 let currentUser = null;
 let _lastPermsCheck = 0;
@@ -7526,9 +7558,10 @@ async function openCameraScan(targetInputId = null) {
     return;
   }
 
+    camLog('1. Старт…', 'warn');
+
   const modal = document.getElementById('camera-scan-modal');
   const status = document.getElementById('camera-scan-status');
-  if (status) status.textContent = 'Запуск камеры…';
   if (modal) modal.classList.add('active');
 
   try {
@@ -7541,9 +7574,11 @@ async function openCameraScan(targetInputId = null) {
       audio: false,
     });
 
+    camLog('2. Поток получен…', 'warn');
     const video = document.getElementById('camera-scan-video');
     video.srcObject = _cameraStream;
     await video.play();
+    camLog('3. Видео: ' + video.videoWidth + '×' + video.videoHeight, 'warn');
 
        // ── Принудительный автофокус ──
     const _track = _cameraStream.getVideoTracks()[0];
@@ -7564,7 +7599,8 @@ async function openCameraScan(targetInputId = null) {
 
     if (status) status.textContent = 'Наведите камеру на штрих-код…';
 
-    checkTorchSupport();
+    await new Promise(r => setTimeout(r, 400));
+    await checkTorchSupport();
     startCameraDecoding(video);
   } catch (e) {
     console.error('Camera error:', e);
@@ -7604,15 +7640,32 @@ function closeCameraScan() {
   if (torchBtn) torchBtn.style.display = 'none';
 }
 
-function checkTorchSupport() {
+async function checkTorchSupport() {
   const torchBtn = document.getElementById('camera-torch-btn');
   if (!torchBtn || !_cameraStream) return;
 
   const track = _cameraStream.getVideoTracks()[0];
   if (!track) return;
 
-  const caps = track.getCapabilities ? track.getCapabilities() : {};
-  torchBtn.style.display = caps.torch ? 'inline-flex' : 'none';
+  // Samsung отдаёт caps.torch не сразу. Прогреваем трек.
+  for (let i = 1; i <= 6; i++) {
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    console.log('[CAM] torch check #' + i + ':', caps.torch);
+
+    if (caps.torch) {
+      // «Разбудить» flash — некоторые A54 отдают torch только после applyConstraints
+      try { await track.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
+      torchBtn.style.display = 'inline-flex';
+      console.log('[CAM] ✅ Фонарик доступен');
+      return;
+    }
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  // Если совсем не поддерживается — всё равно показываем кнопку,
+  // чтобы пользователь мог попробовать (вдруг caps соврал).
+  torchBtn.style.display = 'inline-flex';
+  console.log('[CAM] ⚠️ caps.torch не найдено, но кнопка показана');
 }
 
 async function toggleCameraTorch() {
@@ -7680,7 +7733,7 @@ function startCameraDecoding(video) {
       const h = video.videoHeight;
 
       // Уменьшаем кадр для скорости (640px по длинной стороне — оптимум)
-      const maxSide = 640;
+      const maxSide = 1024;
       const scale = Math.min(1, maxSide / Math.max(w, h));
       const cw = Math.floor(w * scale);
       const ch = Math.floor(h * scale);
