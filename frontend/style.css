@@ -2886,3 +2886,86 @@ html[data-theme="dark"] .hotkeys-table kbd {
   }
 }
 
+/* ============================================================
+   ТЁМНАЯ ТЕМА — фикс inline-фонов внутри модалок
+   Многие блоки в модалках используют style="background:#..." напрямую,
+   и в тёмной теме текст становится невидимым. Перебиваем через
+   !important, не меняя HTML.
+   ============================================================ */
+
+/* Информер — СИНИЙ (info) */
+html[data-theme="dark"] .modal [style*="background:#f0f9ff"],
+html[data-theme="dark"] .modal [style*="background: #f0f9ff"] {
+  background: rgba(14, 165, 233, .12) !important;
+  color: #93c5fd !important;
+}
+html[data-theme="dark"] .modal [style*="background:#f0f9ff"] strong,
+html[data-theme="dark"] .modal [style*="background: #f0f9ff"] strong {
+  color: #93c5fd !important;
+}
+
+/* Информер — ЖЁЛТЫЙ (warning) */
+html[data-theme="dark"] .modal [style*="background:#fef9c3"],
+html[data-theme="dark"] .modal [style*="background: #fef9c3"] {
+  background: rgba(234, 179, 8, .12) !important;
+  color: #fcd34d !important;
+}
+html[data-theme="dark"] .modal [style*="background:#fef9c3"] strong,
+html[data-theme="dark"] .modal [style*="background: #fef9c3"] strong {
+  color: #fcd34d !important;
+}
+
+/* Информер — ЗЕЛЁНЫЙ (success) */
+html[data-theme="dark"] .modal [style*="background:#ecfdf5"],
+html[data-theme="dark"] .modal [style*="background: #ecfdf5"] {
+  background: rgba(22, 163, 74, .12) !important;
+  color: #86efac !important;
+}
+html[data-theme="dark"] .modal [style*="background:#ecfdf5"] strong,
+html[data-theme="dark"] .modal [style*="background: #ecfdf5"] strong {
+  color: #86efac !important;
+}
+
+/* Информер — КРАСНЫЙ (danger) */
+html[data-theme="dark"] .modal [style*="background:#fee2e2"],
+html[data-theme="dark"] .modal [style*="background: #fee2e2"] {
+  background: rgba(220, 38, 38, .12) !important;
+  color: #fca5a5 !important;
+}
+html[data-theme="dark"] .modal [style*="background:#fee2e2"] strong,
+html[data-theme="dark"] .modal [style*="background: #fee2e2"] strong {
+  color: #fca5a5 !important;
+}
+
+/* Светло-серые блоки (f8fafc, f1f5f9) */
+html[data-theme="dark"] .modal [style*="background:#f8fafc"],
+html[data-theme="dark"] .modal [style*="background: #f8fafc"],
+html[data-theme="dark"] .modal [style*="background:#f1f5f9"],
+html[data-theme="dark"] .modal [style*="background: #f1f5f9"] {
+  background: #273449 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Синие блоки (eff6ff — например, «замена на время поверки») */
+html[data-theme="dark"] .modal [style*="background:#eff6ff"],
+html[data-theme="dark"] .modal [style*="background: #eff6ff"] {
+  background: rgba(59, 130, 246, .12) !important;
+  color: #93c5fd !important;
+}
+
+/* Белые вложенные блоки (label внутри replacement-options, replacements и т.п.) */
+html[data-theme="dark"] .modal [style*="background:#fff;"],
+html[data-theme="dark"] .modal [style*="background: #fff;"] {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+/* Наследование цвета для всего текста внутри тёмных модалок */
+html[data-theme="dark"] .modal [style*="background:#f0f9ff"] span,
+html[data-theme="dark"] .modal [style*="background:#fef9c3"] span,
+html[data-theme="dark"] .modal [style*="background:#ecfdf5"] span,
+html[data-theme="dark"] .modal [style*="background:#fee2e2"] span,
+html[data-theme="dark"] .modal [style*="background:#eff6ff"] span {
+  color: inherit !important;
+}
+
