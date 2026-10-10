@@ -3,11 +3,14 @@
 // ============================================================
 const express = require('express');
 const net = require('net');
+const path = require('path');
 const bwipjs = require('bwip-js');
 const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
 const db = require('../db');
 const { authenticate, requireRole, requirePermission } = require('../middleware/auth');
+const FONT_REGULAR = path.join(__dirname, '..', 'frontend', 'fonts', 'DejaVuSans.ttf');
+const FONT_BOLD    = path.join(__dirname, '..', 'frontend', 'fonts', 'DejaVuSans-Bold.ttf');
 
 const router = express.Router();
 
@@ -338,11 +341,21 @@ router.get('/labels.pdf', authenticate, requirePermission('print_labels'), async
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     const zebraSize = LABEL_SIZES[s.barcode_label_size] || LABEL_SIZES['58x40'];
-    const doc = layout === 'zebra'
-      ? new PDFDocument({ size: [zebraSize.widthPt, zebraSize.heightPt], margins: { top: 4, bottom: 4, left: 4, right: 4 }, autoFirstPage: false })
-      : new PDFDocument({ size: 'A4', margin: 20 });
+const doc = layout === 'zebra'
+  ? new PDFDocument({ size: [zebraSize.widthPt, zebraSize.heightPt], margins: { top: 4, bottom: 4, left: 4, right: 4 }, autoFirstPage: false })
+  : new PDFDocument({ size: 'A4', margin: 20 });
 
-    doc.pipe(res);
+try {
+  doc.registerFont('Reg', FONT_REGULAR);
+  doc.registerFont('Bold', FONT_BOLD);
+  doc.font('Reg');
+  console.log('✅ PDF: используется DejaVu Sans (кириллица OK)');
+} catch (e) {
+  console.warn('⚠️ PDF: не удалось загрузить DejaVu, используется Helvetica.', e.message);
+  console.warn('   Положите DejaVuSans.ttf и DejaVuSans-Bold.ttf в frontend/fonts/');
+}
+
+doc.pipe(res);
 
     function getFieldLine(p, f) {
       switch (f) {
