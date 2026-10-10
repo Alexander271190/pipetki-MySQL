@@ -18,10 +18,11 @@ const { authenticate, requireRole, requirePermission } = require('../middleware/
 const FONT_DIR = path.join(__dirname, '..', 'frontend', 'fonts');
 
 const FONTS = {
-  dejavu:   { name: 'DejaVu Sans',             regular: 'DejaVuSans.ttf',                    bold: 'DejaVuSans-Bold.ttf' },
-  ptsans:   { name: 'PT Sans',                 regular: 'PTSans-Regular.ttf',                bold: 'PTSans-Bold.ttf' },
-  roboto:   { name: 'Roboto',                  regular: 'Roboto-Regular.ttf',                bold: 'Roboto-Bold.ttf' },
-  opensans: { name: 'Open Sans SemiCondensed', regular: 'OpenSans_SemiCondensed-Regular.ttf', bold: 'OpenSans-Bold.ttf' },
+  dejavu:     { name: 'DejaVu Sans',        regular: 'DejaVuSans.ttf',                 bold: 'DejaVuSans-Bold.ttf' },
+  ptsans:     { name: 'PT Sans',            regular: 'PTSans-Regular.ttf',             bold: 'PTSans-Bold.ttf' },
+  roboto:     { name: 'Roboto',             regular: 'Roboto-Regular.ttf',             bold: 'Roboto-Bold.ttf' },
+  robotocond: { name: 'Roboto Condensed',   regular: 'Roboto_Condensed-Regular.ttf',   bold: 'Roboto_Condensed-Regular.ttf' },
+  opensans:   { name: 'Open Sans',          regular: 'OpenSans-Bold.ttf',              bold: 'OpenSans-Bold.ttf' },
 };
 
 function fontFilesExist(def) {
