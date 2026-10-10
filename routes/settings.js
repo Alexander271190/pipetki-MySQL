@@ -383,9 +383,17 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
         return res.status(400).json({ error: `Слишком длинный prefix у ${t.value}` });
       }
 
-      // 🛡️ Место поверки: external | internal
+       // 🛡️ Место поверки: external | internal
       if (!t.calibrationPlace || !['external', 'internal'].includes(t.calibrationPlace)) {
         t.calibrationPlace = 'internal';
+      }
+
+      // 🆕 МПИ (месяцы). Если не задан или ≤0 — ставим 12.
+      const rawIv = parseInt(t.interval, 10);
+      if (!Number.isFinite(rawIv) || rawIv < 1 || rawIv > 120) {
+        t.interval = 12;
+      } else {
+        t.interval = rawIv;
       }
     }
 
