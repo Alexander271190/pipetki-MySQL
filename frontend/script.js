@@ -2315,6 +2315,28 @@ async function generateFormFields(data = null) {
       container.appendChild(div);
       
     }
+    
+        // 🆕 Автоподстановка МПИ из типа оборудования
+    const eqSelect = document.getElementById('p-equipmentType');
+    const ivInput  = document.getElementById('p-interval');
+    if (eqSelect && ivInput) {
+      const applyIntervalFromType = () => {
+        const typeVal = eqSelect.value;
+        const t = _equipmentTypes.find(x => x.value === typeVal);
+        const n = t && Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0
+          ? parseInt(t.interval, 10)
+          : 12;
+        ivInput.value = String(n);
+      };
+
+      // При смене типа — пересчитываем МПИ
+      eqSelect.addEventListener('change', applyIntervalFromType);
+
+      // При создании (нет data.id) — подставляем сразу
+      if (!data || !data.id) {
+        applyIntervalFromType();
+      }
+    }
 
     if (document.getElementById('p-department')) {
       const datalist = document.getElementById('dept-list');
@@ -4496,6 +4518,7 @@ async function renderEquipmentSettings() {
             <th style="width:140px;">value</th>
             <th>label</th>
             <th style="width:80px;">prefix</th>
+            <th style="width:100px;">МПИ (мес.)</th>
             <th style="width:200px;">Место поверки</th>
             <th style="width:60px;"></th>
           </tr>
@@ -5423,10 +5446,16 @@ function renderEquipmentTypesTable() {
         <input type="text" value="${esc(t.label)}"
                oninput="updateEquipmentType(${i}, 'label', this.value)">
       </td>
-            <td>
+     <td>
         <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
                style="text-align:center;text-transform:uppercase;"
                oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
+      </td>
+      <td>
+        <input type="number" value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}"
+               min="1" max="120"
+               style="text-align:center;"
+               oninput="updateEquipmentType(${i}, 'interval', parseInt(this.value, 10) || 12)">
       </td>
       <td>
         <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
@@ -5474,11 +5503,12 @@ function addEquipmentType() {
     return;
   }
 
-   _cachedEquipmentTypes.push({
+  _cachedEquipmentTypes.push({
     value: trimmed,
     label: trimmed,
     prefix: 'EQ',
-    calibrationPlace: 'internal'
+    calibrationPlace: 'internal',
+    interval: 12
   });
   renderEquipmentTypesTable();
   showToast('Тип добавлен. Не забудьте нажать «Сохранить типы».', 'success');
@@ -5527,6 +5557,15 @@ function updateEquipmentTypesWarning() {
     problems.push(`Не указано место поверки у: ${noPlace.map(t => t.value).join(', ')}`);
   }
 
+  // 🆕 Некорректный МПИ
+  const badInterval = _cachedEquipmentTypes.filter(t => {
+    const n = parseInt(t.interval, 10);
+    return !Number.isFinite(n) || n < 1 || n > 120;
+  });
+  if (badInterval.length > 0) {
+    problems.push(`Некорректный МПИ у: ${badInterval.map(t => t.value).join(', ')} (будет 12)`);
+  }
+
   if (problems.length > 0) {
     warn.style.display = 'block';
     warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + problems.join('<br><i class="fa-solid fa-triangle-exclamation"></i> ');
@@ -5558,6 +5597,8 @@ async function saveEquipmentTypes() {
   }
     _cachedEquipmentTypes.forEach(t => {
     if (!t.calibrationPlace) t.calibrationPlace = 'internal';
+    const n = parseInt(t.interval, 10);
+    t.interval = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
   });
 
     try {
