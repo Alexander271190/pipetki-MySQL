@@ -336,7 +336,7 @@ async function seedInitialData() {
  await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('barcode_type', 'code128')`);
  await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('barcode_label_fields', ?)`,
   [JSON.stringify(['id', 'model', 'serial', 'department'])]);
-  const bcDefaults = {
+    const bcDefaults = {
     barcode_mode: 'pdf-zebra',
     barcode_label_size: '58x40',
     barcode_fallback_to_pdf: '1',
@@ -344,6 +344,7 @@ async function seedInitialData() {
     barcode_zebra_language: 'zpl',
     barcode_agent_port: '9200',
     barcode_max_length: '128',
+    barcode_font: 'dejavu',
   };
   for (const [k, v] of Object.entries(bcDefaults)) {
   await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES (?, ?)`, [k, v]);
