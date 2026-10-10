@@ -7701,7 +7701,7 @@ function startCameraDecoding(video) {
 
   // ── Hints: только нужные форматы → ускорение в 2–3 раза ──
   const hints = new Map();
-  if (hasZXing) {
+   if (hasZXing) {
     hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
       ZXing.BarcodeFormat.CODE_128,
       ZXing.BarcodeFormat.EAN_13,
@@ -7709,9 +7709,9 @@ function startCameraDecoding(video) {
       ZXing.BarcodeFormat.CODE_39,
       ZXing.BarcodeFormat.QR_CODE,
     ]);
+    // 🆕 TRY_HARDER — для мятых/затёртых этикеток
+    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
   }
-  // Раскомментируй, если этикетки мятые/тусклые (замедлит на ~30%):
-  // hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
    // ── ZXing MultiFormatReader ──
   let multiReader = null;
@@ -7739,7 +7739,7 @@ function startCameraDecoding(video) {
       const isPortrait = h > w;
 
       // Размер уменьшенного кадра
-      const maxSide = 900;
+      const maxSide = 1280;
 
       let canvasW, canvasH;
 
@@ -7760,19 +7760,18 @@ function startCameraDecoding(video) {
       }
 
       // Рисуем кадр
-           if (isPortrait) {
-        // 🆕 Поворот на 90° по часовой.
-        // ВАЖНО: после rotate(π/2) оси меняются местами —
-        // размеры назначения тоже меняются: (canvasH, canvasW).
+                if (isPortrait) {
+        // 🆕 Поворот на 90° ПРОТИВ часовой — Samsung A54 отдаёт видео
+        // с наклоном вправо, поэтому нужен -π/2, а не π/2.
         ctx.save();
-        ctx.translate(canvasW, 0);
-        ctx.rotate(Math.PI / 2);
-        ctx.drawImage(video, 0, 0, canvasH, canvasW);   // ← h,w → canvasH,canvasW
+        ctx.translate(0, canvasH);
+        ctx.rotate(-Math.PI / 2);
+        ctx.drawImage(video, 0, 0, canvasH, canvasW);
         ctx.restore();
       } else {
         ctx.drawImage(video, 0, 0, canvasW, canvasH);
       }
-
+      
       const imageData = ctx.getImageData(0, 0, canvasW, canvasH);
 
       // ── jsQR (только QR) ──
@@ -7786,8 +7785,6 @@ function startCameraDecoding(video) {
 
       // ── ZXing — каждый 2-й кадр ──
       if (multiReader) {
-        _frameCounter++;
-        if (_frameCounter % 2 === 0) {
           try {
             const luminance = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
             const binarizer = new ZXing.HybridBinarizer(luminance);
@@ -7801,7 +7798,7 @@ function startCameraDecoding(video) {
             // NotFoundException — норма
           }
         }
-      }
+      
     }
 
     _cameraRafId = requestAnimationFrame(tick);
