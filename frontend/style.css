@@ -2692,11 +2692,13 @@ html[data-theme="dark"] .status-dot-inline {
 }
 
 /* ============================================================
-   ТУЛБАР — новая структура (строки + dropdown «Ещё»)
+   ТУЛБАР — одна строка с переносом
    ============================================================ */
 .toolbar {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   background: #fff;
   padding: 12px;
@@ -2713,12 +2715,14 @@ html[data-theme="dark"] .status-dot-inline {
 }
 
 .toolbar-row-search {
-  width: 100%;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .toolbar-row-search input {
-  flex: 1;
+  flex: 0 1 340px;
   min-width: 200px;
+  max-width: 400px;
   padding: 9px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -2733,7 +2737,8 @@ html[data-theme="dark"] .status-dot-inline {
 }
 
 .toolbar-row-actions {
-  width: 100%;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* Строка массовых операций */
