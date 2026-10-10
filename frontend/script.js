@@ -7558,10 +7558,11 @@ async function openCameraScan(targetInputId = null) {
     return;
   }
 
-    camLog('1. Старт…', 'warn');
+  // ── Сброс лога перед новой сессией ──
+  camLogReset();
+  camLog('1. Старт…', 'warn');
 
   const modal = document.getElementById('camera-scan-modal');
-  const status = document.getElementById('camera-scan-status');
   if (modal) modal.classList.add('active');
 
   try {
@@ -7574,13 +7575,15 @@ async function openCameraScan(targetInputId = null) {
       audio: false,
     });
 
-    camLog('2. Поток получен…', 'warn');
+    camLog('2. Поток получен', 'warn');
+
     const video = document.getElementById('camera-scan-video');
     video.srcObject = _cameraStream;
     await video.play();
+
     camLog('3. Видео: ' + video.videoWidth + '×' + video.videoHeight, 'warn');
 
-       // ── Принудительный автофокус ──
+    // ── Автофокус ──
     const _track = _cameraStream.getVideoTracks()[0];
     if (_track) {
       const caps = _track.getCapabilities ? _track.getCapabilities() : {};
@@ -7588,27 +7591,29 @@ async function openCameraScan(targetInputId = null) {
           && caps.focusMode.includes('continuous')) {
         try {
           await _track.applyConstraints({ focusMode: 'continuous' });
-          console.log('✅ Автофокус: continuous');
+          camLog('4. Автофокус: continuous', 'ok');
         } catch (e) {
-          console.warn('⚠️ Автофокус не удалось включить:', e.message);
+          camLog('4. Автофокус не включился', 'warn');
         }
       } else {
-        console.log('ℹ️ Автофокус не поддерживается этой камерой');
+        camLog('4. Автофокус не поддерживается', 'warn');
       }
     }
 
-    if (status) status.textContent = 'Наведите камеру на штрих-код…';
+    camLog('5. Запуск сканера…', 'warn');
 
-    await new Promise(r => setTimeout(r, 400));
-    await checkTorchSupport();
+    // 🆕 Фонарик — асинхронно, НЕ блокирует сканирование
+    checkTorchSupport();
+
+    // 🆕 Сканирование стартует сразу
     startCameraDecoding(video);
   } catch (e) {
     console.error('Camera error:', e);
     let msg = 'Не удалось открыть камеру';
-    if (e.name === 'NotAllowedError')       msg = 'Доступ к камере запрещён. Разрешите в настройках браузера.';
-    else if (e.name === 'NotFoundError')    msg = 'Камера не найдена на устройстве.';
-    else if (e.name === 'NotReadableError') msg = 'Камера занята другим приложением.';
-    if (status) status.textContent = '❌ ' + msg;
+    if (e.name === 'NotAllowedError')       msg = 'Доступ к камере запрещён';
+    else if (e.name === 'NotFoundError')    msg = 'Камера не найдена';
+    else if (e.name === 'NotReadableError') msg = 'Камера занята другим приложением';
+    camLog('❌ ' + msg, 'error');
     showToast(msg, 'error');
   }
 }
@@ -7647,25 +7652,23 @@ async function checkTorchSupport() {
   const track = _cameraStream.getVideoTracks()[0];
   if (!track) return;
 
-  // Samsung отдаёт caps.torch не сразу. Прогреваем трек.
-  for (let i = 1; i <= 6; i++) {
+  // Samsung A54 отдаёт caps.torch не сразу. Проверяем с задержками.
+  for (let i = 1; i <= 8; i++) {
     const caps = track.getCapabilities ? track.getCapabilities() : {};
-    console.log('[CAM] torch check #' + i + ':', caps.torch);
 
     if (caps.torch) {
-      // «Разбудить» flash — некоторые A54 отдают torch только после applyConstraints
+      // «Разбудить» фонарик — на некоторых Samsung нужен applyConstraints(false)
       try { await track.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
       torchBtn.style.display = 'inline-flex';
-      console.log('[CAM] ✅ Фонарик доступен');
+      camLog('6. Фонарик: доступен ✓', 'ok');
       return;
     }
     await new Promise(r => setTimeout(r, 250));
   }
 
-  // Если совсем не поддерживается — всё равно показываем кнопку,
-  // чтобы пользователь мог попробовать (вдруг caps соврал).
+  // Показываем кнопку всё равно — вдруг caps соврал
   torchBtn.style.display = 'inline-flex';
-  console.log('[CAM] ⚠️ caps.torch не найдено, но кнопка показана');
+  camLog('6. Фонарик: не подтверждён (кнопка показана)', 'warn');
 }
 
 async function toggleCameraTorch() {
@@ -7688,15 +7691,12 @@ function startCameraDecoding(video) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
   // ── Проверка: ZXing загружен? ──
-  // Если нет — работаем только через jsQR (QR-коды). Камера не падает.
   const hasZXing = (typeof ZXing !== 'undefined'
                     && ZXing.MultiFormatReader
                     && ZXing.HybridBinarizer
                     && ZXing.BinaryBitmap);
 
-  if (!hasZXing) {
-    console.warn('⚠️ ZXing не загружен — доступно только сканирование QR через jsQR');
-  }
+  camLog(hasZXing ? '7. ZXing загружен ✓' : '7. ZXing НЕ загружен ✗', hasZXing ? 'ok' : 'error');
 
   // ── Hints: только нужные форматы → ускорение в 2–3 раза ──
   const hints = new Map();
@@ -7724,6 +7724,7 @@ function startCameraDecoding(video) {
       _cameraZxingReader = null;
     }
   }
+  let _frameCounter = 0;
 
   const tick = () => {
     if (!_cameraStream) return;
@@ -7733,7 +7734,7 @@ function startCameraDecoding(video) {
       const h = video.videoHeight;
 
       // Уменьшаем кадр для скорости (640px по длинной стороне — оптимум)
-      const maxSide = 1024;
+     const maxSide = 800;
       const scale = Math.min(1, maxSide / Math.max(w, h));
       const cw = Math.floor(w * scale);
       const ch = Math.floor(h * scale);
@@ -7755,19 +7756,22 @@ function startCameraDecoding(video) {
         }
       }
 
-      // ── Основной путь: ZXing (Code128, EAN, Code39, QR) ──
+           // ── ZXing — каждый 2-й кадр (в 2 раза быстрее) ──
       if (multiReader) {
-        try {
-          const luminance = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-          const binarizer = new ZXing.HybridBinarizer(luminance);
-          const bitmap = new ZXing.BinaryBitmap(binarizer);
-          const result = multiReader.decode(bitmap, hints);
-          if (result && result.getText()) {
-            handleCameraResult(result.getText());
-            return;
+        _frameCounter++;
+        if (_frameCounter % 2 === 0) {
+          try {
+            const luminance = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+            const binarizer = new ZXing.HybridBinarizer(luminance);
+            const bitmap = new ZXing.BinaryBitmap(binarizer);
+            const result = multiReader.decode(bitmap, hints);
+            if (result && result.getText()) {
+              handleCameraResult(result.getText());
+              return;
+            }
+          } catch (e) {
+            // NotFoundException — норма
           }
-        } catch (e) {
-          // NotFoundException — норма, кадр без кода. Продолжаем.
         }
       }
     }
@@ -7788,9 +7792,7 @@ function handleCameraResult(code) {
 
   if (navigator.vibrate) navigator.vibrate(80);
 
-  const status = document.getElementById('camera-scan-status');
-  if (status) status.textContent = '✅ Найдено: ' + clean;
-
+  camLog('🎉 НАЙДЕНО: ' + clean, 'ok');
   let targetEl = null;
   if (_cameraTargetInput) targetEl = document.getElementById(_cameraTargetInput);
 
