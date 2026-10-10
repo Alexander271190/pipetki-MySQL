@@ -2852,3 +2852,37 @@ html[data-theme="dark"] .hotkeys-table kbd {
   color: #e2e8f0;
 }
 
+/* ============================================================
+   МОБИЛЬНЫЙ ТУЛБАР — не растягиваем кнопки на всю ширину
+   (перебивает общий @media из начала файла)
+   ============================================================ */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  /* Поиск — на всю ширину */
+  .toolbar > #search {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  /* Кнопки и «Ещё» — компактные, слева */
+  .toolbar > .btn,
+  .toolbar > .dropdown > .btn {
+    width: auto;
+    max-width: 100%;
+    flex: 0 0 auto;
+  }
+
+  /* Bulk-строка — на всю ширину */
+  .toolbar > .toolbar-bulk {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}
+
