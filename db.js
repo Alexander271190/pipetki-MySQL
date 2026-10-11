@@ -250,6 +250,35 @@ async function initSchema() {
         INDEX idx_barcode_printers_enabled (enabled)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    
+        // 🆕 Справка
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS help_docs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        slug VARCHAR(100) NOT NULL UNIQUE,
+        title VARCHAR(255) NOT NULL,
+        content MEDIUMTEXT NOT NULL,
+        required_permissions TEXT,
+        sort_order INT DEFAULT 0,
+        enabled TINYINT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_help_enabled (enabled),
+        INDEX idx_help_sort (sort_order)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS help_images (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255),
+        mime_type VARCHAR(100) NOT NULL,
+        size_bytes INT DEFAULT 0,
+        uploaded_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
     // 🆕 Догон колонок
     await ensureColumns(conn, 'users', [
@@ -468,7 +497,7 @@ async function seedInitialData() {
       (id, label, type, field_id, enabled, options_source, filter_order)
       VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-        await pool.query(insF, ['status',         'Статус',           'select',      'status',           1, 'status_list',         1]);
+    await pool.query(insF, ['status',         'Статус',           'select',      'status',           1, 'status_list',         1]);
     await pool.query(insF, ['equipmentType',  'Тип оборудования', 'select',      'equipment_type',   1, 'equipment_type_list', 2]);
     await pool.query(insF, ['department',     'Отдел',            'select',      'department',       1, 'departments',         3]);
     await pool.query(insF, ['responsible',    'Ответственный',    'text',        'responsible',      1, '',                    4]);
@@ -476,6 +505,13 @@ async function seedInitialData() {
     await pool.query(insF, ['manufacturer',   'Производитель',    'text',        'manufacturer',     1, '',                    6]);
     await pool.query(insF, ['active',         'Активность',       'select',      'active',           1, 'active_list',         7]);
     await pool.query(insF, ['calPeriod',      'Дата поверки',     'date-period', 'last_calibration', 1, '',                    8]);  
+  }
+  
+    // 🆕 Справка
+  const [hc] = await pool.query('SELECT COUNT(*) AS c FROM help_docs');
+  if (hc[0].c === 0) {
+    await seedHelpDocs();
+    console.log('📖 Справка инициализирована');
   }
   
   return seededAny; 
@@ -508,4 +544,25 @@ function safeParse(json, fallback = []) {
   try { return JSON.parse(json); } catch { return fallback; }
 }
 
-module.exports = { query, getConnection, pool, initSchema, generatePipetteId, safeParse };
+async function seedHelpDocs(conn) {
+  const executor = conn || pool;
+  let sections = [];
+  try { sections = require('./help-seed'); } catch (e) { sections = []; }
+
+  for (const s of sections) {
+    await executor.query(
+      `INSERT IGNORE INTO help_docs
+         (slug, title, content, required_permissions, sort_order, enabled)
+       VALUES (?, ?, ?, ?, ?, 1)`,
+      [
+        s.slug,
+        s.title,
+        s.content,
+        JSON.stringify(s.requiredPermissions || []),
+        s.sortOrder || 0,
+      ]
+    );
+  }
+}
+
+module.exports = { query, getConnection, pool, initSchema, generatePipetteId, safeParse, seedHelpDocs };
