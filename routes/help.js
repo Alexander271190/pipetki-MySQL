@@ -91,7 +91,7 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const { slug, title, content, requiredPermissions, sortOrder, enabled } = req.body || {};
-    if (!slug || !/^[a-z][a-z0-9_]*$/.test(slug)) return res.status(400).json({ error: 'Некорректный slug' });
+    if (!slug || !/^[a-z][a-z0-9_-]*$/.test(slug)) return res.status(400).json({ error: 'Некорректный slug' });
     if (!title || !content) return res.status(400).json({ error: 'Заполните заголовок и содержимое' });
 
     const [ex] = await db.query('SELECT id FROM help_docs WHERE slug = ?', [slug]);
