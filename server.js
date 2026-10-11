@@ -49,6 +49,7 @@ app.use('/api/export',   wrapRouter(require('./routes/export')));
 app.use('/api/barcodes',         wrapRouter(require('./routes/barcodes')));
 app.use('/api/barcode-printers', wrapRouter(require('./routes/barcode-printers')));
 app.use('/api/help',             wrapRouter(require('./routes/help')));
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found' });
@@ -70,38 +71,76 @@ app.use((err, req, res, next) => {
 // ============================================================
 const db = require('./db');
 
-(async () => {
-  let retries = 30;
-  while (retries > 0) {
+async function waitForDatabase(maxAttempts = 90) {
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    attempt++;
+    let conn;
     try {
-      const conn = await db.pool.getConnection();
+      conn = await db.pool.getConnection();
       await conn.query('SELECT 1');
-      conn.release();
       console.log('✅ MySQL подключён');
-      break;
+      return true;
     } catch (e) {
-      retries--;
-      console.log(`⏳ Ожидание MySQL... (${retries} попыток осталось)`);
+      const left = maxAttempts - attempt;
+      console.log(`⏳ Ожидание MySQL... (${left} попыток осталось)`);
       await new Promise(r => setTimeout(r, 2000));
+    } finally {
+      if (conn) conn.release();
     }
   }
-  if (retries === 0) {
-    console.error('❌ Не удалось подключиться к MySQL');
-    process.exit(1);
+  return false;
+}
+
+(async () => {
+  // 90 попыток × 2 сек = 3 минуты на старт
+  const connected = await waitForDatabase(90);
+
+  if (!connected) {
+    console.error('❌ MySQL не ответил за 3 минуты. Приложение продолжит работу, когда БД поднимется.');
   }
 
+  if (connected) {
     try {
-    const seeded = await db.initSchema();
-    console.log('✅ Схема БД готова');
-    if (seeded) {
-      console.log('👤 Начальные пользователи и данные созданы');
+      const seeded = await db.initSchema();
+      console.log('✅ Схема БД готова');
+      if (seeded) {
+        console.log('👤 Начальные пользователи и данные созданы');
+      }
+    } catch (e) {
+      console.error('❌ Ошибка инициализации схемы:', e);
     }
-  } catch (e) {
-    console.error('❌ Ошибка инициализации схемы:', e);
-    process.exit(1);
   }
 
   app.listen(PORT, () => {
     console.log(`🚀 Server on http://0.0.0.0:${PORT}`);
   });
+
+  // Если БД не поднялась при старте — пытаемся догнать её фоном
+  if (!connected) {
+    const reconnectInterval = setInterval(async () => {
+      let conn;
+      try {
+        conn = await db.pool.getConnection();
+        await conn.query('SELECT 1');
+        console.log('✅ MySQL подключён (отложенное подключение)');
+
+        try {
+          const seeded = await db.initSchema();
+          console.log('✅ Схема БД готова');
+          if (seeded) {
+            console.log('👤 Начальные пользователи и данные созданы');
+          }
+        } catch (e) {
+          console.error('❌ Ошибка инициализации схемы:', e);
+        }
+
+        clearInterval(reconnectInterval);
+      } catch (e) {
+        // тихо ждём следующей попытки
+      } finally {
+        if (conn) conn.release();
+      }
+    }, 5000);
+  }
 })();
