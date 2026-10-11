@@ -50,10 +50,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./frontend:/app/frontend
-      - ./tests:/app/tests
-
+    
   # ═══════════════════════════════════════════════════════════
   # nginx — HTTPS-терминация + reverse proxy
   # Наружу открыты только 80 (редирект на HTTPS) и 443 (HTTPS)
