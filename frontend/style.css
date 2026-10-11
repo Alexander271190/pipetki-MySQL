@@ -2901,3 +2901,127 @@ html[data-theme="dark"] .modal [style*="background:#eff6ff"] span {
   color: inherit !important;
 }
 
+/* ============================================================
+   УНИВЕРСАЛЬНАЯ МОДАЛКА ДОБАВЛЕНИЯ — вкладки
+   ============================================================ */
+.modal-xl {
+  max-width: 1500px !important;
+  width: calc(100vw - 40px) !important;
+}
+
+.add-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 18px;
+}
+
+.add-tab {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: .92rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.add-tab:hover { color: #1e293b; background: #f8fafc; }
+.add-tab.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.bulk-counter { margin-left: auto; font-size: .85rem; color: #475569; font-weight: 600; }
+.bulk-counter b { color: #4f46e5; }
+
+.bulk-table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 55vh;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.bulk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+  min-width: 1200px;
+}
+
+.bulk-table thead th {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 7px 6px;
+  text-align: left;
+  border-bottom: 2px solid #cbd5e1;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.bulk-table tbody td {
+  padding: 3px 4px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.bulk-table tbody tr:hover td { background: #f8fafc; }
+.bulk-num {
+  text-align: center; color: #94a3b8; font-size: .75rem;
+  font-weight: 600; width: 40px;
+}
+
+.bulk-input {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: .82rem;
+  font-family: inherit;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+}
+.bulk-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99,102,241,.15);
+}
+
+.bulk-del-btn {
+  width: 28px; height: 28px;
+  padding: 0; border: none; background: transparent;
+  color: #dc2626; cursor: pointer; border-radius: 5px;
+  transition: background .15s; font-size: .85rem;
+}
+.bulk-del-btn:hover { background: #fee2e2; }
+
+.bulk-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: .9rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+}
+
+@media (max-width: 900px) {
+  .modal-xl { max-width: 98vw !important; width: 98vw !important; }
+}
