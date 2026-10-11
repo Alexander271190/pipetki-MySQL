@@ -1051,7 +1051,10 @@ function getSortedPipettes() {
     } else if (sortField === 'equipmentType') {
       va = (a.equipment_type || 'pipette');
       vb = (b.equipment_type || 'pipette');
-        } else if (sortField === 'status') {
+     } else if (sortField === 'lastCalibration') {
+      va = String(a.last_calibration || '').toLowerCase();
+      vb = String(b.last_calibration || '').toLowerCase();
+      } else if (sortField === 'status') {
       // 🆕 Сортировка по статусу — по фиксированному порядку
       const STATUS_ORDER = {
         'danger':   1,   // Просрочена
@@ -2581,28 +2584,29 @@ function renderBulkRows() {
 function renderBulkCell(field, value, rowIdx) {
   const fid = `bc-${rowIdx}-${field.id}`;
   const val = value == null ? '' : String(value);
-  const onInput = `onBulkChange(${rowIdx}, '${field.id}', this.value)`;
+
+  // Один обработчик — либо onBulkTypeChange (для типа), либо onBulkChange
+  const handler = field.id === 'equipmentType'
+    ? `onBulkTypeChange(${rowIdx}, this.value)`
+    : `onBulkChange(${rowIdx}, '${field.id}', this.value)`;
 
   if (field.type === 'select') {
     const opts = getBulkFieldOptions(field, val);
-    return `<select class="bulk-input" id="${fid}" onchange="${onInput}" ${field.id === 'equipmentType' ? `onchange="onBulkTypeChange(${rowIdx}, this.value)"` : ''}>
+    return `<select class="bulk-input" id="${fid}" onchange="${handler}">
       ${opts.map(o => `<option value="${esc(o.value)}" ${String(o.value) === val ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
     </select>`;
   }
 
   if (field.type === 'date') {
-    return `<input type="date" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${onInput}">`;
+    return `<input type="date" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${handler}">`;
   }
 
   if (field.type === 'number') {
-    return `<input type="number" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${onInput}" ${field.id === 'interval' ? 'min="1" max="120"' : ''}>`;
+    const extra = field.id === 'interval' ? 'min="1" max="120"' : '';
+    return `<input type="number" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${handler}" ${extra}>`;
   }
 
-  if (field.type === 'textarea') {
-    return `<input type="text" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${onInput}" placeholder="${esc(field.label)}">`;
-  }
-
-  return `<input type="text" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${onInput}" placeholder="${esc(field.label)}">`;
+  return `<input type="text" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${handler}" placeholder="${esc(field.label)}">`;
 }
 
 function getBulkFieldOptions(field, currentValue) {
