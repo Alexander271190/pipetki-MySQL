@@ -849,24 +849,87 @@
 </div>
   
 
-  <!-- МОДАЛКА ГОРЯЧИХ КЛАВИШ -->
+  <!-- МОДАЛКА СПРАВКИ -->
 <div class="modal-overlay" id="hotkeys-modal">
-  <div class="modal" style="max-width: 520px;">
-    <h2><i class="fa-solid fa-keyboard"></i> Горячие клавиши</h2>
+  <div class="modal modal-xl" style="max-width:1100px;">
+    <h2><i class="fa-solid fa-book-open"></i> Инструкция по работе с системой</h2>
 
-    <table class="hotkeys-table">
-      <tr><td><kbd>/</kbd></td><td>Фокус в поиск</td></tr>
-      <tr><td><kbd>Esc</kbd></td><td>Закрыть модалку / фильтр</td></tr>
-      <tr><td><kbd>Ctrl</kbd> + <kbd>N</kbd></td><td>Добавить оборудование</td></tr>
-      <tr><td><kbd>Ctrl</kbd> + <kbd>F</kbd></td><td>Открыть фильтр</td></tr>
-      <tr><td><kbd>Ctrl</kbd> + <kbd>E</kbd></td><td>Экспорт в Excel</td></tr>
-      <tr><td><kbd>Ctrl</kbd> + <kbd>P</kbd></td><td>Печать этикеток</td></tr>
-      <tr><td><kbd>F5</kbd></td><td>Обновить данные</td></tr>
-      <tr><td><kbd>Shift</kbd> + <kbd>?</kbd></td><td>Эта справка</td></tr>
-    </table>
+    <div class="docs-layout">
+      <aside class="docs-sidebar" id="docs-sidebar"></aside>
+      <main class="docs-content" id="docs-content"></main>
+    </div>
 
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" onclick="closeHotkeysHelp()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- МОДАЛКА РЕДАКТОРА СПРАВКИ -->
+<div class="modal-overlay" id="help-editor-modal">
+  <div class="modal modal-lg" style="max-width:900px;">
+    <h2 id="help-editor-title"><i class="fa-solid fa-pen"></i> Редактирование</h2>
+
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 200px;">
+        <label>Slug</label>
+        <input type="text" id="he-slug" pattern="[a-z][a-z0-9_]*" placeholder="intro">
+      </div>
+      <div class="form-group">
+        <label>Заголовок *</label>
+        <input type="text" id="he-title" placeholder="📌 Начало работы">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 120px;">
+        <label>Порядок</label>
+        <input type="number" id="he-sort-order" value="0" min="0">
+      </div>
+      <div class="form-group" style="flex:0 0 160px;">
+        <label>Включён</label>
+        <label class="bc-fallback-line" style="height:36px;">
+          <input type="checkbox" id="he-enabled" checked>
+          <span>Показывать</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Права (видимость)</label>
+      <small style="color:#64748b;display:block;margin-bottom:6px;font-size:.78rem;">
+        Если ничего не отмечено — раздел видят все. Если отмечены — только те, у кого есть любое из них, либо админ.
+      </small>
+      <div id="he-permissions" class="help-perms-grid"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Текст (Markdown)</label>
+      <div class="help-toolbar">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('## ')">H2</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('### ')">H3</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="heWrap('**','**')">B</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="heWrap('*','*')">I</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('- ')">• список</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('> ')">подсказка</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="hePickImage()">🖼 Картинка</button>
+      </div>
+      <textarea id="he-content" rows="14" style="font-family:ui-monospace,monospace;font-size:.83rem;"></textarea>
+      <input type="file" id="he-image-input" accept="image/*" style="display:none;">
+    </div>
+
+    <div class="form-group">
+      <label>Предпросмотр</label>
+      <div id="he-preview" class="help-preview"></div>
+    </div>
+
+    <div id="he-error" class="auth-error" style="margin-top:8px;"></div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeHelpEditor()">Отмена</button>
+      <button type="button" class="btn btn-primary" onclick="saveHelpEditor()">
+        <i class="fa-solid fa-floppy-disk"></i> Сохранить
+      </button>
     </div>
   </div>
 </div>
