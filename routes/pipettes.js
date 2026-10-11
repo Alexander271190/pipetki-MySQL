@@ -613,6 +613,10 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     } else if (lastCalibration > todayLocalStr()) {
       errors.push(`Строка ${lineNo}: дата поверки в будущем`);
     }
+    const serial = String(r.serial || '').trim();
+    if (serial.length > 255) errors.push(`Строка ${lineNo}: серийный номер слишком длинный`);
+    const manufacturer = String(r.manufacturer || '').trim();
+    if (manufacturer.length > 255) errors.push(`Строка ${lineNo}: производитель слишком длинный`);
 
     let responsible = String(r.responsible || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
     let department = String(r.department || '').trim();
@@ -649,8 +653,8 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
 
     return {
       lineNo, equipmentType, model,
-      serial: String(r.serial || '').trim(),
-      manufacturer: String(r.manufacturer || '').trim(),
+      serial,
+      manufacturer,
       volume: String(r.volume || '').trim(),
       department, responsible, lastCalibration, interval,
       cert: String(r.cert || '').trim(),
