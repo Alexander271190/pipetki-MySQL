@@ -642,7 +642,7 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     // Кастомные поля — всё, что не стандартное
     const customData = {};
     for (const [k, v] of Object.entries(r)) {
-      if (!STANDARD_FIELDS.has(k) && k !== 'id' && v !== undefined && v !== null && v !== '') {
+      if (!STANDARD_FIELDS.has(k) && k !== 'id' && !k.startsWith('_') && v !== undefined && v !== null && v !== '') {
         customData[k] = v;
       }
     }
