@@ -6,3 +6,5 @@ mysqldata
 data
 .env
 *.md
+tests
+frontend/uploads/help/*
