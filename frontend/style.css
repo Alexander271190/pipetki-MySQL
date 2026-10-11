@@ -3196,3 +3196,106 @@ html[data-theme="dark"] .help-preview { background: #1e293b; border-color: #3341
   max-width: 1100px !important;
   width: calc(100vw - 40px) !important;
 }
+/* ============================================================
+   ТЁМНАЯ ТЕМА — фикс вкладок и партии
+   ============================================================ */
+
+/* ── Вкладки «Одна единица / Партия» ── */
+html[data-theme="dark"] .add-tabs {
+  border-bottom-color: #334155;
+}
+html[data-theme="dark"] .add-tab {
+  color: #94a3b8;
+}
+html[data-theme="dark"] .add-tab:hover {
+  color: #e2e8f0;
+  background: #273449;
+}
+html[data-theme="dark"] .add-tab.active {
+  color: #a5b4fc;
+  border-bottom-color: #818cf8;
+  background: rgba(129, 140, 248, .08);
+}
+
+/* ── Счётчик строк ── */
+html[data-theme="dark"] .bulk-counter {
+  color: #94a3b8;
+}
+html[data-theme="dark"] .bulk-counter b {
+  color: #a5b4fc;
+}
+
+/* ── Обёртка таблицы партии ── */
+html[data-theme="dark"] .bulk-table-wrap {
+  border-color: #334155;
+  background: #1e293b;
+}
+
+/* ── Заголовки таблицы партии ── */
+html[data-theme="dark"] .bulk-table thead th {
+  background: #273449;
+  color: #cbd5e1;
+  border-bottom-color: #475569;
+}
+
+/* ── Ячейки таблицы партии ── */
+html[data-theme="dark"] .bulk-table tbody td {
+  border-bottom-color: #334155;
+}
+html[data-theme="dark"] .bulk-table tbody tr:hover td {
+  background: #273449;
+}
+html[data-theme="dark"] .bulk-num {
+  color: #64748b;
+}
+
+/* ── Поля ввода в таблице партии ── */
+html[data-theme="dark"] .bulk-input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .bulk-input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, .25);
+}
+html[data-theme="dark"] .bulk-input::placeholder {
+  color: #64748b;
+}
+
+/* ── Кнопка удаления строки ── */
+html[data-theme="dark"] .bulk-del-btn {
+  color: #fca5a5;
+}
+html[data-theme="dark"] .bulk-del-btn:hover {
+  background: rgba(220, 38, 38, .2);
+}
+
+/* ── Пустое состояние ── */
+html[data-theme="dark"] .bulk-empty {
+  background: #273449;
+  color: #94a3b8;
+  border-color: #475569;
+}
+
+/* ── Кнопка «Добавить строку» — ярче ── */
+html[data-theme="dark"] .bulk-toolbar .btn-primary {
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  box-shadow: 0 2px 12px rgba(129, 140, 248, .35);
+}
+html[data-theme="dark"] .bulk-toolbar .btn-primary:hover {
+  background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%);
+  box-shadow: 0 4px 18px rgba(129, 140, 248, .5);
+}
+
+/* ── Кнопка «Создать N» в партии ── */
+html[data-theme="dark"] #bc-submit-btn.btn-success {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  color: #052e16;
+  box-shadow: 0 2px 12px rgba(74, 222, 128, .35);
+}
+html[data-theme="dark"] #bc-submit-btn.btn-success:hover {
+  background: linear-gradient(135deg, #86efac 0%, #4ade80 100%);
+  box-shadow: 0 4px 18px rgba(74, 222, 128, .5);
+}
+
