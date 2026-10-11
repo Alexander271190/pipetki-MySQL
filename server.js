@@ -48,7 +48,7 @@ app.use('/api/import',   wrapRouter(require('./routes/import')));
 app.use('/api/export',   wrapRouter(require('./routes/export')));
 app.use('/api/barcodes',         wrapRouter(require('./routes/barcodes')));
 app.use('/api/barcode-printers', wrapRouter(require('./routes/barcode-printers')));
-
+app.use('/api/help',             wrapRouter(require('./routes/help')));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found' });
