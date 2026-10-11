@@ -87,6 +87,26 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
+// GET /api/help/:slug — один раздел
+// ВАЖНО: должен идти ПОСЛЕ статических GET /visible, /images/list, /export/all
+router.get('/:slug', authenticate, async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM help_docs WHERE slug = ?', [req.params.slug]);
+    if (!rows.length) return res.status(404).json({ error: 'Не найден' });
+
+    const row = rows[0];
+    if (!canSeeSection(req.user, row)) {
+      return res.status(403).json({ error: 'Нет доступа к разделу' });
+    }
+
+    res.json({
+      id: row.id, slug: row.slug, title: row.title, content: row.content,
+      requiredPermissions: db.safeParse(row.required_permissions, []),
+      sortOrder: row.sort_order, enabled: !!row.enabled,
+    });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
+});
+
 // POST /api/help
 router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
