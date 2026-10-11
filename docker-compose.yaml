@@ -1,37 +1,41 @@
 services:
+  # ═══════════════════════════════════════════════════════════
+  # db — MySQL 8.0
+  # Наружу НЕ пробрасывается (только внутри docker-сети)
+  # ═══════════════════════════════════════════════════════════
   db:
     image: mysql:8.0.46
     container_name: pipette_db
     restart: unless-stopped
 
-    # 🆕 Дать MySQL время корректно завершиться (уберет XA crash recovery)
+    # Дать MySQL время корректно завершиться (убирает XA crash recovery)
     stop_grace_period: 60s
 
     command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+
     environment:
       MYSQL_ROOT_PASSWORD: Seno16/1978S
       MYSQL_DATABASE: pipette
       MYSQL_USER: pipette
       MYSQL_PASSWORD: Seno16/1978S
       TZ: Asia/Krasnoyarsk
+
     volumes:
       - ./mysqldata:/var/lib/mysql
 
-    # 🆕 Healthcheck: реальный SELECT под пользователем приложения
+    # Реальный SELECT под пользователем приложения — надёжный детект готовности
     healthcheck:
-      test: ["CMD-SHELL", "mysql -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD -e 'SELECT 1' >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 60s
 
-    # ❌ ports убран — MySQL доступен только внутри docker-сети
-
   # ═══════════════════════════════════════════════════════════
-  # app — приложение Node.js
+  # app — Node.js приложение
   # Порт 3000 наружу НЕ пробрасывается.
   # Трафик: Интернет → Nginx (443) → app:3000
   # ═══════════════════════════════════════════════════════════
@@ -57,7 +61,7 @@ services:
       db:
         condition: service_healthy
 
-    # 🆕 Healthcheck: app реально отвечает на /api/health
+    # Приложение реально отвечает на /api/health
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 5s
@@ -70,7 +74,7 @@ services:
   # Наружу открыты только 80 (редирект) и 443 (HTTPS)
   # ═══════════════════════════════════════════════════════════
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:1.31-alpine
     container_name: pipette_nginx
     restart: unless-stopped
 
@@ -83,9 +87,10 @@ services:
       - ./data/certbot/conf:/etc/letsencrypt:ro
       - ./data/certbot/www:/var/www/certbot:ro
 
+    # Стартует только когда app готов отвечать на API — нет 502 при старте
     depends_on:
       app:
-        condition: service_healthy    # 🆕 nginx стартует только когда app готов
+        condition: service_healthy
 
     healthcheck:
       test: ["CMD", "nginx", "-t"]
@@ -94,7 +99,7 @@ services:
       retries: 3
 
   # ═══════════════════════════════════════════════════════════
-  # certbot — получение + автообновление сертификатов
+  # certbot — получение + автообновление SSL-сертификатов
   # Каждые 12 часов: certbot renew → HUP nginx (graceful reload)
   # ═══════════════════════════════════════════════════════════
   certbot:
