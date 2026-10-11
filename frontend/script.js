@@ -443,6 +443,7 @@ function logoutUser() {
 
      // 🆕 Сброс состояния сессии
   filterState = {};
+  _filterRendered = false;
   selectedPipettes.clear();
   _reminderScheduled = false;
   _reminderDismissed = false;
@@ -486,6 +487,7 @@ async function impersonateUser(userId) {
 
     // 🆕 Сброс фильтров, поиска, страницы
     filterState = {};
+    _filterRendered = false;
     currentPage = 1;
     const searchEl = document.getElementById('search');
     if (searchEl) searchEl.value = '';
@@ -534,6 +536,7 @@ async function stopImpersonate() {
 
    // 🆕 Сброс фильтров, поиска, страницы
   filterState = {};
+  _filterRendered = false;
   currentPage = 1;
   const searchEl = document.getElementById('search');
   if (searchEl) searchEl.value = '';
@@ -3853,10 +3856,6 @@ async function openSettingsSection(id) {
   }
 }
 
-document.getElementById('settings-modal').addEventListener('click', e => {
-  if (e.target.id === 'settings-modal') closeSettingsModal();
-});
-
 // ============================================================
 // ВКЛАДКА: ПОЛЯ ФОРМЫ
 // ============================================================
@@ -4413,190 +4412,6 @@ async function saveExportSettings() {
   } catch (e) {
     showToast(e.message, 'error');
   }
-}
-
-function resetUserSettingForm() {
-  ['usr-edit-id', 'usr-login', 'usr-fullname', 'usr-position', 'usr-department'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('usr-role').value = 'user';
-  document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-plus"></i> Добавить пользователя';
-  const onlyOwnCb = document.getElementById('usr-only-own-dept');
-  if (onlyOwnCb) onlyOwnCb.checked = false;
-  const isActingCb = document.getElementById('usr-is-acting');
-  if (isActingCb) {
-    isActingCb.checked = false;
-    onActingChange(false);
-  }
-  const actingForSel = document.getElementById('usr-acting-for');
-  if (actingForSel) actingForSel.value = '';
-  document.querySelectorAll('#usr-permissions input[type="checkbox"]').forEach(cb => {
-    cb.checked = false;
-    cb.disabled = false;
-  });
-}
-
-async function onActingChange(checked) {
-  const wrap = document.getElementById('usr-acting-for-wrap');
-  const sel  = document.getElementById('usr-acting-for');
-  if (!wrap || !sel) return;
-
-  wrap.style.display = checked ? 'block' : 'none';
-
-  if (!checked) {
-    sel.value = '';
-    return;
-  }
-
-  if (sel.dataset.loaded !== '1') {
-    try {
-      const users = await apiRequest('/users/acting-targets');
-      sel.innerHTML = '<option value="">— выберите —</option>' +
-        users.map(u =>
-          `<option value="${esc(u.id)}">${esc(u.fullName)} — ${esc(u.department || 'без отдела')}</option>`
-        ).join('');
-      sel.dataset.loaded = '1';
-    } catch (e) {
-      showToast('Не удалось загрузить список для и.о.', 'error');
-    }
-  }
-}
-
-async function editUserSetting(id) {
-  try {
-    const users = await apiRequest('/users');
-    const u = users.find(x => x.id === id);
-    if (!u) return;
-
-    document.getElementById('usr-edit-id').value = u.id;
-    document.getElementById('usr-login').value = u.login;
-    document.getElementById('usr-fullname').value = u.fullName;
-    document.getElementById('usr-position').value = u.position;
-        // 🛡️ Отдел: безопасная установка с защитой от «битого» значения
-    const deptSel = document.getElementById('usr-department');
-    // Чистим «битые» опции, оставшиеся от предыдущего редактирования
-    Array.from(deptSel.options).forEach(o => {
-      if (o.dataset.broken === '1') o.remove();
-    });
-    deptSel.value = u.department || '';
-    if (u.department && deptSel.value !== u.department) {
-      const opt = document.createElement('option');
-      opt.value = u.department;
-      opt.textContent = u.department + '  ⚠ (нет в списке)';
-      opt.style.color = '#dc2626';
-      opt.dataset.broken = '1';
-      deptSel.appendChild(opt);
-      deptSel.value = u.department;
-      showToast(`Отдел «${u.department}» отсутствует в справочнике`, 'error');
-    }
-    document.getElementById('usr-role').value = u.role;
-    document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Редактирование: ' + esc(u.login);
-
-  const isActingCb = document.getElementById('usr-is-acting');
-    if (isActingCb) {
-      isActingCb.checked = !!u.isActing;
-      await onActingChange(isActingCb.checked);
-      const sel = document.getElementById('usr-acting-for');
-      if (sel) sel.value = u.actingForId || '';
-    }
-
-    const extra = u.extraPermissions || [];
-
-    document.querySelectorAll('#usr-permissions input[type="checkbox"]').forEach(cb => {
-      if (u.role === 'admin') {
-        cb.checked = true;
-        cb.disabled = true;
-      } else {
-        cb.disabled = false;
-        cb.checked = extra.includes(cb.value);
-      }
-    });
-
-    document.getElementById('user-form-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-async function saveUserSetting() {
-  const id = document.getElementById('usr-edit-id').value;
-  const login = document.getElementById('usr-login').value.trim();
-  const fullName = document.getElementById('usr-fullname').value.trim();
-  const position = document.getElementById('usr-position').value.trim();
-  const department = document.getElementById('usr-department').value.trim();
-  const role = document.getElementById('usr-role').value;
-
-  const missing = [];
-  if (!login) missing.push('Логин');
-  if (!fullName) missing.push('ФИО');
-  if (!position) missing.push('Должность');
-
-  if (missing.length > 0) {
-    const msg = missing.length === 1
-      ? `Заполните поле «${missing[0]}»`
-      : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
-    showToast(msg, 'error');
-    return;
-  }
-  
-  const onlyOwnCb = document.getElementById('usr-only-own-dept');
-  const onlyOwnDepartment = onlyOwnCb ? onlyOwnCb.checked : false;
-  const extraPermissions = [];
-  const isActingCb   = document.getElementById('usr-is-acting');
-  const isActing     = isActingCb ? isActingCb.checked : false;
-  const actingForSel = document.getElementById('usr-acting-for');
-  const actingForId  = isActing && actingForSel ? actingForSel.value.trim() : null;
-
-  if (isActing && !actingForId) {
-    showToast('Для и.о. нужно указать, за кого он исполняет', 'error');
-    return;
-  }
-  if (role !== 'admin') {
-    document.querySelectorAll('#usr-permissions input[type="checkbox"]:checked').forEach(cb => {
-      extraPermissions.push(cb.value);
-    });
-  }
-
-  try {
-  const payload = { login, fullName, position, department, role,                     
-                   onlyOwnDepartment, extraPermissions, isActing, actingForId };
-
-    if (id) {
-      await apiRequest('/users/' + id, 'PUT', payload);
-      showToast('Пользователь обновлён', 'success');
-    } else {
-      const res = await apiRequest('/users', 'POST', payload);
-      showToast('Пользователь создан', 'success');
-      // Показать разовый пароль (alert + копия в буфер)
-      setTimeout(() => {
-        showTempPasswordModal(res.login, fullName, res.tempPassword);
-      }, 300);
-    }
-
-       if (id === currentUser.id) {
-      const me = (await apiRequest('/users')).find(x => x.id === id);
-      if (me) {
-        currentUser.fullName = me.fullName;
-        currentUser.position = me.position;
-        currentUser.department = me.department;
-        currentUser.role = me.role;
-        currentUser.onlyOwnDepartment = !!me.onlyOwnDepartment;
-        currentUser.extraPermissions = me.extraPermissions || [];
-
-        const origUser  = getOriginalUser();
-        const origToken = getOriginalToken();
-        if (origUser && origToken) {
-          setSession(currentUser, authToken, origUser, origToken);
-        } else {
-          setSession(currentUser, authToken);
-        }
-        renderAuthUI();
-        render();   // 🆕 перерисовать таблицу — обновятся кнопки ⋮ и столбец «Действия»
-      }
-    }
- 
-    resetUserSettingForm();
-    renderUsersSettings();
-  } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function deleteUserSetting(id, displayName) {
@@ -5437,6 +5252,7 @@ async function saveBulkReturn(e) {
     closeBulkReturnModal();
 
     filterState = {};
+    _filterRendered = false;
     currentPage = 1;
 
     const calFilter = _activeFilters.find(f => f.type === 'date-period');
@@ -5448,8 +5264,7 @@ async function saveBulkReturn(e) {
         to: date
       };
     }
-
-    _filterRendered = false;
+    
     await loadPipetteData();
 
     // 🆕 Подсказка, что таблица теперь отфильтрована
@@ -7483,9 +7298,10 @@ async function openUserViewModal(userId, userName) {
 
   document.getElementById('user-view-target').innerHTML =
     `Настройка полей формы для: <strong>${esc(userName || userId)}</strong>`;
-
+ 
+  let prefs = {};  
   try {
-    const prefs = await apiRequest(`/settings/user-preferences/${userId}`);
+    prefs = await apiRequest(`/settings/user-preferences/${userId}`);
     if (prefs.visibleFields && Array.isArray(prefs.visibleFields)) {
       _userViewVisibleFields = [...prefs.visibleFields];
     }
@@ -7514,9 +7330,10 @@ async function openUserViewModal(userId, userName) {
     // 🆕 Если пользователь ещё не открывал модалку после внедрения виртуальных,
     // добавляем их как «включённые по умолчанию». Если маркер есть — уважаем
     // его выбор (даже если виртуальные выключены).
-    const hadUserPrefs = myPrefs._virtualsInitialized;
+    // 🆕 Флаг берём у ЦЕЛЕВОГО пользователя, не у админа
+    const targetHasVirtualsInit = !!(prefs && prefs._virtualsInitialized);
 
-    if (!hadUserPrefs) {
+    if (!targetHasVirtualsInit) {
       for (const vid of VIRTUAL_IDS) {
         if (!_userViewVisibleFields.includes(vid)) {
           _userViewVisibleFields.push(vid);
