@@ -16,14 +16,12 @@ services:
     volumes:
       - ./mysqldata:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-upipette", "-pSeno16/1978S"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 30s
-    ports:
-      - "3306:3306"
-
+   
   # ═══════════════════════════════════════════════════════════
   # app — приложение Node.js
   # Порт 3000 наружу НЕ пробрасывается.
