@@ -3190,3 +3190,9 @@ html[data-theme="dark"] .help-preview { background: #1e293b; border-color: #3341
   .docs-layout { flex-direction: column; max-height: none; }
   .docs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; padding-right: 0; max-height: 200px; }
 }
+
+/* 🆕 Специфично для модалки справки — перебивает общий .modal-xl */
+#hotkeys-modal .modal-xl {
+  max-width: 1100px !important;
+  width: calc(100vw - 40px) !important;
+}
