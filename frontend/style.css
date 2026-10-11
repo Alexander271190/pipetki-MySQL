@@ -716,6 +716,13 @@ html {
   border-radius: 10px;               
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
   line-height: 1.4;
+  white-space: pre-line;
+  min-height: 60px;
+  box-sizing: border-box;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .2s;
+}
 
   /* 🆕 Резервируем высоту под одну строку — бокс больше не прыгает */
   min-height: 60px;
