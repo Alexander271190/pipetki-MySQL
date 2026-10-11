@@ -723,17 +723,7 @@ html {
   opacity: 0;
   transition: opacity .2s;
 }
-
-  /* 🆕 Резервируем высоту под одну строку — бокс больше не прыгает */
-  min-height: 60px;
-  box-sizing: border-box;
-
-  /* 🆕 Скрываем через visibility, а не display — место сохраняется */
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity .2s;
-}
-
+ 
 .auth-error:not(:empty) {
   visibility: visible;
   opacity: 1;
