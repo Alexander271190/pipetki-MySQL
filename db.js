@@ -378,6 +378,10 @@ async function seedInitialData() {
   for (const [k, v] of Object.entries(bcDefaults)) {
   await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES (?, ?)`, [k, v]);
 }
+      // 🆕 Порог предупреждения о поверке — дефолт 30 дней
+    await pool.query(
+      `INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`
+    );
 
   // Дефолтные типы оборудования
     const defaultTypes = [
