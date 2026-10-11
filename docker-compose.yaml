@@ -56,7 +56,7 @@ services:
   # Наружу открыты только 80 (редирект на HTTPS) и 443 (HTTPS)
   # ═══════════════════════════════════════════════════════════
   nginx:
-    image: nginx:alpine
+    image: nginx:1.31-alpine
     container_name: pipette_nginx
     restart: unless-stopped
     ports:
