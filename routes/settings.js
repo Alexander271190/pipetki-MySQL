@@ -622,4 +622,22 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
   }
 });
 
+router.post('/reset-help', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('DELETE FROM help_docs');
+      await db.seedHelpDocs(conn);
+      await conn.commit();
+    } catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
+
+    await db.query(
+      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+      [req.user.id, req.user.full_name, 'Сброс справки к заводской', '']
+    );
+    res.json({ message: 'Справка восстановлена к заводской' });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка сброса' }); }
+});
+
 module.exports = router;
