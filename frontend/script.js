@@ -3516,6 +3516,10 @@ document.getElementById('history-modal').addEventListener('click', e => { if (e.
 document.getElementById('bulk-send-modal').addEventListener('click', e => { if (e.target.id === 'bulk-send-modal') closeBulkSendModal(); });
 document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
 document.getElementById('bulk-responsible-modal').addEventListener('click', e => { if (e.target.id === 'bulk-responsible-modal') closeBulkResponsibleModal(); });
+document.getElementById('import-modal').addEventListener('click', e => { if (e.target.id === 'import-modal') closeImportModal(); });
+document.getElementById('barcode-scanner-modal').addEventListener('click', e => { if (e.target.id === 'barcode-scanner-modal') closeBarcodeScannerModal(); });
+document.getElementById('barcode-print-modal').addEventListener('click', e => { if (e.target.id === 'barcode-print-modal') closeBarcodePrintModal(); });
+document.getElementById('settings-modal').addEventListener('click', e => { if (e.target.id === 'settings-modal') closeSettingsModal(); });
 document.getElementById('change-password-modal').addEventListener('click', e => {
   if (e.target.id === 'change-password-modal') {
     const mustSetup = currentUser && currentUser.mustSetPassword;
