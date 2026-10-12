@@ -2119,17 +2119,24 @@ function getFilteredPipettes() {
 }
 
 function matchCalPeriodDynamic(p, cfg) {
-  let dateStr;
-  if (cfg.type === 'updated_at') {
-    dateStr = p.updated_at || p.created_at;
-  } else {
-    dateStr = p.last_calibration;
-  }
-  if (!dateStr) return false;
+  let targetDate;
 
-  const pureDate = String(dateStr).split(' ')[0].split('T')[0];
-  const targetDate = parseLocalDate(pureDate);
-  if (!targetDate) return false;
+  if (cfg.type === 'updated_at') {
+    // updated_at приходит ISO-строкой (mysql2 timezone: 'Z'),
+    // поэтому переводим в локальные компоненты, чтобы не получить сдвиг ±1 день.
+    const raw = p.updated_at || p.created_at;
+    if (!raw) return false;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return false;
+    targetDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  } else {
+    const raw = p.last_calibration;
+    if (!raw) return false;
+    const pureDate = String(raw).split(' ')[0].split('T')[0];
+    targetDate = parseLocalDate(pureDate);
+    if (!targetDate) return false;
+  }
+
   targetDate.setHours(0, 0, 0, 0);
 
   const today = new Date();
@@ -6860,7 +6867,7 @@ async function loadBarcodeSettings() {
     const agentEl = document.getElementById('bc-agent-port');
     if (agentEl) agentEl.value = s.barcode_agent_port || 9200;
     const maxEl = document.getElementById('bc-max-length');
-    if (maxEl) maxEl.value = s.barcode_max_length || 128;
+    if (maxEl) maxEl.value = Math.min(255, parseInt(s.barcode_max_length, 10) || 255);
     const fbEl = document.getElementById('bc-fallback-to-pdf');
     if (fbEl) fbEl.checked = s.barcode_fallback_to_pdf !== '0';
 
@@ -6897,7 +6904,8 @@ async function saveBarcodeSettings() {
     barcode_type: document.getElementById('bc-type').value,
     barcode_default_copies: document.getElementById('bc-default-copies').value,
     barcode_agent_port: document.getElementById('bc-agent-port').value,
-    barcode_max_length: document.getElementById('bc-max-length').value,
+    barcode_max_length: String(Math.min(255, Math.max(8,
+     parseInt(document.getElementById('bc-max-length').value, 10) || 255))),
     barcode_fallback_to_pdf: document.getElementById('bc-fallback-to-pdf').checked ? '1' : '0',
     barcode_label_fields: JSON.stringify(fields),
     barcode_font: fontEl && fontEl.value ? fontEl.value : 'dejavu',
