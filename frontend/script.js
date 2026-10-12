@@ -4103,7 +4103,9 @@ async function renderDepartmentsSettings(skipFetch = false) {
   try {
     if (!skipFetch) {
       _cachedDepartmentsFull = await apiRequest('/settings/departments-full');
-    }
+      // 🆕 Запоминаем исходные имена — для отслеживания переименований
+     _cachedDepartmentsFull.forEach(d => { d._originalName = d.name; });
+     }
 
     let html = `
       <h3>Управление отделами</h3>
@@ -4154,8 +4156,12 @@ async function renderDepartmentsSettings(skipFetch = false) {
 
 function onDepartmentNameChange(idx, value) {
   const trimmed = value.trim();
-  _cachedDepartmentsFull[idx].name = trimmed;
-
+  const d = _cachedDepartmentsFull[idx];
+  if (d._originalName === undefined) {
+    d._originalName = d.name;
+  }
+  d.name = trimmed;
+  
   // Проверяем дубли
   const lower = trimmed.toLowerCase();
   const duplicates = _cachedDepartmentsFull.filter((d, i) => i !== idx && d.name.trim().toLowerCase() === lower);
@@ -4182,7 +4188,7 @@ function addDepartmentItem() {
     return;
   }
 
-  _cachedDepartmentsFull.push({ name, enabled: true });
+  _cachedDepartmentsFull.push({ name, enabled: true, _originalName: null });
   renderDepartmentsSettings(true);
 
   setTimeout(() => {
@@ -4219,7 +4225,11 @@ async function saveDepartmentsFull() {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    cleaned.push({ name, enabled: d.enabled !== false });
+   cleaned.push({
+  name,
+  enabled: d.enabled !== false,
+  oldName: (d._originalName && d._originalName !== name) ? d._originalName : null,
+});
   }
 
   if (cleaned.length === 0) {
