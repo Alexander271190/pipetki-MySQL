@@ -1,0 +1,819 @@
+'use strict';
+
+// ============================================================
+// ДИНАМИЧЕСКАЯ ФОРМА
+// ============================================================
+async function generateFormFields(data = null) {
+  const container = document.getElementById('form-fields-container');
+  container.innerHTML = '<p style="color:#94a3b8;padding:10px;">Загрузка полей…</p>';
+
+  try {
+       const allFields = await apiRequest('/settings/fields');
+    const fields = getActiveFormFields(allFields)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    container.innerHTML = '';
+
+    if (fields.length === 0) {
+      container.innerHTML = '<p style="color:#dc2626;padding:10px;">Нет активных полей. Включите их в настройках.</p>';
+      return;
+    }
+
+    for (const f of fields) {
+      if (f.id === 'id' && (!data || !data.id)) {
+        continue;
+      }
+
+      const div = document.createElement('div');
+      div.className = 'form-group';
+      
+      const label = document.createElement('label');
+      label.textContent = f.label + (f.required ? ' *' : '');
+      div.appendChild(label);
+
+      let val;
+      if (data && data[f.id] !== undefined && data[f.id] !== null) {
+        val = data[f.id];
+      } else {
+        val = f.default || '';
+      }
+
+      let input;
+
+      if (f.type === 'textarea') {
+        input = document.createElement('textarea');
+        input.rows = 2;
+        input.placeholder = f.label;
+        input.value = val;
+      } else if (f.type === 'select') {
+        input = document.createElement('select');
+
+        let opts = [];
+
+        if (f.id === 'department') {
+          let deps = departmentsList;
+
+          if (currentUser.isActing && currentUser.actingDepartment) {
+            deps = [currentUser.actingDepartment];
+          } else if (currentUser.role !== 'admin'
+              && currentUser.onlyOwnDepartment
+              && currentUser.department) {
+            deps = [currentUser.department];
+          }
+          opts = deps.length ? deps : (f.options || []);
+
+      } else if (f.id === 'equipmentType') {
+      opts = _equipmentTypes.length > 0
+      ? _equipmentTypes.map(t => ({ value: t.value, label: t.label }))
+      : [{ value: 'pipette', label: 'Пипетка' }];
+    
+      } else if (f.id === 'result') {
+          opts = [
+            { value: 'pass', label: '✅ Годен' },
+            { value: 'fail', label: '❌ Брак' },
+            { value: 'wip', label: '⏳ В процессе' }
+          ];
+                } else if (f.id === 'active') {
+          opts = [
+            { value: 'true', label: '✅ В работе' },
+            { value: 'false', label: '⛔ Не используется' }
+          ];
+         } else if (f.id === 'responsible') {
+          if (currentUser.role === 'admin') {
+            opts = _responsibles.map(u => ({ value: u.fullName, label: u.fullName }));
+            if (!f.required) {
+              opts = [{ value: '', label: '— не указан —' }, ...opts];
+            }
+          } else if (currentUser.isActing && currentUser.actingForName) {
+            opts = [{
+              value: currentUser.actingForName,
+              label: currentUser.actingForName + ' (основной)'
+            }];
+          } else {
+            const self = currentUser.fullName || '';
+            opts = self
+              ? [{ value: self, label: self }]
+              : [{ value: '', label: '— не указан —' }];
+          }
+        } else {
+          opts = f.options || [];
+        }
+
+        const valStr = (val == null) ? '' : String(val);
+        const hasEmpty = opts.some(o => String(typeof o === 'object' ? o.value : o) === '');
+        if (!f.required && !hasEmpty && opts.length > 0) {
+          opts = [{ value: '', label: '— не указан —' }, ...opts];
+        }
+
+        const hasVal = opts.some(o => String(typeof o === 'object' ? o.value : o) === valStr);
+        if (valStr && !hasVal) {
+          opts = [...opts, { value: valStr, label: `${valStr}  ⚠ (нет в списке)` }];
+        }
+
+        if (opts.length === 0) opts = [{ value: '', label: '—' }];
+
+        opts.forEach(opt => {
+          const optValue = (typeof opt === 'object') ? opt.value : opt;
+          const optLabel = (typeof opt === 'object') ? opt.label : (opt || '—');
+          const option = document.createElement('option');
+          option.value = optValue;
+          option.textContent = optLabel;
+          if (String(val) === String(optValue)) option.selected = true;
+          input.appendChild(option);
+        });
+            } else {
+        input = document.createElement('input');
+        input.type = f.type === 'date' ? 'date'
+          : f.type === 'number' ? 'number'
+          : 'text';
+        input.placeholder = f.label;
+
+        if (f.type === 'date' && val) {
+          const s = String(val).trim();
+          const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          input.value = m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+        } else {
+          input.value = val;
+        }
+      }
+
+      input.id = `p-${f.id}`;
+      input.dataset.fieldId = f.id;
+      if (f.required) input.required = true;
+           
+      if (f.id === 'id' && data && data.id) {
+        input.readOnly = true;
+        input.style.background = '#f1f5f9';
+        input.style.cursor = 'not-allowed';
+      }
+      if (f.id === 'department' && currentUser.isActing) {
+        input.disabled = true;
+        input.style.background = '#f1f5f9';
+        input.style.cursor = 'not-allowed';
+        input.title = 'И.о. работает в отделе основного';
+      }
+      if (f.id === 'responsible' && currentUser.role !== 'admin') {
+        input.disabled = true;
+        input.style.background = '#f1f5f9';
+        input.style.cursor = 'not-allowed';
+        input.title = 'Только администратор может изменить ответственного';
+      }
+
+      div.appendChild(input);
+      container.appendChild(div);
+      
+    }
+    
+    const eqSelect = document.getElementById('p-equipmentType');
+    const ivInput  = document.getElementById('p-interval');
+    if (eqSelect && ivInput) {
+      const applyIntervalFromType = () => {
+        const typeVal = eqSelect.value;
+        const t = _equipmentTypes.find(x => x.value === typeVal);
+        const n = t && Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0
+          ? parseInt(t.interval, 10)
+          : 12;
+        ivInput.value = String(n);
+      };
+
+      eqSelect.addEventListener('change', applyIntervalFromType);
+
+      if (!data || !data.id) {
+        applyIntervalFromType();
+      }
+    }
+
+    if (document.getElementById('p-department')) {
+      const datalist = document.getElementById('dept-list');
+      if (datalist) {
+        datalist.innerHTML = departmentsList.map(d => `<option value="${esc(d)}">`).join('');
+      }
+    }
+  } catch (err) {
+    console.error('Ошибка загрузки полей:', err);
+    container.innerHTML = '<p style="color:#dc2626;padding:10px;">Ошибка загрузки полей: ' + esc(err.message) + '</p>';
+  }
+}
+
+// ============================================================
+// УНИВЕРСАЛЬНАЯ МОДАЛКА ДОБАВЛЕНИЯ (одна единица / партия)
+// ============================================================
+let _addTab = 'single';
+let _bulkRows = [];
+let _bulkFields = [];
+const BULK_MAX_ROWS = 100;
+
+async function openModal(id) {
+  await refreshCurrentUser();
+  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+
+  const tabsEl = document.getElementById('add-tabs');
+  const isEdit = !!id;
+
+  if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
+
+  _addTab = 'single';
+  switchAddTab('single');
+
+  document.getElementById('modal').classList.add('active');
+
+  if (!id) {
+    loadEquipmentTemplates();
+  } else {
+    const bar = document.getElementById('template-bar');
+    if (bar) bar.style.display = 'none';
+  }
+
+  if (isEdit) {
+    const p = pipettes.find(x => x.id === id);
+    if (!p) { showToast('Оборудование не найдено', 'error'); return; }
+
+    document.getElementById('modal-title').innerHTML =
+      '<i class="fa-solid fa-pen"></i> Редактировать оборудование';
+    document.getElementById('edit-id').value = p.id;
+
+    let lastCal = '';
+    if (p.last_calibration) {
+      const m = String(p.last_calibration).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) lastCal = `${m[1]}-${m[2]}-${m[3]}`;
+    }
+    const editData = {
+      ...p,
+      equipmentType:   p.equipment_type || 'pipette',
+      lastCalibration: lastCal,
+      result:          p.last_result || 'pass',
+      active:          p.active ? 'true' : 'false'
+    };
+    await generateFormFields(editData);
+  } else {
+    document.getElementById('modal-title').innerHTML =
+      '<i class="fa-solid fa-plus"></i> Добавить оборудование';
+    document.getElementById('edit-id').value = '';
+
+    const defaults = {
+      lastCalibration: todayStr(),
+      interval: 12,
+      result: 'pass',
+      active: 'true'
+    };
+
+    if (currentUser.role === 'admin') {
+      // admin — ничего
+    } else if (currentUser.isActing && currentUser.actingForName) {
+      defaults.responsible = currentUser.actingForName;
+      if (currentUser.actingDepartment) defaults.department = currentUser.actingDepartment;
+    } else {
+      defaults.responsible = currentUser.fullName || '';
+      if (currentUser.onlyOwnDepartment && currentUser.department) {
+        defaults.department = currentUser.department;
+      }
+    }
+
+    await generateFormFields(defaults);
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  document.getElementById('edit-id').value = '';
+  document.getElementById('form-fields-container').innerHTML = '';
+
+  const bar = document.getElementById('template-bar');
+  if (bar) bar.style.display = 'none';
+  const sel = document.getElementById('template-select');
+  if (sel) sel.value = '';
+
+  _bulkRows = [];
+  _bulkFields = [];
+  document.getElementById('bc-rows-body').innerHTML = '';
+  document.getElementById('bc-table-head').innerHTML = '';
+}
+
+function switchAddTab(tab) {
+  _addTab = tab;
+  document.querySelectorAll('.add-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.getElementById('add-tab-single').style.display = tab === 'single' ? '' : 'none';
+  document.getElementById('add-tab-batch').style.display  = tab === 'batch'  ? '' : 'none';
+
+  if (tab === 'batch') {
+    if (_bulkFields.length === 0) {
+      initBulkTable();
+    } else if (_bulkRows.length === 0) {
+      addBulkRow();
+    }
+  }
+}
+
+async function initBulkTable() {
+  const head = document.getElementById('bc-table-head');
+  const body = document.getElementById('bc-rows-body');
+  if (!head || !body) return;
+
+  head.innerHTML = '<tr><th style="width:40px;">#</th><th>Загрузка…</th></tr>';
+  body.innerHTML = '';
+
+  try {
+    const allFields = await apiRequest('/settings/fields');
+    _bulkFields = getActiveFormFields(allFields)
+      .filter(f => f.id !== 'id')
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    if (_bulkFields.length === 0) {
+      head.innerHTML = '';
+      body.innerHTML = '<tr><td colspan="2" style="color:#dc2626;padding:16px;text-align:center;">Нет активных полей. Обратитесь к администратору.</td></tr>';
+      return;
+    }
+
+    head.innerHTML = `
+      <tr>
+        <th style="width:40px;">#</th>
+        ${_bulkFields.map(f => `<th>${esc(f.label)}${f.required ? ' *' : ''}</th>`).join('')}
+        <th style="width:50px;"></th>
+      </tr>
+    `;
+
+    _bulkRows = [];
+    addBulkRow();
+  } catch (e) {
+    head.innerHTML = '';
+    body.innerHTML = `<tr><td colspan="2" style="color:#dc2626;padding:16px;">Ошибка загрузки полей: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+function makeDefaultBulkRow() {
+  const row = { _id: Math.random().toString(36).slice(2) };
+  for (const f of _bulkFields) {
+    if (f.id === 'lastCalibration') {
+      row[f.id] = todayStr();
+    } else if (f.id === 'interval') {
+      const t = _equipmentTypes.find(x => x.value === 'pipette');
+      row[f.id] = t && t.interval ? t.interval : (f.default || 12);
+    } else if (f.id === 'equipmentType') {
+      row[f.id] = 'pipette';
+    } else if (f.id === 'result') {
+      row[f.id] = 'pass';
+    } else if (f.id === 'active') {
+      row[f.id] = 'true';
+    } else if (f.id === 'responsible') {
+      if (currentUser.role !== 'admin') {
+        if (currentUser.isActing && currentUser.actingForName) row[f.id] = currentUser.actingForName;
+        else row[f.id] = currentUser.fullName || '';
+      } else {
+        row[f.id] = '';
+      }
+    } else if (f.id === 'department') {
+      if (currentUser.role !== 'admin') {
+        if (currentUser.isActing && currentUser.actingDepartment) row[f.id] = currentUser.actingDepartment;
+        else if (currentUser.onlyOwnDepartment && currentUser.department) row[f.id] = currentUser.department;
+        else row[f.id] = '';
+      } else {
+        row[f.id] = '';
+      }
+    } else {
+      row[f.id] = '';
+    }
+  }
+  return row;
+}
+
+function addBulkRow() {
+  if (_bulkRows.length >= BULK_MAX_ROWS) {
+    showToast(`Максимум ${BULK_MAX_ROWS} строк`, 'error');
+    return;
+  }
+  _bulkRows.push(makeDefaultBulkRow());
+  renderBulkRows();
+}
+
+function removeBulkRow(idx) {
+  if (idx < 0 || idx >= _bulkRows.length) return;
+  _bulkRows.splice(idx, 1);
+  renderBulkRows();
+}
+
+function updateBulkCounters() {
+  const cnt = _bulkRows.length;
+  const c1 = document.getElementById('bc-rows-count');
+  const c2 = document.getElementById('bc-submit-count');
+  if (c1) c1.textContent = cnt;
+  if (c2) c2.textContent = cnt;
+
+  const empty = document.getElementById('bc-empty');
+  const table = document.getElementById('bc-table');
+  if (empty) empty.style.display = cnt === 0 ? 'block' : 'none';
+  if (table) table.style.display = cnt === 0 ? 'none' : '';
+}
+
+function renderBulkRows() {
+  const tbody = document.getElementById('bc-rows-body');
+  if (!tbody) return;
+
+  if (_bulkRows.length === 0) {
+    tbody.innerHTML = '';
+    updateBulkCounters();
+    return;
+  }
+
+  tbody.innerHTML = _bulkRows.map((row, i) => `
+    <tr data-row-idx="${i}">
+      <td class="bulk-num">${i + 1}</td>
+      ${_bulkFields.map(f => `
+        <td>${renderBulkCell(f, row[f.id], i)}</td>
+      `).join('')}
+      <td>
+        <button type="button" class="bulk-del-btn" onclick="removeBulkRow(${i})" title="Удалить">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  updateBulkCounters();
+}
+
+function renderBulkCell(field, value, rowIdx) {
+  const fid = `bc-${rowIdx}-${field.id}`;
+  const val = value == null ? '' : String(value);
+
+  const handler = field.id === 'equipmentType'
+    ? `onBulkTypeChange(${rowIdx}, this.value)`
+    : `onBulkChange(${rowIdx}, '${field.id}', this.value)`;
+
+  if (field.type === 'select') {
+    const opts = getBulkFieldOptions(field, val);
+    return `<select class="bulk-input" id="${fid}" onchange="${handler}">
+      ${opts.map(o => `<option value="${esc(o.value)}" ${String(o.value) === val ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+    </select>`;
+  }
+
+  if (field.type === 'date') {
+    return `<input type="date" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${handler}">`;
+  }
+
+  if (field.type === 'number') {
+    const extra = field.id === 'interval' ? 'min="1" max="120"' : '';
+    return `<input type="number" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${handler}" ${extra}>`;
+  }
+
+  return `<input type="text" class="bulk-input" id="${fid}" value="${esc(val)}" oninput="${handler}" placeholder="${esc(field.label)}">`;
+}
+
+function getBulkFieldOptions(field, currentValue) {
+  let opts = [];
+
+  if (field.id === 'department') {
+    let deps = departmentsList;
+    if (currentUser.isActing && currentUser.actingDepartment) deps = [currentUser.actingDepartment];
+    else if (currentUser.role !== 'admin' && currentUser.onlyOwnDepartment && currentUser.department) {
+      deps = [currentUser.department];
+    }
+    opts = deps.map(d => ({ value: d, label: d }));
+    if (!field.required) opts.unshift({ value: '', label: '—' });
+  } else if (field.id === 'equipmentType') {
+    opts = _equipmentTypes.map(t => ({ value: t.value, label: t.label }));
+  } else if (field.id === 'result') {
+    opts = [
+      { value: 'pass', label: '✅ Годен' },
+      { value: 'fail', label: '❌ Брак' },
+      { value: 'wip',  label: '⏳ В процессе' },
+    ];
+  } else if (field.id === 'active') {
+    opts = [
+      { value: 'true',  label: '✅ В работе' },
+      { value: 'false', label: '⛔ Не используется' },
+    ];
+  } else if (field.id === 'responsible') {
+    if (currentUser.role === 'admin') {
+      opts = (_responsibles || []).map(u => ({ value: u.fullName, label: u.fullName }));
+      if (!field.required) opts.unshift({ value: '', label: '—' });
+    } else if (currentUser.isActing && currentUser.actingForName) {
+      opts = [{ value: currentUser.actingForName, label: currentUser.actingForName + ' (основной)' }];
+    } else {
+      const self = currentUser.fullName || '';
+      opts = self ? [{ value: self, label: self }] : [{ value: '', label: '—' }];
+    }
+  } else {
+    opts = field.options || [];
+    if (!field.required && !opts.some(o => String(o.value) === '')) {
+      opts = [{ value: '', label: '—' }, ...opts];
+    }
+  }
+
+  if (currentValue && !opts.some(o => String(o.value) === currentValue)) {
+    opts = [...opts, { value: currentValue, label: `${currentValue} ⚠` }];
+  }
+  return opts;
+}
+
+function onBulkChange(rowIdx, fieldId, value) {
+  if (rowIdx < 0 || rowIdx >= _bulkRows.length) return;
+  _bulkRows[rowIdx][fieldId] = value;
+}
+
+function onBulkTypeChange(rowIdx, newType) {
+  if (rowIdx < 0 || rowIdx >= _bulkRows.length) return;
+  const row = _bulkRows[rowIdx];
+  row.equipmentType = newType;
+
+  const t = _equipmentTypes.find(x => x.value === newType);
+  if (t && t.interval) row.interval = t.interval;
+
+  const ivInput = document.getElementById(`bc-${rowIdx}-interval`);
+  if (ivInput) ivInput.value = row.interval;
+}
+
+async function saveBulkRows(e) {
+  if (e) e.preventDefault();
+  await refreshCurrentUser();
+  if (!canAddPipette()) { showToast('Нет прав', 'error'); return; }
+
+  const errEl = document.getElementById('bc-error');
+  errEl.textContent = '';
+
+  if (_bulkRows.length === 0) {
+    errEl.textContent = 'Добавьте хотя бы одну строку';
+    return;
+  }
+  if (_bulkRows.length > BULK_MAX_ROWS) {
+    errEl.textContent = `Максимум ${BULK_MAX_ROWS} строк`;
+    return;
+  }
+
+  const errors = [];
+  _bulkRows.forEach((r, i) => {
+    const n = i + 1;
+    if (!String(r.model || '').trim())            errors.push(`Строка ${n}: модель`);
+    if (!String(r.lastCalibration || '').trim())  errors.push(`Строка ${n}: дата поверки`);
+    if (!String(r.responsible || '').trim())      errors.push(`Строка ${n}: ответственный`);
+  });
+  if (errors.length > 0) {
+    errEl.textContent = 'Заполните: ' + errors.slice(0, 5).join('; ') +
+      (errors.length > 5 ? ` (+${errors.length - 5})` : '');
+    return;
+  }
+
+  if (_bulkRows.length >= 20) {
+    const ok = await showConfirm(
+      `Создать ${_bulkRows.length} единиц одной операцией?`,
+      { icon: '📦', title: 'Пакетное создание', okText: 'Создать', okClass: 'btn-primary' }
+    );
+    if (!ok) return;
+  }
+
+  const btn = document.getElementById('bc-submit-btn');
+  const origHtml = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Создание…'; }
+
+  try {
+    const res = await apiRequest('/pipettes/bulk-create', 'POST', { rows: _bulkRows });
+    showToast(`Создано ${res.count} единиц`, 'success');
+    closeModal();
+    currentPage = 1;
+    await loadPipetteData();
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка создания';
+  } finally {
+    if (btn && origHtml) { btn.disabled = false; btn.innerHTML = origHtml; }
+  }
+}
+
+// ============================================================
+// СОХРАНЕНИЕ ОДНОЙ ЕДИНИЦЫ (создание или редактирование)
+// ============================================================
+async function savePipette(e) {
+  if (e) e.preventDefault();
+  await refreshCurrentUser();
+
+  const editId = document.getElementById('edit-id').value || '';
+  const isEdit = !!editId;
+
+  if (!isEdit && !canAddPipette())     { showToast('Нет прав на добавление', 'error'); return; }
+  if (isEdit  && !canEditPipette())    { showToast('Нет прав на редактирование', 'error'); return; }
+
+  const payload = {};
+  document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
+    const key = el.dataset.fieldId;
+    if (key === 'id') return;
+    payload[key] = el.value;
+  });
+
+  const errors = [];
+  if (!String(payload.model           || '').trim()) errors.push('Модель');
+  if (!String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
+  if (!String(payload.responsible     || '').trim()) errors.push('Ответственный');
+  if (errors.length > 0) {
+    showToast('Заполните: ' + errors.join(', '), 'error');
+    return;
+  }
+
+  const btn = document.querySelector('#pipette-form button[type="submit"]');
+  const origHtml = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Сохранение…'; }
+
+  try {
+    if (isEdit) {
+      const res = await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
+      if (res.idChanged && res.newId) {
+        showToast(`Сохранено. Новый ID: ${res.newId}`, 'success');
+      } else {
+        showToast('Оборудование обновлено', 'success');
+      }
+    } else {
+      const res = await apiRequest('/pipettes', 'POST', payload);
+      showToast(`Оборудование создано (${res.id})`, 'success');
+    }
+    closeModal();
+    currentPage = 1;
+    await loadPipetteData();
+  } catch (err) {
+    showToast(err.message || 'Ошибка сохранения', 'error');
+  } finally {
+    if (btn && origHtml) { btn.disabled = false; btn.innerHTML = origHtml; }
+  }
+}
+
+async function deletePipette(id) {
+  await refreshCurrentUser();
+  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+  const ok = await showConfirm(     
+    `Удалить оборудование «${id}» вместе со всей историей поверок? Действие необратимо.`,    
+    { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }   
+  );   
+  if (!ok) return;
+    try {
+    await apiRequest(`/pipettes/${id}`, 'DELETE');
+    showToast('Оборудование удалено', 'success');
+    selectedPipettes.delete(id);
+    await loadPipetteData();
+  } catch (error) {
+    const isBlock = /Нельзя удалить/.test(error.message || '');
+    showToast(error.message || 'Ошибка удаления', isBlock ? 'warn' : 'error');
+  }
+}
+
+// ============================================================
+// БЫСТРАЯ ПОВЕРКА
+// ============================================================
+async function openQuickCalModal(id) {
+   await refreshCurrentUser();
+  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+  const p = pipettes.find(x => x.id === id);
+  if (!p) { showToast('Оборудование не найдено', 'error'); return; }
+  document.getElementById('quick-cal-id').value = id;
+  document.getElementById('quick-cal-pipette-info').innerHTML = `<strong>${esc(p.id)}</strong> — ${esc(p.model)} (${esc(p.department || 'без отдела')})`;
+  document.getElementById('quick-cal-date').value = todayStr();
+  document.getElementById('quick-cal-cert').value = '';
+  document.getElementById('quick-cal-result').value = 'pass';
+  document.getElementById('quick-cal-org').value = '';
+  document.getElementById('quick-cal-note').value = '';
+  document.getElementById('quick-cal-modal').classList.add('active');
+}
+
+function closeQuickCalModal() {
+  document.getElementById('quick-cal-modal').classList.remove('active');
+}
+
+async function saveQuickCalibration() {
+  await refreshCurrentUser();
+  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+  const id = document.getElementById('quick-cal-id').value;
+  const date = document.getElementById('quick-cal-date').value;
+  const cert = document.getElementById('quick-cal-cert').value.trim();
+  const result = document.getElementById('quick-cal-result').value;
+  const org = document.getElementById('quick-cal-org').value.trim();
+  const note = document.getElementById('quick-cal-note').value.trim();
+
+  if (!date) { showToast('Заполните поле «Дата поверки»', 'error'); return; }
+  if (date > todayStr()) { showToast('Дата не может быть в будущем', 'error'); return; }
+
+  try {
+    await apiRequest(`/pipettes/${id}/calibration`, 'POST', { date, cert, result, org, note });
+    showToast('Поверка зарегистрирована', 'success');
+    closeQuickCalModal();
+    await loadPipetteData();
+    } catch (error) {
+    showToast(error.message || 'Ошибка сохранения', 'error');
+  }
+}
+
+// ============================================================
+// ОТМЕНА ОТПРАВКИ
+// ============================================================
+async function cancelSend(id) {
+  await refreshCurrentUser();
+  if (!canBulkSend() && !canManagePipettes()) {
+    showToast('Нет прав на отмену отправки', 'error');
+    return;
+  }
+
+  const p = pipettes.find(x => x.id === id);
+  if (!p) return;
+
+  const hasReplacement = !!p.replaced_by;
+  const confirmMsg = hasReplacement
+    ? `Отменить отправку «${id}» на поверку?\n\n` +
+      `Замена «${p.replaced_by}» вернётся на склад и станет неактивной.`
+    : `Отменить отправку «${id}» на поверку?`;
+
+  const ok = await showConfirm(
+    confirmMsg,
+    { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+
+  try {
+    await apiRequest(`/pipettes/${encodeURIComponent(id)}/cancel-send`, 'POST', {});
+    showToast('Отправка отменена', 'success');
+    await loadPipetteData();
+  } catch (e) {
+    showToast(e.message || 'Ошибка отмены', 'error');
+  }
+}
+
+// ============================================================
+// ОБЁРТКА generateFormFields — поле «Штрихкод» с кнопками
+// ============================================================
+(function wrapGenerateFormFieldsForBarcode() {
+  if (typeof window.generateFormFields !== 'function') return;
+  const orig = window.generateFormFields;
+  window.generateFormFields = async function(data) {
+    const result = await orig.apply(this, arguments);
+
+    const barcodeInput = document.querySelector('[data-field-id="barcode"]');
+    if (!barcodeInput) return result;
+    if (barcodeInput.parentElement?.dataset.barcodeWrapped === '1') return result;
+
+    const wrap = document.createElement('div');
+    wrap.dataset.barcodeWrapped = '1';
+    wrap.style.display = 'flex';
+    wrap.style.gap = '6px';
+
+    barcodeInput.parentNode.insertBefore(wrap, barcodeInput);
+    wrap.appendChild(barcodeInput);
+
+    if (!canManageBarcodes()) {
+      barcodeInput.readOnly = true;
+      barcodeInput.style.background = '#f1f5f9';
+      barcodeInput.style.cursor = 'not-allowed';
+      barcodeInput.title = 'Меняется администратором. Авто из инв. номера.';
+      return result;
+    }
+
+    const genBtn = document.createElement('button');
+    genBtn.type = 'button';
+    genBtn.className = 'btn btn-secondary';
+    genBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+    genBtn.title = 'Заполнить из инв. / серийного / ID';
+    genBtn.style.flexShrink = '0';
+    genBtn.onclick = () => {
+      const invInput    = document.querySelector('[data-field-id="inventorynumber"]');
+      const serialInput = document.querySelector('[data-field-id="serial"]');
+      const idInput     = document.querySelector('[data-field-id="id"]');
+      let value = '';
+      if (invInput && invInput.value.trim())            value = invInput.value.trim();
+      else if (serialInput && serialInput.value.trim()) value = serialInput.value.trim();
+      else if (idInput && idInput.value.trim())         value = idInput.value.trim();
+      else if (data && data.id)                         value = data.id;
+      if (!value) { showToast('Заполните инв. номер, серийный или ID', 'error'); return; }
+      barcodeInput.value = value;
+      barcodeInput.dataset.manual = '1';
+    };
+    wrap.appendChild(genBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn btn-warning';
+    resetBtn.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
+    resetBtn.title = 'Сбросить ручной штрихкод — вернуть к авто';
+    resetBtn.style.flexShrink = '0';
+    resetBtn.onclick = async () => {
+      if (!data || !data.id) {
+        barcodeInput.value = '';
+        barcodeInput.dataset.manual = '0';
+        return;
+      }
+      const ok = await showConfirm(
+        'Сбросить ручной штрихкод и пересчитать из источника?',
+        { icon: '↩️', title: 'Сброс штрихкода', okText: 'Сбросить', okClass: 'btn-warning' }
+      );
+      if (!ok) return;
+      try {
+        await apiRequest('/barcodes/reset', 'POST', { id: data.id });
+        showToast('Штрихкод сброшен. Будет пересчитан при сохранении.', 'success');
+        barcodeInput.value = '';
+        barcodeInput.dataset.manual = '0';
+      } catch (e) {
+        showToast(e.message || 'Ошибка сброса', 'error');
+      }
+    };
+    wrap.appendChild(resetBtn);
+
+    barcodeInput.addEventListener('input', () => {
+      barcodeInput.dataset.manual = '1';
+    });
+
+    return result;
+  };
+})();
