@@ -832,6 +832,25 @@
     <h2><i class="fa-solid fa-list-check"></i> Поля формы пользователя</h2>
     <p id="user-view-target" style="color:#64748b;margin-bottom:16px;font-size:.9rem;"></p>
 
+    <!-- 🆕 Блок «Скопировать вид с другого пользователя» -->
+    <div class="copy-view-block">
+      <label class="copy-view-label">
+        <i class="fa-solid fa-copy"></i> Скопировать вид с другого пользователя:
+      </label>
+      <div class="copy-view-controls">
+        <select id="copy-view-user-select">
+          <option value="">— загрузка —</option>
+        </select>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="copyViewFromUser()">
+          <i class="fa-solid fa-clipboard"></i> Скопировать
+        </button>
+      </div>
+      <small class="copy-view-hint">
+        Заполнит галочки ниже <strong>текущим видом</strong> выбранного пользователя.
+        Перед сохранением ничего не меняется — просто копия в форму.
+      </small>
+    </div>
+
     <div id="user-view-content"></div>
 
     <div class="form-actions" style="justify-content:space-between;">
