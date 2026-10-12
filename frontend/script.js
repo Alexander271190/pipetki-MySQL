@@ -25,14 +25,15 @@ let _dataLoadedForUser = null;
 const SETTINGS_SECTIONS = [
   {
     group: 'Оборудование и данные',
-    items: [
-      { id: 'fields',      label: 'Поля формы' },
-      { id: 'departments', label: 'Отделы' },
-      { id: 'filters',     label: 'Фильтры' },
-      { id: 'export',      label: 'Экспорт' },
-      { id: 'equipment',   label: 'Типы оборудования' },
-    ]
-  },
+  items: [
+    { id: 'fields',          label: 'Поля формы' },
+    { id: 'departments',     label: 'Отделы' },
+    { id: 'filters',         label: 'Фильтры' },
+    { id: 'export',          label: 'Экспорт' },
+    { id: 'equipment',       label: 'Типы оборудования' },
+    { id: 'view-templates',  label: 'Шаблоны вида' },
+  ]
+},
   {
     group: 'Пользователи',
     items: [
@@ -565,14 +566,20 @@ async function loadPipetteData() {
   if (!isAuthenticated()) return;
   try {
     if (!myPrefs._loaded) {
-      try {
-        myPrefs = await apiRequest('/settings/my-preferences') || {};
-        myPrefs._loaded = true;
-      } catch (e) {
-        myPrefs = { _loaded: true };
-      }
+  try {
+    // 🆕 Эффективный вид: индивидуальное → шаблон → дефолт
+    myPrefs = await apiRequest('/settings/my-preferences/effective') || {};
+    myPrefs._loaded = true;
+  } catch (e) {
+    // 🛡️ Fallback на старый эндпоинт
+    try {
+      myPrefs = await apiRequest('/settings/my-preferences') || {};
+      myPrefs._loaded = true;
+    } catch (e2) {
+      myPrefs = { _loaded: true };
     }
-
+  }
+}
     const data = await apiRequest('/pipettes');
     pipettes = data;
     const settingsData = await apiRequest('/settings/system');
@@ -3849,6 +3856,7 @@ async function openSettingsSection(id) {
     else if (id === 'printers')    await renderPrintersSettings();
     else if (id === 'barcodes')    await renderBarcodesSettings();
     else if (id === 'help')        await renderHelpSettings();
+    else if (id === 'view-templates') await renderViewTemplatesSettings();
     else if (id === 'general')     await renderGeneralSettings();
     else if (id === 'log')         await renderLogSettings();
   } catch (e) {
@@ -8202,6 +8210,224 @@ async function resetHelpToFactory() {
 document.addEventListener('click', (e) => {
   if (e.target && e.target.id === 'help-editor-modal') closeHelpEditor();
 });
+// ============================================================
+// РАЗДЕЛ: ШАБЛОНЫ ВИДА
+// ============================================================
+let _cachedViewTemplates = [];
+let _editingTemplateId = null;
+
+async function renderViewTemplatesSettings() {
+  const c = document.getElementById('settings-section-content');
+  try {
+    _cachedFields = await apiRequest('/settings/fields');
+    _cachedViewTemplates = await apiRequest('/view-templates');
+
+    let html = `
+      <p style="color:#64748b;font-size:.88rem;margin:0 0 14px;">
+        Шаблоны вида — именованные наборы полей. Назначьте шаблон пользователю,
+        и он увидит этот набор. <strong>Индивидуальные настройки перебивают шаблон.</strong>
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn btn-primary btn-sm" onclick="openViewTemplateEditor(null)">
+          <i class="fa-solid fa-plus"></i> Создать шаблон
+        </button>
+      </div>
+    `;
+
+    if (_cachedViewTemplates.length === 0) {
+      html += `<div class="help-empty">Шаблонов пока нет.</div>`;
+      c.innerHTML = html;
+      return;
+    }
+
+    html += `<table class="help-admin-table"><thead><tr>
+      <th>Название</th>
+      <th style="width:100px;">Полей</th>
+      <th style="width:100px;">По умолч.</th>
+      <th style="width:220px;">Действия</th>
+    </tr></thead><tbody>`;
+
+    _cachedViewTemplates.forEach(t => {
+      html += `<tr>
+        <td><strong>${esc(t.name)}</strong></td>
+        <td>${t.visibleFields.length}</td>
+        <td>${t.isDefault ? '✅' : '—'}</td>
+        <td class="help-admin-actions">
+          <button class="btn btn-primary btn-sm bc-icon-btn" onclick="openViewTemplateEditor(${t.id})" title="Изменить">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="btn btn-secondary btn-sm bc-icon-btn" onclick="openApplyTemplateModal(${t.id})" title="Назначить">
+            <i class="fa-solid fa-users"></i>
+          </button>
+          <button class="btn btn-danger btn-sm bc-icon-btn" onclick="deleteViewTemplate(${t.id})" title="Удалить">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+function openViewTemplateEditor(templateId) {
+  _editingTemplateId = templateId;
+  const tpl = templateId ? _cachedViewTemplates.find(t => t.id === templateId) : null;
+
+  const VIRTUAL_COLUMNS = [
+    { id: 'nextCalibration', label: 'Следующая поверка' },
+    { id: 'status',          label: 'Статус' },
+  ];
+
+  const activeFields = _cachedFields
+    .filter(f => f.enabled)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  const defaultSelected = activeFields.map(f => f.id).concat(VIRTUAL_COLUMNS.map(v => v.id));
+  const selected = new Set(tpl ? tpl.visibleFields : defaultSelected);
+
+  const fieldsHtml = `
+    <div style="font-weight:600;margin-bottom:6px;font-size:.85rem;color:#475569;">Поля формы</div>
+    <div class="help-perms-grid">
+      ${activeFields.map(f => `
+        <label class="help-perm-item">
+          <input type="checkbox" class="vt-field-cb" value="${esc(f.id)}" ${selected.has(f.id) ? 'checked' : ''}>
+          <span>${esc(f.label)}</span>
+        </label>
+      `).join('')}
+    </div>
+    <div style="font-weight:600;margin:12px 0 6px;font-size:.85rem;color:#475569;">Виртуальные колонки</div>
+    <div class="help-perms-grid">
+      ${VIRTUAL_COLUMNS.map(v => `
+        <label class="help-perm-item">
+          <input type="checkbox" class="vt-field-cb" value="${esc(v.id)}" ${selected.has(v.id) ? 'checked' : ''}>
+          <span>${esc(v.label)}</span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+
+  const c = document.getElementById('settings-section-content');
+  c.innerHTML = `
+    <h3>${templateId ? 'Редактирование шаблона' : 'Новый шаблон вида'}</h3>
+    <div class="form-group">
+      <label>Название шаблона *</label>
+      <input type="text" id="vt-name" value="${esc(tpl ? tpl.name : '')}" placeholder="напр. Лаборант базовый">
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="vt-default" ${tpl && tpl.isDefault ? 'checked' : ''} style="width:16px;height:16px;">
+        <span>Использовать по умолчанию для новых пользователей</span>
+      </label>
+    </div>
+    <div class="form-group">${fieldsHtml}</div>
+    <div id="vt-error" class="auth-error" style="margin-top:8px;"></div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="renderViewTemplatesSettings()">Отмена</button>
+      <button class="btn btn-success" onclick="saveViewTemplate()">
+        <i class="fa-solid fa-floppy-disk"></i> Сохранить
+      </button>
+    </div>
+  `;
+}
+
+async function saveViewTemplate() {
+  const errEl = document.getElementById('vt-error');
+  errEl.textContent = '';
+
+  const name = document.getElementById('vt-name').value.trim();
+  const isDefault = document.getElementById('vt-default').checked;
+  const fields = [...document.querySelectorAll('.vt-field-cb:checked')].map(cb => cb.value);
+
+  if (!name) { errEl.textContent = 'Укажите название'; return; }
+  if (fields.length === 0) { errEl.textContent = 'Выберите хотя бы одно поле'; return; }
+
+  try {
+    if (_editingTemplateId) {
+      await apiRequest('/view-templates/' + _editingTemplateId, 'PUT', { name, visibleFields: fields, isDefault });
+      showToast('Шаблон обновлён', 'success');
+    } else {
+      await apiRequest('/view-templates', 'POST', { name, visibleFields: fields, isDefault });
+      showToast('Шаблон создан', 'success');
+    }
+    _editingTemplateId = null;
+    renderViewTemplatesSettings();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
+}
+
+async function deleteViewTemplate(id) {
+  const tpl = _cachedViewTemplates.find(t => t.id === id);
+  const ok = await showConfirm(
+    `Удалить шаблон «${tpl ? tpl.name : ''}»?\n\nУ пользователей, которым он назначен, вид вернётся к настройкам по умолчанию.`,
+    { icon: '📋', title: 'Удаление шаблона', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
+  try {
+    await apiRequest('/view-templates/' + id, 'DELETE');
+    showToast('Шаблон удалён', 'success');
+    renderViewTemplatesSettings();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function openApplyTemplateModal(templateId) {
+  const tpl = _cachedViewTemplates.find(t => t.id === templateId);
+  if (!tpl) return;
+
+  let users = [];
+  try { users = await apiRequest('/users'); } catch (e) {}
+
+  const others = users.filter(u => u.role !== 'admin');
+  if (others.length === 0) {
+    showToast('Нет пользователей для назначения', 'error');
+    return;
+  }
+
+  const c = document.getElementById('settings-section-content');
+  c.innerHTML = `
+    <h3>Назначить шаблон «${esc(tpl.name)}»</h3>
+    <p style="color:#64748b;font-size:.85rem;">
+      Отметьте пользователей. <strong>Индивидуальные настройки перебивают шаблон</strong>.
+    </p>
+    <div style="max-height:400px;overflow-y:auto;margin:12px 0;padding:8px;background:#f8fafc;border-radius:8px;">
+      ${others.map(u => `
+        <label style="display:flex;align-items:center;gap:8px;padding:6px;cursor:pointer;">
+          <input type="checkbox" class="at-user-cb" value="${esc(u.id)}">
+          <span>${esc(u.fullName)} — ${esc(u.position || '')}</span>
+        </label>
+      `).join('')}
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-secondary" onclick="renderViewTemplatesSettings()">Назад</button>
+      <button class="btn btn-success" onclick="applyTemplateToUsers(${templateId})">
+        <i class="fa-solid fa-check"></i> Назначить
+      </button>
+    </div>
+  `;
+}
+
+async function applyTemplateToUsers(templateId) {
+  const ids = [...document.querySelectorAll('.at-user-cb:checked')].map(cb => cb.value);
+  if (ids.length === 0) { showToast('Выберите хотя бы одного', 'error'); return; }
+  try {
+    for (const uid of ids) {
+      await apiRequest(`/view-templates/${templateId}/apply-to-user/${uid}`, 'POST');
+    }
+    showToast(`Назначено: ${ids.length}`, 'success');
+
+    if (ids.includes(currentUser.id)) {
+      myPrefs = { _loaded: false };
+    }
+    renderViewTemplatesSettings();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
 
 // ============================================================
 // ГОРЯЧИЕ КЛАВИШИ
