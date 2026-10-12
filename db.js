@@ -292,6 +292,19 @@ async function initSchema() {
         INDEX idx_vt_default (is_default)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    
+        // 🆕 Шаблоны единиц оборудования
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS equipment_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150) NOT NULL UNIQUE,
+        data JSON NOT NULL,
+        created_by VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_et_name (name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
     // 🆕 Догон колонок
     await ensureColumns(conn, 'users', [
