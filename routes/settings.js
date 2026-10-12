@@ -20,40 +20,31 @@ router.get('/departments', authenticate, async (req, res) => {
 router.put('/departments', authenticate, requireRole(['admin']), async (req, res) => {
   const departments = req.body;
 
-  // ──────────────────────────────────────────────────────────
-  // 1. Проверка типа
-  // ──────────────────────────────────────────────────────────
   if (!Array.isArray(departments)) {
     return res.status(400).json({ error: 'Ожидается массив отделов' });
   }
-
   if (departments.length === 0) {
     return res.status(400).json({ error: 'Добавьте хотя бы один отдел' });
   }
 
-  // ──────────────────────────────────────────────────────────
-  // 2. Нормализация: единый формат { name, enabled }
-  //    Принимает и строки ('Гематология'), и объекты ({name, enabled})
-  // ──────────────────────────────────────────────────────────
+  // 🆕 Нормализация: принимаем и строки, и {name, enabled, oldName}
   const normalized = departments
     .map(d => {
       const rawName = typeof d === 'string' ? d : (d && d.name ? d.name : '');
       const name = String(rawName).trim();
       const enabled = (d && typeof d === 'object' && d.enabled === false) ? 0 : 1;
-      return { name, enabled };
+      const oldName = (d && typeof d === 'object' && d.oldName)
+        ? String(d.oldName).trim()
+        : null;
+      return { name, enabled, oldName };
     })
     .filter(d => d.name.length > 0);
 
-  // ──────────────────────────────────────────────────────────
-  // 3. Проверка «после очистки пусто» — все имена были пробелами
-  // ──────────────────────────────────────────────────────────
   if (normalized.length === 0) {
     return res.status(400).json({ error: 'Добавьте хотя бы один отдел' });
   }
 
-  // ──────────────────────────────────────────────────────────
-  // 4. Проверка дублей (регистронезависимая)
-  // ──────────────────────────────────────────────────────────
+  // Проверка дублей
   const seen = new Set();
   const duplicates = [];
   for (const d of normalized) {
@@ -67,14 +58,54 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
     });
   }
 
-  // ──────────────────────────────────────────────────────────
-  // 5. Сохранение (транзакция)
-  // ──────────────────────────────────────────────────────────
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-    await conn.query('DELETE FROM departments');
 
+    // 1) Читаем старый список из БД
+    const [oldRows] = await conn.query('SELECT name FROM departments');
+    const oldNames = oldRows.map(r => r.name);
+
+    // 2) Обновляем привязки при переименовании
+    for (const d of normalized) {
+      if (d.oldName && d.oldName !== d.name) {
+        await conn.query(
+          'UPDATE pipettes SET department = ? WHERE department = ?',
+          [d.name, d.oldName]
+        );
+        await conn.query(
+          'UPDATE users SET department = ? WHERE department = ?',
+          [d.name, d.oldName]
+        );
+      }
+    }
+
+    // 3) Проверяем, что удаляемые отделы не используются
+    const newNames = new Set(normalized.map(d => d.name));
+    const removed = oldNames.filter(n => !newNames.has(n));
+    if (removed.length > 0) {
+      const ph = removed.map(() => '?').join(',');
+      const [used] = await conn.query(
+        `SELECT department, COUNT(*) AS c
+         FROM pipettes
+         WHERE department IN (${ph})
+         GROUP BY department`,
+        removed
+      );
+      if (used.length > 0) {
+        await conn.rollback();
+        const details = used
+          .map(r => `«${r.department}» (${r.c} шт.)`)
+          .join(', ');
+        return res.status(400).json({
+          error: `Нельзя удалить используемые отделы: ${details}. ` +
+                 `Переименуйте их, чтобы сохранить привязку.`
+        });
+      }
+    }
+
+    // 4) Полная замена справочника
+    await conn.query('DELETE FROM departments');
     for (const d of normalized) {
       await conn.query(
         'INSERT INTO departments (name, enabled) VALUES (?, ?)',
