@@ -2762,6 +2762,63 @@ async function saveBulkRows(e) {
   }
 }
 
+// ============================================================
+// СОХРАНЕНИЕ ОДНОЙ ЕДИНИЦЫ (создание или редактирование)
+// ============================================================
+async function savePipette(e) {
+  if (e) e.preventDefault();
+  await refreshCurrentUser();
+
+  const editId = document.getElementById('edit-id').value || '';
+  const isEdit = !!editId;
+
+  if (!isEdit && !canAddPipette())     { showToast('Нет прав на добавление', 'error'); return; }
+  if (isEdit  && !canEditPipette())    { showToast('Нет прав на редактирование', 'error'); return; }
+
+  // Собираем значения со всех инпутов формы по data-field-id
+  const payload = {};
+  document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
+    const key = el.dataset.fieldId;
+    if (key === 'id') return;   // ID не отправляем — генерируется или read-only
+    payload[key] = el.value;
+  });
+
+  // Локальная валидация — быстрая отдача до похода на сервер
+  const errors = [];
+  if (!String(payload.model           || '').trim()) errors.push('Модель');
+  if (!String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
+  if (!String(payload.responsible     || '').trim()) errors.push('Ответственный');
+  if (errors.length > 0) {
+    showToast('Заполните: ' + errors.join(', '), 'error');
+    return;
+  }
+
+  const btn = document.querySelector('#pipette-form button[type="submit"]');
+  const origHtml = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Сохранение…'; }
+
+  try {
+    if (isEdit) {
+      const res = await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
+      if (res.idChanged && res.newId) {
+        showToast(`Сохранено. Новый ID: ${res.newId}`, 'success');
+      } else {
+        showToast('Оборудование обновлено', 'success');
+      }
+    } else {
+      const res = await apiRequest('/pipettes', 'POST', payload);
+      showToast(`Оборудование создано (${res.id})`, 'success');
+    }
+    closeModal();
+    currentPage = 1;
+    await loadPipetteData();
+  } catch (err) {
+    showToast(err.message || 'Ошибка сохранения', 'error');
+  } finally {
+    if (btn && origHtml) { btn.disabled = false; btn.innerHTML = origHtml; }
+  }
+}
+
 // Обновление горячей клавиши / «+ Добавить» — старая функция openModal уже заменена
 async function deletePipette(id) {
   await refreshCurrentUser();
@@ -4638,7 +4695,7 @@ async function renderBarcodesSettings() {
           </div>
           <div class="bc-cell">
             <label>Макс. длина</label>
-            <input type="number" id="bc-max-length" value="128" min="8" max="255">
+            <input type="number" id="bc-max-length" value="255" min="8" max="255">
           </div>
           <div class="bc-cell bc-cell-check">
             <label class="bc-fallback-line">
