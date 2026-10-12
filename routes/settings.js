@@ -640,4 +640,50 @@ router.post('/reset-help', authenticate, requireRole(['admin']), async (req, res
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка сброса' }); }
 });
 
+// ============================================================
+// GET /api/settings/user-preferences/:userId/effective
+// Актуальный вид пользователя: индивидуальное → шаблон → дефолт.
+// Только для админа.
+// ============================================================
+router.get('/user-preferences/:userId/effective', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const [userRows] = await db.query(
+      'SELECT id FROM users WHERE id = ?',
+      [userId]
+    );
+    if (!userRows.length) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // 1. Индивидуальные
+    const [prefRows] = await db.query(
+      'SELECT preferences FROM user_preferences WHERE user_id = ?',
+      [userId]
+    );
+
+    let prefs = {};
+    if (prefRows.length) {
+      try { prefs = JSON.parse(prefRows[0].preferences || '{}'); } catch (e) {}
+    }
+
+    if (Array.isArray(prefs.visibleFields) && prefs.visibleFields.length > 0) {
+      return res.json({ source: 'individual', visibleFields: prefs.visibleFields });
+    }
+
+    // 2. Дефолт (шаблоны добавим на этапе 3)
+    const [fieldRows] = await db.query(
+      'SELECT id FROM field_config WHERE enabled = 1 ORDER BY field_order'
+    );
+    const active = fieldRows.map(r => r.id);
+    const VIRTUAL = ['status', 'nextCalibration'];
+
+    return res.json({ source: 'default', visibleFields: [...active, ...VIRTUAL] });
+  } catch (e) {
+    console.error('GET /settings/user-preferences/:userId/effective:', e);
+    res.status(500).json({ error: 'Ошибка загрузки эффективного вида' });
+  }
+});
+
 module.exports = router;
