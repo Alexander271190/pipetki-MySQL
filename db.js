@@ -572,6 +572,9 @@ async function generatePipetteId(prefix = 'P', conn = null) {
 }
 
 function safeParse(json, fallback = []) {
+  if (json === null || json === undefined) return fallback;
+  if (typeof json === 'object') return json;       
+  if (typeof json !== 'string') return fallback;
   try { return JSON.parse(json); } catch { return fallback; }
 }
 
