@@ -280,6 +280,19 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+        // 🆕 Шаблоны вида
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS view_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150) NOT NULL UNIQUE,
+        visible_fields JSON NOT NULL,
+        is_default TINYINT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_vt_default (is_default)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // 🆕 Догон колонок
     await ensureColumns(conn, 'users', [
       { name: 'is_acting',           ddl: 'TINYINT DEFAULT 0' },
@@ -287,6 +300,7 @@ async function initSchema() {
       { name: 'password_changed_at', ddl: 'TIMESTAMP NULL DEFAULT NULL' },
       { name: 'only_own_department', ddl: 'TINYINT DEFAULT 0' },
       { name: 'must_set_password',   ddl: 'TINYINT DEFAULT 0' },
+      { name: 'view_template_id',    ddl: 'INT NULL DEFAULT NULL' },
     ]);
 
     await ensureColumns(conn, 'pipettes', [
