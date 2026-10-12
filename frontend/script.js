@@ -7298,8 +7298,8 @@ async function openUserViewModal(userId, userName) {
 
   document.getElementById('user-view-target').innerHTML =
     `Настройка полей формы для: <strong>${esc(userName || userId)}</strong>`;
- 
-  let prefs = {};  
+
+  let prefs = {};
   try {
     prefs = await apiRequest(`/settings/user-preferences/${userId}`);
     if (prefs.visibleFields && Array.isArray(prefs.visibleFields)) {
@@ -7314,25 +7314,18 @@ async function openUserViewModal(userId, userName) {
     showToast('Ошибка загрузки полей: ' + e.message, 'error');
   }
 
-   const VIRTUAL_IDS = ['status', 'nextCalibration'];
+  const VIRTUAL_IDS = ['status', 'nextCalibration'];
 
   const allEnabled = _cachedFields.filter(f => f.enabled).map(f => f.id);
   const allAvailable = [...allEnabled, ...VIRTUAL_IDS];
 
-    if (_userViewVisibleFields.length === 0) {
-    // Настроек нет — показываем всё
+  if (_userViewVisibleFields.length === 0) {
     _userViewVisibleFields = [...allAvailable];
   } else {
-    // Настройки есть — оставляем только валидные
     const validSet = new Set(allAvailable);
     _userViewVisibleFields = _userViewVisibleFields.filter(id => validSet.has(id));
 
-    // 🆕 Если пользователь ещё не открывал модалку после внедрения виртуальных,
-    // добавляем их как «включённые по умолчанию». Если маркер есть — уважаем
-    // его выбор (даже если виртуальные выключены).
-    // 🆕 Флаг берём у ЦЕЛЕВОГО пользователя, не у админа
     const targetHasVirtualsInit = !!(prefs && prefs._virtualsInitialized);
-
     if (!targetHasVirtualsInit) {
       for (const vid of VIRTUAL_IDS) {
         if (!_userViewVisibleFields.includes(vid)) {
@@ -7344,6 +7337,8 @@ async function openUserViewModal(userId, userName) {
 
   renderUserViewContent();
   document.getElementById('user-view-modal').classList.add('active');
+
+  loadCopyViewUserList(userId);
 }
 
 function closeUserViewModal() {
@@ -7425,6 +7420,82 @@ function renderUserViewContent() {
   `;
 
   c.innerHTML = html;
+}
+
+// 🆕 Загрузка списка пользователей для «Скопировать вид»
+async function loadCopyViewUserList(excludeUserId) {
+  const sel = document.getElementById('copy-view-user-select');
+  if (!sel) return;
+
+  sel.innerHTML = '<option value="">— загрузка —</option>';
+
+  try {
+    const users = await apiRequest('/users');
+    const others = users.filter(u => u.id !== excludeUserId);
+
+    if (others.length === 0) {
+      sel.innerHTML = '<option value="">— нет других пользователей —</option>';
+      return;
+    }
+
+    others.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'ru'));
+
+    sel.innerHTML = '<option value="">— выберите пользователя —</option>' +
+      others.map(u => `<option value="${esc(u.id)}">${esc(u.fullName)} — ${esc(u.position || '')}</option>`).join('');
+  } catch (e) {
+    sel.innerHTML = '<option value="">— ошибка загрузки —</option>';
+    console.error('loadCopyViewUserList:', e);
+  }
+}
+
+// 🆕 Копирование вида с другого пользователя
+async function copyViewFromUser() {
+  const sel = document.getElementById('copy-view-user-select');
+  if (!sel) return;
+
+  const sourceId = sel.value;
+  if (!sourceId) {
+    showToast('Выберите пользователя', 'error');
+    return;
+  }
+
+  try {
+    showToast('Загрузка вида…', 'success');
+
+    const res = await apiRequest(`/settings/user-preferences/${sourceId}/effective`);
+
+    if (!res.visibleFields || res.visibleFields.length === 0) {
+      showToast('У выбранного пользователя нет активных полей', 'error');
+      return;
+    }
+
+    const activeFieldIds = new Set(
+      _cachedFields.filter(f => f.enabled).map(f => f.id)
+    );
+    const VIRTUAL_IDS = new Set(['status', 'nextCalibration']);
+
+    const filtered = res.visibleFields.filter(id =>
+      activeFieldIds.has(id) || VIRTUAL_IDS.has(id)
+    );
+
+    if (filtered.length === 0) {
+      showToast('Все поля недоступны', 'error');
+      return;
+    }
+
+    _userViewVisibleFields = [...filtered];
+    renderUserViewContent();
+
+    const skipped = res.visibleFields.length - filtered.length;
+    let msg = `Скопировано полей: ${filtered.length}`;
+    if (skipped > 0) msg += ` (пропущено недоступных: ${skipped})`;
+    msg += '. Нажмите «Сохранить».';
+
+    showToast(msg, 'success');
+  } catch (e) {
+    console.error('copyViewFromUser:', e);
+    showToast('Ошибка загрузки вида: ' + (e.message || ''), 'error');
+  }
 }
 
 async function applyFieldsToAll(mode) {
