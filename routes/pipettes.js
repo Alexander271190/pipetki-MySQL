@@ -72,12 +72,15 @@ function todayLocalStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+const BARCODE_MAX_LEN = 255; 
+
 function computeBarcodeValue(p) {
   const custom = parseCustomData(p.custom_data);
   const inv = custom.inventorynumber || custom.inventoryNumber || custom.inventory_no || '';
-  if (inv && String(inv).trim()) return { value: String(inv).trim(), source: 'inventorynumber' };
-  if (p.serial && String(p.serial).trim()) return { value: String(p.serial).trim(), source: 'serial' };
-  return { value: String(p.id).trim(), source: 'id' };
+  const cut = (s) => String(s).trim().slice(0, BARCODE_MAX_LEN);
+  if (inv && String(inv).trim()) return { value: cut(inv), source: 'inventorynumber' };
+  if (p.serial && String(p.serial).trim()) return { value: cut(p.serial), source: 'serial' };
+  return { value: cut(p.id), source: 'id' };
 }
 
 function parseCustomData(raw) {
@@ -86,10 +89,13 @@ function parseCustomData(raw) {
   try { return JSON.parse(raw) || {}; } catch { return {}; }
 }
 
+const FORBIDDEN_CUSTOM_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function mergeCustom(p) {
   if (!p) return p;
   const custom = parseCustomData(p.custom_data);
   for (const [k, v] of Object.entries(custom)) {
+    if (FORBIDDEN_CUSTOM_KEYS.has(k)) continue;
     if (Object.prototype.hasOwnProperty.call(p, k)) continue;
     p[k] = v;
   }
@@ -521,6 +527,7 @@ if (String(lastCalibration) > todayLocalStr()) {
         // 🆕 Собираем кастомные поля
     const customData = {};
     for (const [k, v] of Object.entries(req.body)) {
+      if (FORBIDDEN_CUSTOM_KEYS.has(k)) continue;
       if (!STANDARD_FIELDS.has(k) && k !== 'id') {
         customData[k] = v;
       }
@@ -531,7 +538,14 @@ if (String(lastCalibration) > todayLocalStr()) {
     let barcodeSource = null;
 
     if (req.user.role === 'admin' && rawBarcode && String(rawBarcode).trim()) {
-      barcodeValue = String(rawBarcode).trim();
+      const trimmed = String(rawBarcode).trim();
+      if (trimmed.length > BARCODE_MAX_LEN) {
+        await conn.rollback();
+        return res.status(400).json({
+          error: `Штрихкод слишком длинный (максимум ${BARCODE_MAX_LEN} символов)`
+        });
+      }
+      barcodeValue = trimmed;
       barcodeSource = 'manual';
     } else {
       const computed = computeBarcodeValue({ id, serial, custom_data: customData });
@@ -587,7 +601,7 @@ if (String(lastCalibration) > todayLocalStr()) {
       'ER_CHECKREAD',           
     ]);
 
-    const RACE_ERRNOS = new Set([1020, 1062, 1205, 1213, 1317, 1105]);
+    const RACE_ERRNOS = new Set([1020, 1062, 1205, 1213, 1317]);
 
     // 🆕 Ошибки данных — это 400, не 500 и не race
     const DATA_ERROR_CODES = new Set([
@@ -698,6 +712,7 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     // Кастомные поля — всё, что не стандартное
     const customData = {};
     for (const [k, v] of Object.entries(r)) {
+      if (FORBIDDEN_CUSTOM_KEYS.has(k)) continue;
       if (!STANDARD_FIELDS.has(k) && k !== 'id' && !k.startsWith('_') && v !== undefined && v !== null && v !== '') {
         customData[k] = v;
       }
@@ -809,10 +824,17 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     updates.department  = req.user.acting_department || '';
   }
 
-    // 🆕 Штрихкод — обрабатывается отдельно
+  // 🆕 Штрихкод — обрабатывается отдельно
   const manualBarcode = (req.user.role === 'admin' && updates.barcode !== undefined)
     ? String(updates.barcode || '').trim()
     : null;
+
+  if (manualBarcode !== null && manualBarcode.length > BARCODE_MAX_LEN) {
+    return res.status(400).json({
+      error: `Штрихкод слишком длинный (максимум ${BARCODE_MAX_LEN} символов)`
+    });
+  }
+
   delete updates.barcode;
   delete updates.barcodeSource;
 
@@ -826,14 +848,31 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
   }
 
-  // Только админ может менять отдел
+   // Только админ может менять отдел
   if (updates.department !== undefined
       && req.user.role !== 'admin'
       && updates.department !== pipRows[0].department) {
     return res.status(403).json({ error: 'Смена отдела доступна только администратору' });
   }
-    
-      const map = {
+
+  // 🛡️ Валидация длин строковых полей — синхронно со схемой
+  if (updates.serial !== undefined && String(updates.serial).trim().length > 255) {
+    return res.status(400).json({ error: 'Серийный номер слишком длинный (максимум 255 символов)' });
+  }
+  if (updates.manufacturer !== undefined && String(updates.manufacturer).trim().length > 255) {
+    return res.status(400).json({ error: 'Производитель слишком длинный (максимум 255 символов)' });
+  }
+  if (updates.model !== undefined) {
+    const m = String(updates.model).replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+    if (!m) {
+      return res.status(400).json({ error: 'Заполните поле «Модель»' });
+    }
+    if (m.length > 255) {
+      return res.status(400).json({ error: 'Модель слишком длинная (максимум 255 символов)' });
+    }
+  }
+
+  const map = {
     serial: 'serial', manufacturer: 'manufacturer', model: 'model',
     equipmentType: 'equipment_type',
     volume: 'volume',
