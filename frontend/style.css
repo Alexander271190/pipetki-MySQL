@@ -3299,3 +3299,58 @@ html[data-theme="dark"] #bc-submit-btn.btn-success:hover {
   box-shadow: 0 4px 18px rgba(74, 222, 128, .5);
 }
 
+/* ============================================================
+   «Скопировать вид с другого пользователя»
+   ============================================================ */
+.copy-view-block {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: #f0f9ff;
+  border-left: 3px solid #0ea5e9;
+  border-radius: 8px;
+}
+.copy-view-label {
+  display: block;
+  font-weight: 600;
+  font-size: .85rem;
+  color: #0369a1;
+  margin-bottom: 8px;
+}
+.copy-view-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.copy-view-controls select {
+  flex: 1;
+  min-width: 180px;
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: .85rem;
+  font-family: inherit;
+  background: #fff;
+  box-sizing: border-box;
+}
+.copy-view-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: .76rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+html[data-theme="dark"] .copy-view-block {
+  background: rgba(14, 165, 233, .12);
+  border-left-color: #0ea5e9;
+}
+html[data-theme="dark"] .copy-view-label { color: #93c5fd; }
+html[data-theme="dark"] .copy-view-controls select {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .copy-view-hint { color: #94a3b8; }
+
+
