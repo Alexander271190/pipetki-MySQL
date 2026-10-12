@@ -650,7 +650,7 @@ router.get('/user-preferences/:userId/effective', authenticate, requireRole(['ad
     const userId = req.params.userId;
 
     const [userRows] = await db.query(
-      'SELECT id FROM users WHERE id = ?',
+      'SELECT id, view_template_id FROM users WHERE id = ?',
       [userId]
     );
     if (!userRows.length) {
@@ -672,7 +672,26 @@ router.get('/user-preferences/:userId/effective', authenticate, requireRole(['ad
       return res.json({ source: 'individual', visibleFields: prefs.visibleFields });
     }
 
-    // 2. Дефолт (шаблоны добавим на этапе 3)
+    // 2. Шаблон
+    const tplId = userRows[0].view_template_id;
+    if (tplId) {
+      try {
+        const [tplRows] = await db.query(
+          'SELECT visible_fields FROM view_templates WHERE id = ?',
+          [tplId]
+        );
+        if (tplRows.length) {
+          const tplFields = db.safeParse(tplRows[0].visible_fields, []);
+          if (tplFields.length > 0) {
+            return res.json({ source: 'template', visibleFields: tplFields });
+          }
+        }
+      } catch (e) {
+        console.warn('view_templates не найдена:', e.message);
+      }
+    }
+
+    // 3. Дефолт
     const [fieldRows] = await db.query(
       'SELECT id FROM field_config WHERE enabled = 1 ORDER BY field_order'
     );
@@ -682,6 +701,80 @@ router.get('/user-preferences/:userId/effective', authenticate, requireRole(['ad
     return res.json({ source: 'default', visibleFields: [...active, ...VIRTUAL] });
   } catch (e) {
     console.error('GET /settings/user-preferences/:userId/effective:', e);
+    res.status(500).json({ error: 'Ошибка загрузки эффективного вида' });
+  }
+});
+
+// ============================================================
+// GET /api/settings/my-preferences/effective
+// АКТУАЛЬНЫЙ вид текущего пользователя: индивидуальное → шаблон → дефолт
+// ============================================================
+router.get('/my-preferences/effective', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Индивидуальные
+    const [prefRows] = await db.query(
+      'SELECT preferences FROM user_preferences WHERE user_id = ?',
+      [userId]
+    );
+
+    let prefs = {};
+    if (prefRows.length) {
+      try { prefs = JSON.parse(prefRows[0].preferences || '{}'); } catch (e) {}
+    }
+
+    if (Array.isArray(prefs.visibleFields) && prefs.visibleFields.length > 0) {
+      return res.json({ ...prefs, _loaded: true, _source: 'individual' });
+    }
+
+    // 2. Шаблон
+    let tplId = null;
+    try {
+      const [uRows] = await db.query(
+        'SELECT view_template_id FROM users WHERE id = ?',
+        [userId]
+      );
+      tplId = uRows[0] ? uRows[0].view_template_id : null;
+    } catch (e) { tplId = null; }
+
+    if (tplId) {
+      try {
+        const [tplRows] = await db.query(
+          'SELECT visible_fields FROM view_templates WHERE id = ?',
+          [tplId]
+        );
+        if (tplRows.length) {
+          const tplFields = db.safeParse(tplRows[0].visible_fields, []);
+          if (tplFields.length > 0) {
+            return res.json({
+              visibleFields: tplFields,
+              _virtualsInitialized: true,
+              _loaded: true,
+              _source: 'template',
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('my-preferences/effective: view_templates не найдена:', e.message);
+      }
+    }
+
+    // 3. Дефолт
+    const [fieldRows] = await db.query(
+      'SELECT id FROM field_config WHERE enabled = 1 ORDER BY field_order'
+    );
+    const active = fieldRows.map(r => r.id);
+    const VIRTUAL = ['status', 'nextCalibration'];
+
+    res.json({
+      visibleFields: [...active, ...VIRTUAL],
+      _virtualsInitialized: true,
+      _loaded: true,
+      _source: 'default',
+    });
+  } catch (e) {
+    console.error('GET /settings/my-preferences/effective:', e);
     res.status(500).json({ error: 'Ошибка загрузки эффективного вида' });
   }
 });
