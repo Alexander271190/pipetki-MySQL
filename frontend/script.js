@@ -7479,25 +7479,29 @@ async function saveUserView() {
     return;
   }
 
-  let existing = {};
-  try { existing = await apiRequest(`/settings/user-preferences/${_userViewUserId}`); } catch (e) {}
+  // 🛡️ Сохраняем ДО closeUserViewModal — иначе _userView* обнулятся
+  const savedUserId = _userViewUserId;
+  const savedFields = [..._userViewVisibleFields];
 
-    const merged = {
+  let existing = {};
+  try { existing = await apiRequest(`/settings/user-preferences/${savedUserId}`); } catch (e) {}
+
+  const merged = {
     ...existing,
-    visibleFields: _userViewVisibleFields,
-    _virtualsInitialized: true,   // 🆕 пользователь видел модалку с виртуальными
+    visibleFields: savedFields,
+    _virtualsInitialized: true,
   };
 
   try {
-    await apiRequest(`/settings/user-preferences/${_userViewUserId}`, 'PUT', merged);
+    await apiRequest(`/settings/user-preferences/${savedUserId}`, 'PUT', merged);
     showToast('Поля формы сохранены', 'success');
     closeUserViewModal();
 
-       // 🆕 Если настройки сохранили СЕБЕ — сразу обновить myPrefs и перерисовать
-    if (_userViewUserId === currentUser.id) {
-      myPrefs.visibleFields = [..._userViewVisibleFields];
+    // 🆕 Если сохранили СЕБЕ — сразу применить к myPrefs и перерисовать
+    if (savedUserId === currentUser.id) {
+      myPrefs.visibleFields = [...savedFields];
       myPrefs._loaded = true;
-      myPrefs._virtualsInitialized = true;   // 🆕 синхронизируем маркер локально
+      myPrefs._virtualsInitialized = true;
       render();
     }
   } catch (e) {
