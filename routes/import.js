@@ -67,17 +67,15 @@ function normalizeHeader(h) {
     .replace(/[.:;]+$/g, '');   
 }
 
-let _importCustomFields = [];
-
-function mapHeader(h) {
+function mapHeader(h, customFields = []) {
   const n = normalizeHeader(h);
   if (HEADER_MAP[n]) return HEADER_MAP[n];
   const n2 = n.replace(/\(.*?\)/g, '').trim();
   if (HEADER_MAP[n2]) return HEADER_MAP[n2];
 
-  // 🆕 Фоллбэк — кастомные поля из field_config
-  if (Array.isArray(_importCustomFields)) {
-    const found = _importCustomFields.find(f =>
+  // 🆕 Фоллбэк — кастомные поля из field_config (прокинуты параметром)
+  if (Array.isArray(customFields) && customFields.length > 0) {
+    const found = customFields.find(f =>
       normalizeHeader(f.label) === n || f.id === n
     );
     if (found) return `custom:${found.id}`;
@@ -223,7 +221,7 @@ function cellValue(cell) {
 // ============================================================
 
 // --- XLSX / XLS через exceljs ---
-async function parseXlsx(buffer) {
+async function parseXlsx(buffer, customFields = []) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
 
@@ -245,7 +243,7 @@ async function parseXlsx(buffer) {
     for (let c = 1; c <= row.cellCount; c++) {
       const v = cellValue(row.getCell(c));
       if (v === '' || v === undefined || v === null) continue;
-      if (mapHeader(v)) score++;
+      if (mapHeader(v, customFields)) score++;
     }
 
     if (score > bestScore) {
@@ -283,8 +281,8 @@ async function parseXlsx(buffer) {
 
     // 🛡️ Отсекаем мусор — подвал «Документ сформировал: …», «Подпись: …»,
     // и размноженные merged-ячейки (там ID === Модель === Объём …)
-    const idKey    = headers.find(h => mapHeader(h) === 'id');
-    const modelKey = headers.find(h => mapHeader(h) === 'model');
+    const idKey    = headers.find(h => mapHeader(h, customFields) === 'id');
+    const modelKey = headers.find(h => mapHeader(h, customFields) === 'model');
     const idVal    = idKey    ? String(obj[idKey] || '').trim()    : '';
     const modelVal = modelKey ? String(obj[modelKey] || '').trim() : '';
     if (/Документ сформировал|Подпись/i.test(idVal))    continue;
@@ -360,7 +358,8 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
     const buffer = Buffer.from(file, 'base64');
     const ext = (filename || '').toLowerCase().split('.').pop();
 
-    // 🆕 ВСТАВЛЯЕМ СЮДА — ДО парсинга
+    // 🆕 Локальная переменная вместо глобальной — избегаем race
+    let customFields = [];
     try {
       const [fRows] = await db.query(
         'SELECT id, label FROM field_config WHERE enabled = 1'
@@ -370,9 +369,9 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         'department','interval','lastCalibration','cert','result','active',
         'responsible','location','notes'
       ]);
-      _importCustomFields = fRows.filter(f => !standardIds.has(f.id));
+      customFields = fRows.filter(f => !standardIds.has(f.id));
     } catch (e) {
-      _importCustomFields = [];
+      customFields = [];
     }
 
     let headers = [];
@@ -386,7 +385,7 @@ try {
   } else if (ext === 'csv' || ext === 'txt') {
     ({ headers, objects } = parseCsv(buffer));
   } else {
-    ({ headers, objects } = await parseXlsx(buffer));
+    ({ headers, objects } = await parseXlsx(buffer, customFields));
   }
 } catch (parseErr) {
   console.warn('Import parse error:', parseErr.message);
@@ -408,7 +407,7 @@ if (!objects.length) {
   return res.status(400).json({ error: 'Не найдено ни одной строки данных' });
 }
 
-    const colMap = headers.map(h => mapHeader(h));
+    const colMap = headers.map(h => mapHeader(h, customFields));
     const mappedCount = colMap.filter(Boolean).length;
 
     if (mappedCount === 0) {
