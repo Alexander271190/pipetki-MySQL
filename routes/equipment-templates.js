@@ -5,7 +5,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 // GET /api/equipment-templates — все шаблоны
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT id, name, data FROM equipment_templates ORDER BY name'
