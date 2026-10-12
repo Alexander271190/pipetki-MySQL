@@ -139,6 +139,8 @@ async function initSchema() {
         replaced_by VARCHAR(255) DEFAULT NULL,
         replacing VARCHAR(255) DEFAULT NULL,
         custom_data JSON DEFAULT NULL,
+        barcode        VARCHAR(255) DEFAULT NULL,
+        barcode_source VARCHAR(50)  DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -322,8 +324,8 @@ async function initSchema() {
       { name: 'replacing',            ddl: 'VARCHAR(255) DEFAULT NULL' },
       { name: 'sent_for_calibration', ddl: 'VARCHAR(20)' },
       { name: 'sent_note',            ddl: 'TEXT' },
-      { name: 'barcode',              ddl: 'VARCHAR(128) DEFAULT NULL' },
-      { name: 'barcode_source',       ddl: 'VARCHAR(20) DEFAULT NULL' },
+      { name: 'barcode',              ddl: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'barcode_source',       ddl: 'VARCHAR(50) DEFAULT NULL' },
     ]);
 
     // 🆕 Догон индексов
@@ -332,10 +334,15 @@ async function initSchema() {
       { name: 'idx_pipettes_equipment_type', ddl: 'CREATE INDEX idx_pipettes_equipment_type ON pipettes(equipment_type)' },
       { name: 'idx_pipettes_barcode',        ddl: 'CREATE INDEX idx_pipettes_barcode ON pipettes(barcode)' },
     ]);
-
+    
     await ensureIndexes(conn, 'audit_log', [
       { name: 'idx_audit_log_timestamp', ddl: 'CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC)' },
     ]);
+
+    // === Идемпотентное выравнивание длины barcode на существующих БД ===
+    // MODIFY COLUMN безопасно, если длина уже правильная — можно на каждом старте.
+    await conn.query('ALTER TABLE pipettes MODIFY COLUMN barcode VARCHAR(255) NULL DEFAULT NULL');
+    await conn.query('ALTER TABLE pipettes MODIFY COLUMN barcode_source VARCHAR(50) NULL DEFAULT NULL');
 
   } finally {
     conn.release();
@@ -399,7 +406,7 @@ async function seedInitialData() {
     barcode_default_copies: '1',
     barcode_zebra_language: 'zpl',
     barcode_agent_port: '9200',
-    barcode_max_length: '128',
+    barcode_max_length: '255',
     barcode_font: 'dejavu',
   };
   for (const [k, v] of Object.entries(bcDefaults)) {
