@@ -5,6 +5,51 @@ const { authenticate, requirePermission, requireAnyPermission } = require('../mi
 const router = express.Router();
 
 // ============================================================
+// 🆕 Универсальная валидация даты формата ГГГГ-ММ-ДД
+// Возвращает: { ok: true } или { ok: false, error: '...' }
+// ============================================================
+function validateISODate(str) {
+  if (!str) return { ok: false, error: 'Дата не указана' };
+
+  const s = String(str).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return { ok: false, error: 'Некорректный формат даты поверки (ожидается ГГГГ-ММ-ДД)' };
+  }
+
+  const [yy, mm, dd] = s.split('-').map(Number);
+  if (mm < 1 || mm > 12) {
+    return { ok: false, error: 'Месяц должен быть от 1 до 12' };
+  }
+  if (dd < 1 || dd > 31) {
+    return { ok: false, error: 'День должен быть от 1 до 31' };
+  }
+
+  // Проверяем, что такая дата реально существует
+  const parsed = new Date(yy, mm - 1, dd);
+  if (
+    parsed.getFullYear() !== yy ||
+    parsed.getMonth() !== mm - 1 ||
+    parsed.getDate() !== dd
+  ) {
+    return { ok: false, error: 'Такой даты не существует (проверьте месяц и день)' };
+  }
+
+  return { ok: true, value: s };
+}
+
+// ============================================================
+// 🆕 Универсальная нормализация МПИ
+// 1..120 → как есть, иначе → 12 (или fallback)
+// ============================================================
+function normalizeInterval(value, fallback = 12) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 120) {
+    return fallback;
+  }
+  return n;
+}
+
+// ============================================================
 // СТАНДАРТНЫЕ ПОЛЯ (есть колонка в pipettes)
 // ============================================================
 const STANDARD_FIELDS = new Set([
@@ -404,10 +449,11 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
 if (!lastCalibration || String(lastCalibration).trim() === '') {
   return res.status(400).json({ error: 'Заполните поле «Дата последней поверки»' });
 }
-  
-  // 🛡️ Дата должна быть валидной
-if (!/^\d{4}-\d{2}-\d{2}$/.test(String(lastCalibration))) {
-  return res.status(400).json({ error: 'Некорректный формат даты поверки (ожидается ГГГГ-ММ-ДД)' });
+
+// 🛡️ Валидация даты — универсальным хелпером
+const dateCheck = validateISODate(lastCalibration);
+if (!dateCheck.ok) {
+  return res.status(400).json({ error: dateCheck.error });
 }
 
 // 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
@@ -429,6 +475,9 @@ if (String(lastCalibration) > todayLocalStr()) {
       });
     }
   }
+
+    // 🆕 Нормализация МПИ: 1..120 — как есть, иначе 12
+  const safeInterval = normalizeInterval(interval, 12);
 
   const conn = await db.getConnection();
   try {
@@ -499,7 +548,7 @@ if (String(lastCalibration) > todayLocalStr()) {
       [
         id, trimmedSerial, trimmedManufacturer, trimmedModel,
         equipmentType || 'pipette', volume, department,
-        interval || 12, lastCalibration, cert,
+        safeInterval, lastCalibration, cert,
         result || 'pass',
         (active === false || active === 0 || active === 'false' || active === '0') ? 0 : 1,
         trimmedResponsible, location, notes,
@@ -605,13 +654,16 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     if (!model) errors.push(`Строка ${lineNo}: не указана модель`);
     if (model.length > 255) errors.push(`Строка ${lineNo}: модель слишком длинная`);
 
-    const lastCalibration = String(r.lastCalibration || '').trim();
+   const lastCalibration = String(r.lastCalibration || '').trim();
     if (!lastCalibration) {
       errors.push(`Строка ${lineNo}: не указана дата поверки`);
-    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(lastCalibration)) {
-      errors.push(`Строка ${lineNo}: неверный формат даты поверки`);
-    } else if (lastCalibration > todayLocalStr()) {
-      errors.push(`Строка ${lineNo}: дата поверки в будущем`);
+    } else {
+      const dc = validateISODate(lastCalibration);
+      if (!dc.ok) {
+        errors.push(`Строка ${lineNo}: ${dc.error}`);
+      } else if (lastCalibration > todayLocalStr()) {
+        errors.push(`Строка ${lineNo}: дата поверки в будущем`);
+      }
     }
     const serial = String(r.serial || '').trim();
     if (serial.length > 255) errors.push(`Строка ${lineNo}: серийный номер слишком длинный`);
@@ -805,6 +857,18 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
 
  const fields = [];
  const values = [];
+
+        // 🆕 Валидация lastCalibration при обновлении
+  if (updates.lastCalibration !== undefined && updates.lastCalibration !== '' && updates.lastCalibration !== null) {
+    const lcCheck = validateISODate(updates.lastCalibration);
+    if (!lcCheck.ok) {
+      return res.status(400).json({ error: lcCheck.error });
+    }
+    if (String(updates.lastCalibration) > todayLocalStr()) {
+      return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
+    }
+  }
+      
  for (const [k, col] of Object.entries(map)) {
    if (updates[k] === undefined) continue;
    if (k === 'lastCalibration' && (updates[k] === '' || updates[k] === null)) {
@@ -1185,9 +1249,16 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Не выбрано ни одной единицы оборудования' });
   }
-  if (!date) {
+   if (!date) {
     return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
   }
+
+  // 🛡️ Валидация даты — универсальным хелпером
+  const returnDateCheck = validateISODate(date);
+  if (!returnDateCheck.ok) {
+    return res.status(400).json({ error: returnDateCheck.error });
+  }
+  
   if (items.length > 100) {
     return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 100)' });
   }
@@ -1520,12 +1591,13 @@ router.post('/:id/calibration', authenticate, requireAnyPermission(['quick_calib
 
 if (!date) return res.status(400).json({ error: 'Заполните поле «Дата поверки»' });
 
-// 🛡️ Дата должна быть валидной
-if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
-  return res.status(400).json({ error: 'Некорректный формат даты поверки (ожидается ГГГГ-ММ-ДД)' });
+// 🛡️ Валидация даты — универсальным хелпером
+const calDateCheck = validateISODate(date);
+if (!calDateCheck.ok) {
+  return res.status(400).json({ error: calDateCheck.error });
 }
 
-// 🛡️ Дата поверки не может быть в будущем (локальная дата, не UTC)
+// 🛡️ Дата поверки не может быть в будущем
 if (String(date) > todayLocalStr()) {
   return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
 }
