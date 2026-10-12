@@ -156,7 +156,7 @@
         <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
       </button>
       <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
-        <i class="fa-solid fa-keyboard"></i> Горячие клавиши
+         <i class="fa-solid fa-book-open"></i> Справка
       </button>
     </div>
   </div>
@@ -207,6 +207,19 @@
 <div class="modal-overlay" id="modal">
   <div class="modal modal-xl">
     <h2 id="modal-title"><i class="fa-solid fa-plus"></i> Добавить оборудование</h2>
+
+    <!-- 🆕 Панель шаблонов (только для админа) -->
+<div class="template-bar" id="template-bar" style="display:none;">
+  <label class="template-bar-label">
+    <i class="fa-solid fa-clone"></i> Шаблон:
+  </label>
+  <select id="template-select" onchange="applyEquipmentTemplate(this.value)">
+    <option value="">— без шаблона —</option>
+  </select>
+  <button type="button" class="btn btn-secondary btn-sm" onclick="saveAsTemplate()" title="Сохранить текущие поля как шаблон">
+    <i class="fa-solid fa-floppy-disk"></i> Сохранить как шаблон
+  </button>
+</div>
 
     <div class="add-tabs" id="add-tabs">
       <button type="button" class="add-tab active" data-tab="single" onclick="switchAddTab('single')">
