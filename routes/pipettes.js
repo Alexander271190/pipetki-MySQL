@@ -838,9 +838,10 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
   delete updates.barcode;
   delete updates.barcodeSource;
 
-  const [pipRows] = await db.query(
-  'SELECT department, equipment_type FROM pipettes WHERE id = ?', [req.params.id]
-);
+   const [pipRows] = await db.query(
+    'SELECT department, equipment_type, responsible FROM pipettes WHERE id = ?',
+    [req.params.id]
+  );
   if (!pipRows.length) {
     return res.status(404).json({ error: 'Оборудование не найдено' });
   }
@@ -848,13 +849,16 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
   }
 
-   // Только админ может менять отдел
+  // Только админ может менять отдел
   if (updates.department !== undefined
       && req.user.role !== 'admin'
       && updates.department !== pipRows[0].department) {
     return res.status(403).json({ error: 'Смена отдела доступна только администратору' });
   }
-
+  
+  if (req.user.role !== 'admin' && !req.user.is_acting) {
+    delete updates.responsible;
+  }
   // 🛡️ Валидация длин строковых полей — синхронно со схемой
   if (updates.serial !== undefined && String(updates.serial).trim().length > 255) {
     return res.status(400).json({ error: 'Серийный номер слишком длинный (максимум 255 символов)' });
@@ -1271,6 +1275,94 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
     conn.release();
   }
 });
+
+// ============================================================
+// ОТМЕНА ОТПРАВКИ НА ПОВЕРКУ (одна единица)
+// ============================================================
+router.post(
+  '/:id/cancel-send',
+  authenticate,
+  requireAnyPermission(['bulk_send', 'manage_pipettes']),
+  async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [rows] = await conn.query(
+        `SELECT id, department, sent_for_calibration, replaced_by
+         FROM pipettes WHERE id = ? FOR UPDATE`,
+        [req.params.id]
+      );
+      if (!rows.length) {
+        await conn.rollback();
+        return res.status(404).json({ error: 'Оборудование не найдено' });
+      }
+
+      const p = rows[0];
+
+      if (!canAccessDepartment(req.user, p.department)) {
+        await conn.rollback();
+        return res.status(403).json({ error: 'Нет доступа' });
+      }
+
+      if (!p.sent_for_calibration) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'Оборудование не находится на поверке' });
+      }
+
+      const replId = p.replaced_by;
+
+      // Возврат замены на склад (если была)
+      if (replId) {
+        const [rep] = await conn.query(
+          'SELECT id FROM pipettes WHERE id = ? FOR UPDATE',
+          [replId]
+        );
+        if (rep.length) {
+          await conn.query(
+            `UPDATE pipettes
+             SET active = 0, location = 'Склад', replacing = NULL,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [replId]
+          );
+        }
+      }
+
+      // Снятие отправки с оригинала + реактивация
+      await conn.query(
+        `UPDATE pipettes
+         SET sent_for_calibration = NULL,
+             sent_note = NULL,
+             active = 1,
+             replaced_by = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [req.params.id]
+      );
+
+      await conn.query(
+        'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+        [req.user.id, req.user.full_name, 'Отмена отправки на поверку',
+         `${p.id}${replId ? ` (замена возвращена на склад: ${replId})` : ''}`]
+      );
+
+      await conn.commit();
+      res.json({
+        message: 'Отправка отменена',
+        id: p.id,
+        replacementReturned: !!replId,
+      });
+    } catch (e) {
+      await conn.rollback();
+      console.error('cancel-send error:', e);
+      res.status(500).json({ error: 'Ошибка отмены отправки' });
+    } finally {
+      conn.release();
+    }
+  }
+);
+
 // ============================================================
 // МАССОВЫЙ ВОЗВРАТ С ПОВЕРКИ
 // ============================================================
@@ -1644,13 +1736,23 @@ if (String(date) > todayLocalStr()) {
 const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-    const [exist] = await conn.query('SELECT id, department FROM pipettes WHERE id = ?', [req.params.id]);
+
+    // 🆕 Читаем исходное состояние с блокировкой строки:
+    // важно знать, была ли единица НА поверке (sent) и была ли у неё замена.
+    const [exist] = await conn.query(
+      `SELECT id, department, sent_for_calibration, replaced_by
+       FROM pipettes WHERE id = ? FOR UPDATE`,
+      [req.params.id]
+    );
     if (!exist.length) { await conn.rollback(); return res.status(404).json({ error: 'Не найдена' }); }
 
     if (!canAccessDepartment(req.user, exist[0].department)) {
-  await conn.rollback();
-  return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
-}
+      await conn.rollback();
+      return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+    }
+
+    const wasSent = !!exist[0].sent_for_calibration;
+    const replId  = exist[0].replaced_by;
 
     const ALLOWED = ['pass', 'fail', 'wip'];
     const safeResult = ALLOWED.includes(result) ? result : 'pass';
@@ -1660,26 +1762,46 @@ const conn = await db.getConnection();
        VALUES (?, ?, ?, ?, ?, ?)`,
       [req.params.id, date, cert, safeResult, org, note]
     );
-
+   
     await conn.query(
-  `UPDATE pipettes
-   SET last_calibration = ?,
-       cert = ?,
-       last_result = ?,
-       sent_for_calibration = NULL,
-       sent_note = NULL,
-       updated_at = CURRENT_TIMESTAMP
-   WHERE id = ?`,
-  [date, cert, safeResult, req.params.id]
-);
+      `UPDATE pipettes
+       SET last_calibration = ?,
+           cert = ?,
+           last_result = ?,
+           sent_for_calibration = NULL,
+           sent_note = NULL,
+           active      = CASE WHEN ? = 1 THEN 1    ELSE active      END,
+           replaced_by = CASE WHEN ? = 1 THEN NULL ELSE replaced_by END,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [date, cert, safeResult, wasSent ? 1 : 0, wasSent ? 1 : 0, req.params.id]
+    );
+
+    // 🆕 Возвращаем замену на склад, если была и если она ещё существует
+    if (wasSent && replId) {
+      const [replExists] = await conn.query(
+        'SELECT id FROM pipettes WHERE id = ? FOR UPDATE',
+        [replId]
+      );
+      if (replExists.length) {
+        await conn.query(
+          `UPDATE pipettes
+           SET active = 0, location = 'Склад', replacing = NULL,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [replId]
+        );
+      }
+    }
 
     await conn.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Добавление поверки', `${req.params.id} — ${date}`]
+      [req.user.id, req.user.full_name, 'Добавление поверки',
+       `${req.params.id} — ${date}${wasSent ? ' (возврат с поверки)' : ''}`]
     );
 
     await conn.commit();
-    res.status(201).json({ message: 'Поверка добавлена' });
+    res.status(201).json({ message: 'Поверка добавлена', wasReturn: wasSent, replacementReturned: wasSent && !!replId });
   } catch (e) {
     await conn.rollback();
     console.error(e);
