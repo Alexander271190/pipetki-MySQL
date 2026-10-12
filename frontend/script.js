@@ -66,7 +66,8 @@ function todayStr() {
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 function esc(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({
+  if (s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
@@ -2890,7 +2891,11 @@ async function saveQuickCalibration() {
 // ============================================================
 async function cancelSend(id) {
   await refreshCurrentUser();
-  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+  // 🆕 Проверяем то же право, что и сервер — bulk_send (или manage_pipettes)
+  if (!canBulkSend() && !canManagePipettes()) {
+    showToast('Нет прав на отмену отправки', 'error');
+    return;
+  }
 
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
@@ -2908,28 +2913,8 @@ async function cancelSend(id) {
   if (!ok) return;
 
   try {
-    // 🆕 Если была замена — сначала разрываем связь:
-    // возвращаем складскую на склад
-    if (hasReplacement) {
-      try {
-        await apiRequest(`/pipettes/${p.replaced_by}`, 'PUT', {
-          replacing: null,
-          active: false,
-          location: 'Склад'
-        });
-      } catch (e) {
-        console.warn('Не удалось разорвать связь с заменой:', e.message);
-      }
-    }
-
-    // Отменяем отправку + снимаем связь
-    await apiRequest(`/pipettes/${id}`, 'PUT', {
-      sentForCalibration: null,
-      sentNote: null,
-      active: true,
-      replacedBy: null
-    });
-
+    // 🆕 Вся работа (возврат замены + снятие отправки) — на сервере, в одной транзакции
+    await apiRequest(`/pipettes/${encodeURIComponent(id)}/cancel-send`, 'POST', {});
     showToast('Отправка отменена', 'success');
     await loadPipetteData();
   } catch (e) {
