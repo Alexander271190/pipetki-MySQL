@@ -401,7 +401,9 @@ router.get('/labels.pdf', authenticate, requirePermission('print_labels'), async
 
     const ids = idsParam.split(',').map(s => s.trim()).filter(Boolean);
     if (ids.length === 0) return res.status(400).json({ error: 'Не указаны ids' });
-
+    if (ids.length > 2000) {
+      return res.status(400).json({ error: 'Слишком много ID за раз (максимум 2000)' });
+    }
     const s = await getSettings();
     const type        = (req.query.type || s.barcode_type || 'code128').toLowerCase();
     const labelFields = req.query.fields
@@ -572,8 +574,11 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
     const { ids, copies: copiesRaw, printerId } = req.body || {};
     const copies = Math.max(1, Math.min(50, parseInt(copiesRaw, 10) || 1));
 
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: 'Не указаны ids' });
+     if (!Array.isArray(ids) || ids.length === 0) {
+     return res.status(400).json({ error: 'Не указаны ids' });
+    }
+    if (ids.length > 2000) {
+      return res.status(400).json({ error: 'Слишком много ID за раз (максимум 2000)' });
     }
 
     const s = await getSettings();
