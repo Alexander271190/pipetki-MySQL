@@ -85,15 +85,18 @@ function safeParseCustom(raw) {
   try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
 }
 
+const BARCODE_MAX_LEN = 255;
+
 function resolveBarcodeValue(pipette) {
+  const cut = s => String(s).trim().slice(0, BARCODE_MAX_LEN);
   if (pipette.barcode && pipette.barcode_source === 'manual') {
-    return { value: String(pipette.barcode).trim(), source: 'manual' };
+    return { value: cut(pipette.barcode), source: 'manual' };
   }
   const custom = safeParseCustom(pipette.custom_data);
   const inv = custom.inventorynumber || custom.inventoryNumber || custom.inventory_no || '';
-  if (inv && String(inv).trim()) return { value: String(inv).trim(), source: 'inventorynumber' };
-  if (pipette.serial && String(pipette.serial).trim()) return { value: String(pipette.serial).trim(), source: 'serial' };
-  return { value: String(pipette.id).trim(), source: 'id' };
+  if (inv && String(inv).trim()) return { value: cut(inv), source: 'inventorynumber' };
+  if (pipette.serial && String(pipette.serial).trim()) return { value: cut(pipette.serial), source: 'serial' };
+  return { value: cut(pipette.id), source: 'id' };
 }
 
 async function generateBarcodePng(value, type = 'code128') {
@@ -221,12 +224,16 @@ function sendZplToPrinter(zpl, ip, port, timeoutMs = 4000) {
     const timer = setTimeout(() => finish(new Error('Таймаут подключения к принтеру')), timeoutMs);
     client.once('error', (e) => { clearTimeout(timer); finish(e); });
     client.once('timeout', () => { clearTimeout(timer); finish(new Error('Таймаут')); });
-    client.connect(port, ip, () => {
+      client.connect(port, ip, () => {
       client.write(zpl, 'utf8', (err) => {
-        clearTimeout(timer);
-        if (err) return finish(err);
-        client.end();
-        finish(null);
+        if (err) {
+          clearTimeout(timer);
+          return finish(err);
+        }
+        client.end(() => {
+          clearTimeout(timer);
+          finish(null);
+        });
       });
     });
   });
@@ -324,11 +331,11 @@ router.post('/manual', authenticate, requireRole(['admin']), async (req, res) =>
     if (!barcode) return res.status(400).json({ error: 'Укажите штрихкод' });
 
     const s = await getSettings();
-    const maxLen = parseInt(s.barcode_max_length, 10) || 128;
+    const configuredMax = parseInt(s.barcode_max_length, 10) || 255;
+    const maxLen = Math.min(configuredMax, 255);
     const value = String(barcode).trim();
     if (!value) return res.status(400).json({ error: 'Пустой штрихкод' });
     if (value.length > maxLen) return res.status(400).json({ error: `Максимум ${maxLen} символов` });
-
     const [rows] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
     if (!rows.length) return res.status(404).json({ error: 'Оборудование не найдено' });
 
