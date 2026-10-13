@@ -61,27 +61,27 @@ const SETTINGS_SECTIONS = [
 // 🆕 СПИСОК ПРАВ (16 штук, по 5 группам)
 // ============================================================
   const ALL_PERMISSIONS = [
-  { key: 'add_pipette',       group: 'Оборудование',      label: '➕ Добавление оборудования' },
-  { key: 'edit_pipette',      group: 'Оборудование',      label: '✏️ Редактирование оборудования' },
-  { key: 'delete_pipette',    group: 'Оборудование',      label: '🗑️ Удаление оборудования' },
-  { key: 'quick_calibration', group: 'Оборудование',      label: '✓ Быстрая поверка' },
-  { key: 'transfer_pipette',  group: 'Оборудование',      label: '🔀 Передача в другой отдел' },
-  { key: 'bulk_change_responsible', group: 'Оборудование', label: '👤 Массовая смена ответственного' },
+  { key: 'add_pipette',       group: 'Оборудование', label: '<i class="fa-solid fa-plus"></i> Добавление оборудования' },
+  { key: 'edit_pipette',      group: 'Оборудование', label: '<i class="fa-solid fa-pen"></i> Редактирование оборудования' },
+  { key: 'delete_pipette',    group: 'Оборудование', label: '<i class="fa-solid fa-trash"></i> Удаление оборудования' },
+  { key: 'quick_calibration', group: 'Оборудование', label: '<i class="fa-solid fa-clipboard-check"></i> Быстрая поверка' },
+  { key: 'transfer_pipette',  group: 'Оборудование', label: '<i class="fa-solid fa-right-left"></i> Передача в другой отдел' },
+  { key: 'bulk_change_responsible', group: 'Оборудование', label: '<i class="fa-solid fa-user-pen"></i> Массовая смена ответственного' },
 
-  { key: 'bulk_send',         group: 'Поверки',           label: '📦 Отправка на поверку' },
-  { key: 'bulk_return',       group: 'Поверки',           label: '📥 Возврат с поверки' },
+  { key: 'bulk_send',         group: 'Поверки',      label: '<i class="fa-solid fa-box"></i> Отправка на поверку' },
+  { key: 'bulk_return',       group: 'Поверки',      label: '<i class="fa-solid fa-box-open"></i> Возврат с поверки' },
 
-  { key: 'import_data',       group: 'Данные',            label: '📥 Импорт данных' },
-  { key: 'export_data',       group: 'Данные',            label: '📤 Экспорт данных' },
+  { key: 'import_data',       group: 'Данные',       label: '<i class="fa-solid fa-download"></i> Импорт данных' },
+  { key: 'export_data',       group: 'Данные',       label: '<i class="fa-solid fa-upload"></i> Экспорт данных' },
 
-  { key: 'scan_barcode',      group: 'Штрихкоды',         label: '📷 Сканирование штрихкодов' },
-  { key: 'print_labels',      group: 'Штрихкоды',         label: '🏷️ Печать этикеток' },
-  { key: 'manage_barcodes',   group: 'Штрихкоды',         label: '🔧 Ручной ввод / сброс штрихкодов' },
+  { key: 'scan_barcode',      group: 'Штрихкоды',    label: '<i class="fa-solid fa-barcode"></i> Сканирование штрихкодов' },
+  { key: 'print_labels',      group: 'Штрихкоды',    label: '<i class="fa-solid fa-tag"></i> Печать этикеток' },
+  { key: 'manage_barcodes',   group: 'Штрихкоды',    label: '<i class="fa-solid fa-wand-magic-sparkles"></i> Ручной ввод / сброс штрихкодов' },
 
-  { key: 'manage_users',      group: 'Администрирование', label: '👥 Управление пользователями' },
-  { key: 'manage_settings',   group: 'Администрирование', label: '⚙️ Настройки системы' },
-  { key: 'manage_printers',   group: 'Администрирование', label: '🖨️ Управление принтерами' },
-  { key: 'view_log',          group: 'Администрирование', label: '📜 Просмотр журнала' },
+  { key: 'manage_users',      group: 'Администрирование', label: '<i class="fa-solid fa-users"></i> Управление пользователями' },
+  { key: 'manage_settings',   group: 'Администрирование', label: '<i class="fa-solid fa-gear"></i> Настройки системы' },
+  { key: 'manage_printers',   group: 'Администрирование', label: '<i class="fa-solid fa-print"></i> Управление принтерами' },
+  { key: 'view_log',          group: 'Администрирование', label: '<i class="fa-solid fa-scroll"></i> Просмотр журнала' },
 
-  { key: 'view_history',      group: 'Общие',             label: '📋 Просмотр истории поверок' },
+  { key: 'view_history',      group: 'Общие',        label: '<i class="fa-solid fa-clock-rotate-left"></i> Просмотр истории поверок' },
 ];
