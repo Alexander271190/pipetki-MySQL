@@ -165,7 +165,11 @@ function toggleHeaderCollapse() {
   const btn = document.getElementById('header-collapse-btn');
   if (btn) {
     const label = btn.querySelector('.collapse-label');
-    if (label) label.textContent = collapsed ? '▼ Развернуть' : '▲ Свернуть';
+    if (label) {
+      label.innerHTML = collapsed
+        ? '<i class="fa-solid fa-chevron-down"></i> Развернуть'
+        : '<i class="fa-solid fa-chevron-up"></i> Свернуть';
+    }
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
 }
@@ -202,7 +206,11 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   try { localStorage.setItem('pipette_theme', theme); } catch (e) {}
   const btn = document.getElementById('theme-btn');
-  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  if (btn) {
+    btn.innerHTML = theme === 'dark'
+      ? '<i class="fa-solid fa-sun"></i>'
+      : '<i class="fa-solid fa-moon"></i>';
+  }
 }
 
 function toggleTheme() {
