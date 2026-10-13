@@ -134,12 +134,22 @@ function renderUserEditForm() {
           Для роли «Администратор» все права выдаются автоматически.
         </small>
 
-        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')">Очистить</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')">👤 Пользователь</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')">🔬 Ст. лаборант</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('manager')">📊 Менеджер</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')">⭐ Все права</button>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')">
+             <i class="fa-solid fa-eraser"></i> Очистить
+        </button>
+         <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')">
+              <i class="fa-solid fa-user"></i> Пользователь
+         </button>
+         <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')">
+              <i class="fa-solid fa-flask"></i> Ст. лаборант
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('manager')">
+              <i class="fa-solid fa-chart-line"></i> Менеджер
+           </button>
+           <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')">
+              <i class="fa-solid fa-star"></i> Все права
+           </button>
         </div>
 
         <div id="usr-permissions">${permsHtml}</div>
