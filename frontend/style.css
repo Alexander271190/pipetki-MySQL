@@ -864,6 +864,92 @@ html {
 .confirm-actions { justify-content: center !important; margin-top: 0 !important; gap: 12px !important; }
 .confirm-actions .btn { min-width: 110px; padding: 10px 20px; font-size: .92rem; }
 
+/* ========== МОДАЛКА PROMPT ========== */
+.prompt-modal { max-width: 480px; padding: 26px 24px 20px; }
+
+.prompt-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 12px;
+  text-align: center;
+  color: var(--primary);
+}
+
+.prompt-modal h3 {
+  font-size: 1.15rem;
+  color: #1e293b;
+  margin-bottom: 8px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.prompt-message {
+  color: #475569;
+  font-size: .92rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  text-align: center;
+  white-space: pre-line;
+}
+
+.prompt-modal .form-group { margin-bottom: 8px; }
+
+.prompt-modal input[type="text"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border .2s;
+  box-sizing: border-box;
+}
+
+.prompt-modal input[type="text"]:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+
+.prompt-modal input[type="text"].invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220,38,38,.15);
+}
+
+.prompt-error {
+  color: #dc2626;
+  font-size: .82rem;
+  padding: 6px 10px;
+  background: #fee2e2;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+/* Тёмная тема */
+html[data-theme="dark"] .prompt-modal h3 { color: #e2e8f0; }
+html[data-theme="dark"] .prompt-message { color: #94a3b8; }
+html[data-theme="dark"] .prompt-modal input[type="text"] {
+  background: #273449;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .prompt-modal input[type="text"]:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129,140,248,.2);
+}
+html[data-theme="dark"] .prompt-error {
+  background: rgba(220, 38, 38, .2);
+  color: #fca5a5;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 480px) {
+  .prompt-modal { max-width: 94vw; padding: 22px 18px 16px; }
+  .prompt-icon { font-size: 2.2rem; }
+  .prompt-modal h3 { font-size: 1.05rem; }
+}
+
 /* ========== ВКЛАДКИ НАСТРОЕК ВИДА ========== */
 .prefs-tabs {
   display: flex;
