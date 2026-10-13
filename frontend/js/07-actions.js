@@ -38,7 +38,7 @@ async function openUserActions(ev, userId) {
       label: '<i class="fa-solid fa-right-to-bracket"></i> Войти как этот пользователь',
       class: 'item-warning',
       action: () => impersonateUser(userId),
-  });
+    });
     items.push({
       label: '<i class="fa-solid fa-key"></i> Сбросить пароль',
       class: 'item-warning',
@@ -49,8 +49,8 @@ async function openUserActions(ev, userId) {
       label: '<i class="fa-solid fa-trash"></i> Удалить пользователя',
       class: 'item-danger',
       action: () => deleteUserSetting(userId, u.fullName || ''),
-   });
-   }
+    });
+  }
 
   renderUserActionsMenu(anchorEl, items);
 }
