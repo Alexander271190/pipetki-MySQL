@@ -37,14 +37,14 @@ async function loadPipetteData() {
     try {
       _equipmentTypes = await apiRequest('/settings/equipment-types');
     } catch (e) {
-      _equipmentTypes = [
-        { value: 'pipette',     label: 'Пипетка',     icon: '💧',  prefix: 'P' },
-        { value: 'analyzer',    label: 'Анализатор',  icon: '🖥️', prefix: 'A' },
-        { value: 'thermometer', label: 'Термометр',   icon: '🌡️', prefix: 'T' },
-        { value: 'scales',      label: 'Весы',        icon: '⚖️', prefix: 'S' },
-        { value: 'photometer',  label: 'Фотометр',    icon: '🔆', prefix: 'F' },
-        { value: 'microscope',  label: 'Микроскоп',   icon: '🔬', prefix: 'M' }
-      ];
+ _equipmentTypes = [
+  { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
+  { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
+  { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
+  { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
+  { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
+  { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 }
+];
     }
 
    try {
