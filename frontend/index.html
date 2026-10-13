@@ -64,9 +64,9 @@
 </h1>
     <div class="header-mini-stats" id="header-mini-stats"></div>
     <button class="header-collapse-btn" id="header-collapse-btn" onclick="toggleHeaderCollapse()" title="Свернуть шапку">
-      <span class="collapse-label">▲ Свернуть</span>
+      <span class="collapse-label"><i class="fa-solid fa-chevron-up"></i> Свернуть</span>
     </button>
-  </div>
+   </div>
 
   <div class="header-body">
     <div class="header-stats">
@@ -82,7 +82,7 @@
       <span class="name" id="user-fullname">Имя</span>
       <span class="position" id="user-position">Должность</span>
       <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()"><i class="fa-solid fa-arrow-left"></i> Вернуться</button>
-      <button class="btn btn-sm" id="theme-btn" onclick="toggleTheme()" title="Переключить тему">🌙</button>
+      <button class="btn btn-sm" id="theme-btn" onclick="toggleTheme()" title="Переключить тему">   <i class="fa-solid fa-moon"></i> </button>
       <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль"><i class="fa-solid fa-lock"></i> Пароль</button>
       <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
     </div>
@@ -116,7 +116,7 @@
   </div>
 
   <!-- Поиск -->
-  <input type="text" id="search" placeholder="🔍 Поиск по номеру, модели, отделу, ответственному…">
+  <input type="text" id="search" placeholder="Поиск по номеру, модели, отделу, ответственному…">
 
   <!-- Фильтр -->
   <div style="position:relative;display:inline-block;">
