@@ -150,7 +150,7 @@ function updateHeaderMiniStats() {
   if (!el) return;
   const ok = document.getElementById('stat-ok')?.textContent || '0';
   const total = document.getElementById('stat-total')?.textContent || '0';
-  el.innerHTML = `<b>${ok}</b>/${total} в норме`;
+  el.innerHTML = `<i class="fa-solid fa-circle-check" style="opacity:.8;"></i> <b>${ok}</b>/${total} в норме`;
 }
 
 function toggleHeaderCollapse() {
