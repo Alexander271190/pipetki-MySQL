@@ -336,7 +336,8 @@ async function openHistoryModal(id) {
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
   currentHistoryId = id;
-  document.getElementById('history-title').textContent = `История поверок — ${p.id}`;
+  document.getElementById('history-title').innerHTML =
+    `<i class="fa-solid fa-clock-rotate-left"></i> История поверок — ${esc(p.id)}`;
   await renderHistoryContent(p);
   closeCalibrationForm();
   document.getElementById('history-modal').classList.add('active');
