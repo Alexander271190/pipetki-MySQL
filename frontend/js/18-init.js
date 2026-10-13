@@ -183,7 +183,7 @@ function toggleHeaderCollapse() {
       const btn = document.getElementById('header-collapse-btn');
       if (btn) {
         const label = btn.querySelector('.collapse-label');
-        if (label) label.textContent = '▼ Развернуть';
+        if (label) label.innerHTML = '<i class="fa-solid fa-chevron-down"></i> Развернуть';
       }
     }
   } catch (e) {}
@@ -223,7 +223,11 @@ function toggleTheme() {
   try { saved = localStorage.getItem('pipette_theme') || 'light'; } catch (e) {}
   document.documentElement.setAttribute('data-theme', saved);
   const btn = document.getElementById('theme-btn');
-  if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+  if (btn) {
+    btn.innerHTML = saved === 'dark'
+      ? '<i class="fa-solid fa-sun"></i>'
+      : '<i class="fa-solid fa-moon"></i>';
+  }
 })();
 
 // ============================================================
