@@ -23,11 +23,11 @@ async function openUserActions(ev, userId) {
 
   const items = [
     {
-      label: 'Редактировать',
+      label: '<i class="fa-solid fa-pen"></i> Редактировать',
       action: () => editUserSetting(userId),
     },
     {
-      label: 'Настроить видимые поля',
+      label: '<i class="fa-solid fa-list-check"></i> Настроить видимые поля',
       action: () => openUserViewModal(userId, u.fullName || ''),
     },
   ];
@@ -35,22 +35,22 @@ async function openUserActions(ev, userId) {
   if (!isSelf) {
     items.push({ divider: true });
     items.push({
-      label: 'Войти как этот пользователь',
+      label: '<i class="fa-solid fa-right-to-bracket"></i> Войти как этот пользователь',
       class: 'item-warning',
       action: () => impersonateUser(userId),
-    });
+  });
     items.push({
-      label: 'Сбросить пароль',
+      label: '<i class="fa-solid fa-key"></i> Сбросить пароль',
       class: 'item-warning',
       action: () => resetUserPassword(userId, u.login || ''),
     });
     items.push({ divider: true });
     items.push({
-      label: 'Удалить пользователя',
+      label: '<i class="fa-solid fa-trash"></i> Удалить пользователя',
       class: 'item-danger',
       action: () => deleteUserSetting(userId, u.fullName || ''),
-    });
-  }
+   });
+   }
 
   renderUserActionsMenu(anchorEl, items);
 }
@@ -77,58 +77,58 @@ function openRowActions(ev, id) {
 
   if (_canHistory) {
     items.push({
-      label: 'История поверок' + (histCount > 0 ? ` (${histCount})` : ''),
+      label: '<i class="fa-solid fa-clock-rotate-left"></i> История поверок' + (histCount > 0 ? ` (${histCount})` : ''),
       action: () => openHistoryModal(id),
     });
   }
 
    if (_canEdit) {
+  items.push({
+    label: '<i class="fa-solid fa-pen"></i> Редактировать',
+    action: () => openModal(id),
+  });
+}
+
+if (canTransferPipette()) {
+  items.push({
+    label: '<i class="fa-solid fa-right-left"></i> Передать в другой отдел',
+    action: () => openTransferModal(id),
+  });
+}
+
+if (_canQuickCal) {
+  items.push({ divider: true });
+  if (status === 'sent') {
     items.push({
-      label: 'Редактировать',
-      action: () => openModal(id),
+      label: '<i class="fa-solid fa-rotate-left"></i> Вернулась с поверки',
+      class: 'item-success',
+      action: () => openQuickCalModal(id),
+    });
+  } else {
+    items.push({
+      label: '<i class="fa-solid fa-clipboard-check"></i> Быстрая поверка',
+      class: 'item-success',
+      action: () => openQuickCalModal(id),
     });
   }
+}
 
-  if (canTransferPipette()) {
-    items.push({
-      label: 'Передать в другой отдел',
-      action: () => openTransferModal(id),
-    });
-  }
+if (status === 'sent' && canBulkSend()) {
+  items.push({
+    label: '<i class="fa-solid fa-xmark"></i> Отменить отправку',
+    class: 'item-warning',
+    action: () => cancelSend(id),
+  });
+}
 
-  if (_canQuickCal) {
-    items.push({ divider: true });
-    if (status === 'sent') {
-      items.push({
-        label: 'Вернулась с поверки',
-        class: 'item-success',
-        action: () => openQuickCalModal(id),
-      });
-    } else {
-      items.push({
-        label: 'Быстрая поверка',
-        class: 'item-success',
-        action: () => openQuickCalModal(id),
-      });
-    }
-  }
-
-  if (status === 'sent' && canBulkSend()) {
-    items.push({
-      label: 'Отменить отправку',
-      class: 'item-warning',
-      action: () => cancelSend(id),
-    });
-  }
-
-  if (_canDelete) {
-    items.push({ divider: true });
-    items.push({
-      label: 'Удалить',
-      class: 'item-danger',
-      action: () => deletePipette(id),
-    });
-  }
+if (_canDelete) {
+  items.push({ divider: true });
+  items.push({
+    label: '<i class="fa-solid fa-trash"></i> Удалить',
+    class: 'item-danger',
+    action: () => deletePipette(id),
+  });
+}
 
   renderRowActionsMenu(ev.currentTarget, items);
 }
@@ -147,7 +147,7 @@ function renderRowActionsMenu(anchorEl, items) {
       html += `<div class="row-actions-divider"></div>`;
       continue;
     }
-    html += `<button class="row-actions-item ${item.class || ''}" type="button">${esc(item.label)}</button>`;
+    html += `<button class="row-actions-item ${item.class || ''}" type="button">${item.label}</button>`;
   }
   menu.innerHTML = html;
 
