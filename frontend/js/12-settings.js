@@ -127,7 +127,7 @@ async function renderFieldsSettings(skipFetch = false) {
   html += `<tr>
     <td>
       <div class="order-btns">
-        <button class="btn btn-secondary btn-sm" onclick="moveFilter(${i},-1)" title="Выше">
+        <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},-1)" title="Выше">
           <i class="fa-solid fa-arrow-up"></i>
         </button>
         <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},1)" title="Ниже">
