@@ -124,15 +124,18 @@ async function renderFieldsSettings(skipFetch = false) {
         </tr></thead><tbody>`;
 
     _cachedFields.forEach((f, i) => {
-      html += `<tr>
-        <td><div class="order-btns">
-      <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},-1)" title="Выше">
-         <i class="fa-solid fa-arrow-up"></i>
-      </button>
-      <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},1)" title="Ниже">
-         <i class="fa-solid fa-arrow-down"></i>
-      </button>
-        <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
+  html += `<tr>
+    <td>
+      <div class="order-btns">
+        <button class="btn btn-secondary btn-sm" onclick="moveFilter(${i},-1)" title="Выше">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},1)" title="Ниже">
+          <i class="fa-solid fa-arrow-down"></i>
+        </button>
+      </div>
+    </td>
+    <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
         <td>${renderFieldTypeSelect(i, f)}</td>
         <td style="text-align:center;"><input type="checkbox" ${f.required ? 'checked' : ''} onchange="_cachedFields[${i}].required=this.checked"></td>
         <td style="text-align:center;"><input type="checkbox" ${f.enabled ? 'checked' : ''} onchange="_cachedFields[${i}].enabled=this.checked"></td>
@@ -508,12 +511,12 @@ async function renderFiltersSettings(skipFetch = false) {
       html += `<tr>
         <td>
           <div class="order-btns">
-         <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},-1)" title="Выше">
+         <button class="btn btn-secondary btn-sm" onclick="moveFilter(${i},-1)" title="Выше">
             <i class="fa-solid fa-arrow-up"></i>
          </button>
-         <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},1)" title="Ниже">
-             <i class="fa-solid fa-arrow-down"></i>
-        </button>
+         <button class="btn btn-secondary btn-sm" onclick="moveFilter(${i},1)" title="Ниже">
+            <i class="fa-solid fa-arrow-down"></i>
+          </button>
           </div>
         </td>
         <td style="text-align:center;">
@@ -800,8 +803,12 @@ function renderEquipmentTypesTable() {
     <tr>
       <td>
         <div class="order-btns">
-          <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
-          <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, 1)" ${i === _cachedEquipmentTypes.length - 1 ? 'disabled' : ''}>▼</button>
+           <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Выше">
+              <i class="fa-solid fa-arrow-up"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, 1)" ${i === _cachedEquipmentTypes.length - 1 ? 'disabled' : ''} title="Ниже">
+                <i class="fa-solid fa-arrow-down"></i>
+            </button>
         </div>
       </td>
       <td>
