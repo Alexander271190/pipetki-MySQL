@@ -77,7 +77,7 @@ function renderUserEditForm() {
           ${items.map(p => `
             <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:5px 8px;border-radius:6px;font-size:.85rem;line-height:1.3;">
               <input type="checkbox" class="usr-perm-cb" value="${esc(p.key)}" style="margin-top:2px;">
-              <span>${esc(p.label)}</span>
+              <span>${p.label}</span>
             </label>
           `).join('')}
         </div>
