@@ -179,12 +179,14 @@ if (totalEl) {
   empty.style.display = 'none';
 
 const labels = {
-  ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-  inactive: 'Неактивна',
-  sent: '<i class="fa-solid fa-box"></i> На поверке',
-  fail: '<i class="fa-solid fa-xmark"></i> Брак',
-  wip: '<i class="fa-solid fa-hourglass-half"></i> В процессе',
-  unknown: '<i class="fa-solid fa-circle-question"></i> Не задано'
+  ok:       '<i class="fa-solid fa-circle-check"></i> В норме',
+  warn:     '<i class="fa-solid fa-clock"></i> Скоро поверка',
+  danger:   '<i class="fa-solid fa-triangle-exclamation"></i> Просрочена',
+  inactive: '<i class="fa-solid fa-circle-pause"></i> Неактивна',
+  sent:     '<i class="fa-solid fa-box"></i> На поверке',
+  fail:     '<i class="fa-solid fa-xmark"></i> Брак',
+  wip:      '<i class="fa-solid fa-hourglass-half"></i> В процессе',
+  unknown:  '<i class="fa-solid fa-circle-question"></i> Не задано'
 };
 
   tbody.innerHTML = pageItems.map(p => {
