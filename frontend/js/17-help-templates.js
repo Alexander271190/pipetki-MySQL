@@ -67,8 +67,18 @@ async function applyEquipmentTemplate(templateId) {
 async function saveAsTemplate() {
   if (!isAdmin()) { showToast('Только админ может создавать шаблоны', 'error'); return; }
 
-  const name = prompt('Название шаблона (например «Eppendorf Research Plus 1000 мкл»):');
-  if (!name || !name.trim()) return;
+  const name = await showPrompt(
+    'Название шаблона (например «Eppendorf Research Plus 1000 мкл»)',
+    {
+      icon: 'fa-floppy-disk',
+      title: 'Сохранение шаблона',
+      okText: 'Сохранить',
+      okClass: 'btn-success',
+      placeholder: 'Например: Eppendorf 1000 мкл',
+      validator: (v) => v ? null : 'Укажите название шаблона'
+    }
+  );
+  if (!name) return;
 
   const data = {};
   document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
