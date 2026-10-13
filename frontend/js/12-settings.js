@@ -191,11 +191,28 @@ function moveFieldSetting(idx, dir) {
   renderFieldsSettings(true);
 }
 
-function addFieldSetting() {
-  const id = prompt('ID нового поля (латиницей, без пробелов):');
-  if (!id || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(id)) { showToast('Некорректный ID', 'error'); return; }
-  if (_cachedFields.some(f => f.id === id)) { showToast('Поле с таким ID уже существует', 'error'); return; }
-  _cachedFields.push({ id, label: id, type: 'text', required: false, enabled: true, options: [], default: '', order: _cachedFields.length + 1 });
+async function addFieldSetting() {
+  const id = await showPrompt(
+    'ID нового поля (латиница, начинается с буквы)',
+    {
+      icon: 'fa-plus',
+      title: 'Новое поле',
+      okText: 'Добавить',
+      placeholder: 'Например: inventorynumber',
+      validator: (v) => {
+        if (!v) return 'Укажите ID поля';
+        if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(v)) return 'Только латиница, цифры и _, начиная с буквы';
+        if (_cachedFields.some(f => f.id === v)) return 'Поле с таким ID уже существует';
+        return null;
+      }
+    }
+  );
+  if (!id) return;
+
+  _cachedFields.push({
+    id, label: id, type: 'text', required: false, enabled: true,
+    options: [], default: '', order: _cachedFields.length + 1
+  });
   renderFieldsSettings(true);
 }
 
@@ -541,18 +558,27 @@ function moveFilter(idx, dir) {
   renderFiltersSettings(true);
 }
 
-function addFilter() {
-  const id = prompt('ID нового фильтра (латиницей):');
-  if (!id || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(id)) { showToast('Некорректный ID', 'error'); return; }
-  if (_cachedFilters.some(f => f.id === id)) { showToast('Уже есть', 'error'); return; }
+async function addFilter() {
+  const id = await showPrompt(
+    'ID нового фильтра (латиница, начинается с буквы)',
+    {
+      icon: 'fa-filter',
+      title: 'Новый фильтр',
+      okText: 'Добавить',
+      placeholder: 'Например: responsible',
+      validator: (v) => {
+        if (!v) return 'Укажите ID фильтра';
+        if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(v)) return 'Только латиница, цифры и _';
+        if (_cachedFilters.some(f => f.id === v)) return 'Такой фильтр уже есть';
+        return null;
+      }
+    }
+  );
+  if (!id) return;
+
   _cachedFilters.push({
-    id,
-    label: id,
-    type: 'text',
-    fieldId: '',
-    enabled: true,
-    optionsSource: '',
-    order: _cachedFilters.length + 1
+    id, label: id, type: 'text', fieldId: '',
+    enabled: true, optionsSource: '', order: _cachedFilters.length + 1
   });
   renderFiltersSettings(true);
 }
@@ -823,26 +849,29 @@ function moveEquipmentType(idx, dir) {
   renderEquipmentTypesTable();
 }
 
-function addEquipmentType() {
-  const value = prompt('Ключ типа (латиница, без пробелов, например ph_meter):');
+async function addEquipmentType() {
+  const value = await showPrompt(
+    'Ключ типа (латиница, без пробелов)',
+    {
+      icon: 'fa-screwdriver-wrench',
+      title: 'Новый тип оборудования',
+      okText: 'Добавить',
+      placeholder: 'Например: ph_meter',
+      validator: (v) => {
+        if (!v) return 'Укажите ключ';
+        const t = v.trim().toLowerCase();
+        if (!/^[a-z][a-z0-9_]*$/.test(t)) return 'Только латиница, цифры и _, начиная с буквы';
+        if (_cachedEquipmentTypes.some(x => x.value === t)) return 'Тип с таким ключом уже есть';
+        return null;
+      }
+    }
+  );
   if (!value) return;
 
   const trimmed = value.trim().toLowerCase();
-  if (!/^[a-z][a-z0-9_]*$/.test(trimmed)) {
-    showToast('Ключ должен начинаться с буквы и содержать только латиницу, цифры и _', 'error');
-    return;
-  }
-  if (_cachedEquipmentTypes.some(t => t.value === trimmed)) {
-    showToast('Тип с таким ключом уже существует', 'error');
-    return;
-  }
-
   _cachedEquipmentTypes.push({
-    value: trimmed,
-    label: trimmed,
-    prefix: 'EQ',
-    calibrationPlace: 'internal',
-    interval: 12
+    value: trimmed, label: trimmed, prefix: 'EQ',
+    calibrationPlace: 'internal', interval: 12
   });
   renderEquipmentTypesTable();
   showToast('Тип добавлен. Не забудьте нажать «Сохранить типы».', 'success');
