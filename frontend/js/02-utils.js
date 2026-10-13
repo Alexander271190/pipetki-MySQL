@@ -129,6 +129,108 @@ function resolveConfirm(result) {
   }
 }
 
+// ============================================================
+// PROMPT — замена нативного prompt()
+// ============================================================
+let _promptResolver = null;
+let _promptValidator = null;
+
+function showPrompt(message, options = {}) {
+  if (_promptResolver) {
+    const prev = _promptResolver;
+    _promptResolver = null;
+    try { prev(null); } catch (e) {}
+  }
+
+  return new Promise(resolve => {
+    _promptResolver = resolve;
+    _promptValidator = options.validator || null;
+
+    const modal   = document.getElementById('prompt-modal');
+    const iconEl  = document.getElementById('prompt-icon');
+    const title   = document.getElementById('prompt-title');
+    const msgEl   = document.getElementById('prompt-message');
+    const input   = document.getElementById('prompt-input');
+    const okBtn   = document.getElementById('prompt-ok-btn');
+    const errEl   = document.getElementById('prompt-error');
+
+    if (options.icon) {
+      iconEl.innerHTML = '<i class="fa-solid ' + options.icon + '"></i>';
+    } else {
+      iconEl.innerHTML = '<i class="fa-solid fa-comment-dots"></i>';
+    }
+
+    title.textContent = options.title || 'Введите значение';
+    msgEl.textContent = message;
+    input.value       = options.defaultValue || '';
+    input.placeholder = options.placeholder || '';
+    input.type        = options.inputType || 'text';
+    input.classList.remove('invalid');
+    okBtn.textContent = options.okText || 'ОК';
+    okBtn.className   = 'btn ' + (options.okClass || 'btn-primary');
+    errEl.textContent = '';
+    errEl.style.display = 'none';
+
+    modal.classList.add('active');
+    setTimeout(() => { input.focus(); input.select(); }, 100);
+  });
+}
+
+function submitPrompt() {
+  const input = document.getElementById('prompt-input');
+  const errEl = document.getElementById('prompt-error');
+  const value = input.value.trim();
+
+  if (_promptValidator) {
+    const err = _promptValidator(value);
+    if (err) {
+      errEl.textContent = err;
+      errEl.style.display = 'block';
+      input.classList.add('invalid');
+      input.focus();
+      return;
+    }
+  }
+
+  input.classList.remove('invalid');
+  errEl.textContent = '';
+  errEl.style.display = 'none';
+
+  const resolve = _promptResolver;
+  _promptResolver = null;
+  _promptValidator = null;
+
+  document.getElementById('prompt-modal').classList.remove('active');
+  if (resolve) resolve(value);
+}
+
+function resolvePrompt(value) {
+  const modal = document.getElementById('prompt-modal');
+  if (modal) modal.classList.remove('active');
+
+  const resolve = _promptResolver;
+  _promptResolver = null;
+  _promptValidator = null;
+  if (resolve) resolve(value);
+}
+
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('prompt-modal');
+  if (!modal || !modal.classList.contains('active')) return;
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitPrompt();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    resolvePrompt(null);
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'prompt-modal') resolvePrompt(null);
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const m = document.getElementById('confirm-modal');
