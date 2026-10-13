@@ -224,8 +224,12 @@ async function renderHelpSettings() {
 
     html += `<tr>
       <td class="help-order-cell">
-        <button class="btn btn-secondary btn-sm" onclick="moveHelpSection(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
-        <button class="btn btn-secondary btn-sm" onclick="moveHelpSection(${i}, 1)" ${i === _helpSections.length - 1 ? 'disabled' : ''}>▼</button>
+        <button class="btn btn-secondary btn-sm" onclick="moveHelpSection(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Выше">
+            <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="moveHelpSection(${i}, 1)" ${i === _helpSections.length - 1 ? 'disabled' : ''} title="Ниже">
+            <i class="fa-solid fa-arrow-down"></i>
+        </button>
       </td>
       <td><code style="font-size:.78rem;">${esc(s.slug)}</code></td>
       <td>${esc(s.title)}</td>
