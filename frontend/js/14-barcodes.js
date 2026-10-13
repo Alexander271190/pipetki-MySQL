@@ -169,20 +169,20 @@ async function loadPrintersForBarcodePrint() {
     const data = await apiRequest('/barcode-printers/available');
 
     if (!data.printers || data.printers.length === 0) {
-      container.innerHTML = `
-        <label class="bc-printer-item">
-          <input type="radio" name="bc-printer" value="pdf-a4" checked>
-          <span>📄 PDF (A4)</span>
-        </label>`;
-      return;
-    }
+    container.innerHTML = `
+      <label class="bc-printer-item">
+      <input type="radio" name="bc-printer" value="pdf-a4" checked>
+      <span><i class="fa-solid fa-file-lines"></i> PDF (A4)</span>
+      </label>`;
+   return;
+     }
 
     const modeLabels = {
-      'pdf-a4':      '📄 PDF (A4)',
-      'pdf-zebra':   '🖨️ PDF 58×40 (Ctrl+P)',
-      'zebra-ip':    '🌐 Zebra по сети (IP)',
-      'zebra-agent': '⚡ Zebra (агент)',
-    };
+     'pdf-a4':      '<i class="fa-solid fa-file-lines"></i> PDF (A4)',
+     'pdf-zebra':   '<i class="fa-solid fa-print"></i> PDF 58×40 (Ctrl+P)',
+     'zebra-ip':    '<i class="fa-solid fa-network-wired"></i> Zebra по сети (IP)',
+     'zebra-agent': '<i class="fa-solid fa-bolt"></i> Zebra (агент)',
+  };
 
     const options = data.printers.map(p => {
       const isPreferred = (p.id === data.preferredId);
@@ -195,18 +195,18 @@ async function loadPrintersForBarcodePrint() {
     });
 
     options.push(`
-      <label class="bc-printer-item">
-        <input type="radio" name="bc-printer" value="pdf-a4" ${!data.preferredId ? 'checked' : ''}>
-        <span>📄 PDF (A4, обычный принтер)</span>
+     <label class="bc-printer-item">
+       <input type="radio" name="bc-printer" value="pdf-a4" ${!data.preferredId ? 'checked' : ''}>
+       <span><i class="fa-solid fa-file-lines"></i> PDF (A4, обычный принтер)</span>
       </label>`);
 
     container.innerHTML = options.join('');
   } catch (e) {
     container.innerHTML = `
-      <label class="bc-printer-item">
-        <input type="radio" name="bc-printer" value="pdf-a4" checked>
-        <span>📄 PDF (A4)</span>
-      </label>`;
+     <label class="bc-printer-item">
+       <input type="radio" name="bc-printer" value="pdf-a4" checked>
+       <span><i class="fa-solid fa-file-lines"></i> PDF (A4)</span>
+     </label>`;
   }
 }
 
