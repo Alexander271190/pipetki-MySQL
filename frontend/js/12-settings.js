@@ -1069,7 +1069,7 @@ async function renderBarcodesSettings() {
           <div class="bc-fields-label">Поля на этикетке:</div>
           <div id="bc-label-fields" class="bc-fields-grid"></div>
           <div class="bc-fields-hint">
-            ℹ️ На этикетке 58×40 мм влезает <b>3–4 поля</b>
+             <i class="fa-solid fa-circle-info"></i> На этикетке 58×40 мм влезает <b>3–4 поля</b>
           </div>
         </div>
       </div>
