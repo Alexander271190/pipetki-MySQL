@@ -304,7 +304,7 @@ function renderHelpPermissions(selected) {
           ${items.map(p => `
             <label class="help-perm-item">
               <input type="checkbox" value="${esc(p.key)}" ${set.has(p.key) ? 'checked' : ''}>
-              <span>${esc(p.label)}</span>
+              <span>${p.label}</span>
             </label>
           `).join('')}
         </div>
