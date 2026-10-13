@@ -485,30 +485,85 @@ async function checkPrinterById(id) {
 }
 
 async function addBarcodePrinter() {
-  const name = prompt('Название принтера (например «Zebra КДЛ»):');
-  if (!name || !name.trim()) return;
-  const mode = prompt(
-    'Режим:\n' +
-    '1 — pdf-a4 (PDF A4)\n' +
-    '2 — pdf-zebra (PDF 58×40, Ctrl+P)\n' +
-    '3 — zebra-ip (прямая печать по сети)\n' +
-    '4 — zebra-agent (через локальный агент)\n\n' +
-    'Введите номер:',
-    '2'
+  // Шаг 1 — название
+  const name = await showPrompt(
+    'Название принтера',
+    {
+      icon: 'fa-print',
+      title: 'Новый принтер этикеток',
+      okText: 'Далее',
+      placeholder: 'Например: Zebra КДЛ',
+      validator: v => v ? null : 'Укажите название принтера'
+    }
   );
+  if (!name) return;
+
+  // Шаг 2 — режим
+  const mode = await showPrompt(
+    'Режим печати:\n1 — PDF (A4)\n2 — PDF 58×40 (Ctrl+P)\n3 — Zebra по сети (IP)\n4 — Zebra через агент',
+    {
+      icon: 'fa-gear',
+      title: 'Режим принтера',
+      okText: 'Далее',
+      defaultValue: '2',
+      validator: v => ['1','2','3','4'].includes(v) ? null : 'Введите 1, 2, 3 или 4'
+    }
+  );
+  if (!mode) return;
+
   const modeMap = { '1': 'pdf-a4', '2': 'pdf-zebra', '3': 'zebra-ip', '4': 'zebra-agent' };
   const selectedMode = modeMap[mode];
-  if (!selectedMode) { showToast('Отменено', 'error'); return; }
+  if (!selectedMode) return;
 
-  let ip = null;
+  // Шаг 3 — IP и порт (только для zebra-ip)
+  let ip = '';
   let port = 9100;
   if (selectedMode === 'zebra-ip') {
-    ip = prompt('IP адрес принтера (например 192.168.1.100):');
-    if (!ip || !ip.trim()) { showToast('IP не указан', 'error'); return; }
-    port = parseInt(prompt('Порт (по умолчанию 9100):', '9100') || '9100', 10) || 9100;
+    ip = await showPrompt(
+      'IP-адрес принтера',
+      {
+        icon: 'fa-network-wired',
+        title: 'Сетевой принтер',
+        okText: 'Далее',
+        placeholder: 'Например: 192.168.1.100',
+        validator: v => {
+          if (!v) return 'Укажите IP';
+          if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(v)) return 'Некорректный IP';
+          return null;
+        }
+      }
+    );
+    if (!ip) return;
+
+    const portStr = await showPrompt(
+      'Порт принтера',
+      {
+        icon: 'fa-plug',
+        title: 'Порт',
+        okText: 'Далее',
+        defaultValue: '9100',
+        validator: v => {
+          const n = parseInt(v, 10);
+          if (!Number.isFinite(n) || n < 1 || n > 65535) return 'Порт 1..65535';
+          return null;
+        }
+      }
+    );
+    port = parseInt(portStr, 10) || 9100;
   }
 
-  const department = prompt('Отдел (оставьте пустым для общего принтера):');
+  // Шаг 4 — отдел (необязательный)
+  const department = await showPrompt(
+    'Отдел (оставьте пустым для общего принтера)',
+    {
+      icon: 'fa-building',
+      title: 'Отдел',
+      okText: 'Создать',
+      okClass: 'btn-success',
+      placeholder: 'Например: Гематологический',
+    }
+  );
+  if (department === null) return;  // отмена на этом шаге = отмена всей операции
 
   try {
     await apiRequest('/barcode-printers', 'POST', {
