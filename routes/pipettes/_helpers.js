@@ -141,11 +141,6 @@ function canAccessDepartment(user, department) {
   return department === user.department;
 }
 
-async function isExternalCalibrationServer(equipmentType) {
-  try { return await equipmentTypes.isExternal(equipmentType); }
-  catch (e) { return true; }
-}
-
 module.exports = {
   validateISODate,
   normalizeInterval,
@@ -160,5 +155,4 @@ module.exports = {
   maybeRegenerateId,
   applyIdChange,
   canAccessDepartment,
-  isExternalCalibrationServer,
 };
