@@ -367,7 +367,11 @@ const statusLabels = {
     let history = [];
   try {
     history = await apiRequest(`/pipettes/${p.id}/calibration`);
-    history.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    history.sort((a, b) => {
+      const dateCmp = String(b.date).localeCompare(String(a.date));
+      if (dateCmp !== 0) return dateCmp;
+      return (b.id || 0) - (a.id || 0);
+    });
   } catch (error) {
     console.error('Error loading history:', error);
   }
