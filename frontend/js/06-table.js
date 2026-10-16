@@ -318,6 +318,9 @@ const labels = {
   updateSelectAllCheckbox();
   updateBulkCalButton();
   fitTableWrapperHeight();
+  requestAnimationFrame(() => {
+  requestAnimationFrame(fitTableWrapperHeight);
+  });
 }
 
 // ============================================================
@@ -328,7 +331,7 @@ function fitTableWrapperHeight() {
   if (!wrapper) return;
 
   // Верх обёртки относительно документа
-  const wrapperTop = wrapper.getBoundingClientRect().top + window.scrollY;
+  const wrapperTop = wrapper.getBoundingClientRect().top;
 
   // Базовый отступ + скроллбар + пагинация
   const pagination = document.getElementById('pagination');
