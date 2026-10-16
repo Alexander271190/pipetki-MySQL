@@ -59,12 +59,12 @@ services:
       # 🆕 Логирование без правок кода
       NODE_OPTIONS: "-r /app/logger-bootstrap.js"
       LOG_DIR: "/app/logs"
-
-    # 🆕 Логи наружу — смотреть без exec
+    
     volumes:
       - ./logs:/app/logs
       - ./frontend:/app/frontend
       - ./routes:/app/routes
+      - ./middleware:/app/middleware
       - ./server.js:/app/server.js
       - ./db:/app/db
       - ./utils:/app/utils
