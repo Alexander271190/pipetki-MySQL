@@ -73,6 +73,7 @@ body {
 
 html {
   overflow-x: clip;
+  min-height: 100vh;
 }
 
 /* ========== ШАПКА ========== */
