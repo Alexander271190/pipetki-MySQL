@@ -468,6 +468,23 @@ if (String(lastCalibration) > todayLocalStr()) {
 }
 
   
+    // 🛡️ Валидация equipmentType против справочника
+  const eqTypeCheck = String(equipmentType || 'pipette').trim();
+  {
+    const [typeRows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    const typesCache = db.safeParse(typeRows[0]?.setting_value, []);
+    const validTypes = new Set(typesCache.map(t => t.value));
+    if (!validTypes.has(eqTypeCheck)) {
+      return res.status(400).json({
+        error: `Неизвестный тип оборудования: «${eqTypeCheck}». ` +
+               `Допустимые: ${[...validTypes].join(', ')}`,
+        code: 'invalid_equipment_type'
+      });
+    }
+  }
+
   // 🛡️ Пользователь с "только свой отдел" не может создавать в чужом отделе
   if (req.user.only_own_department && req.user.role !== 'admin') {
     if (!req.user.department) {
@@ -659,6 +676,7 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
   );
   const typesCache = db.safeParse(typeRows[0] ? typeRows[0].setting_value : null, []);
+  const validTypesSet = new Set(typesCache.map(t => t.value));
 
   const errors = [];
   const normalized = rows.map((r, idx) => {
@@ -667,6 +685,9 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     const model = String(r.model || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
     if (!model) errors.push(`Строка ${lineNo}: не указана модель`);
     if (model.length > 255) errors.push(`Строка ${lineNo}: модель слишком длинная`);
+    if (!validTypesSet.has(equipmentType)) {
+      errors.push(`Строка ${lineNo}: неизвестный тип «${equipmentType}»`);
+    }
 
    const lastCalibration = String(r.lastCalibration || '').trim();
     if (!lastCalibration) {
@@ -838,13 +859,31 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
   delete updates.barcode;
   delete updates.barcodeSource;
 
-   const [pipRows] = await db.query(
+    const [pipRows] = await db.query(
     'SELECT department, equipment_type, responsible FROM pipettes WHERE id = ?',
     [req.params.id]
   );
   if (!pipRows.length) {
     return res.status(404).json({ error: 'Оборудование не найдено' });
   }
+
+  // 🛡️ Валидация equipmentType против справочника
+  if (updates.equipmentType !== undefined) {
+    const [typeRows] = await db.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
+    );
+    const typesCache = db.safeParse(typeRows[0]?.setting_value, []);
+    const validTypes = new Set(typesCache.map(t => t.value));
+    const newType = String(updates.equipmentType).trim();
+    if (!validTypes.has(newType)) {
+      return res.status(400).json({
+        error: `Неизвестный тип оборудования: «${newType}». ` +
+               `Допустимые: ${[...validTypes].join(', ')}`,
+        code: 'invalid_equipment_type'
+      });
+    }
+  }
+
   if (!canAccessDepartment(req.user, pipRows[0].department)) {
     return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
   }
@@ -1826,9 +1865,8 @@ router.get('/:id/calibration', authenticate, async (req, res) => {
     if (!canAccessDepartment(req.user, pipRows[0].department)) {
       return res.status(403).json({ error: 'Нет доступа' });
     }
-
-    const [rows] = await db.query(
-      'SELECT * FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC',
+      const [rows] = await db.query(
+      'SELECT * FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC, id DESC',
       [req.params.id]
     );
     res.json(rows);
