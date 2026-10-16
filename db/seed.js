@@ -33,7 +33,9 @@ async function generatePipetteId(prefix = 'P', conn = null) {
 async function seedHelpDocs(conn) {
   const executor = conn || pool;
   let sections = [];
-  try { sections = require('./help-seed'); } catch (e) { sections = []; }
+  // ⚠️ ИСПРАВЛЕНО: './help-seed' → '../help-seed'
+  //    (файл help-seed.js остаётся в корне проекта, а этот файл теперь в db/)
+  try { sections = require('../help-seed'); } catch (e) { sections = []; }
 
   for (const s of sections) {
     await executor.query(
