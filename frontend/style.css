@@ -627,7 +627,8 @@ html {
   grid-template-columns: 1fr 1fr;
   gap: 8px 10px;
 }
-.filter-panel .filter-row[id$="-custom"][style*="flex"] {
+.filter-panel .filter-row[id$="-custom"][style*="flex"],
+.filter-panel .filter-row[id$="-custom"][style*="grid"] {
   display: grid;
 }
 
