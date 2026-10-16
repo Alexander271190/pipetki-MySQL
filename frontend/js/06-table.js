@@ -330,18 +330,22 @@ function fitTableWrapperHeight() {
   const wrapper = document.querySelector('.table-wrapper');
   if (!wrapper) return;
 
-  // Верх обёртки относительно документа
+  // Верх обёртки от viewport
   const wrapperTop = wrapper.getBoundingClientRect().top;
 
-  // Базовый отступ + скроллбар + пагинация
+  // Учитываем border обёртки — offsetHeight = height + border*2
+  const cs = getComputedStyle(wrapper);
+  const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+
   const pagination = document.getElementById('pagination');
-  let bottomGap = 0;
+  let bottomGap = borderY;   // компенсация рамки
   if (pagination && pagination.style.display !== 'none') {
     bottomGap += pagination.offsetHeight + 16;
   }
 
+  // Math.floor — чтобы не вылезти за границу из-за субпикселей
   const available = window.innerHeight - wrapperTop - bottomGap;
-  wrapper.style.height = Math.max(200, available) + 'px';
+  wrapper.style.height = Math.max(200, Math.floor(available)) + 'px';
 }
 
 // 🆕 Пересчёт при resize окна (с debounce) — ОДИН раз на весь файл
