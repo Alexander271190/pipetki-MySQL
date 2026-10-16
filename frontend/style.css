@@ -2494,13 +2494,13 @@ td small {
   display: none;
 }
 .table-wrapper::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: transparent;
   border-radius: 4px;
 }
 .table-wrapper::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
-  border: 2px solid #f3f4f6;
+  border: none;
 }
 .table-wrapper::-webkit-scrollbar-thumb:hover {
   background: var(--text-faint);
