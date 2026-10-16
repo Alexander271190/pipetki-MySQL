@@ -3442,3 +3442,157 @@ html[data-theme="dark"] .template-bar select {
   .template-bar { flex-direction: column; align-items: stretch; }
   .template-bar select { min-width: 0; width: 100%; }
 }
+
+/* ============================================================
+   АНИМАЦИЯ МОДАЛКИ
+   ============================================================ */
+.modal-overlay.active .modal {
+  animation: modalIn .22s cubic-bezier(.16, 1, .3, 1);
+  will-change: transform, opacity;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(.985) translateY(4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* ============================================================
+   РАСКРАСКА FA-ИКОНОК — ВАРИАНТ B «МЕДИЦИНСКИЙ»
+   ============================================================ */
+
+/* ── 🔵 ДЕЙСТВИЕ (синий) ── */
+.fa-plus:not(.btn i),
+.fa-pen:not(.btn i),
+.fa-user-pen:not(.btn i),
+.fa-right-left:not(.btn i),
+.fa-arrows-rotate:not(.btn i),
+.fa-rotate-left:not(.btn i),
+.fa-rotate-right:not(.btn i),
+.fa-filter:not(.btn i),
+.fa-wand-magic-sparkles:not(.btn i),
+.fa-list-check:not(.btn i) {
+  color: #1e40af;
+}
+
+/* ── 🔴 ОПАСНОСТЬ (красный) ── */
+.fa-trash:not(.btn i),
+.fa-xmark:not(.btn i),
+.fa-triangle-exclamation:not(.btn i),
+.fa-ban:not(.btn i),
+.fa-circle-exclamation:not(.btn i) {
+  color: #b91c1c;
+}
+
+/* ── 🟢 УСПЕХ (зелёный) ── */
+.fa-circle-check:not(.btn i),
+.fa-check:not(.btn i),
+.fa-floppy-disk:not(.btn i) {
+  color: #15803d;
+}
+
+/* ── ⏱ ВРЕМЯ (серо-коричневый) ── */
+.fa-clock:not(.btn i),
+.fa-hourglass-half:not(.btn i),
+.fa-clock-rotate-left:not(.btn i),
+.fa-calendar-days:not(.btn i) {
+  color: #78716c;
+}
+
+/* ── ⚫ НЕЙТРАЛЬНЫЙ (слейт) ── */
+.fa-book-open:not(.btn i),
+.fa-circle-info:not(.btn i),
+.fa-barcode:not(.btn i),
+.fa-qrcode:not(.btn i),
+.fa-tag:not(.btn i),
+.fa-file-excel:not(.btn i),
+.fa-file-lines:not(.btn i),
+.fa-print:not(.btn i),
+.fa-upload:not(.btn i),
+.fa-download:not(.btn i),
+.fa-box:not(.btn i),
+.fa-box-open:not(.btn i),
+.fa-users:not(.btn i),
+.fa-key:not(.btn i),
+.fa-lock:not(.btn i),
+.fa-user-clock:not(.btn i),
+.fa-eye-slash:not(.btn i),
+.fa-gear:not(.btn i),
+.fa-screwdriver-wrench:not(.btn i),
+.fa-scroll:not(.btn i),
+.fa-moon:not(.btn i),
+.fa-sun:not(.btn i),
+.fa-magnifying-glass:not(.btn i),
+.fa-search:not(.btn i),
+.fa-ellipsis:not(.btn i),
+.fa-ellipsis-vertical:not(.btn i),
+.fa-caret-down:not(.btn i),
+.fa-chevron-up:not(.btn i),
+.fa-chevron-down:not(.btn i),
+.fa-arrow-left:not(.btn i),
+.fa-arrow-right:not(.btn i),
+.fa-arrow-up:not(.btn i),
+.fa-arrow-down:not(.btn i),
+.fa-circle-pause:not(.btn i),
+.fa-circle-question:not(.btn i),
+.fa-bell:not(.btn i),
+.fa-image:not(.btn i) {
+  color: #475569;
+}
+
+/* ── Кнопки — иконки в тон текста ── */
+.btn i                { color: inherit !important; }
+.btn-secondary i      { color: #1e40af !important; }
+.btn-secondary:hover i { color: #1d4ed8 !important; }
+.btn-outline i        { color: #475569 !important; }
+
+/* ── Меню ⋮ — в цвет пункта ── */
+.row-actions-item.item-success i { color: inherit !important; }
+.row-actions-item.item-warning i { color: inherit !important; }
+.row-actions-item.item-danger  i { color: inherit !important; }
+
+/* ── Статус-бейджи ── */
+.status-badge i { color: inherit !important; }
+
+/* ── Права пользователя — приглушённые ── */
+.usr-perm-cb + span i,
+.help-perm-item i { color: #64748b !important; opacity: 0.85; }
+
+/* ── Тёмная тема ── */
+html[data-theme="dark"] .fa-plus:not(.btn i),
+html[data-theme="dark"] .fa-pen:not(.btn i),
+html[data-theme="dark"] .fa-user-pen:not(.btn i),
+html[data-theme="dark"] .fa-right-left:not(.btn i),
+html[data-theme="dark"] .fa-arrows-rotate:not(.btn i),
+html[data-theme="dark"] .fa-rotate-left:not(.btn i),
+html[data-theme="dark"] .fa-filter:not(.btn i),
+html[data-theme="dark"] .fa-wand-magic-sparkles:not(.btn i),
+html[data-theme="dark"] .fa-list-check:not(.btn i) { color: #93c5fd; }
+
+html[data-theme="dark"] .fa-trash:not(.btn i),
+html[data-theme="dark"] .fa-xmark:not(.btn i),
+html[data-theme="dark"] .fa-triangle-exclamation:not(.btn i) { color: #fca5a5; }
+
+html[data-theme="dark"] .fa-circle-check:not(.btn i),
+html[data-theme="dark"] .fa-check:not(.btn i),
+html[data-theme="dark"] .fa-floppy-disk:not(.btn i) { color: #86efac; }
+
+html[data-theme="dark"] .fa-clock:not(.btn i),
+html[data-theme="dark"] .fa-hourglass-half:not(.btn i),
+html[data-theme="dark"] .fa-clock-rotate-left:not(.btn i) { color: #d6d3d1; }
+
+html[data-theme="dark"] .fa-book-open:not(.btn i),
+html[data-theme="dark"] .fa-circle-info:not(.btn i),
+html[data-theme="dark"] .fa-barcode:not(.btn i),
+html[data-theme="dark"] .fa-tag:not(.btn i),
+html[data-theme="dark"] .fa-file-excel:not(.btn i),
+html[data-theme="dark"] .fa-print:not(.btn i),
+html[data-theme="dark"] .fa-box:not(.btn i),
+html[data-theme="dark"] .fa-box-open:not(.btn i),
+html[data-theme="dark"] .fa-users:not(.btn i),
+html[data-theme="dark"] .fa-key:not(.btn i),
+html[data-theme="dark"] .fa-lock:not(.btn i),
+html[data-theme="dark"] .fa-gear:not(.btn i),
+html[data-theme="dark"] .fa-ellipsis:not(.btn i),
+html[data-theme="dark"] .fa-ellipsis-vertical:not(.btn i) { color: #cbd5e1; }
+
+html[data-theme="dark"] .btn-secondary i { color: #93c5fd !important; }
