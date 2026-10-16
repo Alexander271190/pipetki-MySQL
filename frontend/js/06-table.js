@@ -329,10 +329,13 @@ function fitTableWrapperHeight() {
 
   // Верх обёртки относительно документа
   const wrapperTop = wrapper.getBoundingClientRect().top + window.scrollY;
-  
-  // Базовый отступ + скроллбар + пагинация
+
+  // Высота горизонтального скроллбара внутри обёртки
+  // (Chrome: ~12-15px, Firefox: 0 — scrollbar-width: thin)
+  const hScrollbar = Math.max(0, wrapper.offsetHeight - wrapper.clientHeight);
+
   const pagination = document.getElementById('pagination');
-  let bottomGap = 0;
+  let bottomGap = 16 + hScrollbar;   // базовый зазор + скроллбар
   if (pagination && pagination.style.display !== 'none') {
     bottomGap += pagination.offsetHeight + 16;
   }
