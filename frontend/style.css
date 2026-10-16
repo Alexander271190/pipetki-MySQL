@@ -2211,7 +2211,6 @@ html[data-theme="dark"] .row-actions-divider { background: var(--border); }
    ============================================================ */
 .table-wrapper {
   border: 1px solid var(--border-hard);
-  border-bottom: none;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
   background: var(--card);
@@ -2487,23 +2486,18 @@ td small {
 }
 
 .table-wrapper::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-.table-wrapper::-webkit-scrollbar:horizontal {
-  display: none;
+  width: 8px;
+  height: 8px;
 }
 .table-wrapper::-webkit-scrollbar-track {
   background: transparent;
-  border-radius: 4px;
 }
 .table-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(0, 0, 0, 0.18);
   border-radius: 4px;
-  border: none;
 }
 .table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--text-faint);
+  background: rgba(0, 0, 0, 0.32);
 }
 
 html[data-theme="dark"] .table-wrapper {
@@ -2624,14 +2618,14 @@ html[data-theme="dark"] .row-checkbox {
 }
 
 html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-track {
-  background: var(--card);
+  background: transparent;
 }
 html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-color: var(--card);
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
 }
 html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: rgba(255, 255, 255, 0.32);
 }
 
 /* ============================================================
