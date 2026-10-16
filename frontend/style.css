@@ -39,7 +39,7 @@ html {
 /* ========== КОНТЕЙНЕР ========== */
 .container {
   max-width: 100%;           
-  margin: 8px auto;
+  margin: 8px auto 0;
   padding: 0 8px;
   width: 100%;
   box-sizing: border-box;
