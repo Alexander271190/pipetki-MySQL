@@ -795,7 +795,7 @@ function renderEquipmentTypesTable() {
   if (!tbody) return;
 
   if (_cachedEquipmentTypes.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
 
