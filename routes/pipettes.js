@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticate, requirePermission, requireAnyPermission } = require('../middleware/auth');
-
+const equipmentTypes = require('../utils/equipment-types');
 const router = express.Router();
 
 // ============================================================
@@ -122,14 +122,8 @@ async function maybeRegenerateId(oldId, oldType, newType, conn) {
   const num       = parseInt(m[2], 10);
   if (!Number.isFinite(num)) return null;
 
-  // 2. Достаём префикс нового типа
-  const [rows] = await conn.query(
-    "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-  );
-  if (!rows.length || !rows[0].setting_value) return null;
-
-  const types = db.safeParse(rows[0].setting_value, []);
-  const type  = types.find(t => t.value === newType);
+  // 2. Достаём префикс нового типа через единый модуль (кэшируется)
+  const type = await equipmentTypes.getTypeByValue(newType);
   if (!type || !type.prefix) return null;
 
   const newPrefix = String(type.prefix).trim().toUpperCase();
@@ -185,14 +179,7 @@ function canAccessDepartment(user, department) {
 // 🛡️ Серверный аналог isExternalCalibration из script.js
 async function isExternalCalibrationServer(equipmentType) {
   try {
-    const [rows] = await db.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    if (!rows.length || !rows[0].setting_value) return true;
-    const types = db.safeParse(rows[0].setting_value, []);
-    const t = types.find(x => x.value === equipmentType);
-    if (!t) return true;
-    return (t.calibrationPlace || 'internal') === 'external';
+    return await equipmentTypes.isExternal(equipmentType);
   } catch (e) {
     return true;
   }
@@ -467,14 +454,10 @@ if (String(lastCalibration) > todayLocalStr()) {
   return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
 }
 
-  
-    // 🛡️ Валидация equipmentType против справочника
+  // 🛡️ Валидация equipmentType против справочника
   const eqTypeCheck = String(equipmentType || 'pipette').trim();
   {
-    const [typeRows] = await db.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    const typesCache = db.safeParse(typeRows[0]?.setting_value, []);
+    const typesCache = await equipmentTypes.getEquipmentTypes();
     const validTypes = new Set(typesCache.map(t => t.value));
     if (!validTypes.has(eqTypeCheck)) {
       return res.status(400).json({
@@ -484,7 +467,7 @@ if (String(lastCalibration) > todayLocalStr()) {
       });
     }
   }
-
+  
   // 🛡️ Пользователь с "только свой отдел" не может создавать в чужом отделе
   if (req.user.only_own_department && req.user.role !== 'admin') {
     if (!req.user.department) {
@@ -508,21 +491,9 @@ if (String(lastCalibration) > todayLocalStr()) {
 
     let id = rawId;
 
-    if (!id) {
-      // Получить prefix
-      let prefix = null;
-      const [rows] = await conn.query(
-        "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-      );
-      if (rows.length && rows[0].setting_value) {
-        try {
-          const types = JSON.parse(rows[0].setting_value);
-          const found = types.find(t => t.value === equipmentType);
-          if (found && found.prefix && found.prefix.trim()) {
-            prefix = found.prefix.trim().toUpperCase();
-          }
-        } catch (e) { /* fallback ниже */ }
-      }
+      if (!id) {
+      // Получить prefix через единый модуль (кэшируется)
+      let prefix = await equipmentTypes.getPrefix(equipmentType);
 
       if (!prefix) {
         const fallback = {
@@ -534,7 +505,7 @@ if (String(lastCalibration) > todayLocalStr()) {
 
       id = await db.generatePipetteId(prefix, conn);
     }
-
+    
     const [exist] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [id]);
     if (exist.length) {
       await conn.rollback();
@@ -672,12 +643,8 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     return res.status(400).json({ error: 'Максимум 100 строк за раз' });
   }
 
-  const [typeRows] = await db.query(
-    "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-  );
-  const typesCache = db.safeParse(typeRows[0] ? typeRows[0].setting_value : null, []);
+  const typesCache = await equipmentTypes.getEquipmentTypes();
   const validTypesSet = new Set(typesCache.map(t => t.value));
-
   const errors = [];
   const normalized = rows.map((r, idx) => {
     const lineNo = idx + 1;
@@ -867,12 +834,9 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     return res.status(404).json({ error: 'Оборудование не найдено' });
   }
 
-  // 🛡️ Валидация equipmentType против справочника
+   // 🛡️ Валидация equipmentType против справочника
   if (updates.equipmentType !== undefined) {
-    const [typeRows] = await db.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    const typesCache = db.safeParse(typeRows[0]?.setting_value, []);
+    const typesCache = await equipmentTypes.getEquipmentTypes();
     const validTypes = new Set(typesCache.map(t => t.value));
     const newType = String(updates.equipmentType).trim();
     if (!validTypes.has(newType)) {
@@ -1196,10 +1160,7 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
     const notFound = [];
     let skippedReplacements = [];
     
-    const [typeRows] = await conn.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    const typesCache = db.safeParse(typeRows[0] ? typeRows[0].setting_value : null, []);
+    const typesCache = await equipmentTypes.getEquipmentTypes();
     const isExternalType = (t) => {
       const found = typesCache.find(x => x.value === t);
       if (!found) return true;
@@ -1442,16 +1403,13 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
     let missingReplacements = [];
 
     // 🛡️ Один раз читаем типы, чтобы не дёргать БД в цикле
-    const [typeRows] = await conn.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    const typesCache = db.safeParse(typeRows[0] ? typeRows[0].setting_value : null, []);
+    const typesCache = await equipmentTypes.getEquipmentTypes();
     const isExternalType = (t) => {
       const found = typesCache.find(x => x.value === t);
       if (!found) return true;
       return (found.calibrationPlace || 'internal') === 'external';
     };
-
+    
     for (const item of items) {
       if (!item.id) { skipped.push('?'); continue; }
 
