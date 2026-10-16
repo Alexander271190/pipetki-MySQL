@@ -216,6 +216,11 @@ function applyTheme(theme) {
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'light';
   applyTheme(current === 'dark' ? 'light' : 'dark');
+
+  // Пересчитать высоту обёртки — смена темы меняет толщину границ
+  if (typeof fitTableWrapperHeight === 'function') {
+    setTimeout(fitTableWrapperHeight, 50);
+  }
 }
 
 (function initTheme() {
