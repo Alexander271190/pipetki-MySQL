@@ -1573,8 +1573,9 @@ html[data-theme="dark"] .modal-overlay {
   .modal { max-width: 98%; padding: 14px; border-radius: 10px; }
   .modal h2 { font-size: 1.1rem; margin-bottom: 14px; }
 
- .filter-panel {
-    width: calc(100% - 16px);
+  .filter-panel {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
     padding: 10px;
   }
   .filter-panel #filter-fields-container { grid-template-columns: 1fr; }
