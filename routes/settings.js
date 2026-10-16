@@ -307,6 +307,9 @@ router.put('/system', authenticate, requireRole(['admin']), async (req, res) => 
         [k, String(v)]
       );
     }
+    if ('equipment_types' in settings) {
+      equipmentTypes.invalidateCache();
+    }
     res.json({ message: 'Настройки обновлены' });
   } catch (e) {
     console.error(e);
