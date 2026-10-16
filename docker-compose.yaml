@@ -67,6 +67,7 @@ services:
       - ./routes:/app/routes
       - ./server.js:/app/server.js
       - ./db:/app/db
+      - ./utils:/app/utils
 
     depends_on:
       db:
