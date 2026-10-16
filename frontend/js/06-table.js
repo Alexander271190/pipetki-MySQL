@@ -173,6 +173,7 @@ if (totalEl) {
     updateSortArrows();
     updateSelectAllCheckbox();
     updateBulkCalButton();
+    fitTableWrapperHeight();
     return;
   }
   table.style.display = '';
@@ -316,7 +317,44 @@ const labels = {
   updateSortArrows();
   updateSelectAllCheckbox();
   updateBulkCalButton();
+  fitTableWrapperHeight();
 }
+
+// ============================================================
+// 🆕 ДИНАМИЧЕСКАЯ ВЫСОТА ОБЁРТКИ ТАБЛИЦЫ
+// ============================================================
+function fitTableWrapperHeight() {
+  const wrapper = document.querySelector('.table-wrapper');
+  if (!wrapper) return;
+
+  const wrapperTop = wrapper.getBoundingClientRect().top;
+
+  const pagination = document.getElementById('pagination');
+  let bottomGap = 20;
+  if (pagination && pagination.style.display !== 'none') {
+    bottomGap += pagination.offsetHeight;
+  }
+
+  const available = window.innerHeight - wrapperTop - bottomGap;
+  wrapper.style.height = Math.max(200, available) + 'px';
+}
+
+// 🆕 Пересчёт при resize окна (с debounce) — ОДИН раз на весь файл
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(fitTableWrapperHeight, 100);
+});
+
+// 🆕 Пересчёт при сворачивании шапки — ОДИН раз на весь файл
+const _origToggleHeader = window.toggleHeaderCollapse;
+if (typeof _origToggleHeader === 'function') {
+  window.toggleHeaderCollapse = function() {
+    _origToggleHeader.apply(this, arguments);
+    setTimeout(fitTableWrapperHeight, 100);
+  };
+}
+
 
 function updateSortArrows() {
   document.querySelectorAll('th .sort-arrow').forEach(el => {
