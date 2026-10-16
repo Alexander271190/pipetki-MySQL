@@ -2211,8 +2211,8 @@ html[data-theme="dark"] .row-actions-divider { background: var(--border); }
    ============================================================ */
 .table-wrapper {
   border: 1px solid var(--border-hard);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
   background: var(--card);
   overflow: auto;
   height: auto;
@@ -2487,7 +2487,7 @@ td small {
 
 .table-wrapper::-webkit-scrollbar {
   width: 8px;
-  height: 8px;
+  height: 0;
 }
 .table-wrapper::-webkit-scrollbar-track {
   background: transparent;
