@@ -327,12 +327,14 @@ function fitTableWrapperHeight() {
   const wrapper = document.querySelector('.table-wrapper');
   if (!wrapper) return;
 
-  const wrapperTop = wrapper.getBoundingClientRect().top;
+  // Верх обёртки относительно документа
+  const wrapperTop = wrapper.getBoundingClientRect().top + window.scrollY;
 
+  // Нижний отступ: пагинация + запас
   const pagination = document.getElementById('pagination');
-  let bottomGap = 20;
+  let bottomGap = 24;
   if (pagination && pagination.style.display !== 'none') {
-    bottomGap += pagination.offsetHeight;
+    bottomGap += pagination.offsetHeight + 16;
   }
 
   const available = window.innerHeight - wrapperTop - bottomGap;
@@ -345,6 +347,26 @@ window.addEventListener('resize', () => {
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(fitTableWrapperHeight, 100);
 });
+// 🆕 Пересчёт после полной загрузки (шрифты/картинки сдвигают верх)
+window.addEventListener('load', () => {
+  setTimeout(fitTableWrapperHeight, 100);
+  setTimeout(fitTableWrapperHeight, 400);
+});
+
+// 🆕 ResizeObserver — ловит зум, появление скролла, любые сдвиги
+let _roScheduled = false;
+if (window.ResizeObserver) {
+  const _ro = new ResizeObserver(() => {
+    if (_roScheduled) return;
+    _roScheduled = true;
+    requestAnimationFrame(() => {
+      _roScheduled = false;
+      fitTableWrapperHeight();
+    });
+  });
+  _ro.observe(document.documentElement);
+}
+
 
 // 🆕 Пересчёт при сворачивании шапки — ОДИН раз на весь файл
 const _origToggleHeader = window.toggleHeaderCollapse;
