@@ -2258,26 +2258,17 @@ html[data-theme="dark"] .row-actions-divider { background: #334155; }
   border: 1px solid #d1d5db;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
-  background: #fff;
-
-  /* Оба скролла внутри обёртки */
+  background: #fff; 
   overflow: auto;
-
-  /* 🆕 Фиксированная высота — обёртка всегда занимает всю доступную область.
-     Скроллбар будет внизу экрана, независимо от числа строк.
-     Вычитаем: шапку + тулбар + баннер + пагинацию + запас */
-  height: calc(100vh - 320px);
-
-  /* 🆕 Минимальная защита для очень маленьких экранов */
+  height: auto;  
   min-height: 200px;
 }
 
 @media (max-width: 768px) {
   .table-wrapper {
-    height: auto;
-    min-height: auto;
+    min-height: 200px;
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
   }
 }
 
@@ -2396,7 +2387,7 @@ tbody tr.row-warn td:first-child {
 tbody tr.row-danger td,
 tbody tr.row-fail td,
 tbody tr.row-warn td {
-  background: #fff;
+background: #fff;
 }
 tbody tr.row-danger:nth-child(even) td,
 tbody tr.row-fail:nth-child(even) td,
