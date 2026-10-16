@@ -2215,6 +2215,9 @@ html[data-theme="dark"] .row-actions-divider { background: var(--border); }
   border-radius: 8px 8px 0 0;
   background: var(--card);
   overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-gutter: auto;
   height: auto;
   min-height: 200px;
 }
@@ -2486,20 +2489,22 @@ td small {
 }
 
 .table-wrapper::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 .table-wrapper::-webkit-scrollbar-track {
   background: transparent;
 }
 .table-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 .table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.32);
+  background: rgba(0, 0, 0, 0.45);
+  background-clip: content-box;
 }
-
 html[data-theme="dark"] .table-wrapper {
   border-color: var(--border);
   background: var(--card);
@@ -2620,12 +2625,19 @@ html[data-theme="dark"] .row-checkbox {
 html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-track {
   background: transparent;
 }
+html[data-theme="dark"] .table-wrapper::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
 html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 html[data-theme="dark"] .table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.45);
+  background-clip: content-box;
 }
 
 /* ============================================================
