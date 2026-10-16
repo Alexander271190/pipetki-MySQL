@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const equipmentTypes = require('../utils/equipment-types');
 
 const router = express.Router();
 
@@ -365,24 +366,22 @@ router.put('/filters', authenticate, requireRole(['admin']), async (req, res) =>
 
 // GET /api/settings/equipment-types
 router.get('/equipment-types', authenticate, async (req, res) => {
-   const fallback = [
-    { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external' },
-    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external' },
-    { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal' },
-    { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal' },
-    { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal' },
-    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal' },
-  ];
-
   try {
-    const [rows] = await db.query(
-      "SELECT setting_value FROM system_settings WHERE setting_key = 'equipment_types'"
-    );
-    if (!rows.length) return res.json(fallback);
-    res.json(db.safeParse(rows[0].setting_value, fallback));
+    const types = await equipmentTypes.getEquipmentTypes({ force: true });
+    if (!types || types.length === 0) {
+      return res.json([
+        { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
+        { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
+        { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
+        { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
+        { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
+        { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 },
+      ]);
+    }
+    res.json(types);
   } catch (e) {
     console.error('GET /equipment-types:', e);
-    res.json(fallback);
+    res.status(500).json({ error: 'Ошибка загрузки типов' });
   }
 });
 
@@ -461,6 +460,10 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
       [JSON.stringify(types)]
     );
+
+    // 🆕 Сбросить кэш — иначе последующие запросы ещё 60 сек будут получать старое
+    equipmentTypes.invalidateCache();
+
     res.json({ message: 'Типы оборудования обновлены' });
   } catch (e) {
     console.error('PUT /equipment-types:', e);
