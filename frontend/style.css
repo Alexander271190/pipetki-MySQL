@@ -2221,17 +2221,22 @@ html[data-theme="dark"] .row-actions-divider { background: #334155; }
   overflow-wrap: anywhere;
 }
 
-/* На средних экранах — прокрутка таблицы, а не разъезд */
+/* Таблица полей формы — min-width только если нужно */
 #settings-section-content .field-settings-table {
-  min-width: 560px;
+  min-width: 0;
+}
+
+/* Исключение — таблица пользователей, там много колонок */
+#settings-section-content .field-settings-table.users-table-fix {
+  min-width: 700px;
 }
 
 @media (max-width: 900px) {
   #settings-section-content {
     overflow-x: auto;
   }
-  #settings-section-content .field-settings-table {
-    min-width: 560px;
+  #settings-section-content .field-settings-table.users-table-fix {
+    min-width: 700px;
   }
 }
 
@@ -2254,7 +2259,25 @@ html[data-theme="dark"] .row-actions-divider { background: #334155; }
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
   background: #fff;
-  overflow-x: auto;
+
+  /* Оба скролла внутри обёртки */
+  overflow: auto;
+
+  /* Высота обёртки — почти на весь экран.
+     Вычитаем: шапку + тулбар + пагинацию + запас */
+  max-height: calc(100vh - 320px);
+
+  /* Минимальная высота, чтобы при 2 строках обёртка не сжималась */
+  min-height: 300px;
+}
+
+@media (max-width: 768px) {
+  .table-wrapper {
+    max-height: none;
+    min-height: auto;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
 }
 
 /* ── Сама таблица ── */
@@ -2262,11 +2285,31 @@ table {
   border-collapse: collapse;
   border-spacing: 0;
   width: 100%;
-  min-width: 1100px;
   font-variant-numeric: tabular-nums;
   font-size: .82rem;
   background: #fff;
   table-layout: auto;
+}
+
+/* Адаптивный min-width — только у главной таблицы пипеток */
+#pipettes-table {
+  min-width: 1100px;
+}
+@media (max-width: 1400px) {
+  #pipettes-table { min-width: 900px; }
+}
+@media (max-width: 1024px) {
+  #pipettes-table { min-width: 800px; }
+}
+@media (max-width: 768px) {
+  #pipettes-table { min-width: 700px; }
+}
+
+/* Таблицы в настройках — не растягивать насильно */
+.table-wrapper > table:not(#pipettes-table) {
+  width: auto;
+  margin: 0 auto;
+  min-width: 0;
 }
 
 /* ── Заголовки ── */
@@ -2742,6 +2785,11 @@ html[data-theme="dark"] .status-dot-inline {
   background-repeat: no-repeat;
   background-position: 12px center;
   background-size: 14px;
+}
+
+/* Иконка поиска в тёмной теме — чуть светлее */
+html[data-theme="dark"] #search {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 512 512'><path fill='%2364748b' d='M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0s208 93.1 208 208zM208 352c79.5 0 144-64.5 144-144S287.5 64 208 64S64 128.5 64 208s64.5 144 144 144z'/></svg>");
 }
 
 .toolbar > #search:focus {
