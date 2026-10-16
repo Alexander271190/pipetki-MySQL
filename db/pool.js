@@ -1,6 +1,9 @@
 'use strict';
 const mysql = require('mysql2/promise');
 
+// ============================================================
+// ПУЛ СОЕДИНЕНИЙ
+// ============================================================
 const pool = mysql.createPool({
   host:     process.env.DB_HOST || 'localhost',
   port:     parseInt(process.env.DB_PORT || '3306', 10),
@@ -15,6 +18,7 @@ const pool = mysql.createPool({
   multipleStatements: false,
 });
 
+// Универсальный query → [rowsOrResult, fields]
 async function query(sql, params = []) {
   return pool.query(sql, params);
 }
@@ -22,7 +26,7 @@ async function query(sql, params = []) {
 async function getConnection() {
   const conn = await pool.getConnection();
   return {
-    query:            (sql, p = []) => conn.query(sql, p),
+    query:            (sql, params = []) => conn.query(sql, params),
     beginTransaction: () => conn.beginTransaction(),
     commit:           () => conn.commit(),
     rollback:         async () => { try { await conn.rollback(); } catch (e) {} },
@@ -30,6 +34,7 @@ async function getConnection() {
   };
 }
 
+// Универсальный безопасный парсер JSON
 function safeParse(json, fallback = []) {
   if (json === null || json === undefined) return fallback;
   if (typeof json === 'object') return json;
