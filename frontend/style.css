@@ -2488,7 +2488,7 @@ td small {
 
 .table-wrapper::-webkit-scrollbar {
   width: 10px;
-  height: 12;
+  height: 0;
 }
 .table-wrapper::-webkit-scrollbar-track {
   background: #f3f4f6;
