@@ -44,19 +44,19 @@ function renderFilterFields() {
           <div class="form-group"><label>С даты</label><input type="date" id="${fid}-from"></div>
           <div class="form-group"><label>По дату</label><input type="date" id="${fid}-to"></div>
         </div>`;
-    } else if (f.type === 'select') {
-      html += `<div class="filter-row"><div class="form-group">
+       } else if (f.type === 'select') {
+      html += `<div class="form-group">
         <label>${esc(f.label)}</label>
         <select id="${fid}">
           <option value="">Все</option>
           ${(f.options || []).map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}
         </select>
-      </div></div>`;
+      </div>`;
     } else if (f.type === 'text') {
-      html += `<div class="filter-row"><div class="form-group">
+      html += `<div class="form-group">
         <label>${esc(f.label)}</label>
         <input type="text" id="${fid}" placeholder="${esc(f.label)}">
-      </div></div>`;
+      </div>`;
     }
   });
 
