@@ -2488,7 +2488,10 @@ td small {
 
 .table-wrapper::-webkit-scrollbar {
   width: 10px;
-  height: 0;
+  height: 10px;
+}
+.table-wrapper::-webkit-scrollbar:horizontal {
+  display: none;
 }
 .table-wrapper::-webkit-scrollbar-track {
   background: #f3f4f6;
