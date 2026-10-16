@@ -1,3 +1,75 @@
+/* ============================================================
+   ТОКЕНЫ СТИЛЕЙ (CSS custom properties)
+   Все цвета собраны здесь. Меняем значение один раз —
+   меняется во всех местах, где используется var(--...)
+   ============================================================ */
+:root {
+  /* Фоны и карточки */
+  --bg:           #f5f7fb;
+  --card:         #ffffff;
+  --card-alt:     #fafbfc;
+  --card-hover:   #eff6ff;
+
+  /* Границы */
+  --border:       #e2e8f0;
+  --border-soft:  #e5e7eb;
+  --border-hard:  #d1d5db;
+
+  /* Текст */
+  --text:         #1a1a2e;
+  --text-strong:  #1e293b;
+  --text-muted:   #64748b;
+  --text-faint:   #94a3b8;
+
+  /* Акценты */
+  --primary:      #4f46e5;
+  --primary-light:#eef2ff;
+  --primary-hover:#6366f1;
+
+  /* Статусы */
+  --success:      #16a34a;
+  --success-light:#dcfce7;
+  --warn:         #d97706;
+  --warn-light:   #fef3c7;
+  --danger:       #dc2626;
+  --danger-light: #fee2e2;
+
+  /* Тени */
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:    0 4px 12px rgba(0,0,0,.08);
+}
+
+/* Тёмная тема — только значения, без селекторов */
+html[data-theme="dark"] {
+  --bg:           #0f172a;
+  --card:         #1e293b;
+  --card-alt:     #263449;
+  --card-hover:   #334155;
+
+  --border:       #334155;
+  --border-soft:  #334155;
+  --border-hard:  #475569;
+
+  --text:         #e2e8f0;
+  --text-strong:  #f1f5f9;
+  --text-muted:   #94a3b8;
+  --text-faint:   #64748b;
+
+  --primary:      #818cf8;
+  --primary-light:#312e81;
+  --primary-hover:#a5b4fc;
+
+  --success:      #4ade80;
+  --success-light:#14532d;
+  --warn:         #fbbf24;
+  --warn-light:   #78350f;
+  --danger:       #f87171;
+  --danger-light: #7f1d1d;
+
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:    0 4px 12px rgba(0,0,0,.5);
+}
+
 /* ========== ОСНОВНЫЕ СТИЛИ ========== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
