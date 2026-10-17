@@ -144,6 +144,10 @@ function inlineMd(text) {
   s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
   s = s.replace(/\*(.+?)\*/g, '<i>$1</i>');
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  
+  // 🆕 Рендер FA-иконок в справке
+  s = s.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/g, '<i class="fa-solid $1 help-icon"></i>');
+  
   s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,
     '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;">');
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
