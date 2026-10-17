@@ -739,3 +739,46 @@ async function applyTemplateToUsers(templateId) {
     showToast(e.message, 'error');
   }
 }
+// ============================================================
+// ПЕЧАТЬ СПРАВКИ
+// ============================================================
+function printHelpSection() {
+  const sec = _docsSections.find(s => s.slug === _docsCurrentSection);
+  if (!sec) return;
+
+  // Убираем из заголовка служебные теги {icon: ...}
+  const cleanTitle = sec.title.replace(/\{icon:.*?\}/g, '').trim();
+  const printWindow = window.open('', '_blank');
+  
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+      <meta charset="UTF-8">
+      <title>Справка: ${cleanTitle}</title>
+      <link rel="stylesheet" href="fontawesome/css/all.min.css">
+      <link rel="stylesheet" href="style.css">
+      <style>
+        body { background: #fff !important; padding: 20px; font-size: 12pt; }
+        .docs-content { overflow: visible !important; max-height: none !important; color: #000 !important; }
+        .docs-content h1, .docs-content h2, .docs-content h3 { color: #000 !important; page-break-after: avoid; }
+        .docs-content .help-icon { color: #000 !important; }
+        .docs-hint { background: #f0f9ff !important; color: #000 !important; border-left: 3px solid #0ea5e9; }
+        .docs-table th, .docs-table td { border: 1px solid #999 !important; color: #000 !important; }
+        .docs-table th { background: #f1f5f9 !important; }
+        @media print {
+          @page { size: A4 portrait; margin: 15mm; }
+          .docs-content { padding: 0 !important; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="docs-content">${renderMarkdown(sec.content)}</div>
+      <script>
+        window.onload = () => { window.print(); window.close(); };
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
