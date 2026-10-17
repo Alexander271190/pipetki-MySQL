@@ -230,7 +230,7 @@
   width: 100%;
   overflow: hidden;
   box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
-  background-image: url('images/login-bg.jpg');
+  background-image: url('../images/login-bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
