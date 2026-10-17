@@ -314,3 +314,32 @@ html[data-theme="dark"] .toolbar > .btn i,
 html[data-theme="dark"] .dropdown-menu .dropdown-item i,
 html[data-theme="dark"] .settings-item i,
 html[data-theme="dark"] .hotkeys-table i { color: var(--icon-default); }
+
+/* ============================================================
+   ФИКС ШРИФТОВ В ТЁМНОЙ ТЕМЕ (жирный текст)
+   ============================================================ */
+html[data-theme="dark"] .modal b,
+html[data-theme="dark"] .modal strong,
+html[data-theme="dark"] .modal h4,
+html[data-theme="dark"] .field-settings-table b,
+html[data-theme="dark"] .help-perm-item span {
+  color: var(--text-strong) !important;
+}
+
+/* Иконки в модалках тёмной темы */
+html[data-theme="dark"] .modal .field-settings-table i,
+html[data-theme="dark"] .modal .bc-printers-table i,
+html[data-theme="dark"] .modal .help-perm-item i,
+html[data-theme="dark"] .modal .usr-perm-cb + span i {
+  color: var(--text) !important; /* Светлый цвет для тёмной темы */
+}
+
+/* Расширенная справка */
+#hotkeys-modal .modal-xl {
+  width: 95vw !important;
+  max-width: 1600px !important;
+  height: 90vh !important;
+}
+#hotkeys-modal .docs-layout {
+  height: calc(90vh - 160px);
+}
