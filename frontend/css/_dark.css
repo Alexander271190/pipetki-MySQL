@@ -343,3 +343,28 @@ html[data-theme="dark"] .modal .usr-perm-cb + span i {
 #hotkeys-modal .docs-layout {
   height: calc(90vh - 160px);
 }
+
+/* ============================================================
+   ФИКС ЦВЕТА МЕЛКИХ ПОДСКАЗОК В МОДАЛКАХ (Тёмная тема)
+   ============================================================ */
+
+/* Перекрашиваем в светлый все <small> и <p> внутри модалок, 
+   у которых задан захардкоженный тёмный цвет */
+html[data-theme="dark"] .modal small,
+html[data-theme="dark"] .modal p {
+  color: var(--text-muted) !important;
+}
+
+/* Отдельно для блока "Права доступа" (там где подсказка про Администратора) */
+html[data-theme="dark"] .modal .settings-form small,
+html[data-theme="dark"] .modal [style*="color:#0c4a6e"],
+html[data-theme="dark"] .modal [style*="color:#64748b"],
+html[data-theme="dark"] .modal [style*="color:#475569"] {
+  color: var(--text-muted) !important;
+}
+
+/* Но жирный текст внутри этих подсказок должен быть ярче */
+html[data-theme="dark"] .modal small b,
+html[data-theme="dark"] .modal small strong {
+  color: var(--text-strong) !important;
+}
