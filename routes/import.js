@@ -596,22 +596,23 @@ if (!objects.length) {
 
         if (parsed.length > 0) {
           // ── Batch INSERT pipettes ──
+          const clean = (s) => String(s || '').replace(/\u0000/g, '');
           const values = parsed.map(p => [
             p.id,
-            String(p.obj.serial || '').trim(),
-            String(p.obj.manufacturer || '').trim(),
-            p.model,
+            clean(p.obj.serial).trim(),
+            clean(p.obj.manufacturer).trim(),
+            clean(p.model),
             p.eqType,
-            String(p.obj.volume || '').trim(),
-            String(p.obj.department || '').trim(),
+            clean(p.obj.volume).trim(),
+            clean(p.obj.department).trim(),
             parseInterval(p.obj.interval),
             p.lastCal,
-            String(p.obj.cert || '').trim(),
+            clean(p.obj.cert).trim(),
             p.result,
             normalizeActive(p.obj.active),
-            String(p.obj.responsible || '').trim(),
-            String(p.obj.location || '').trim(),
-            String(p.obj.notes || '').trim(),
+            clean(p.obj.responsible).trim(),
+            clean(p.obj.location).trim(),
+            clean(p.obj.notes).trim(),
             Object.keys(p.customObj).length ? JSON.stringify(p.customObj) : null
           ]);
 
@@ -627,10 +628,10 @@ if (!objects.length) {
           // ── Batch INSERT history ──
           const histValues = parsed
             .filter(p => p.lastCal)
-            .map(p => [p.id, p.lastCal, String(p.obj.cert || '').trim(), p.result, 'Импорт из файла']);
-
+            .map(p => [p.id, p.lastCal, clean(p.obj.cert).trim(), p.result, 'Импорт из файла']);
           if (histValues.length > 0) {
             const histPh = histValues.map(() => '(?, ?, ?, ?, ?)').join(',');
+           
             await conn.query(
               `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
                VALUES ${histPh}`,
@@ -692,20 +693,20 @@ if (!objects.length) {
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 p.id,
-                String(p.obj.serial || '').trim(),
-                String(p.obj.manufacturer || '').trim(),
-                p.model,
+                String(p.obj.serial || '').replace(/\u0000/g, '').trim(),
+                String(p.obj.manufacturer || '').replace(/\u0000/g, '').trim(),
+                String(p.model || '').replace(/\u0000/g, ''),
                 p.eqType,
-                String(p.obj.volume || '').trim(),
-                String(p.obj.department || '').trim(),
+                String(p.obj.volume || '').replace(/\u0000/g, '').trim(),
+                String(p.obj.department || '').replace(/\u0000/g, '').trim(),
                 parseInterval(p.obj.interval),
                 p.lastCal,
-                String(p.obj.cert || '').trim(),
+                String(p.obj.cert || '').replace(/\u0000/g, '').trim(),
                 p.result,
                 normalizeActive(p.obj.active),
-                String(p.obj.responsible || '').trim(),
-                String(p.obj.location || '').trim(),
-                String(p.obj.notes || '').trim(),
+                String(p.obj.responsible || '').replace(/\u0000/g, '').trim(),
+                String(p.obj.location || '').replace(/\u0000/g, '').trim(),
+                String(p.obj.notes || '').replace(/\u0000/g, '').trim(),
                 Object.keys(p.customObj).length ? JSON.stringify(p.customObj) : null
               ]
             );
@@ -713,7 +714,7 @@ if (!objects.length) {
               await conn2.query(
                 `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
                  VALUES (?, ?, ?, ?, ?)`,
-                [p.id, p.lastCal, String(p.obj.cert || '').trim(), p.result, 'Импорт из файла']
+                [p.id, p.lastCal, String(p.obj.cert || '').replace(/\u0000/g, '').trim(), p.result, 'Импорт из файла']
               );
             }
             await conn2.commit();
