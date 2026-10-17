@@ -58,7 +58,7 @@ function renderDocsSidebar() {
     ${_docsSections.map(s => `
       <button class="docs-nav-item ${s.slug === _docsCurrentSection ? 'active' : ''}"
               onclick="switchDocsSection('${esc(s.slug)}')">
-        ${esc(s.title)}
+        ${inlineMd(s.title)}  
       </button>
     `).join('')}
   `;
