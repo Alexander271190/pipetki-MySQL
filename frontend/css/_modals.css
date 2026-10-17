@@ -362,28 +362,46 @@
 }
 
 /* ============================================================
-   ИСПРАВЛЕНИЯ МОДАЛОК (Resize, таблицы, иконки)
+   ИСПРАВЛЕНИЯ МОДАЛОК (Адаптивность, таблицы, иконки)
    ============================================================ */
 
-/* 1. Возможность растягивать модалки за правый нижний угол */
+/* 1. Модалки: адаптивность + resize */
 .modal {
   resize: both;
   overflow: auto;
-  min-width: 400px;
+  min-width: 500px;
+  max-width: 95vw; /* Не шире 95% экрана */
   min-height: 300px;
-  max-width: 98vw;
-  max-height: 95vh;
+  max-height: 92vh; /* Не выше 92% экрана */
+  width: fit-content; /* Ширина подстраивается под содержимое */
 }
 
-/* 2. Фикс обрезания первого столбца в таблицах настроек */
+/* 2. Фикс таблиц настроек: убираем жесткую сетку */
+.field-settings-table {
+  table-layout: auto !important; /* Позволяем колонкам дышать */
+  width: 100% !important;
+}
+
+/* Запрещаем первой колонке сжиматься */
 .field-settings-table th:first-child,
 .field-settings-table td:first-child {
-  min-width: 50px;
-  width: 50px;
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  text-align: center;
+  padding: 4px !important;
 }
+
+/* Чуть больше места для колонки с названиями */
 .field-settings-table th:nth-child(2),
 .field-settings-table td:nth-child(2) {
-  min-width: 120px; /* Для полей "Название", "Логин" и т.д. */
+  min-width: 150px;
+}
+
+/* Убедимся, что обертка настроек имеет скролл */
+#settings-section-content {
+  overflow-x: auto;
+  width: 100%;
 }
 
 /* 3. Иконки в модалках и таблицах — черные (в светлой теме) */
