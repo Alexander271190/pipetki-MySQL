@@ -360,3 +360,36 @@
   .bc-settings-grid { grid-template-columns: 1fr; }
   .bc-fields-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   ИСПРАВЛЕНИЯ МОДАЛОК (Resize, таблицы, иконки)
+   ============================================================ */
+
+/* 1. Возможность растягивать модалки за правый нижний угол */
+.modal {
+  resize: both;
+  overflow: auto;
+  min-width: 400px;
+  min-height: 300px;
+  max-width: 98vw;
+  max-height: 95vh;
+}
+
+/* 2. Фикс обрезания первого столбца в таблицах настроек */
+.field-settings-table th:first-child,
+.field-settings-table td:first-child {
+  min-width: 50px;
+  width: 50px;
+}
+.field-settings-table th:nth-child(2),
+.field-settings-table td:nth-child(2) {
+  min-width: 120px; /* Для полей "Название", "Логин" и т.д. */
+}
+
+/* 3. Иконки в модалках и таблицах — черные (в светлой теме) */
+.modal .field-settings-table i,
+.modal .bc-printers-table i,
+.modal .help-perm-item i,
+.modal .usr-perm-cb + span i {
+  color: var(--icon-default) !important;
+}
