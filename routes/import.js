@@ -430,11 +430,12 @@ if (!objects.length) {
       }
     } catch (e) { /* fallback ниже */ }
 
-        // ═══════════════════════════════════════════════════════════
-    // 🚀 BATCH IMPORT — ускорение ~10×
+           // ═══════════════════════════════════════════════════════════
+    // 🚀 BATCH IMPORT — ускорение ~10× с fallback на построчную
     // ═══════════════════════════════════════════════════════════
     const BATCH_SIZE = 50;
 
+    // 1) Предварительная проверка: все объявленные ID одним запросом
     const idHeaderIdx = headers.findIndex(h => mapHeader(h, customFields) === 'id');
     const declaredIds = [];
     const seenInFile = new Set();
@@ -457,6 +458,7 @@ if (!objects.length) {
       validObjects.push({ raw, originalIdx: i });
     }
 
+    // Batch-проверка существующих ID (по 500 за раз)
     const existingIds = new Set();
     if (declaredIds.length > 0) {
       for (let k = 0; k < declaredIds.length; k += 500) {
@@ -467,6 +469,7 @@ if (!objects.length) {
       }
     }
 
+    // 2) Обработка батчами по 50
     const totalBatches = Math.ceil(validObjects.length / BATCH_SIZE);
     console.log(`📥 Импорт: ${validObjects.length} строк, ${totalBatches} батчей по ${BATCH_SIZE}`);
 
@@ -476,6 +479,7 @@ if (!objects.length) {
       const batchEntries = validObjects.slice(batchStart, batchEnd);
       const batchStartTime = Date.now();
 
+      // ── Этап 1: распарсить все строки батча ──
       const parsed = [];
       const idGenQueue = new Map();
 
@@ -519,15 +523,18 @@ if (!objects.length) {
         const lastCal = parseDate(obj.lastCalibration);
         const result = normalizeResult(obj.result);
 
-        parsed.push({ id, prefix, model, obj, customObj, lastCal, result, eqType });
+        parsed.push({ id, prefix, model, obj, customObj, lastCal, result, eqType, originalIdx });
       }
 
       if (parsed.length === 0) continue;
 
+      // ── Этап 2: одна транзакция на батч ──
       const conn = await db.getConnection();
+      let batchCommitted = false;
       try {
         await conn.beginTransaction();
 
+        // Генерируем ID разом для каждого префикса (1 FOR UPDATE на префикс)
         const idGenResults = new Map();
         for (const [prefix, count] of idGenQueue.entries()) {
           const safePrefix = String(prefix).replace(/[%_\\]/g, '\\$&');
@@ -550,12 +557,24 @@ if (!objects.length) {
         const prefixCounter = new Map();
         for (const item of parsed) {
           if (!item.id) {
+            const ids = idGenResults.get(item.prefix) || [];
             const c = prefixCounter.get(item.prefix) || 0;
-            item.id = idGenResults.get(item.prefix)[c];
+            if (!ids[c]) {
+              item._failed = true;
+              errors.push(`Не удалось сгенерировать ID (префикс "${item.prefix}")`);
+              continue;
+            }
+            item.id = ids[c];
             prefixCounter.set(item.prefix, c + 1);
           }
         }
 
+        // Убираем провалившиеся
+        for (let k = parsed.length - 1; k >= 0; k--) {
+          if (parsed[k]._failed) parsed.splice(k, 1);
+        }
+
+        // Финальная проверка на гонку — защита от параллельных импортов
         const allBatchIds = parsed.map(p => p.id);
         if (allBatchIds.length > 0) {
           const ph = allBatchIds.map(() => '?').join(',');
@@ -576,6 +595,7 @@ if (!objects.length) {
         }
 
         if (parsed.length > 0) {
+          // ── Batch INSERT pipettes ──
           const values = parsed.map(p => [
             p.id,
             String(p.obj.serial || '').trim(),
@@ -604,6 +624,7 @@ if (!objects.length) {
             values.flat()
           );
 
+          // ── Batch INSERT history ──
           const histValues = parsed
             .filter(p => p.lastCal)
             .map(p => [p.id, p.lastCal, String(p.obj.cert || '').trim(), p.result, 'Импорт из файла']);
@@ -616,27 +637,112 @@ if (!objects.length) {
               histValues.flat()
             );
           }
-
-          parsed.forEach(p => added.push(p.id));
         }
 
         await conn.commit();
+        batchCommitted = true;
+        parsed.forEach(p => added.push(p.id));
+
         const elapsed = Date.now() - batchStartTime;
         console.log(`   ✅ Батч ${b + 1}/${totalBatches}: ${parsed.length} строк за ${elapsed} мс`);
-      } catch (e) {
+      } catch (batchErr) {
         await conn.rollback();
-        console.error(`❌ Батч ${b + 1}/${totalBatches}:`, e.message);
-        parsed.forEach(p => errors.push(`${p.id || '?'}: ${e.message}`));
+        console.error(`❌ Батч ${b + 1}/${totalBatches}: ${batchErr.message} → fallback на построчную`);
       } finally {
         conn.release();
       }
+
+      // ── Fallback: если батч упал — обрабатываем построчно ──
+      if (!batchCommitted && parsed.length > 0) {
+        for (const p of parsed) {
+          if (p._failed) continue;
+          // Если ID не был сгенерирован — генерируем одиночно
+          if (!p.id) {
+            const conn0 = await db.getConnection();
+            try {
+              await conn0.beginTransaction();
+              const safePrefix = String(p.prefix || 'EQ').replace(/[%_\\]/g, '\\$&');
+              const [rows] = await conn0.query(
+                `SELECT id FROM pipettes WHERE id LIKE ? ORDER BY id FOR UPDATE`,
+                [`${safePrefix}-%`]
+              );
+              let maxNum = 0;
+              for (const row of rows) {
+                const m = String(row.id).match(/(\d+)$/);
+                if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+              }
+              p.id = `${p.prefix || 'EQ'}-${String(maxNum + 1).padStart(3, '0')}`;
+              await conn0.commit();
+            } catch (e) {
+              await conn0.rollback();
+              errors.push(`Строка ${(p.originalIdx ?? 0) + 2}: не удалось сгенерировать ID (${e.message})`);
+              continue;
+            } finally {
+              conn0.release();
+            }
+          }
+
+          const conn2 = await db.getConnection();
+          try {
+            await conn2.beginTransaction();
+            await conn2.query(
+              `INSERT INTO pipettes
+                (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
+                 last_calibration, cert, last_result, active, responsible, location, notes, custom_data)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                p.id,
+                String(p.obj.serial || '').trim(),
+                String(p.obj.manufacturer || '').trim(),
+                p.model,
+                p.eqType,
+                String(p.obj.volume || '').trim(),
+                String(p.obj.department || '').trim(),
+                parseInterval(p.obj.interval),
+                p.lastCal,
+                String(p.obj.cert || '').trim(),
+                p.result,
+                normalizeActive(p.obj.active),
+                String(p.obj.responsible || '').trim(),
+                String(p.obj.location || '').trim(),
+                String(p.obj.notes || '').trim(),
+                Object.keys(p.customObj).length ? JSON.stringify(p.customObj) : null
+              ]
+            );
+            if (p.lastCal) {
+              await conn2.query(
+                `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
+                 VALUES (?, ?, ?, ?, ?)`,
+                [p.id, p.lastCal, String(p.obj.cert || '').trim(), p.result, 'Импорт из файла']
+              );
+            }
+            await conn2.commit();
+            added.push(p.id);
+          } catch (rowErr) {
+            await conn2.rollback();
+            if (rowErr.code === 'ER_DUP_ENTRY') {
+              skipped.push(`${p.id}: ID уже занят`);
+            } else {
+              errors.push(`${p.id}: ${rowErr.message}`);
+            }
+          } finally {
+            conn2.release();
+          }
+        }
+        console.log(`   ⚠️ Батч ${b + 1}/${totalBatches}: fallback обработал ${parsed.length} строк построчно`);
+      }
     }
-    
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Импорт из файла',
-       `${filename || 'файл'}: добавлено ${added.length}, пропущено ${skipped.length}, ошибок ${errors.length}`]
-    );
+
+    // ── Audit log (защищённый) ──
+    try {
+      await db.query(
+        'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
+        [req.user.id, req.user.full_name, 'Импорт из файла',
+         `${filename || 'файл'}: добавлено ${added.length}, пропущено ${skipped.length}, ошибок ${errors.length}`]
+      );
+    } catch (logErr) {
+      console.error('Audit log error (не критично):', logErr.message);
+    }
 
     res.json({
       message: `Импортировано: ${added.length}`,
