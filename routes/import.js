@@ -430,55 +430,82 @@ if (!objects.length) {
       }
     } catch (e) { /* fallback ниже */ }
 
+        // ═══════════════════════════════════════════════════════════
+    // 🚀 BATCH IMPORT — ускорение ~10×
+    // ═══════════════════════════════════════════════════════════
+    const BATCH_SIZE = 50;
+
+    const idHeaderIdx = headers.findIndex(h => mapHeader(h, customFields) === 'id');
+    const declaredIds = [];
+    const seenInFile = new Set();
+    const validObjects = [];
+
     for (let i = 0; i < objects.length; i++) {
       const raw = objects[i];
-      const obj = {};
-      const customObj = {};
-      for (let j = 0; j < headers.length; j++) {
-        const key = colMap[j];
-        if (!key) continue;
-        const v = raw[headers[j]];
-        if (v === undefined || v === null || v === '') continue;
-        if (key.startsWith('custom:')) {
-          customObj[key.slice(7)] = v;
-        } else {
-          obj[key] = v;
-        }
-      }
+      const idVal = idHeaderIdx >= 0 ? String(raw[headers[idHeaderIdx]] || '').trim() : '';
 
-      let id = String(obj.id || '').trim();
-      const model = String(obj.model || '').trim();
-
-      if (!id && !model) continue;
-
-      if (!model) {
-        skipped.push(`Строка ${i + 2}: не указана модель`);
+      if (!idVal) {
+        validObjects.push({ raw, originalIdx: i });
         continue;
       }
-
-      // Быстрая отсечка: если ID задан и уже занят — не тратим соединение
-      if (id) {
-        const [ex] = await db.query('SELECT id FROM pipettes WHERE id = ?', [id]);
-        if (ex.length) { skipped.push(`${id}: ID уже существует`); continue; }
+      if (seenInFile.has(idVal)) {
+        skipped.push(`${idVal}: дубль в файле (строка ${i + 2})`);
+        continue;
       }
+      seenInFile.add(idVal);
+      declaredIds.push(idVal);
+      validObjects.push({ raw, originalIdx: i });
+    }
 
-      // ─── Одна транзакция на строку ───
-      const conn = await db.getConnection();
-      try {
-        await conn.beginTransaction();
+    const existingIds = new Set();
+    if (declaredIds.length > 0) {
+      for (let k = 0; k < declaredIds.length; k += 500) {
+        const chunk = declaredIds.slice(k, k + 500);
+        const ph = chunk.map(() => '?').join(',');
+        const [rows] = await db.query(`SELECT id FROM pipettes WHERE id IN (${ph})`, chunk);
+        rows.forEach(r => existingIds.add(r.id));
+      }
+    }
 
-       // Нормализуем тип один раз и переиспользуем
-      const eqType = normalizeEquipmentTypeCached(obj.equipmentType, typesCache);
+    const totalBatches = Math.ceil(validObjects.length / BATCH_SIZE);
+    console.log(`📥 Импорт: ${validObjects.length} строк, ${totalBatches} батчей по ${BATCH_SIZE}`);
 
-        // ─── Автогенерация ID внутри транзакции ───
+    for (let b = 0; b < totalBatches; b++) {
+      const batchStart = b * BATCH_SIZE;
+      const batchEnd = Math.min(batchStart + BATCH_SIZE, validObjects.length);
+      const batchEntries = validObjects.slice(batchStart, batchEnd);
+      const batchStartTime = Date.now();
+
+      const parsed = [];
+      const idGenQueue = new Map();
+
+      for (const { raw, originalIdx } of batchEntries) {
+        const obj = {};
+        const customObj = {};
+        for (let j = 0; j < headers.length; j++) {
+          const key = colMap[j];
+          if (!key) continue;
+          const v = raw[headers[j]];
+          if (v === undefined || v === null || v === '') continue;
+          if (key.startsWith('custom:')) customObj[key.slice(7)] = v;
+          else obj[key] = v;
+        }
+
+        let id = String(obj.id || '').trim();
+        const model = String(obj.model || '').trim();
+
+        if (!id && !model) continue;
+        if (!model) { skipped.push(`Строка ${originalIdx + 2}: не указана модель`); continue; }
+        if (id && existingIds.has(id)) { skipped.push(`${id}: ID уже существует`); continue; }
+
+        const eqType = normalizeEquipmentTypeCached(obj.equipmentType, typesCache);
+
+        let prefix = null;
         if (!id) {
-          let prefix = null;
-
           const found = (typesCache || []).find(t => t.value === eqType);
           if (found && found.prefix && found.prefix.trim()) {
             prefix = found.prefix.trim().toUpperCase();
           }
-
           if (!prefix) {
             const fallback = {
               pipette: 'P', analyzer: 'A', thermometer: 'T',
@@ -486,70 +513,125 @@ if (!objects.length) {
             };
             prefix = fallback[eqType] || 'EQ';
           }
-
-          id = await db.generatePipetteId(prefix, conn);
-        }
-
-        // Финальная проверка дубля внутри транзакции
-        const [ex] = await conn.query('SELECT id FROM pipettes WHERE id = ?', [id]);
-        if (ex.length) {
-          await conn.rollback();
-          skipped.push(`${id}: ID уже существует`);
-          continue;
+          idGenQueue.set(prefix, (idGenQueue.get(prefix) || 0) + 1);
         }
 
         const lastCal = parseDate(obj.lastCalibration);
-        const result  = normalizeResult(obj.result);
+        const result = normalizeResult(obj.result);
 
-      await conn.query(
-          `INSERT INTO pipettes
-            (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
-             last_calibration, cert, last_result, active, responsible, location, notes, custom_data)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            id,
-            String(obj.serial || '').trim(),
-            String(obj.manufacturer || '').trim(),
-            model,
-            eqType,
-            String(obj.volume || '').trim(),
-            String(obj.department || '').trim(),
-            parseInterval(obj.interval),
-            lastCal,
-            String(obj.cert || '').trim(),
-            result,
-            normalizeActive(obj.active),
-            String(obj.responsible || '').trim(),
-            String(obj.location || '').trim(),
-            String(obj.notes || '').trim(),
-            Object.keys(customObj).length ? JSON.stringify(customObj) : null
-          ]
-        );
+        parsed.push({ id, prefix, model, obj, customObj, lastCal, result, eqType });
+      }
 
-        if (lastCal) {
-          await conn.query(
-            `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
-             VALUES (?, ?, ?, ?, ?)`,
-            [id, lastCal, String(obj.cert || '').trim(), result, 'Импорт из файла']
+      if (parsed.length === 0) continue;
+
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        const idGenResults = new Map();
+        for (const [prefix, count] of idGenQueue.entries()) {
+          const safePrefix = String(prefix).replace(/[%_\\]/g, '\\$&');
+          const [rows] = await conn.query(
+            `SELECT id FROM pipettes WHERE id LIKE ? ORDER BY id FOR UPDATE`,
+            [`${safePrefix}-%`]
           );
+          let maxNum = 0;
+          for (const row of rows) {
+            const m = String(row.id).match(/(\d+)$/);
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+          }
+          const ids = [];
+          for (let i = 0; i < count; i++) {
+            ids.push(`${prefix}-${String(maxNum + 1 + i).padStart(3, '0')}`);
+          }
+          idGenResults.set(prefix, ids);
+        }
+
+        const prefixCounter = new Map();
+        for (const item of parsed) {
+          if (!item.id) {
+            const c = prefixCounter.get(item.prefix) || 0;
+            item.id = idGenResults.get(item.prefix)[c];
+            prefixCounter.set(item.prefix, c + 1);
+          }
+        }
+
+        const allBatchIds = parsed.map(p => p.id);
+        if (allBatchIds.length > 0) {
+          const ph = allBatchIds.map(() => '?').join(',');
+          const [dupCheck] = await conn.query(
+            `SELECT id FROM pipettes WHERE id IN (${ph})`,
+            allBatchIds
+          );
+          if (dupCheck.length > 0) {
+            const dupSet = new Set(dupCheck.map(r => r.id));
+            const filtered = [];
+            for (const item of parsed) {
+              if (dupSet.has(item.id)) skipped.push(`${item.id}: ID уже занят (гонка)`);
+              else filtered.push(item);
+            }
+            parsed.length = 0;
+            parsed.push(...filtered);
+          }
+        }
+
+        if (parsed.length > 0) {
+          const values = parsed.map(p => [
+            p.id,
+            String(p.obj.serial || '').trim(),
+            String(p.obj.manufacturer || '').trim(),
+            p.model,
+            p.eqType,
+            String(p.obj.volume || '').trim(),
+            String(p.obj.department || '').trim(),
+            parseInterval(p.obj.interval),
+            p.lastCal,
+            String(p.obj.cert || '').trim(),
+            p.result,
+            normalizeActive(p.obj.active),
+            String(p.obj.responsible || '').trim(),
+            String(p.obj.location || '').trim(),
+            String(p.obj.notes || '').trim(),
+            Object.keys(p.customObj).length ? JSON.stringify(p.customObj) : null
+          ]);
+
+          const rowPh = values.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+          await conn.query(
+            `INSERT INTO pipettes
+              (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
+               last_calibration, cert, last_result, active, responsible, location, notes, custom_data)
+             VALUES ${rowPh}`,
+            values.flat()
+          );
+
+          const histValues = parsed
+            .filter(p => p.lastCal)
+            .map(p => [p.id, p.lastCal, String(p.obj.cert || '').trim(), p.result, 'Импорт из файла']);
+
+          if (histValues.length > 0) {
+            const histPh = histValues.map(() => '(?, ?, ?, ?, ?)').join(',');
+            await conn.query(
+              `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
+               VALUES ${histPh}`,
+              histValues.flat()
+            );
+          }
+
+          parsed.forEach(p => added.push(p.id));
         }
 
         await conn.commit();
-        added.push(id);
-
+        const elapsed = Date.now() - batchStartTime;
+        console.log(`   ✅ Батч ${b + 1}/${totalBatches}: ${parsed.length} строк за ${elapsed} мс`);
       } catch (e) {
         await conn.rollback();
-
-        if (e.code === 'ER_DUP_ENTRY') {
-          // Гонка с параллельным запросом — ID занял кто-то другой
-          skipped.push(`${id}: ID уже занят (гонка с параллельным запросом)`);
-        } else {
-          errors.push(`${id}: ${e.message}`);
-        }
+        console.error(`❌ Батч ${b + 1}/${totalBatches}:`, e.message);
+        parsed.forEach(p => errors.push(`${p.id || '?'}: ${e.message}`));
       } finally {
         conn.release();
       }
     }
+    
     await db.query(
       'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
       [req.user.id, req.user.full_name, 'Импорт из файла',
