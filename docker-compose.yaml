@@ -68,7 +68,7 @@ services:
       - ./server.js:/app/server.js
       - ./db:/app/db
       - ./utils:/app/utils
-      - ./help-seed.js:/app/help-seed.js
+      
 
     depends_on:
       db:
