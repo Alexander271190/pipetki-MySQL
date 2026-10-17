@@ -920,7 +920,7 @@
 
   <!-- МОДАЛКА СПРАВКИ -->
 <div class="modal-overlay" id="hotkeys-modal">
-  <div class="modal modal-xl" style="max-width:1100px;">
+  <div class="modal modal-xl">
     <h2><i class="fa-solid fa-book-open"></i> Инструкция по работе с системой</h2>
 
     <div class="docs-layout">
@@ -928,7 +928,10 @@
       <main class="docs-content" id="docs-content"></main>
     </div>
 
-    <div class="form-actions">
+    <div class="form-actions" style="justify-content: space-between;">
+      <button type="button" class="btn btn-info" onclick="printHelpSection()">
+        <i class="fa-solid fa-print"></i> Распечатать раздел
+      </button>
       <button type="button" class="btn btn-secondary" onclick="closeHotkeysHelp()">Закрыть</button>
     </div>
   </div>
