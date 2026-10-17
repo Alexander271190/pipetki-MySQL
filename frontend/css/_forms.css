@@ -290,6 +290,9 @@
   .auth-title-sub { font-size: 1.1rem; }
   .auth-header { flex-direction: column; text-align: center; gap: 8px; }
 }
+#usr-only-own-dept {
+  accent-color: #eab308;
+}
 
 /* ============================================================
    ТАБЛИЦА ГЛАВНАЯ
