@@ -169,20 +169,26 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
     responsible = req.user.acting_full_name  || '';
     department  = req.user.acting_department || '';
   }
-
-  const trimmedModel = String(model || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+  const stripNulls = (s) => String(s || '').replace(/\u0000/g, '');
+  const trimmedModel = stripNulls(model).replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
   if (!trimmedModel) return res.status(400).json({ error: 'Заполните поле «Модель»' });
   if (trimmedModel.length > 255) return res.status(400).json({ error: 'Модель слишком длинная (максимум 255 символов)' });
 
-  const trimmedSerial = String(serial || '').trim();
+  const trimmedSerial = stripNulls(serial).trim();
   if (trimmedSerial.length > 255) return res.status(400).json({ error: 'Серийный номер слишком длинный (максимум 255 символов)' });
 
-  const trimmedManufacturer = String(manufacturer || '').trim();
+  const trimmedManufacturer = stripNulls(manufacturer).trim();
   if (trimmedManufacturer.length > 255) return res.status(400).json({ error: 'Производитель слишком длинный (максимум 255 символов)' });
 
-  const trimmedResponsible = String(responsible || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+  const trimmedResponsible = stripNulls(responsible).replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
   if (!trimmedResponsible) return res.status(400).json({ error: 'Заполните поле «Ответственный»' });
 
+  // 🆕 Санитизация остальных текстовых полей
+  const safeVolume     = stripNulls(volume).trim();
+  const safeDepartment = stripNulls(department).trim();
+  const safeCert       = stripNulls(cert).trim();
+  const safeLocation   = stripNulls(location).trim();
+  const safeNotes      = stripNulls(notes);
   if (!lastCalibration || String(lastCalibration).trim() === '') {
     return res.status(400).json({ error: 'Заполните поле «Дата последней поверки»' });
   }
@@ -240,15 +246,16 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
     const customData = {};
     for (const [k, v] of Object.entries(req.body)) {
       if (FORBIDDEN_CUSTOM_KEYS.has(k)) continue;
-      if (!STANDARD_FIELDS.has(k) && k !== 'id') customData[k] = v;
+      if (!STANDARD_FIELDS.has(k) && k !== 'id') {
+        customData[k] = (typeof v === 'string') ? v.replace(/\u0000/g, '') : v;
+      }
     }
-
     const rawBarcode = req.body.barcode;
     let barcodeValue = null;
     let barcodeSource = null;
 
-    if (req.user.role === 'admin' && rawBarcode && String(rawBarcode).trim()) {
-      const trimmed = String(rawBarcode).trim();
+       if (req.user.role === 'admin' && rawBarcode && String(rawBarcode).trim()) {
+      const trimmed = stripNulls(rawBarcode).trim();
       if (trimmed.length > BARCODE_MAX_LEN) {
         await conn.rollback();
         return res.status(400).json({ error: `Штрихкод слишком длинный (максимум ${BARCODE_MAX_LEN} символов)` });
@@ -256,12 +263,13 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
       barcodeValue = trimmed;
       barcodeSource = 'manual';
     } else {
+         
       const computed = computeBarcodeValue({ id, serial, custom_data: customData });
       barcodeValue = computed.value;
       barcodeSource = computed.source;
     }
 
-    await conn.query(
+   await conn.query(
       `INSERT INTO pipettes
         (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
          last_calibration, cert, last_result, active, responsible, location, notes, custom_data,
@@ -269,11 +277,11 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, trimmedSerial, trimmedManufacturer, trimmedModel,
-        equipmentType || 'pipette', volume, department,
-        safeInterval, lastCalibration, cert,
+        equipmentType || 'pipette', safeVolume, safeDepartment,
+        safeInterval, lastCalibration, safeCert,
         result || 'pass',
         (active === false || active === 0 || active === 'false' || active === '0') ? 0 : 1,
-        trimmedResponsible, location, notes,
+        trimmedResponsible, safeLocation, safeNotes,
         Object.keys(customData).length ? JSON.stringify(customData) : null,
         barcodeValue, barcodeSource,
       ]
@@ -283,7 +291,7 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
       await conn.query(
         `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
          VALUES (?, ?, ?, ?, ?)`,
-        [id, lastCalibration, cert, result || 'pass', 'Первичная поверка']
+        [id, lastCalibration, safeCert, result || 'pass', 'Первичная поверка']
       );
     }
 
@@ -331,8 +339,9 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     updates.department  = req.user.acting_department || '';
   }
 
+  const stripNullsUpd = (s) => String(s || '').replace(/\u0000/g, '');
   const manualBarcode = (req.user.role === 'admin' && updates.barcode !== undefined)
-    ? String(updates.barcode || '').trim() : null;
+    ? stripNullsUpd(updates.barcode).trim() : null;
   if (manualBarcode !== null && manualBarcode.length > BARCODE_MAX_LEN) {
     return res.status(400).json({ error: `Штрихкод слишком длинный (максимум ${BARCODE_MAX_LEN} символов)` });
   }
@@ -369,18 +378,32 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     delete updates.responsible;
   }
 
-  if (updates.serial !== undefined && String(updates.serial).trim().length > 255) {
-    return res.status(400).json({ error: 'Серийный номер слишком длинный (максимум 255 символов)' });
+  if (updates.serial !== undefined) {
+    updates.serial = stripNullsUpd(updates.serial).trim();
+    if (updates.serial.length > 255) {
+      return res.status(400).json({ error: 'Серийный номер слишком длинный (максимум 255 символов)' });
+    }
   }
-  if (updates.manufacturer !== undefined && String(updates.manufacturer).trim().length > 255) {
-    return res.status(400).json({ error: 'Производитель слишком длинный (максимум 255 символов)' });
+  if (updates.manufacturer !== undefined) {
+    updates.manufacturer = stripNullsUpd(updates.manufacturer).trim();
+    if (updates.manufacturer.length > 255) {
+      return res.status(400).json({ error: 'Производитель слишком длинный (максимум 255 символов)' });
+    }
   }
   if (updates.model !== undefined) {
-    const m = String(updates.model).replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
+    const m = stripNullsUpd(updates.model).replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
     if (!m) return res.status(400).json({ error: 'Заполните поле «Модель»' });
     if (m.length > 255) return res.status(400).json({ error: 'Модель слишком длинная (максимум 255 символов)' });
+    updates.model = m;
   }
 
+  // 🆕 Санитизация остальных текстовых полей
+  ['volume', 'department', 'cert', 'location', 'notes'].forEach(key => {
+    if (updates[key] !== undefined) {
+      updates[key] = stripNullsUpd(updates[key]);
+    }
+  });
+   
   const map = {
     serial: 'serial', manufacturer: 'manufacturer', model: 'model',
     equipmentType: 'equipment_type', volume: 'volume', department: 'department',
@@ -394,7 +417,9 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
   const NUMERIC_FIELDS = new Set(['interval']);
   const customUpdates = {};
   for (const [k, v] of Object.entries(updates)) {
-    if (!STANDARD_FIELDS.has(k)) customUpdates[k] = v;
+    if (!STANDARD_FIELDS.has(k)) {
+      customUpdates[k] = (typeof v === 'string') ? v.replace(/\u0000/g, '') : v;
+    }
   }
 
   const fields = [];
@@ -502,8 +527,18 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       newId: regeneratedId || undefined,
       oldId: regeneratedId ? req.params.id : undefined
     });
-  } catch (e) {
+    
+    } catch (e) {
     await conn.rollback();
+    const DATA_ERROR_CODES = new Set(['ER_DATA_TOO_LONG', 'ER_TRUNCATED_WRONG_VALUE', 'ER_BAD_NULL_ERROR', 'ER_NO_DEFAULT_FOR_FIELD']);
+    const DATA_ERROR_ERRNOS = new Set([1406, 1292, 1048, 1364]);
+    if (DATA_ERROR_CODES.has(e.code) || DATA_ERROR_ERRNOS.has(e.errno)) {
+      return res.status(400).json({ error: 'Некорректные данные: ' + (e.sqlMessage || e.message) });
+    }
+    const RACE_CODES = new Set(['ER_DUP_ENTRY', 'ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT']);
+    if (RACE_CODES.has(e.code)) {
+      return res.status(409).json({ error: 'Конфликт, попробуйте ещё раз' });
+    }
     console.error(e);
     res.status(500).json({ error: 'Ошибка обновления' });
   } finally {
