@@ -1,0 +1,19 @@
+/* ============================================================
+   БАЗА: reset, body, html
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: clip;
+  min-height: 100vh;
+}
+
+html {
+  overflow-x: clip;
+  min-height: 100vh;
+  background: var(--bg);
+}
