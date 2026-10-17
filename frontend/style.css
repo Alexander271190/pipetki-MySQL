@@ -1,0 +1,14 @@
+/* ============================================================
+   СИСТЕМА УЧЁТА ОБОРУДОВАНИЯ КДЛ — СТИЛИ
+   Разбито на модули в папке css/.
+   Порядок @import ВАЖЕН: переменные → база → компоненты → тёмная тема.
+   ============================================================ */
+
+@import url('./css/_variables.css');
+@import url('./css/_base.css');
+@import url('./css/_layout.css');
+@import url('./css/_buttons.css');
+@import url('./css/_modals.css');
+@import url('./css/_forms.css');
+@import url('./css/_components.css');
+@import url('./css/_dark.css');
