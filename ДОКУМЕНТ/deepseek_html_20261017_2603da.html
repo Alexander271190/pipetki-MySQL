@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Руководство по развёртыванию — Учёт оборудования КДЛ</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  body {
+    font-family: 'Segoe UI', 'Calibri', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1a1a2e;
+    margin: 0;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #1e293b;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 8px;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #1e293b;
+    margin-top: 28px;
+    padding: 8px 12px;
+    background: #eff6ff;
+    border-left: 5px solid #2563eb;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #334155;
+    margin-top: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 9.5pt;
+  }
+  th {
+    background: #1e293b;
+    color: #fff;
+    padding: 7px 9px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 5px 9px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+  code {
+    background: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', monospace;
+    font-size: 9pt;
+    color: #be123c;
+  }
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 9pt;
+    overflow-x: auto;
+    line-height: 1.4;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  .info {
+    background: #dbeafe;
+    border-left: 4px solid #2563eb;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 5px;
+    font-size: 10pt;
+  }
+  .warn {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 5px;
+    font-size: 10pt;
+  }
+  .danger {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 5px;
+    font-size: 10pt;
+  }
+  .success {
+    background: #dcfce7;
+    border-left: 4px solid #16a34a;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 5px;
+    font-size: 10pt;
+  }
+  ul, ol { padding-left: 24px; margin: 6px 0; }
+  li { margin-bottom: 4px; }
+  hr { border: none; border-top: 1px solid #cbd5e1; margin: 20px 0; }
+  .page-break { page-break-before: always; }
+  .toc {
+    background: #f8fafc;
+    padding: 16px 24px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin: 16px 0;
+  }
+  .toc ol { margin: 0; }
+  .toc a { color: #2563eb; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>Руководство по развёртыванию<br>Система учёта оборудования КДЛ</h1>
+
+<p><strong>Версия:</strong> 3.0.0<br>
+<strong>Кому:</strong> IT-специалистам, DevOps, администраторам серверов<br>
+<strong>Уровень:</strong> продвинутый (Linux, Docker, Nginx)<br>
+<strong>Дата:</strong> 18.10.2026</p>
+
+<div class="info">
+<strong>ℹ️ Что в этом документе</strong><br>
+Пошаговая инструкция по развёртыванию с нуля, обновлению, резервному копированию и устранению неполадок. Все команды — для Linux. Для Windows используйте PowerShell-эквиваленты (указаны в отдельных блоках).
+</div>
+
+<div class="toc">
+<strong>📑 Содержание</strong>
+<ol>
+<li><a href="#requirements">Требования к серверу</a></li>
+<li><a href="#prep">Подготовка сервера</a></li>
+<li><a href="#install">Установка Docker</a></li>
+<li><a href="#clone">Клонирование проекта</a></li>
+<li><a href="#env">Настройка .env</a></li>
+<li><a href="#ssl">Первичный SSL (Let's Encrypt)</a></li>
+<li><a href="#launch">Запуск (docker compose up)</a></li>
+<li><a href="#firstlogin">Первый вход</a></li>
+<li><a href="#check">Проверка работоспособности</a></li>
+<li><a href="#update">Обновление</a></li>
+<li><a href="#backup">Резервное копирование</a></li>
+<li><a href="#restore">Восстановление</a></li>
+<li><a href="#monitoring">Мониторинг</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+</div>
+
+<hr>
+
+<h2 id="requirements">1. Требования к серверу</h2>
+
+<table>
+<tr><th style="width:25%">Параметр</th><th style="width:20%">Минимум</th><th>Рекомендуется</th></tr>
+<tr><td>ОС</td><td>Ubuntu 20.04 LTS</td><td>Ubuntu 22.04 LTS / 24.04 LTS</td></tr>
+<tr><td>CPU</td><td>1 vCPU</td><td>2 vCPU</td></tr>
+<tr><td>RAM</td><td>2 GB</td><td>4 GB</td></tr>
+<tr><td>Диск</td><td>20 GB SSD</td><td>50 GB SSD</td></tr>
+<tr><td>Сеть</td><td>Открыты порты 80, 443</td><td>+ домен или статический IP</td></tr>
+<tr><td>Docker</td><td>24.0+</td><td>последняя stable</td></tr>
+<tr><td>Docker Compose</td><td>2.20+</td><td>последняя stable</td></tr>
+</table>
+
+<h3>Проверка</h3>
+<pre><code># Версия ОС
+cat /etc/os-release
+
+# Свободное место
+df -h
+
+# RAM
+free -h
+
+# Открытые порты
+ss -tulpn | grep -E ':80|:443'</code></pre>
+
+<div class="warn">
+<strong>⚠️ Порт 80 занят?</strong> Если на сервере уже стоит Apache/Nginx вне Docker — освободите порты или настройте проксирование. Иначе <code>docker compose up</code> упадёт с ошибкой «port already allocated».
+</div>
+
+---
+
+<h2 id="prep">2. Подготовка сервера</h2>
+
+<h3>Обновление системы</h3>
+<pre><code>sudo apt update
+sudo apt upgrade -y</code></pre>
+
+<h3>Установка пакетов</h3>
+<pre><code>sudo apt install -y \
+  curl \
+  wget \
+  git \
+  ca-certificates \
+  gnupg \
+  lsb-release \
+  ufw \
+  htop \
+  nano</code></pre>
+
+<h3>Настройка firewall (UFW)</h3>
+<pre><code>sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status</code></pre>
+
+<h3>Создание пользователя (не root)</h3>
+<pre><code>sudo adduser deploy
+sudo usermod -aG sudo deploy
+sudo usermod -aG docker deploy  # после установки Docker
+su - deploy</code></pre>
+
+<div class="page-break"></div>
+
+<h2 id="install">3. Установка Docker</h2>
+
+<h3>Официальный скрипт (быстро)</h3>
+<pre><code>curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER</code></pre>
+
+<h3>Проверка</h3>
+<pre><code>docker --version
+# Docker version 24.x.x
+
+docker compose version
+# Docker Compose version v2.x.x</code></pre>
+
+<div class="warn">
+<strong>⚠️ После <code>usermod</code></strong> — выйдите и войдите в сессию заново, чтобы применились права на docker.
+</div>
+
+<h3>Автозапуск Docker</h3>
+<pre><code>sudo systemctl enable docker
+sudo systemctl start docker
+sudo systemctl status docker</code></pre>
+
+<h2 id="clone">4. Клонирование проекта</h2>
+
+<h3>Выбор папки</h3>
+<pre><code>cd /opt
+sudo mkdir -p pipette-app
+sudo chown $USER:$USER pipette-app
+cd pipette-app</code></pre>
+
+<h3>Клонирование</h3>
+<pre><code># Если проект в Git
+git clone &lt;repo-url&gt; .
+
+# Или распаковка архива
+# scp user@server:~/pipette-app.tar.gz .
+# tar -xzf pipette-app.tar.gz</code></pre>
+
+<h3>Структура после клонирования</h3>
+<pre><code>pipette-app/
+├── docker-compose.yaml
+├── Dockerfile
+├── server.js
+├── package.json
+├── .env.example
+├── routes/ db/ middleware/ utils/
+├── frontend/
+├── nginx/
+└── help-seed.js</code></pre>
+
+<h2 id="env">5. Настройка .env</h2>
+
+<h3>Копирование шаблона</h3>
+<pre><code>cp .env.example .env</code></pre>
+
+<h3>Генерация JWT_SECRET</h3>
+<div class="danger">
+<strong>🔴 КРИТИЧНО:</strong> замените JWT_SECRET на случайные 64 hex-символа. Не используйте дефолтное значение «change_this_secret_key»!
+</div>
+
+<pre><code>openssl rand -hex 32</code></pre>
+
+<h3>Редактирование .env</h3>
+<pre><code>nano .env</code></pre>
+
+<p>Пример:</p>
+<pre><code>PORT=3000
+DB_HOST=db
+DB_PORT=3306
+DB_NAME=pipette
+DB_USER=pipette
+DB_PASSWORD=YourStrongPassword2026!
+JWT_SECRET=a1b2c3d4e5f6... (64 символа)</code></pre>
+
+<h3>Пароль БД</h3>
+<p>Замените и в <code>.env</code>, и в <code>docker-compose.yaml</code> (в двух местах: <code>MYSQL_PASSWORD</code> и <code>MYSQL_ROOT_PASSWORD</code>).</p>
+
+<div class="warn">
+<strong>⚠️ Не забудьте:</strong> если меняете пароль после первого запуска БД — потребуется сброс тома (<code>docker compose down -v</code>), иначе MySQL не примет новый пароль.
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="ssl">6. Первичный SSL (Let's Encrypt)</h2>
+
+<p>Приложение работает через HTTPS. Сертификаты получаются автоматически через certbot. Первый раз — вручную.</p>
+
+<h3>Вариант A: есть домен (рекомендуется)</h3>
+<ol>
+<li>Направьте A-запись домена (например, <code>pipette.example.ru</code>) на IP сервера</li>
+<li>Дождитесь DNS-распространения (<code>ping pipette.example.ru</code> — должен вернуть IP)</li>
+<li>В <code>nginx/pipette.conf</code> замените IP на домен:
+<pre><code>server_name pipette.example.ru;</code></pre>
+</li>
+</ol>
+
+<h3>Вариант B: только IP (как у вас)</h3>
+<p>Используется <code>server_name 5.189.243.15;</code> — уже настроено.</p>
+
+<h3>Получение сертификата (первый раз)</h3>
+<pre><code>cd /opt/pipette-app
+
+# 1. Запустить nginx (без app — для ACME challenge)
+docker compose up -d nginx
+
+# 2. Получить сертификат
+docker compose run --rm certbot certonly \
+  --webroot \
+  --webroot-path /var/www/certbot \
+  --email admin@example.ru \
+  --agree-tos \
+  --no-eff-email \
+  -d 5.189.243.15
+  # (для домена: -d pipette.example.ru)
+
+# 3. Перезапустить nginx
+docker compose restart nginx</code></pre>
+
+<h3>Проверка</h3>
+<pre><code>docker compose logs certbot --tail 20
+# Должно быть: Certificate saved at /etc/letsencrypt/live/...</code></pre>
+
+<div class="info">
+<strong>ℹ️ Автообновление:</strong> certbot-контейнер сам обновляет сертификаты каждые 12 часов и посылает HUP nginx. Вмешательство не нужно.
+</div>
+
+<h2 id="launch">7. Запуск (docker compose up)</h2>
+
+<h3>Сборка и запуск</h3>
+<pre><code>cd /opt/pipette-app
+docker compose up -d --build</code></pre>
+
+<div class="info">
+<strong>ℹ️ Первый запуск</strong> занимает 60–180 сек (сборка Node + инициализация MySQL). Не пугайтесь паузы.
+</div>
+
+<h3>Проверка запуска</h3>
+<pre><code># Все 5 контейнеров
+docker compose ps
+
+# Ожидаемо:
+# NAME              STATUS
+# pipette_app       Up (healthy)
+# pipette_db        Up (healthy)
+# pipette_nginx     Up (healthy)
+# pipette_certbot   Up</code></pre>
+
+<h3>Логи приложения</h3>
+<pre><code>docker logs pipette_app --tail 30</code></pre>
+
+<p><strong>Ожидаемо:</strong></p>
+<pre><code>📝 logger-bootstrap.js активен — логи пишутся в /app/logs
+✅ MySQL подключён
+✅ Схема БД готова
+🚀 Server on http://0.0.0.0:3000</code></pre>
+
+<div class="danger">
+<strong>🔴 Если в логах:</strong><br>
+• <code>MySQL не ответил за 3 минуты</code> — БД не поднялась, проверьте <code>docker logs pipette_db</code><br>
+• <code>SyntaxError</code> — синтаксическая ошибка в коде, проверьте файлы<br>
+• <code>EADDRINUSE</code> — порт 3000 занят
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="firstlogin">8. Первый вход</h2>
+
+<ol>
+<li>Откройте <code>https://&lt;host&gt;</code></li>
+<li>Логин: <code>admin</code>, пароль: <strong>пустой</strong></li>
+<li>Система покажет окно <strong>«Установка пароля администратора»</strong></li>
+<li>Введите пароль: 8+, a-z, A-Z, 0-9, спецсимвол</li>
+<li>Сохраните — войдёте в систему</li>
+</ol>
+
+<div class="warn">
+<strong>⚠️ Если пишет «Неверный логин или пароль»</strong> при пустом пароле — значит, seed не отработал. Проверьте логи <code>docker logs pipette_app | grep seed</code>. Если БД инициализирована неправильно — <code>docker compose down -v</code> + <code>up -d</code> для полного сброса.
+</div>
+
+<h3>Первичная настройка (10 минут)</h3>
+<ol>
+<li><strong>Настройки → Пользователи</strong> — создать остальных сотрудников</li>
+<li><strong>Настройки → Отделы</strong> — проверить список</li>
+<li><strong>Настройки → Типы оборудования</strong> — проверить типы, префиксы, место поверки</li>
+<li><strong>Настройки → Поля формы</strong> — включить/выключить нужные</li>
+<li><strong>Настройки → Принтеры этикеток</strong> — добавить принтеры</li>
+<li><strong>Настройки → Общие</strong> — порог warn_days (по умолчанию 30)</li>
+</ol>
+
+<h2 id="check">9. Проверка работоспособности</h2>
+
+<h3>Healthcheck</h3>
+<pre><code>curl -k https://localhost/api/health
+# {"status":"ok"}</code></pre>
+
+<h3>Проверка БД</h3>
+<pre><code>docker exec pipette_db mysqladmin ping -h localhost -u pipette -p
+# mysqld is alive</code></pre>
+
+<h3>Проверка TZ UTC</h3>
+<pre><code>docker exec pipette_db date
+# Sat Oct 18 ... UTC 2026
+
+docker exec pipette_app date
+# Sat Oct 18 ... UTC 2026
+
+# Время должно совпадать</code></pre>
+
+<h3>Проверка всех контейнеров healthy</h3>
+<pre><code>docker ps --format "table {{.Names}}\t{{.Status}}"</code></pre>
+
+<h3>Проверка Nginx (HTTPS)</h3>
+<pre><code>curl -I https://localhost
+# HTTP/2 200
+
+curl -k https://localhost/api/health
+# {"status":"ok"}</code></pre>
+
+<div class="page-break"></div>
+
+<h2 id="update">10. Обновление</h2>
+
+<h3>Вариант A: обновление кода (без пересборки)</h3>
+<p>Если изменились только <code>routes/</code>, <code>frontend/</code>, <code>db/</code> и т.п. — volume mount подхватит изменения:</p>
+
+<pre><code>cd /opt/pipette-app
+
+# 1. Скачать обновления
+git pull origin main
+# или распаковать архив поверх
+
+# 2. Перезапустить app
+docker restart pipette_app
+
+# 3. Проверить логи
+docker logs pipette_app --tail 20</code></pre>
+
+<div class="success">
+<strong>✅ Быстро (5 секунд):</strong> код подхватывается без пересборки образа, благодаря volume mount.
+</div>
+
+<h3>Вариант B: обновление с пересборкой</h3>
+<p>Если изменились <code>package.json</code>, <code>Dockerfile</code>, <code>docker-compose.yaml</code>:</p>
+
+<pre><code>cd /opt/pipette-app
+git pull origin main
+docker compose up -d --build app
+docker logs pipette_app --tail 20</code></pre>
+
+<h3>Откат</h3>
+<pre><code># Если что-то пошло не так
+git log --oneline -5           # найти нужный коммит
+git checkout &lt;commit-hash&gt;
+docker compose up -d --build app</code></pre>
+
+<h2 id="backup">11. Резервное копирование</h2>
+
+<h3>Что бэкапить</h3>
+<table>
+<tr><th>Что</th><th>Где</th><th>Размер</th><th>Частота</th></tr>
+<tr><td><strong>БД MySQL</strong></td><td><code>mysqldata/</code> или через mysqldump</td><td>~10–100 МБ</td><td>Ежедневно</td></tr>
+<tr><td><strong>SSL-сертификаты</strong></td><td><code>data/certbot/</code></td><td>~50 КБ</td><td>При обновлении</td></tr>
+<tr><td><strong>Загруженные картинки</strong></td><td><code>frontend/uploads/</code></td><td>~5–50 МБ</td><td>Еженедельно</td></tr>
+<tr><td><strong>Конфигурация</strong></td><td><code>.env</code>, <code>docker-compose.yaml</code>, <code>nginx/</code></td><td>&lt; 10 КБ</td><td>При изменении</td></tr>
+</table>
+
+<h3>Бэкап БД через mysqldump (рекомендуется)</h3>
+<pre><code># Создать папку для бэкапов
+mkdir -p /opt/backups/pipette
+cd /opt/backups/pipette
+
+# Сделать бэкап
+docker exec pipette_db mysqldump \
+  -u pipette \
+  -pSeno16/1978S \
+  --single-transaction \
+  --routines \
+  --triggers \
+  pipette > pipette_$(date +%Y-%m-%d_%H-%M).sql
+
+# Размер
+ls -lh</code></pre>
+
+<h3>Автоматизация (cron)</h3>
+<pre><code>sudo nano /etc/cron.d/pipette-backup</code></pre>
+
+<pre><code># Ежедневно в 3:00 — бэкап БД
+0 3 * * * root docker exec pipette_db mysqldump -u pipette -pSeno16/1978S --single-transaction pipette | gzip > /opt/backups/pipette/pipette_$(date +\%Y-\%m-\%d).sql.gz
+
+# Еженедельно — удалять бэкапы старше 30 дней
+0 4 * * 0 root find /opt/backups/pipette -name "*.sql.gz" -mtime +30 -delete</code></pre>
+
+<div class="warn">
+<strong>⚠️ Пароль в cron</strong> — виден в <code>ps aux</code>. Если критично — используйте <code>~/.my.cnf</code> с паролем.
+</div>
+
+<h3>Бэкап картинок и конфигурации</h3>
+<pre><code>cd /opt/pipette-app
+tar -czf /opt/backups/pipette/uploads_$(date +%Y-%m-%d).tar.gz frontend/uploads/
+tar -czf /opt/backups/pipette/config_$(date +%Y-%m-%d).tar.gz .env docker-compose.yaml nginx/</code></pre>
+
+<div class="page-break"></div>
+
+<h2 id="restore">12. Восстановление</h2>
+
+<h3>Из SQL-дампа</h3>
+<pre><code>cd /opt/backups/pipette
+
+# 1. Остановить app (чтобы не было записи в БД)
+docker compose stop app
+
+# 2. Восстановить БД
+docker exec -i pipette_db mysql -u pipette -pSeno16/1978S pipette &lt; pipette_2026-10-18.sql
+
+# 3. Запустить app
+docker compose start app
+
+# 4. Проверить
+docker logs pipette_app --tail 10</code></pre>
+
+<h3>Если дамп сжат gzip</h3>
+<pre><code>gunzip -c pipette_2026-10-18.sql.gz | docker exec -i pipette_db mysql -u pipette -pSeno16/1978S pipette</code></pre>
+
+<h3>Полное восстановление (включая volumes)</h3>
+<pre><code>cd /opt/pipette-app
+docker compose down -v       # УДАЛИТ ВСЕ ДАННЫЕ!
+# Восстановить из бэкапа
+docker compose up -d
+docker compose stop app
+docker exec -i pipette_db mysql -u pipette -pSeno16/1978S pipette &lt; /opt/backups/...sql
+docker compose start app</code></pre>
+
+<div class="danger">
+<strong>🔴 ВНИМАНИЕ:</strong> <code>docker compose down -v</code> удаляет <strong>все volumes</strong> — БД, сертификаты, логи. Делайте только если уверены, что есть бэкап.
+</div>
+
+<h2 id="monitoring">13. Мониторинг</h2>
+
+<h3>Просмотр логов</h3>
+<pre><code># Логи приложения (последние 100 строк)
+docker logs pipette_app --tail 100
+
+# Следить в реальном времени
+docker logs pipette_app -f
+
+# Логи БД
+docker logs pipette_db --tail 50
+
+# Логи Nginx
+docker logs pipette_nginx --tail 50</code></pre>
+
+<h3>Логи в файлы (уже настроено)</h3>
+<pre><code># Логи пишутся в /opt/pipette-app/logs/
+ls -lh logs/
+
+# Читать
+tail -f logs/app-$(date +%Y-%m-%d).log</code></pre>
+
+<h3>Проверка ресурсов</h3>
+<pre><code># Docker stats (CPU, RAM)
+docker stats --no-stream
+
+# Место на диске
+df -h
+
+# Свободная RAM
+free -h
+
+# Размеры volumes
+docker system df</code></pre>
+
+<h3>Мониторинг healthcheck</h3>
+<pre><code># Простой bash-цикл (каждые 60 сек)
+while true; do
+  status=$(docker inspect -f '{{.State.Health.Status}}' pipette_app)
+  echo "$(date): $status"
+  sleep 60
+done</code></pre>
+
+<h3>Внешний мониторинг</h3>
+<p>Добавьте <code>https://&lt;host&gt;/api/health</code> в:</p>
+<ul>
+<li><strong>Uptime Robot</strong> (бесплатно, 5 мин интервал)</li>
+<li><strong>Zabbix</strong> / <strong>Prometheus + Grafana</strong> — если есть инфраструктура</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2 id="troubleshooting">14. Troubleshooting</h2>
+
+<h3>Контейнер app не стартует</h3>
+<pre><code>docker logs pipette_app --tail 100</code></pre>
+
+<table>
+<tr><th>Ошибка</th><th>Причина</th><th>Решение</th></tr>
+<tr><td><code>SyntaxError</code></td><td>Синтаксис в JS</td><td>Проверьте изменённые файлы</td></tr>
+<tr><td><code>Cannot find module</code></td><td>Не установлены зависимости</td><td><code>docker compose up -d --build app</code></td></tr>
+<tr><td><code>EADDRINUSE</code></td><td>Порт 3000 занят</td><td><code>sudo ss -tulpn | grep 3000</code> → убить процесс</td></tr>
+<tr><td><code>MySQL не ответил</code></td><td>БД не поднялась</td><td><code>docker logs pipette_db</code></td></tr>
+<tr><td><code>ER_ACCESS_DENIED_ERROR</code></td><td>Неверный пароль БД</td><td>Проверьте <code>.env</code> и <code>docker-compose.yaml</code></td></tr>
+</table>
+
+<h3>Nginx отдаёт 502 Bad Gateway</h3>
+<pre><code># Проверить app
+docker ps | grep pipette_app
+docker logs pipette_app --tail 20
+
+# Проверить сеть
+docker exec pipette_nginx ping -c 2 app
+
+# Перезапустить nginx
+docker restart pipette_nginx</code></pre>
+
+<h3>SSL-сертификат не обновляется</h3>
+<pre><code>docker logs pipette_certbot --tail 30
+
+# Принудительное обновление
+docker compose run --rm certbot renew --force-renewal
+docker compose restart nginx</code></pre>
+
+<h3>БД занимает много места</h3>
+<pre><code># Размер БД
+docker exec pipette_db du -sh /var/lib/mysql
+
+# Очистить audit_log (если > 100000 записей)
+docker exec -it pipette_db mysql -u pipette -p
+# mysql> USE pipette;
+# mysql> DELETE FROM audit_log WHERE timestamp < DATE_SUB(NOW(), INTERVAL 90 DAY);
+# mysql> OPTIMIZE TABLE audit_log;</code></pre>
+
+<h3>Медленная работа при большом числе записей</h3>
+<pre><code># Проверить индексы
+docker exec -it pipette_db mysql -u pipette -p
+# mysql> USE pipette;
+# mysql> SHOW INDEX FROM pipettes;
+# mysql> EXPLAIN SELECT * FROM pipettes WHERE department = 'Биохимический';</code></pre>
+
+<p>Если индексов не хватает — они создаются автоматически при старте через <code>ensureIndexes()</code> в <code>db/schema.js</code>.</p>
+
+<h3>Volume mount не работает на Windows</h3>
+<pre><code># Docker Desktop → Settings → Resources → File Sharing
+# Добавить папку проекта в разрешённые</code></pre>
+
+<h3>Полный сброс (безопасно для dev)</h3>
+<div class="danger">
+<strong>🔴 УДАЛИТ ВСЕ ДАННЫЕ</strong> — только для тестов!
+</div>
+<pre><code>cd /opt/pipette-app
+docker compose down -v
+docker compose up -d --build</code></pre>
+
+<hr>
+
+<div class="success">
+<strong>🎯 Итог</strong><br>
+Развёртывание — 20–30 минут при наличии готового сервера. Обновление — 5–30 секунд (через restart, без пересборки). Бэкап — cron + mysqldump. Все типовые проблемы покрыты в разделе 14.
+</div>
+
+<h3>Контакты</h3>
+<p>При проблемах, не описанных здесь:</p>
+<ul>
+<li>Проверьте логи всех контейнеров: <code>docker compose logs --tail 100</code></li>
+<li>Проверьте <code>https://&lt;host&gt;/api/health</code></li>
+<li>Откройте issue в репозитории проекта</li>
+</ul>
+
+<p style="margin-top:30px; color:#64748b; font-size:8.5pt; text-align:center;">
+Клинико-диагностическая лаборатория · Руководство по развёртыванию · v3.0.0 · 18.10.2026
+</p>
+
+</body>
+</html>

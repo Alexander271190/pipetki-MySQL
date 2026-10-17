@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Инструкция для лаборанта — Учёт оборудования КДЛ</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  body {
+    font-family: 'Segoe UI', 'Calibri', Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.55;
+    color: #1a1a2e;
+    margin: 0;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #1e293b;
+    border-bottom: 3px solid #16a34a;
+    padding-bottom: 8px;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #1e293b;
+    margin-top: 28px;
+    padding: 8px 12px;
+    background: #f0fdf4;
+    border-left: 5px solid #16a34a;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #334155;
+    margin-top: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 10pt;
+  }
+  th {
+    background: #1e293b;
+    color: #fff;
+    padding: 7px 9px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 6px 9px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+  code {
+    background: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', monospace;
+    font-size: 9pt;
+    color: #be123c;
+  }
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: 'Consolas', monospace;
+    font-size: 9pt;
+    overflow-x: auto;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  .info {
+    background: #dbeafe;
+    border-left: 4px solid #2563eb;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 5px;
+    font-size: 10pt;
+  }
+  .warn {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 5px;
+    font-size: 10pt;
+  }
+  .success {
+    background: #dcfce7;
+    border-left: 4px solid #16a34a;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 5px;
+    font-size: 10pt;
+  }
+  ul, ol { padding-left: 24px; margin: 6px 0; }
+  li { margin-bottom: 5px; }
+  hr { border: none; border-top: 1px solid #cbd5e1; margin: 20px 0; }
+  .page-break { page-break-before: always; }
+  .toc {
+    background: #f8fafc;
+    padding: 16px 24px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin: 16px 0;
+  }
+  .toc ol { margin: 0; }
+  .toc a { color: #16a34a; text-decoration: none; }
+  .step {
+    display: inline-block;
+    background: #16a34a;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-weight: 700;
+    font-size: 10pt;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .key {
+    display: inline-block;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 8px;
+    font-family: 'Consolas', monospace;
+    font-size: 9pt;
+    color: #1e293b;
+  }
+</style>
+</head>
+<body>
+
+<h1>Инструкция для лаборанта<br>Система учёта оборудования КДЛ</h1>
+
+<p><strong>Версия:</strong> 3.0.0<br>
+<strong>Кому:</strong> лаборантам, старшим лаборантам, заведующим отделов<br>
+<strong>Дата:</strong> 18.10.2026</p>
+
+<div class="info">
+<strong>ℹ️ Что это за документ</strong><br>
+Пошаговая инструкция по работе с системой учёта оборудования. Все действия — в браузере. Данные хранятся на сервере лаборатории. Если чего-то не хватает (кнопки, раздела) — значит, у вас нет на это прав. Обратитесь к администратору.
+</div>
+
+<div class="toc">
+<strong>📑 Содержание</strong>
+<ol>
+<li><a href="#login">Вход в систему</a></li>
+<li><a href="#screen">Что на экране</a></li>
+<li><a href="#search">Поиск и фильтры</a></li>
+<li><a href="#view">Просмотр оборудования</a></li>
+<li><a href="#add">Добавление (если есть права)</a></li>
+<li><a href="#quickcal">Быстрая поверка</a></li>
+<li><a href="#history">История поверок</a></li>
+<li><a href="#send">Отправка на поверку</a></li>
+<li><a href="#return">Возврат с поверки</a></li>
+<li><a href="#export">Экспорт данных</a></li>
+<li><a href="#labels">Печать этикеток</a></li>
+<li><a href="#hotkeys">Горячие клавиши</a></li>
+<li><a href="#faq">Частые вопросы</a></li>
+</ol>
+</div>
+
+<hr>
+
+<h2 id="login">1. Вход в систему</h2>
+
+<h3>Где открывается</h3>
+<p>Адрес системы выдаёт администратор. Обычно это <code>https://5.189.243.15</code> или внутренний IP лаборатории. Открывается в любом браузере: Chrome, Яндекс, Firefox, Edge.</p>
+
+<div class="info">
+<strong>ℹ️ Совет:</strong> создайте ярлык на рабочем столе — правый клик по странице → «Создать ярлык». Так не придётся каждый раз вводить адрес.
+</div>
+
+<h3>Что вы видите при входе</h3>
+<p>Один экран с формой:</p>
+<ul>
+<li>Поле <strong>Логин</strong> — обычно фамилия латиницей (например, <code>ivanova</code>)</li>
+<li>Поле <strong>Пароль</strong> — ваш пароль</li>
+<li>Кнопка <strong>Войти</strong></li>
+</ul>
+
+<h3>Первый вход</h3>
+<ol>
+<li>Введите <strong>логин</strong>, который выдал администратор</li>
+<li>Введите <strong>разовый пароль</strong> (набор букв, цифр и символов)</li>
+<li>Нажмите <strong>Войти</strong></li>
+<li>Сразу откроется окно <strong>«Смена пароля»</strong>. Придумайте свой</li>
+</ol>
+
+<h3>Требования к новому паролю</h3>
+<table>
+<tr><th>Условие</th><th>Пояснение</th></tr>
+<tr><td><strong>8+ символов</strong></td><td>Чем длиннее — тем лучше</td></tr>
+<tr><td><strong>Строчная буква</strong></td><td>a, b, c…</td></tr>
+<tr><td><strong>Заглавная буква</strong></td><td>A, B, C…</td></tr>
+<tr><td><strong>Цифра</strong></td><td>0-9</td></tr>
+<tr><td><strong>Спецсимвол</strong></td><td>! @ # $ % ^ &amp; *</td></tr>
+<tr><td><strong>Без пробелов</strong></td><td>Пробел запрещён</td></tr>
+</table>
+
+<p><strong>Хороший пример:</strong> <code>Lab2024!pip</code> — легко запомнить, трудно угадать.</p>
+
+<h3>Как войти потом</h3>
+<p>Логин сохраняется автоматически. Достаточно ввести пароль и нажать <strong>Войти</strong>.</p>
+
+<h3>Как выйти</h3>
+<p>Кнопка <strong>Выйти</strong> в правом верхнем углу. Всегда выходите, если отходите от компьютера — особенно если он общий.</p>
+
+<div class="page-break"></div>
+
+<h2 id="screen">2. Что на экране</h2>
+
+<h3>Общая структура</h3>
+<p>Сверху вниз:</p>
+<ol>
+<li><strong>Шапка</strong> — название системы, счётчики, ваши данные и кнопки</li>
+<li><strong>Жёлтый баннер</strong> — появляется, если есть просрочки. Не закрывается, пока проблема есть</li>
+<li><strong>Тулбар</strong> — поиск, фильтр, кнопки действий</li>
+<li><strong>Таблица</strong> — список оборудования</li>
+<li><strong>Страницы</strong> — если записей больше 100</li>
+</ol>
+
+<h3>Счётчики в шапке</h3>
+<table>
+<tr><th>Счётчик</th><th>Что значит</th></tr>
+<tr><td>🟢 <strong>В норме</strong></td><td>Поверка не скоро, всё хорошо</td></tr>
+<tr><td>🟡 <strong>Скоро поверка</strong></td><td>Подходит срок (обычно 30 дней)</td></tr>
+<tr><td>🔴 <strong>Просрочены</strong></td><td>Срок уже прошёл — надо срочно</td></tr>
+<tr><td>⚪ <strong>Всего</strong></td><td>Общее число приборов</td></tr>
+</table>
+
+<div class="info">
+<strong>ℹ️ Подсказка:</strong> наведите мышкой на <strong>«Всего»</strong> — появится подробная разбивка счётчиков.
+</div>
+
+<h3>Тулбар</h3>
+<table>
+<tr><th>Кнопка</th><th>Что делает</th></tr>
+<tr><td><strong>Выбрано: N</strong></td><td>Появляется, если отметить строки. Здесь массовые операции</td></tr>
+<tr><td>🔍 <strong>Поиск</strong></td><td>Ищет по ID, модели, отделу, ответственному</td></tr>
+<tr><td>🔽 <strong>Фильтр</strong></td><td>Открывает панель фильтров</td></tr>
+<tr><td>📷 <strong>Сканировать</strong></td><td>Открывает сканер штрихкодов (только ПК)</td></tr>
+<tr><td>➕ <strong>Добавить</strong></td><td>Добавить единицу или партию</td></tr>
+<tr><td>⋯ <strong>Ещё ▼</strong></td><td>Меню: экспорт, печать, импорт, настройки, справка</td></tr>
+</table>
+
+<h3>Таблица</h3>
+<p>Главный элемент. Каждая строка — один прибор.</p>
+
+<h4>Что видно по цвету строки</h4>
+<ul>
+<li>🔴 <strong>Красная полоска слева</strong> — просрочка или брак</li>
+<li>🟡 <strong>Жёлтая полоска</strong> — скоро поверка</li>
+<li>Без полоски — всё в порядке</li>
+</ul>
+
+<h4>Клик по заголовку</h4>
+<p><strong>Сортирует таблицу</strong> по этой колонке. Стрелка ▲ или ▼ показывает направление.</p>
+
+<div class="page-break"></div>
+
+<h2 id="search">3. Поиск и фильтры</h2>
+
+<h3>Поиск</h3>
+<p>Поле <strong>🔍 Поиск</strong> в тулбаре.</p>
+<ol>
+<li>Клик в поле</li>
+<li>Введите часть текста: <code>P-001</code>, <code>Eppendorf</code>, <code>Иванова</code></li>
+<li>Таблица <strong>сразу фильтруется</strong> — ничего нажимать не надо</li>
+<li>Чтобы сбросить — очистите поле</li>
+</ol>
+
+<h3>Что ищется</h3>
+<p>Одновременно по всем полям:</p>
+<ul>
+<li>ID (внутренний номер)</li>
+<li>Серийный номер</li>
+<li>Модель</li>
+<li>Производитель</li>
+<li>Отдел</li>
+<li>Ответственный</li>
+</ul>
+
+<h3>Хитрость</h3>
+<p>Поиск <strong>не учитывает регистр</strong> и <strong>раскладку</strong>:</p>
+<ul>
+<li><code>иванова</code> = <code>Иванова</code> = <code>IVANOVA</code></li>
+<li>Латинские <code>P</code> и русские <code>Р</code> — тоже</li>
+</ul>
+
+<h3>Фильтры</h3>
+<p>Кнопка <strong>🔽 Фильтр</strong> в тулбаре. Открывается панель:</p>
+<ol>
+<li>Выберите параметры (см. ниже)</li>
+<li>Нажмите <strong>✔️ Применить</strong></li>
+<li>Таблица отфильтруется</li>
+</ol>
+
+<h3>Какие фильтры бывают</h3>
+<table>
+<tr><th>Фильтр</th><th>Что делает</th></tr>
+<tr><td><strong>Статус</strong></td><td>Просрочены / в норме / на поверке и т.д.</td></tr>
+<tr><td><strong>Тип оборудования</strong></td><td>Пипетки / весы / …</td></tr>
+<tr><td><strong>Отдел</strong></td><td>Из справочника отделов</td></tr>
+<tr><td><strong>Активность</strong></td><td>В работе / не активны</td></tr>
+<tr><td><strong>Дата поверки</strong></td><td>Период: сегодня, неделя, месяц, произвольный</td></tr>
+<tr><td><strong>Ответственный</strong></td><td>Текстом</td></tr>
+<tr><td><strong>Модель</strong></td><td>Текстом</td></tr>
+</table>
+
+<h3>Период дат</h3>
+<p>Особый фильтр — выбираете не одну дату, а диапазон:</p>
+<ul>
+<li><strong>Сегодня</strong> — только за сегодня</li>
+<li><strong>За 7 дней</strong> — последняя неделя</li>
+<li><strong>За 30 дней</strong> — последний месяц</li>
+<li><strong>Произвольный</strong> — два поля: С даты / По дату</li>
+</ul>
+
+<h3>Сбросить</h3>
+<p>Кнопка <strong>Сбросить</strong> в панели фильтра.</p>
+
+<div class="page-break"></div>
+
+<h2 id="view">4. Просмотр оборудования</h2>
+
+<h3>Колонки таблицы</h3>
+<table>
+<tr><th>Колонка</th><th>Что показывает</th></tr>
+<tr><td><strong>Галочка</strong></td><td>Для массовых операций</td></tr>
+<tr><td><strong>ID</strong></td><td>Внутренний номер + цветная точка статуса</td></tr>
+<tr><td><strong>Тип</strong></td><td>Пипетка / Весы / Микроскоп</td></tr>
+<tr><td><strong>Модель</strong></td><td>+ производитель мелким шрифтом</td></tr>
+<tr><td><strong>Отдел</strong>, <strong>Ответственный</strong></td><td>Кто отвечает</td></tr>
+<tr><td><strong>Дата поверки</strong>, <strong>Следующая поверка</strong></td><td>Даты</td></tr>
+<tr><td><strong>Статус</strong></td><td>Цветной бейдж</td></tr>
+<tr><td><strong>⋮</strong></td><td>Кнопка действий строки</td></tr>
+</table>
+
+<h3>Статусы — цветные бейджи</h3>
+<table>
+<tr><th>Цвет</th><th>Значит</th></tr>
+<tr><td>🟢 <strong>В норме</strong></td><td>Поверка не скоро</td></tr>
+<tr><td>🟡 <strong>Скоро поверка</strong></td><td>Приближается</td></tr>
+<tr><td>🔴 <strong>Просрочена</strong></td><td>Уже прошло</td></tr>
+<tr><td>⚪ <strong>Неактивна</strong></td><td>Не используется</td></tr>
+<tr><td>📦 <strong>На поверке</strong></td><td>Отправлена в ЦСМ</td></tr>
+<tr><td>❌ <strong>Брак</strong></td><td>Последняя поверка не годна</td></tr>
+<tr><td>⏳ <strong>В процессе</strong></td><td>Идёт поверка</td></tr>
+<tr><td>❓ <strong>Не задано</strong></td><td>Нет даты или МПИ</td></tr>
+</table>
+
+<h3>Меню ⋮ в строке</h3>
+<p>Кнопка <strong>⋮</strong> в последней колонке. Открывает меню:</p>
+<ul>
+<li>🕐 <strong>История поверок</strong></li>
+<li>✏️ <strong>Редактировать</strong></li>
+<li>🔄 <strong>Передать в другой отдел</strong></li>
+<li>☑️ <strong>Быстрая поверка</strong></li>
+<li>🗑️ <strong>Удалить</strong></li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2 id="add">5. Добавление оборудования (если есть права)</h2>
+
+<div class="warn">
+<strong>⚠️ Важно:</strong> если кнопки <strong>Добавить</strong> не видно — у вас нет на это прав. Обратитесь к администратору.
+</div>
+
+<h3>Где находится</h3>
+<p>Кнопка <strong>➕ Добавить</strong> в тулбаре. Или <span class="key">Ctrl</span> + <span class="key">N</span>.</p>
+
+<h3>Пошагово</h3>
+<ol>
+<li><span class="step">1</span> Нажмите <strong>Добавить</strong></li>
+<li><span class="step">2</span> Заполните поля сверху вниз</li>
+<li><span class="step">3</span> Нажмите <strong>💾 Сохранить</strong></li>
+<li><span class="step">4</span> Проверьте результат — прибор появится в таблице</li>
+</ol>
+
+<h3>Основные поля</h3>
+<table>
+<tr><th>Поле</th><th>Обязательное</th><th>Что вписать</th></tr>
+<tr><td>Модель</td><td>✔️</td><td>Название модели (Research Plus)</td></tr>
+<tr><td>Тип оборудования</td><td>✔️</td><td>Из списка (Пипетка / Весы / …)</td></tr>
+<tr><td>МПИ</td><td>✔️</td><td>Число месяцев (обычно 12)</td></tr>
+<tr><td>Дата поверки</td><td>✔️</td><td>Календарь, не в будущем</td></tr>
+<tr><td>Ответственный</td><td>✔️</td><td>Из списка</td></tr>
+<tr><td>Серийный</td><td>—</td><td>Заводской номер</td></tr>
+<tr><td>Производитель</td><td>—</td><td>Eppendorf, Gilson…</td></tr>
+<tr><td>Объём (мкл)</td><td>—</td><td>Только для пипеток</td></tr>
+<tr><td>Отдел</td><td>—</td><td>Из справочника</td></tr>
+<tr><td>Место хранения</td><td>—</td><td>Лаб. 201, шкаф 3</td></tr>
+<tr><td>Примечание</td><td>—</td><td>Любой текст</td></tr>
+</table>
+
+<h3>Что произойдёт после сохранения</h3>
+<ol>
+<li>Прибор появится в таблице</li>
+<li>В его <strong>истории</strong> — запись «Первичная поверка»</li>
+<li>В <strong>журнале</strong> — запись «Добавление оборудования»</li>
+<li><strong>Штрихкод</strong> рассчитан автоматически</li>
+</ol>
+
+<div class="info">
+<strong>ℹ️ Партия:</strong> если нужно добавить сразу 5–50 приборов — используйте вкладку <strong>📋 Партия (таблица)</strong> в той же модалке. Заполняете таблицу, создаёте всё разом.
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="quickcal">6. Быстрая поверка</h2>
+
+<h3>Когда использовать</h3>
+<p>Когда прибор прошёл поверку — <strong>на месте</strong> или <strong>уже вернулся</strong> с внешней поверки, и нужно зафиксировать факт.</p>
+
+<h3>Где находится</h3>
+<p><strong>⋮</strong> в строке → <strong>☑️ Быстрая поверка</strong>.</p>
+
+<h3>Пошагово</h3>
+<ol>
+<li>Открыли меню → Быстрая поверка</li>
+<li>Заполнили поля:
+  <ul>
+    <li><strong>Дата поверки</strong> — из свидетельства, не в будущем</li>
+    <li><strong>Номер свидетельства</strong> — из документа</li>
+    <li><strong>Результат</strong> — Годен / Брак / В процессе</li>
+    <li><strong>Поверяющая организация</strong> — например, ФБУ «Красноярский ЦСМ»</li>
+    <li><strong>Примечание</strong> — если есть</li>
+  </ul>
+</li>
+<li>Нажали <strong>Записать</strong></li>
+<li>Тост «Поверка зарегистрирована»</li>
+</ol>
+
+<h3>Что произойдёт</h3>
+<ol>
+<li><strong>«Последняя поверка»</strong> обновится в карточке</li>
+<li><strong>«Следующая поверка»</strong> пересчитается: дата + МПИ</li>
+<li>Запись появится в <strong>истории поверок</strong></li>
+<li><strong>Статус в таблице</strong> обновится (например, 🔴 → 🟢)</li>
+</ol>
+
+<div class="page-break"></div>
+
+<h2 id="history">7. История поверок</h2>
+
+<h3>Где находится</h3>
+<p><strong>⋮</strong> в строке → <strong>🕐 История поверок (N)</strong>. N — число записей.</p>
+
+<h3>Что внутри</h3>
+<p><strong>Сверху</strong> — карточка прибора:</p>
+<ul>
+<li>Модель, производитель</li>
+<li>Серийный номер</li>
+<li>МПИ</li>
+<li>Последняя/следующая поверка</li>
+<li>Статус</li>
+<li>Ответственный</li>
+</ul>
+
+<p><strong>Ниже</strong> — timeline всех поверок (свежая сверху):</p>
+<ul>
+<li>Дата (крупно)</li>
+<li>Свидетельство (синий бейдж)</li>
+<li>Результат (цветной бейдж)</li>
+<li>Организация</li>
+<li>Примечание</li>
+</ul>
+
+<h3>Экспорт истории</h3>
+<p>Кнопка <strong>📤 Экспорт истории</strong> внизу:</p>
+<ol>
+<li>Откроется окно выбора периода</li>
+<li>Укажите даты (можно пусто — вся история)</li>
+<li>Кнопка <strong>Excel (.xlsx)</strong> или <strong>PDF</strong></li>
+</ol>
+
+<h3>Добавить старую запись</h3>
+<p>Если нужно внести поверку <strong>задним числом</strong>:</p>
+<ol>
+<li>Кнопка <strong>➕ Добавить поверку</strong> внизу</li>
+<li>Заполните: дата, свидетельство, результат, организация</li>
+<li><strong>Сохранить</strong></li>
+</ol>
+
+<div class="page-break"></div>
+
+<h2 id="send">8. Отправка на поверку</h2>
+
+<div class="warn">
+<strong>⚠️ Важно:</strong> отправка на внешнюю поверку — только для типов оборудования с настройкой «📦 Внешняя». Для внутренней поверки на месте — используйте <strong>Быструю поверку</strong>.
+</div>
+
+<h3>Подготовка</h3>
+<ol>
+<li>Поставьте <strong>галочки</strong> у нужных приборов</li>
+<li>Появится панель <strong>⚡ Выбрано: N</strong></li>
+<li>Кнопка <strong>📦 Отправить (N)</strong></li>
+</ol>
+
+<h3>Что в окне</h3>
+<ul>
+<li><strong>Список отправляемых</strong> — проверьте</li>
+<li><strong>Замены</strong> — если есть складские того же типа</li>
+<li><strong>Дата отправки</strong> — сегодня по умолчанию</li>
+<li><strong>Примечание</strong> — например, «Курьер, накладная №123»</li>
+</ul>
+
+<h3>Кнопки</h3>
+<ul>
+<li><strong>📦 Отправить на поверку</strong> — применить</li>
+<li><strong>🖨 Распечатать акт</strong> — печать документа</li>
+<li><strong>Отмена</strong> — закрыть</li>
+</ul>
+
+<h3>Что будет после</h3>
+<ol>
+<li>Статус <strong>📦 На поверке</strong></li>
+<li>Замена (если выбрали) — активна, на месте оригинала</li>
+<li>Запись в журнале</li>
+</ol>
+
+<div class="page-break"></div>
+
+<h2 id="return">9. Возврат с поверки</h2>
+
+<h3>Подготовка</h3>
+<ol>
+<li>Найдите приборы со статусом <strong>📦 На поверке</strong> (фильтр или цвет)</li>
+<li>Поставьте <strong>галочки</strong></li>
+<li>Кнопка <strong>📥 Вернуть (N)</strong></li>
+</ol>
+
+<h3>Что в окне</h3>
+<ul>
+<li><strong>Дата поверки</strong> — из свидетельства</li>
+<li><strong>Поверяющая организация</strong></li>
+<li><strong>Результат</strong> (общий) — Годен / Брак / В процессе</li>
+<li><strong>☑ Одно свидетельство на всех</strong> — если так</li>
+<li><strong>Таблица приборов</strong> — для каждого свидетельство и результат</li>
+<li><strong>Примечание</strong></li>
+<li><strong>Замены</strong> — чекбокс «Вернуть замену на склад» (по умолчанию)</li>
+</ul>
+
+<h3>Кнопка</h3>
+<p><strong>💾 Применить ко всем</strong> — сохранить.</p>
+
+<h3>Что будет после</h3>
+<ol>
+<li>Обновятся даты и результат</li>
+<li>Статус «На поверке» снимается</li>
+<li>Замены возвращаются на склад</li>
+<li>Записи в истории + журнале</li>
+<li>Таблица <strong>автоматически отфильтруется</strong> по дате возврата — чтобы вы увидели только что вернувшиеся. Сбросьте фильтр, чтобы увидеть всё</li>
+</ol>
+
+<div class="page-break"></div>
+
+<h2 id="export">10. Экспорт данных</h2>
+
+<div class="info">
+<strong>ℹ️ Экспортируется то, что видно в таблице</strong> — с учётом текущих фильтров и поиска. Если нужен экспорт всего — сначала сбросьте фильтры.
+</div>
+
+<h3>Excel (.xlsx)</h3>
+<ol>
+<li>Меню <strong>Ещё ▼ → 📊 Экспорт в Excel</strong> (или <span class="key">Ctrl</span>+<span class="key">E</span>)</li>
+<li>Тост «Формирование Excel…»</li>
+<li>Файл скачается</li>
+</ol>
+
+<h3>PDF</h3>
+<ol>
+<li><strong>Ещё ▼ → 🖨 PDF</strong></li>
+<li>Откроется вкладка с документом</li>
+<li><span class="key">Ctrl</span>+<span class="key">P</span> → распечатать</li>
+</ol>
+
+<h3>Экспорт истории одного прибора</h3>
+<p>Отдельный случай:</p>
+<ol>
+<li>Откройте <strong>🕐 Историю поверок</strong> прибора</li>
+<li>Кнопка <strong>📤 Экспорт истории</strong> внизу</li>
+<li>Укажите период</li>
+<li>Excel или PDF</li>
+</ol>
+
+<div class="page-break"></div>
+
+<h2 id="labels">11. Печать этикеток</h2>
+
+<h3>Где находится</h3>
+<p>Меню <strong>Ещё ▼ → 🏷️ Печать этикеток</strong> (или <span class="key">Ctrl</span>+<span class="key">P</span>).</p>
+
+<h3>Что выбрать</h3>
+<h4>Что печатать</h4>
+<ul>
+<li><strong>Только выбранные N</strong> — если отметили галочками</li>
+<li><strong>Текущая страница N</strong> — что видно сейчас</li>
+<li><strong>Весь фильтр N</strong> — всё по фильтру</li>
+</ul>
+
+<h4>Принтер</h4>
+<p>Список принтеров — настраивает админ. Ваш принтер — сверху с пометкой «← ваш».</p>
+
+<h4>Копий</h4>
+<p>1–50 экземпляров каждой этикетки.</p>
+
+<h3>Кнопка</h3>
+<p><strong>🖨 Печать</strong> — начнётся печать или скачивание PDF.</p>
+
+<div class="info">
+<strong>ℹ️ Совет:</strong> перед массовой печатью — распечатайте <strong>одну этикетку</strong> и проверьте, что она читается сканером.
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="hotkeys">12. Горячие клавиши</h2>
+
+<table>
+<tr><th>Клавиша</th><th>Что делает</th></tr>
+<tr><td><span class="key">/</span></td><td>Фокус в поле поиска</td></tr>
+<tr><td><span class="key">Esc</span></td><td>Закрыть модалку / панель фильтра</td></tr>
+<tr><td><span class="key">F5</span></td><td>Обновить данные</td></tr>
+<tr><td><span class="key">Shift</span>+<span class="key">?</span></td><td>Справка</td></tr>
+<tr><td><span class="key">Ctrl</span>+<span class="key">N</span></td><td>Добавить оборудование</td></tr>
+<tr><td><span class="key">Ctrl</span>+<span class="key">F</span></td><td>Открыть/закрыть фильтр</td></tr>
+<tr><td><span class="key">Ctrl</span>+<span class="key">E</span></td><td>Экспорт в Excel</td></tr>
+<tr><td><span class="key">Ctrl</span>+<span class="key">P</span></td><td>Печать этикеток</td></tr>
+</table>
+
+<div class="info">
+<strong>ℹ️ Работает и с русской раскладкой:</strong> <span class="key">Ctrl</span>+<span class="key">Е</span> = <span class="key">Ctrl</span>+<span class="key">E</span>.
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="faq">13. Частые вопросы</h2>
+
+<h3>Не могу войти</h3>
+<ol>
+<li>Проверьте раскладку (<code>P</code> и <code>Р</code> — разные)</li>
+<li>Проверьте Caps Lock</li>
+<li>Введите заново внимательно</li>
+<li>Не помогает — обратитесь к админу, он сбросит пароль</li>
+</ol>
+
+<h3>Забыл пароль</h3>
+<p>Сам не восстановить. Админ выдаст новый разовый, при первом входе смените.</p>
+
+<h3>Не вижу прибор, который есть</h3>
+<ul>
+<li>Проверьте фильтры (может, отсекают)</li>
+<li>Проверьте поиск</li>
+<li>Проверьте отдел — если у вас «только свой отдел», видите только свои</li>
+<li>Проверьте статус — может, неактивен</li>
+</ul>
+
+<h3>Не вижу кнопку «Удалить» / «Добавить»</h3>
+<p>У вас нет на это прав. Обратитесь к админу.</p>
+
+<h3>Прибор сломался — что делать</h3>
+<ol>
+<li><strong>Быстрая поверка</strong> → результат <strong>Брак</strong></li>
+<li>Если нужно списать — <strong>Редактирование</strong> → <strong>Не используется</strong></li>
+</ol>
+
+<h3>Прибор отдали в другой отдел</h3>
+<p><strong>⋮ → 🔄 Передать в другой отдел</strong>. Заполните новый отдел и ответственного.</p>
+
+<h3>Excel не скачивается</h3>
+<p>Проверьте папку «Загрузки». Если пусто — включите скачивание в браузере.</p>
+
+<h3>Этикетка не печатается</h3>
+<ol>
+<li>Проверьте, что принтер выбран</li>
+<li>Проверьте, что он включён</li>
+<li>Если не отвечает — скачается PDF, распечатайте вручную</li>
+</ol>
+
+<h3>Всё тормозит</h3>
+<ul>
+<li>Возможно, много данных в таблице</li>
+<li>Попробуйте <strong>Компактный режим</strong> в меню «Ещё ▼»</li>
+<li>Или обновите страницу (<span class="key">Ctrl</span>+<span class="key">Shift</span>+<span class="key">R</span>)</li>
+</ul>
+
+<hr>
+
+<div class="success">
+<strong>🎯 Если что-то непонятно</strong><br>
+В системе есть встроенная справка — <strong>Shift + ?</strong> на клавиатуре. Открывается на любом экране, не закрывая работу. Там 23 раздела с подробным описанием.
+</div>
+
+<p style="margin-top:30px; color:#64748b; font-size:8.5pt; text-align:center;">
+Клинико-диагностическая лаборатория · Инструкция для лаборанта · v3.0.0 · 18.10.2026
+</p>
+
+</body>
+</html>
