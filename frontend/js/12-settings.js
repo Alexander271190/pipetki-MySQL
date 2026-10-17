@@ -824,13 +824,14 @@ function renderEquipmentTypesTable() {
         <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
                style="text-align:center;text-transform:uppercase;"
                oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
-      </td>
+     </td>
       <td>
-        <input type="number" value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}"
-               min="1" max="120"
-               style="text-align:center;"
-               oninput="updateEquipmentType(${i}, 'interval', parseInt(this.value, 10) || 12)">
-      </td>
+       <input type="number"
+          value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}"
+          min="1" max="120"
+          style="text-align:center;"
+          oninput="updateEquipmentType(${i}, 'interval', this.value)">
+    </td>
       <td>
         <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
           <option value="external" ${t.calibrationPlace === 'external' ? 'selected' : ''}>📦 Внешняя (с отправкой)</option>
@@ -851,7 +852,15 @@ function renderEquipmentTypesTable() {
 
 function updateEquipmentType(idx, field, value) {
   if (idx < 0 || idx >= _cachedEquipmentTypes.length) return;
-  _cachedEquipmentTypes[idx][field] = value.trim();
+
+  if (field === 'interval') {
+    const n = parseInt(value, 10);
+    _cachedEquipmentTypes[idx][field] =
+      (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
+  } else {
+    _cachedEquipmentTypes[idx][field] = String(value).trim();
+  }
+
   updateEquipmentTypesWarning();
 }
 
