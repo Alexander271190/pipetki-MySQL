@@ -45,14 +45,21 @@ function formatDate(d) {
 function normalizeSearch(s) {
   if (!s) return '';
   const map = {
-    'а': 'a', 'в': 'b', 'е': 'e', 'к': 'k', 'м': 'm',
-    'н': 'h', 'о': 'o', 'р': 'p', 'с': 'c', 'т': 't',
-    'у': 'y', 'х': 'x'
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd',
+    'е': 'e', 'ё': 'yo', 'ж': 'zh', 'з': 'z', 'и': 'i',
+    'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n',
+    'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't',
+    'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch',
+    'ш': 'sh', 'щ': 'shch', 'ъ': '', 'ы': 'y', 'ь': '',
+    'э': 'e', 'ю': 'yu', 'я': 'ya'
   };
   return String(s)
     .toLowerCase()
-    .replace(/[авекмнорстух]/g, ch => map[ch] || ch);
+    .split('')
+    .map(ch => map[ch] !== undefined ? map[ch] : ch)
+    .join('');
 }
+
 function pluralizeType(label) {
   if (!label) return '';
   const s = label.trim();
