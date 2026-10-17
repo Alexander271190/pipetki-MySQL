@@ -1,0 +1,262 @@
+/* ============================================================
+   КНОПКИ
+   ============================================================ */
+.btn {
+  position: relative;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: .9rem;
+  font-weight: 600;
+  letter-spacing: .2px;
+  cursor: pointer;
+  transition: all .25s cubic-bezier(.4, 0, .2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-family: inherit;
+  user-select: none;
+  overflow: hidden;
+  background-clip: padding-box;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 6px rgba(0,0,0,.05);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,.18) 0%,
+    rgba(255,255,255,.05) 45%,
+    rgba(255,255,255,0) 60%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s;
+}
+.btn:hover::before { opacity: 1; }
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.06);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0,0,0,.1);
+  transition-duration: .08s;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(99, 102, 241, .3),
+    0 2px 8px rgba(0,0,0,.08);
+}
+
+.btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  filter: grayscale(.25);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(79,70,229,.12), 0 3px 10px rgba(79,70,229,.25);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #7c7ff0 0%, #5b52e8 100%);
+  box-shadow: 0 6px 18px rgba(79,70,229,.38), 0 2px 4px rgba(79,70,229,.2);
+}
+.btn-primary:active {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(22,163,74,.12), 0 3px 10px rgba(22,163,74,.25);
+}
+.btn-success:hover {
+  background: linear-gradient(135deg, #34d16a 0%, #1cb254 100%);
+  box-shadow: 0 6px 18px rgba(22,163,74,.38), 0 2px 4px rgba(22,163,74,.2);
+}
+.btn-success:active {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(220,38,38,.12), 0 3px 10px rgba(220,38,38,.25);
+}
+.btn-danger:hover {
+  background: linear-gradient(135deg, #f45c5c 0%, #e53535 100%);
+  box-shadow: 0 6px 18px rgba(220,38,38,.38), 0 2px 4px rgba(220,38,38,.2);
+}
+.btn-danger:active {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--card) 0%, #f3f4f6 100%);
+  color: #374151;
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 6px rgba(0,0,0,.04);
+}
+.btn-secondary:hover {
+  background: linear-gradient(135deg, var(--card) 0%, #e9ebef 100%);
+  border-color: var(--border-hard);
+  color: #111827;
+  box-shadow: 0 6px 16px rgba(0,0,0,.1), 0 2px 4px rgba(0,0,0,.05);
+}
+.btn-secondary:active {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+}
+
+.btn-info {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(14,165,233,.12), 0 3px 10px rgba(14,165,233,.25);
+}
+.btn-info:hover {
+  background: linear-gradient(135deg, #4cc4f8 0%, #0e9dd9 100%);
+  box-shadow: 0 6px 18px rgba(14,165,233,.38), 0 2px 4px rgba(14,165,233,.2);
+}
+.btn-info:active {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(120,53,15,.2);
+  box-shadow: 0 1px 2px rgba(245,158,11,.15), 0 3px 10px rgba(245,158,11,.28);
+}
+.btn-warning:hover {
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+  box-shadow: 0 6px 18px rgba(245,158,11,.45), 0 2px 4px rgba(245,158,11,.25);
+}
+.btn-warning:active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--border-hard);
+  color: #374151;
+  box-shadow: none;
+}
+.btn-outline:hover {
+  background: #f8fafc;
+  border-color: #9ca3af;
+  color: #111827;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.btn-sm { padding: 7px 13px; font-size: .8rem; border-radius: 10px; gap: 5px; }
+.btn-icon-only { padding: 7px 10px; border-radius: 10px; }
+.btn-sm.btn-icon-only { padding: 6px 8px; border-radius: 9px; }
+
+/* ============================================================
+   РАСКРАСКА FA-ИКОНОК — Вариант A «смысловой»
+   ============================================================ */
+
+/* Иконки в кнопках наследуют цвет кнопки */
+.btn i                 { color: inherit !important; }
+.btn-secondary i       { color: #1e40af !important; }
+.btn-secondary:hover i { color: #1d4ed8 !important; }
+.btn-outline i         { color: #475569 !important; }
+
+/* Меню ⋮ — в цвет пункта */
+.row-actions-item.item-success i { color: inherit !important; }
+.row-actions-item.item-warning i { color: inherit !important; }
+.row-actions-item.item-danger  i { color: inherit !important; }
+
+/* Статус-бейджи — цвет статуса */
+.status-badge i { color: inherit !important; }
+
+/* Права пользователя — приглушённые */
+.usr-perm-cb + span i,
+.help-perm-item i { color: var(--icon-muted) !important; opacity: 0.85; }
+
+/* Нейтральные иконки */
+.modal h2 i,
+.modal h3 i,
+.toolbar > .btn i,
+.dropdown-menu .dropdown-item i,
+.settings-item i,
+.docs-content .help-icon,
+.help-preview .help-icon,
+.hotkeys-table i {
+  color: var(--icon-default);
+}
+
+/* Раскраска иконок вне кнопок — нейтральная */
+.fa-plus,
+.fa-pen,
+.fa-user-pen,
+.fa-right-left,
+.fa-arrows-rotate,
+.fa-rotate-left,
+.fa-rotate-right,
+.fa-filter,
+.fa-wand-magic-sparkles,
+.fa-list-check,
+.fa-trash,
+.fa-xmark,
+.fa-triangle-exclamation,
+.fa-ban,
+.fa-circle-exclamation,
+.fa-circle-check,
+.fa-check,
+.fa-floppy-disk,
+.fa-clock,
+.fa-hourglass-half,
+.fa-clock-rotate-left,
+.fa-calendar-days,
+.fa-book-open,
+.fa-circle-info,
+.fa-barcode,
+.fa-qrcode,
+.fa-tag,
+.fa-file-excel,
+.fa-file-lines,
+.fa-print,
+.fa-upload,
+.fa-download,
+.fa-box,
+.fa-box-open,
+.fa-users,
+.fa-key,
+.fa-lock,
+.fa-user-clock,
+.fa-eye-slash,
+.fa-gear,
+.fa-screwdriver-wrench,
+.fa-scroll,
+.fa-moon,
+.fa-sun,
+.fa-magnifying-glass,
+.fa-search,
+.fa-ellipsis,
+.fa-ellipsis-vertical,
+.fa-caret-down,
+.fa-chevron-up,
+.fa-chevron-down,
+.fa-arrow-left,
+.fa-arrow-right,
+.fa-arrow-up,
+.fa-arrow-down,
+.fa-circle-pause,
+.fa-circle-question,
+.fa-bell,
+.fa-image {
+  color: var(--icon-default);
+}
