@@ -308,16 +308,29 @@ async function initSchema() {
       { name: 'idx_audit_log_timestamp', ddl: 'CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC)' },
     ]);
 
-    // === Идемпотентное выравнивание длины barcode на существующих БД ===
-    await conn.query('ALTER TABLE pipettes MODIFY COLUMN barcode VARCHAR(255) NULL DEFAULT NULL');
-    await conn.query('ALTER TABLE pipettes MODIFY COLUMN barcode_source VARCHAR(50) NULL DEFAULT NULL');
+       // === Идемпотентное выравнивание длины barcode на существующих БД ===
+    const [barcodeCol] = await conn.query(`
+      SELECT CHARACTER_MAXIMUM_LENGTH AS len FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pipettes' AND COLUMN_NAME = 'barcode'
+    `);
+    if (!barcodeCol.length || barcodeCol[0].len !== 255) {
+      await conn.query('ALTER TABLE pipettes MODIFY COLUMN barcode VARCHAR(255) NULL DEFAULT NULL');
+    }
 
+    const [barcodeSrcCol] = await conn.query(`
+      SELECT CHARACTER_MAXIMUM_LENGTH AS len FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pipettes' AND COLUMN_NAME = 'barcode_source'
+    `);
+    if (!barcodeSrcCol.length || barcodeSrcCol[0].len !== 50) {
+      await conn.query('ALTER TABLE pipettes MODIFY COLUMN barcode_source VARCHAR(50) NULL DEFAULT NULL');
+    }
+    
   } finally {
     conn.release();
   }
 
-  // ⚠️ ЕДИНСТВЕННОЕ ИЗМЕНЕНИЕ: было `return await seedInitialData();`
-  return require('./seed').seedInitialData();
+  
+  return true;
 }
 
 module.exports = { initSchema, ensureColumns, ensureIndexes };
