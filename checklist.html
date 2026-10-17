@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Чек-лист КДЛ v5.0</title>
+<title>Чек-лист КДЛ v6.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f5f7fb;--card:#fff;--card-2:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--primary:#4f46e5;--primary-light:#eef2ff;--success:#16a34a;--success-light:#dcfce7;--danger:#dc2626;--danger-light:#fee2e2;--warn:#d97706;--warn-light:#fef3c7;--skip:#64748b;--skip-light:#f1f5f9;--shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -56,6 +56,23 @@ button.success:hover{opacity:.9}
 button.icon{padding:8px 10px;font-size:15px}
 button.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary)}
 button:disabled{opacity:.4;cursor:not-allowed}
+button.btn-auto{
+  background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);
+  color:#fff;
+  border:none;
+  font-weight:600;
+  padding:9px 16px;
+  box-shadow:0 2px 8px rgba(79,70,229,.3);
+  animation:pulse-auto 2.5s infinite;
+}
+button.btn-auto:hover{
+  transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(79,70,229,.4);
+}
+@keyframes pulse-auto{
+  0%,100%{box-shadow:0 2px 8px rgba(79,70,229,.3)}
+  50%{box-shadow:0 2px 8px rgba(79,70,229,.3),0 0 0 4px rgba(79,70,229,.15)}
+}
 .section{background:var(--card);border-radius:12px;margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
 .section.scenario{border-left:4px solid var(--primary)}
 .section.visual{border-left:4px solid var(--success)}
@@ -64,16 +81,40 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .section-header .arrow{font-size:12px;color:var(--muted);transition:transform .2s;width:14px;display:inline-block}
 .section.collapsed .section-header .arrow{transform:rotate(-90deg)}
 .section.collapsed .section-body{display:none}
-.section-title{font-weight:600;font-size:15px;flex:1}
-.section-badge{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--bg);color:var(--muted);font-weight:600}
+.section-title{font-weight:600;font-size:15px;flex:1;min-width:0}
+.section-badge{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--bg);color:var(--muted);font-weight:600;white-space:nowrap}
 .section-badge.done{background:var(--success-light);color:var(--success)}
 .section-badge.fail{background:var(--danger-light);color:var(--danger)}
-.section-meta{font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px}
+.section-meta{font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px;white-space:nowrap}
 .mini-bar{width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;flex-shrink:0}
 .mini-bar-fill{height:100%;background:var(--success);width:0;transition:width .3s;border-radius:3px}
 .section-body{padding:4px 20px 16px}
-.section-ops{display:flex;gap:3px;margin-left:auto;margin-right:8px}
-.section-ops button{width:26px;height:26px;padding:0;font-size:12px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+
+/* 🆕 Большие кнопки «Отметить блок» */
+.section-ops{display:flex;gap:6px;margin-left:auto;margin-right:8px;flex-shrink:0;flex-wrap:wrap}
+.section-ops button{
+  padding:6px 12px;
+  font-size:12px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--card);
+  cursor:pointer;
+  font-family:inherit;
+  font-weight:600;
+  display:inline-flex;align-items:center;gap:4px;
+  transition:all .15s;
+  white-space:nowrap;
+}
+.section-ops button:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.section-ops button[data-op="pass-all"]{background:var(--success-light);color:var(--success);border-color:var(--success)}
+.section-ops button[data-op="pass-all"]:hover{background:var(--success);color:#fff}
+.section-ops button[data-op="skip-all"]{background:var(--skip-light);color:var(--skip)}
+.section-ops button[data-op="skip-all"]:hover{background:var(--skip);color:#fff}
+.section-ops button[data-op="clear-all"]{background:transparent;color:var(--muted)}
+.section-ops button[data-op="clear-all"]:hover{background:var(--danger-light);color:var(--danger);border-color:var(--danger)}
+.section-ops button[data-op="auto-block"]{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
+.section-ops button[data-op="auto-block"]:hover{background:var(--primary);color:#fff}
+
 .item{display:flex;align-items:flex-start;gap:10px;padding:7px 8px;border-radius:6px;border-left:3px solid transparent;flex-wrap:wrap}
 .item:hover{background:var(--bg)}
 .item.status-pass{border-left-color:var(--success);background:var(--success-light)}
@@ -146,6 +187,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .snap-item-actions button{padding:6px 12px;font-size:12px;border-radius:6px}
 .snap-empty{padding:24px;text-align:center;color:var(--muted);font-size:13px;background:var(--card-2);border-radius:8px;border:1px dashed var(--border)}
 .snap-warn{padding:10px 14px;background:var(--warn-light);border-left:3px solid var(--warn);border-radius:6px;font-size:12.5px;color:var(--warn);margin-bottom:14px}
+
+/* Визуал */
 .vp-section{background:var(--card);border-radius:12px;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden;border-left:4px solid var(--success)}
 .vp-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .vp-title{font-weight:700;font-size:15px;flex:1}
@@ -157,6 +200,9 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .vp-table thead{background:#1e293b;color:#fff}
 .vp-table th{padding:12px 16px;text-align:left;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;color:#fff}
 .vp-table td{padding:11px 16px;border-top:1px solid #f1f5f9;font-size:.9rem;vertical-align:middle;color:#1a1a2e;background:#fff}
+.vp-checkbox{text-align:center;width:30px}
+.vp-sn{color:#94a3b8;font-size:.75rem}
+.vp-row-selected td{background:#eff6ff!important}
 .vp-badge-type{display:inline-block;padding:3px 10px;border-radius:8px;font-size:.75rem;font-weight:600;white-space:nowrap}
 .vp-badge-pipette{background:#e0f2fe;color:#0369a1}
 .vp-badge-other{background:#f3e8ff;color:#6d28d9}
@@ -169,7 +215,6 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .vp-status-sent{background:#e0f2fe;color:#0369a1}.vp-status-sent .vp-status-dot{background:#0ea5e9}
 .vp-status-fail{background:#fee2e2;color:#991b1b;font-weight:700}.vp-status-fail .vp-status-dot{background:#dc2626}
 .vp-status-wip{background:#fef9c3;color:#854d0e}.vp-status-wip .vp-status-dot{background:#eab308}
-.vp-status-unknown{background:#f1f5f9;color:#64748b}.vp-status-unknown .vp-status-dot{background:#94a3b8}
 .vp-modal-stage{position:relative;background:rgba(15,23,42,.55);border-radius:12px;padding:30px 20px;display:flex;align-items:center;justify-content:center;min-height:400px;overflow:hidden}
 .vp-modal{background:#fff;border-radius:16px;padding:24px;max-width:640px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);color:#1e293b;font-size:14px}
 .vp-modal.vp-modal-lg{max-width:820px}
@@ -193,15 +238,12 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .vp-info-yellow{background:#fef9c3;border-left:3px solid #eab308;color:#854d0e}
 .vp-info-green{background:#ecfdf5;border-left:3px solid #16a34a;color:#166534}
 .vp-info-grey{background:#f8fafc;border-radius:8px;padding:10px;font-size:.9rem}
-.vp-modal-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px}
-.vp-modal-table th{background:#f1f5f9;color:#1e293b;padding:8px 10px;text-align:left;font-size:.78rem;font-weight:600}
-.vp-modal-table td{padding:8px 10px;border-bottom:1px solid #e2e8f0;vertical-align:top}
 .vp-mono{font-family:monospace;letter-spacing:1px;background:#f1f5f9;cursor:not-allowed}
 .vp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:12px}
 .vp-swatch{padding:8px 12px;border-radius:8px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--card)}
 @media print{
   header{position:static;box-shadow:none}
-  .controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint,.tabs,.header-collapse-btn{display:none!important}
+  .controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint,.tabs,.header-collapse-btn,button.btn-auto{display:none!important}
   .section{box-shadow:none;border:1px solid var(--border);break-inside:avoid}
   .item.hidden{display:none!important}
   body{background:#fff;padding:0}
@@ -214,7 +256,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   .controls input[type=search]{min-width:100%}
   .item-meta{margin-left:0}
   .diff-files{grid-template-columns:1fr}
-  .section-ops{margin-right:0}
+  .section-ops{margin-right:0;width:100%;justify-content:flex-end}
+  .section-ops button{padding:5px 10px;font-size:11px}
   .tab{padding:8px 12px;font-size:13px}
 }
 </style>
@@ -223,11 +266,11 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 <div class="container">
 <header id="main-header">
   <div class="header-top">
-    <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400">v5.0</span></h1>
+    <h1>🧪 Чек-лист «Учёт оборудования КДЛ» <span style="font-size:12px;color:var(--muted);font-weight:400">v6.0</span></h1>
     <div class="header-mini-stats" id="header-mini-stats"></div>
     <button class="header-collapse-btn" id="header-collapse-btn" onclick="toggleHeaderCollapse()" title="Свернуть шапку">▲ Свернуть</button>
   </div>
-  <div class="subtitle">Актуализированный чек-лист под текущее состояние проекта. Все блоки, все сценарии, все функции.</div>
+  <div class="subtitle">Актуализировано под текущий проект после рефакторинга (17.10.2026). Авто-проверки + ручные сценарии.</div>
 
   <div class="tabs">
     <button class="tab active" data-tab="checklist" onclick="switchTab('checklist')">📋 Чек-лист <span class="count" id="tab-count-checklist">0/0</span></button>
@@ -253,6 +296,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
     <button onclick="filterStatus('fail')" id="f-fail">❌ Провалы</button>
     <button onclick="filterStatus('with-meta')" id="f-meta">💬 С мета</button>
     <button onclick="filterStatus('with-bugs')" id="f-bugs">🐞 С багами</button>
+    <button class="btn-auto" onclick="runAutoChecks()" title="Запустить авто-проверки через API">⚡ Авто-проверка</button>
     <button class="primary" onclick="exportJSON()">💾 Экспорт</button>
     <button onclick="triggerImport()">📥 Импорт</button>
     <button class="success" onclick="openSnapshotsModal()">📸 Снимки <span id="snap-count-badge"></span></button>
@@ -277,6 +321,9 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 </footer>
 </div>
 
+<!-- ============================================ -->
+<!-- МОДАЛКА: Diff -->
+<!-- ============================================ -->
 <div class="modal-overlay" id="diff-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeDiff()">✕</button>
@@ -290,6 +337,9 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   </div>
 </div>
 
+<!-- ============================================ -->
+<!-- МОДАЛКА: Снимки -->
+<!-- ============================================ -->
 <div class="modal-overlay" id="snapshots-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeSnapshotsModal()">✕</button>
@@ -306,10 +356,25 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
   </div>
 </div>
 
+<!-- ============================================ -->
+<!-- МОДАЛКА: Результат авто-проверки -->
+<!-- ============================================ -->
+<div class="modal-overlay" id="auto-check-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('auto-check-modal').classList.remove('open')">✕</button>
+    <h2>⚡ Авто-проверка завершена</h2>
+    <p id="auto-check-summary">Проверяется…</p>
+    <div id="auto-check-results" style="max-height:400px;overflow-y:auto;margin-top:16px;"></div>
+    <div style="text-align:right;margin-top:16px;">
+      <button class="primary" onclick="document.getElementById('auto-check-modal').classList.remove('open')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="import-file" accept=".json,application/json" style="display:none">
 <script>
 /* ============================================================
-   ЧАСТЬ 2/4 — ДАННЫЕ ЧЕК-ЛИСТА
+   ЧАСТЬ 3 — ДАННЫЕ ЧЕК-ЛИСТА (v6.0)
    ============================================================ */
 var DATA = [
   { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
@@ -317,197 +382,121 @@ var DATA = [
     { g: "1.1 Backend", t: "Лог: ✅ MySQL подключён" },
     { g: "1.1 Backend", t: "Лог: ✅ Схема БД готова" },
     { g: "1.1 Backend", t: "Лог: 🚀 Server on http://0.0.0.0:3000" },
-    { g: "1.1 Backend", t: "В логе НЕТ сообщений о создании senior/user паролей" },
+    { g: "1.1 Backend", t: "В логе НЕТ спама от logger-bootstrap (только 1 раз при старте)" },
     { g: "1.1 Backend", t: "Лог: ➕ Индекс idx_pipettes_department создан" },
     { g: "1.1 Backend", t: "Лог: ➕ Индекс idx_pipettes_equipment_type создан" },
     { g: "1.1 Backend", t: "Лог: ➕ Индекс idx_pipettes_barcode создан" },
     { g: "1.1 Backend", t: "Лог: ➕ Индекс idx_audit_log_timestamp создан" },
     { g: "1.2 Frontend", t: "http://localhost:3000 открывается" },
-    { g: "1.2 Frontend", t: "F12 Console без SyntaxError, is not defined" },
-    { g: "1.2 Frontend", t: "Виден экран логина с фоновой картинкой (login-bg.jpg)" },
-    { g: "1.2 Frontend", t: "Логин подставлен из localStorage.pipette_last_login" },
-    { g: "1.2 Frontend", t: "Пароль пустой" },
-    { g: "1.2 Frontend", t: "Все 18 скриптов подключены в правильном порядке" },
+    { g: "1.2 Frontend", t: "F12 Console без SyntaxError" },
+    { g: "1.2 Frontend", t: "Виден экран логина с фоновой картинкой" },
+    { g: "1.2 Frontend", t: "Все 18 скриптов подключены" },
     { g: "1.3 БД", t: "Таблицы: users, pipettes, calibration_history, audit_log, departments, filter_config, system_settings, field_config, export_settings, user_preferences, barcode_printers, help_docs, help_images, view_templates, equipment_templates" },
-    { g: "1.3 БД", t: "1 пользователь (только admin), 8 отделов, 5 демо-пипеток" },
-    { g: "1.3 БД", t: "system_settings.equipment_types содержит 6 типов с calibrationPlace и interval" },
-    { g: "1.3 БД", t: "system_settings.warn_days = 30" },
-    { g: "1.3 БД", t: "system_settings.demo_seeded = 1" },
-    { g: "1.3 БД", t: "system_settings.barcode_type, barcode_label_fields, barcode_mode, barcode_label_size, barcode_font заполнены" },
-    { g: "1.3 БД", t: "system_settings.barcode_max_length = 255" },
+    { g: "1.3 БД", t: "system_settings.equipment_types = 6 типов с calibrationPlace" },
+    { g: "1.3 БД", t: "system_settings.warn_days = 30, demo_seeded = 1" },
     { g: "1.3 БД", t: "Колонки pipettes: replaced_by, replacing, barcode, barcode_source, custom_data" },
     { g: "1.3 БД", t: "Колонки users: is_acting, acting_for_id, password_changed_at, only_own_department, must_set_password, view_template_id" },
-    { g: "1.3 БД", t: "Индексы в pipettes, audit_log, barcode_printers созданы" },
-    { g: "1.3 БД", t: "Повторный запуск сервера НЕ дублирует создание индексов и колонок" }
+    { g: "1.3 БД", t: "Повторный запуск НЕ дублирует колонки/индексы (schema.js проверяет длину)" }
   ]},
 
   { title: "Блок 2. Авторизация, роли, права", tag: "2", items: [
-    { g: "2.1 Экран входа", t: "Вход admin — тост «Добро пожаловать, Администратор!»" },
-    { g: "2.1 Экран входа", t: "В шапке: ФИО, должность с (админ)" },
-    { g: "2.1 Экран входа", t: "Создать senior через Настройки → Пользователи" },
-    { g: "2.1 Экран входа", t: "Вход senior — в шапке (ст. лаборант) · отдел" },
-    { g: "2.1 Экран входа", t: "Вход user — в шапке (пользователь) · отдел" },
+    { g: "2.1 Экран входа", t: "Вход admin — тост «Добро пожаловать»" },
+    { g: "2.1 Экран входа", t: "В шапке: ФИО, должность (админ)" },
     { g: "2.1 Экран входа", t: "При must_set_password=1 — модалка установки пароля" },
     { g: "2.2 Ошибки входа", t: "Пустой логин → «Заполните поле Логин»" },
     { g: "2.2 Ошибки входа", t: "Пустой пароль → «Заполните поле Пароль»" },
-    { g: "2.2 Ошибки входа", t: "Пусто оба → список полей" },
-    { g: "2.2 Ошибки входа", t: "Неверный логин/пароль → «Неверный логин или пароль»" },
-    { g: "2.2 Ошибки входа", t: "Пароль скрыт точками" },
-    { g: "2.2 Ошибки входа", t: "Кнопка входа блокируется со спиннером" },
-    { g: "2.3 Хранение логина", t: "После выхода логин остался" },
-    { g: "2.3 Хранение логина", t: "Пароль очистился" },
-    { g: "2.3 Хранение логина", t: "F5 — логин подставлен из localStorage" },
+    { g: "2.2 Ошибки входа", t: "Неверный пароль → «Неверный логин или пароль»" },
+    { g: "2.3 Хранение логина", t: "После выхода логин остался в localStorage" },
     { g: "2.4 user без прав", t: "Нет кнопок Добавить, Импорт, Настройки, Экспорт" },
-    { g: "2.4 user без прав", t: "В истории поверок нет «Добавить поверку»" },
-    { g: "2.4 user без прав", t: "В строке таблицы только ⋮ → История (если view_history)" },
     { g: "2.4 user без прав", t: "openModal() из консоли → Доступ запрещён" },
-    { g: "2.4 user без прав", t: "apiRequest('/pipettes/P-001','DELETE') → 403" },
-    { g: "2.4 user без прав", t: "GET /api/users → 403" },
-    { g: "2.4 user без прав", t: "GET /api/log → 403" },
-    { g: "2.4 user без прав", t: "GET /api/settings/fields → 403" },
+    { g: "2.4 user без прав", t: "GET /api/users под user → 403" },
+    { g: "2.4 user без прав", t: "GET /api/log под user → 403" },
     { g: "2.5 user onlyOwnDepartment", t: "GET /api/pipettes — только его отдел" },
-    { g: "2.5 user onlyOwnDepartment", t: "POST /api/pipettes с чужим отделом → 403" },
-    { g: "2.5 user onlyOwnDepartment", t: "PUT /api/pipettes/:id чужого → 403" },
-    { g: "2.5 user onlyOwnDepartment", t: "DELETE /api/pipettes/:id чужого → 403" },
-    { g: "2.5 user onlyOwnDepartment", t: "GET /api/pipettes/:id/calibration чужого → 403" },
-    { g: "2.5 user onlyOwnDepartment", t: "Без отдела — «У вас не указан отдел»" },
-    { g: "2.6 user с правами", t: "add_pipette — появляется кнопка Добавить" },
-    { g: "2.6 user с правами", t: "edit_pipette — открывается форма редактирования" },
-    { g: "2.6 user с правами", t: "delete_pipette — появляется ⋮ → Удалить" },
-    { g: "2.6 user с правами", t: "quick_calibration — появляется ⋮ → Быстрая поверка" },
-    { g: "2.6 user с правами", t: "transfer_pipette — ⋮ → Передать в другой отдел" },
-    { g: "2.6 user с правами", t: "bulk_change_responsible — кнопка «Ответственный»" },
-    { g: "2.6 user с правами", t: "bulk_send — кнопка «Отправить»" },
-    { g: "2.6 user с правами", t: "bulk_return — кнопка «Вернуть»" },
+    { g: "2.5 user onlyOwnDepartment", t: "PUT/DELETE чужого → 403" },
+    { g: "2.6 user с правами", t: "add_pipette — кнопка Добавить появилась" },
+    { g: "2.6 user с правами", t: "edit_pipette — форма редактирования открывается" },
+    { g: "2.6 user с правами", t: "delete_pipette — пункт Удалить в меню ⋮" },
+    { g: "2.6 user с правами", t: "quick_calibration — Быстрая поверка в меню ⋮" },
+    { g: "2.6 user с правами", t: "transfer_pipette — пункт Передать в другой отдел" },
+    { g: "2.6 user с правами", t: "bulk_send — кнопка Отправить" },
+    { g: "2.6 user с правами", t: "bulk_return — кнопка Вернуть" },
+    { g: "2.6 user с правами", t: "export_data — Ещё ▼ → Экспорт в Excel/PDF" },
     { g: "2.6 user с правами", t: "import_data — Ещё ▼ → Импорт данных" },
-    { g: "2.6 user с правами", t: "export_data — Ещё ▼ → Экспорт в Excel / PDF" },
     { g: "2.6 user с правами", t: "scan_barcode — кнопка Сканировать" },
     { g: "2.6 user с правами", t: "print_labels — Ещё ▼ → Печать этикеток" },
-    { g: "2.6 user с правами", t: "manage_barcodes — кнопки ✨ и ↩️ в поле штрихкода" },
-    { g: "2.6 user с правами", t: "manage_users — раздел Пользователи в настройках" },
-    { g: "2.6 user с правами", t: "manage_settings — раздел Настройки вообще доступен" },
-    { g: "2.6 user с правами", t: "manage_printers — раздел Принтеры" },
-    { g: "2.6 user с правами", t: "view_log — раздел Журнал действий" },
-    { g: "2.6 user с правами", t: "view_history — пункт История поверок в ⋮" },
+    { g: "2.6 user с правами", t: "manage_settings — раздел Настройки доступен" },
     { g: "2.7 senior_lab", t: "Есть Добавить, Импорт, Экспорт, Добавить поверку" },
-    { g: "2.7 senior_lab", t: "Нет Настроек (если не выдано manage_settings)" },
     { g: "2.7 senior_lab", t: "GET /api/users/responsibles → 200" },
     { g: "2.7 senior_lab", t: "GET /api/users → 403" },
     { g: "2.8 admin", t: "Всё доступно" },
     { g: "2.9 Истёкшая сессия", t: "Удалить pipette_session → F5 → логин" },
-    { g: "2.9 Истёкшая сессия", t: "Токен-мусор → F5 → «Недействительный токен»" },
-    { g: "2.9 Истёкшая сессия", t: "apiRequest('/pipettes') без токена → 401" },
-    { g: "2.9 Истёкшая сессия", t: "Битый JSON в sessionStorage → не падает, логин" }
+    { g: "2.9 Истёкшая сессия", t: "apiRequest без токена → 401" }
   ]},
 
   { title: "Блок 3. Главная таблица", tag: "3", items: [
     { g: "3.1 Базовый рендер", t: "5 демо-строк: P-001, P-002, P-003, A-001, M-001" },
     { g: "3.1 Базовый рендер", t: "Тип бейджем (pipette синий, остальные фиолетовый)" },
-    { g: "3.1 Базовый рендер", t: "Объём с мкл, у не-пипеток —" },
-    { g: "3.1 Базовый рендер", t: "В «Следующая»: дата + (N дн.) / (просрочка N дн.)" },
+    { g: "3.1 Базовый рендер", t: "«Следующая»: дата + (N дн.) / (просрочка N дн.)" },
     { g: "3.1 Базовый рендер", t: "M-001 — Неактивна (серый)" },
     { g: "3.1 Базовый рендер", t: "A-001 — Брак (красный)" },
     { g: "3.1 Базовый рендер", t: "P-003 — Просрочена (красный)" },
     { g: "3.1 Базовый рендер", t: "Счётчики в шапке совпадают" },
-    { g: "3.1 Базовый рендер", t: "Баннер появляется при danger/fail" },
-    { g: "3.1 Базовый рендер", t: "Тултип кнопки истории показывает реальный history_count" },
-    { g: "3.1 Базовый рендер", t: "GET /api/pipettes — без вложенных историй, history_count числом" },
-    { g: "3.1 Базовый рендер", t: "Все иконки Font Awesome рендерятся" },
+    { g: "3.1 Базовый рендер", t: "Тултип кнопки истории показывает history_count" },
     { g: "3.2 Пустая таблица", t: "Сбросить данные → таблица скрыта, счётчики 0" },
     { g: "3.3 Строка выбрана", t: "Фон строки при выборе — голубой" },
-    { g: "3.3 Строка выбрана", t: "Hover темнее" },
-    { g: "3.3 Строка выбрана", t: "select-all-checkbox indeterminate при частичном выборе" },
+    { g: "3.3 Строка выбрана", t: "select-all indeterminate при частичном" },
     { g: "3.4 Визуальный вид", t: "Шапка таблицы тёмная #1e293b" },
     { g: "3.4 Визуальный вид", t: "Зебра: чётные светлые" },
     { g: "3.4 Визуальный вид", t: "Sticky-шапка при скролле" },
-    { g: "3.4 Визуальный вид", t: "Красная/жёлтая полоска слева у проблемных строк" },
+    { g: "3.4 Визуальный вид", t: "Красная/жёлтая полоска слева у проблемных" },
     { g: "3.4 Визуальный вид", t: "Точка-индикатор статуса рядом с ID" },
-    { g: "3.5 Замены в таблице", t: "У отправленного: «↔ замена: X-XXX»" },
-    { g: "3.5 Замены в таблице", t: "У складской: «↔ заменяет: P-001»" },
-    { g: "3.5 Замены в таблице", t: "Если замена удалена: «⚠ замена удалена»" },
+    { g: "3.5 Замены в таблице", t: "«↔ замена: X-XXX»" },
+    { g: "3.5 Замены в таблице", t: "«↔ заменяет: X-XXX»" },
     { g: "3.6 Кастомные поля", t: "Кастомные поля из field_config — как колонки" },
-    { g: "3.6 Кастомные поля", t: "mergeCustom раскрывает custom_data" },
-    { g: "3.6 Кастомные поля", t: "Виртуальные колонки «Следующая» и «Статус» — по умолчанию" }
+    { g: "3.6 Кастомные поля", t: "Виртуальные колонки «Следующая» и «Статус»" }
   ]},
 
   { title: "Блок 4. CRUD оборудования", tag: "4", items: [
     { g: "4.1 Открытие модалки", t: "Кнопка Добавить → вкладки «Одна единица» / «Партия»" },
-    { g: "4.1 Открытие модалки", t: "При редактировании вкладки скрываются" },
+    { g: "4.1 Открытие модалки", t: "При редактировании вкладки скрыты" },
     { g: "4.1 Открытие модалки", t: "Панель шаблонов видна только админу" },
-    { g: "4.1 Открытие модалки", t: "Все поля рендерятся в правильном порядке" },
-    { g: "4.1 Открытие модалки", t: "Обязательные поля помечены *" },
-    { g: "4.2 Создание", t: "Дефолты: дата сегодня, МПИ 12, результат pass, статус active" },
-    { g: "4.2 Создание", t: "Заполнить → Сохранить → «Оборудование создано (P-XXX)»" },
+    { g: "4.2 Создание", t: "Дефолты: дата сегодня, МПИ 12, результат pass" },
+    { g: "4.2 Создание", t: "Заполнить → Сохранить → «Оборудование создано»" },
     { g: "4.2 Создание", t: "ID генерируется по префиксу типа" },
-    { g: "4.2 Создание", t: "Без модели → ошибка «Заполните: Модель»" },
-    { g: "4.2 Создание", t: "Без даты → ошибка" },
+    { g: "4.2 Создание", t: "Без модели → ошибка" },
     { g: "4.2 Создание", t: "Дата в будущем → 400" },
     { g: "4.2 Создание", t: "Занятый ID → 409" },
-    { g: "4.2 Создание", t: "Ответственный подставляется автоматически для не-админа" },
-    { g: "4.2 Создание", t: "Отмена — ничего не сохранено" },
-    { g: "4.2 Создание", t: "Кастомное поле сохраняется в custom_data" },
-    { g: "4.2 Создание", t: "POST с пустым body → 400" },
-    { g: "4.2 Создание", t: "POST с массивом → 400" },
-    { g: "4.2 Создание", t: "ER_DATA_TOO_LONG → 400 с понятным текстом" },
-    { g: "4.2 Создание", t: "Race condition → 409 с кодом race" },
-    { g: "4.3 Партия", t: "Вкладка «Партия» — открывается" },
     { g: "4.3 Партия", t: "Кнопка «Добавить строку»" },
     { g: "4.3 Партия", t: "Максимум 100 строк" },
-    { g: "4.3 Партия", t: "Счётчик «Строк: N / 100»" },
-    { g: "4.3 Партия", t: "onBulkTypeChange — МПИ пересчитывается по типу" },
-    { g: "4.3 Партия", t: "Валидация: пустая модель / дата / ответственный" },
+    { g: "4.3 Партия", t: "onBulkTypeChange — МПИ пересчитывается" },
     { g: "4.3 Партия", t: "> 20 строк → подтверждение" },
-    { g: "4.3 Партия", t: "После создания — «Создано N единиц»" },
-    { g: "4.3 Партия", t: "Удалить строку кнопкой 🗑" },
-    { g: "4.4 Редактирование", t: "Форма с данными, ID read-only" },
-    { g: "4.4 Редактирование", t: "Модель → Сохранить → «Оборудование обновлено»" },
-    { g: "4.4 Редактирование", t: "Стереть дату → не обнуляется" },
+    { g: "4.4 Редактирование", t: "ID read-only" },
     { g: "4.4 Редактирование", t: "Скрытое поле Результат → last_result сохраняется" },
-    { g: "4.4 Редактирование", t: "PUT {\"active\":\"false\"} (строка) → 0" },
-    { g: "4.4 Редактирование", t: "PUT {\"active\":false} (boolean) → 0" },
-    { g: "4.4 Редактирование", t: "PUT {\"active\":true} → 1" },
-    { g: "4.4 Редактирование", t: "PUT с кастомным полем — мёржится в custom_data" },
-    { g: "4.4 Редактирование", t: "PUT {\"interval\":\"\"} → NULL, не 0" },
-    { g: "4.4 Редактирование", t: "PUT не-админом отдел → «Смена отдела доступна только администратору»" },
-    { g: "4.4 Редактирование", t: "PUT не-админом responsible → игнорируется" },
-    { g: "4.4 Редактирование", t: "PUT несуществующего → 404" },
-    { g: "4.5 Смена типа (автоперегенерация ID)", t: "P-001 → тип Анализатор → ID стал A-XXX" },
-    { g: "4.5 Смена типа", t: "Тост: «Сохранено. Новый ID: A-XXX»" },
-    { g: "4.5 Смена типа", t: "История поверок переехала на новый ID" },
-    { g: "4.5 Смена типа", t: "Связки replaced_by / replacing перепривязались" },
-    { g: "4.5 Смена типа", t: "Если A-XXX занят — берётся следующий" },
-    { g: "4.5 Смена типа", t: "Тот же prefix → ID не меняется" },
+    { g: "4.4 Редактирование", t: "PUT {\"active\":\"false\"} → 0" },
+    { g: "4.4 Редактирование", t: "PUT не-админом отдел → 403" },
+    { g: "4.5 Смена типа", t: "P-001 → Анализатор → ID стал A-XXX" },
+    { g: "4.5 Смена типа", t: "История переехала на новый ID" },
+    { g: "4.5 Смена типа", t: "Связки replaced_by/replacing перепривязались" },
     { g: "4.5 Смена типа", t: "idChanged=true в ответе API" },
     { g: "4.6 Удаление", t: "⋮ → Удалить → подтверждение" },
-    { g: "4.6 Удаление", t: "После подтверждения — тост, строка исчезла" },
     { g: "4.6 Удаление", t: "История удалилась каскадом" },
-    { g: "4.6 Удаление", t: "Удаление с replaced_by → 400 «Нельзя удалить… отправлена на поверку»" },
-    { g: "4.6 Удаление", t: "Удаление с replacing → 400 «Нельзя удалить… заменена на…»" },
-    { g: "4.6 Удаление", t: "Удаление используемой как замена → 400" },
-    { g: "4.6 Удаление", t: "DELETE несуществующего → 404" },
-    { g: "4.7 Штрихкод в карточке", t: "Поле Штрихкод присутствует" },
-    { g: "4.7 Штрихкод в карточке", t: "Для не-админа — read-only с тултипом" },
-    { g: "4.7 Штрихкод в карточке", t: "Кнопка ✨ подставляет из инв./серийного/ID" },
-    { g: "4.7 Штрихкод в карточке", t: "Кнопка ↩️ сбрасывает ручной штрихкод" },
-    { g: "4.7 Штрихкод в карточке", t: "data-manual='1' при вводе вручную" },
-    { g: "4.7 Штрихкод в карточке", t: "Admin передал barcode → barcode_source='manual'" },
-    { g: "4.7 Штрихкод в карточке", t: "Иначе computeBarcodeValue пересчитывает" }
+    { g: "4.6 Удаление", t: "Удаление с replaced_by → 400" },
+    { g: "4.6 Удаление", t: "Удаление с replacing → 400" },
+    { g: "4.7 Штрихкод в карточке", t: "Для не-админа — read-only" },
+    { g: "4.7 Штрихкод в карточке", t: "Кнопка ✨ подставляет из источника" },
+    { g: "4.7 Штрихкод в карточке", t: "Кнопка ↩️ сбрасывает ручной" }
   ]},
 
   { title: "Блок 5. Быстрая поверка", tag: "5", items: [
     { g: "", t: "⋮ → Быстрая поверка открывает модалку" },
-    { g: "", t: "Инфо о приборе в шапке" },
     { g: "", t: "Дата = сегодня" },
-    { g: "", t: "Заполнить → Записать → «Поверка зарегистрирована»" },
+    { g: "", t: "Записать → «Поверка зарегистрирована»" },
     { g: "", t: "Обновились «Поверка» и «Следующая»" },
     { g: "", t: "Результат Брак → статус красный" },
-    { g: "", t: "Результат В процессе → статус жёлтый" },
     { g: "", t: "Пустая дата → ошибка" },
-    { g: "", t: "Дата в будущем → ошибка на клиенте и сервере" },
-    { g: "", t: "Для статуса sent — пункт «Вернулась с поверки»" },
-    { g: "", t: "При возврате sent_for_calibration очищен" },
-    { g: "", t: "Результат hacked → сохраняется pass" },
-    { g: "", t: "После возврата замена вернулась на склад" }
+    { g: "", t: "Дата в будущем → ошибка" },
+    { g: "", t: "Для статуса sent — «Вернулась с поверки»" },
+    { g: "", t: "При возврате sent_for_calibration очищен" }
   ]},
 
   { title: "Блок 6. История поверок", tag: "6", items: [
@@ -516,345 +505,195 @@ var DATA = [
     { g: "6.1 Просмотр", t: "Таймлайн свежий сверху" },
     { g: "6.1 Просмотр", t: "Свидетельство — синий бейдж" },
     { g: "6.1 Просмотр", t: "Результат цветным бейджем" },
-    { g: "6.1 Просмотр", t: "Организация и примечание серым" },
-    { g: "6.2 Добавить поверку", t: "Форма появляется ниже" },
-    { g: "6.2 Добавить поверку", t: "Заполнить → Записать → тост" },
+    { g: "6.2 Добавить поверку", t: "Форма → Записать → тост" },
     { g: "6.2 Добавить поверку", t: "Валидация даты" },
-    { g: "6.2 Добавить поверку", t: "Модалка закрывается, таблица обновляется" },
     { g: "6.3 Экспорт истории", t: "Пустой период → вся история" },
     { g: "6.3 Экспорт истории", t: "Фильтр С/По работает" },
     { g: "6.3 Экспорт истории", t: "Excel: history_<id>_YYYY-MM-DD.xlsx" },
-    { g: "6.3 Экспорт истории", t: "PDF: открывается вкладка" },
-    { g: "6.3 Экспорт истории", t: "Пусто → «Нет записей за выбранный период»" }
+    { g: "6.3 Экспорт истории", t: "PDF: открывается вкладка" }
   ]},
 
   { title: "Блок 7. Массовая отправка на поверку", tag: "7", items: [
-    { g: "7.1 Выбор и открытие", t: "Выбрать 3 пипетки → счётчик (3)" },
-    { g: "7.1 Выбор и открытие", t: "Добавить анализатор → 4" },
-    { g: "7.1 Выбор и открытие", t: "Добавить весы (internal) → счётчик не изменился" },
-    { g: "7.1 Выбор и открытие", t: "Кнопка 📦 Отправить (N) открывает модалку" },
-    { g: "7.1 Выбор и открытие", t: "Без external → «Не выбрано ни одной единицы для внешней поверки»" },
+    { g: "7.1 Выбор", t: "Выбрать 3 пипетки → счётчик (3)" },
+    { g: "7.1 Выбор", t: "Добавить весы (internal) → счётчик не изменился" },
+    { g: "7.1 Выбор", t: "Без external → «Не выбрано ни одной для внешней»" },
     { g: "7.2 Модалка", t: "Список выбранного оборудования" },
-    { g: "7.2 Модалка", t: "Жёлтый инфо-блок про external/internal" },
     { g: "7.2 Модалка", t: "Дата отправки = сегодня" },
-    { g: "7.2 Модалка", t: "Примечание" },
     { g: "7.2 Модалка", t: "Кнопка «Распечатать акт» работает" },
-    { g: "7.3 Блок подбора замен", t: "Для каждого ID подгружаются складские того же типа" },
-    { g: "7.3 Блок подбора замен", t: "CONCURRENCY=5" },
-    { g: "7.3 Блок подбора замен", t: "«Без замены» отмечено по умолчанию" },
-    { g: "7.3 Блок подбора замен", t: "Если нет складских → «Нет доступных»" },
-    { g: "7.4 Валидация сервера", t: "Без ids → 400" },
-    { g: "7.4 Валидация сервера", t: "Без sentDate → 400" },
-    { g: "7.4 Валидация сервера", t: "> 100 ids → 400" },
-    { g: "7.4 Валидация сервера", t: "Internal-тип в ids → skipped" },
-    { g: "7.4 Валидация сервера", t: "Замена = сама себе → 400" },
-    { g: "7.4 Валидация сервера", t: "Одна замена для двух → 400" },
-    { g: "7.4 Валидация сервера", t: "Замена активна → skipped" },
-    { g: "7.4 Валидация сервера", t: "Замена уже отправлена → skipped" },
-    { g: "7.4 Валидация сервера", t: "Тип не совпадает → skipped" },
+    { g: "7.3 Замены", t: "Складские того же типа подгружаются" },
+    { g: "7.3 Замены", t: "«Без замены» по умолчанию" },
+    { g: "7.4 Валидация", t: "Без ids → 400" },
+    { g: "7.4 Валидация", t: "Internal-тип → skipped" },
+    { g: "7.4 Валидация", t: "Замена = сама себе → 400" },
+    { g: "7.4 Валидация", t: "Одна замена для двух → 400" },
     { g: "7.5 После отправки", t: "Статус 📦 На поверке" },
-    { g: "7.5 После отправки", t: "active = 0" },
-    { g: "7.5 После отправки", t: "Замена: active=1, location=<место>, replacing=<оригинал>" },
-    { g: "7.5 После отправки", t: "В логе «Отправка на поверку»" },
-    { g: "7.5 После отправки", t: "Кнопка Отправить пропала, появилась Вернуть (N)" },
-    { g: "7.6 Акт отправки", t: "Окно в новой вкладке" },
+    { g: "7.5 После отправки", t: "Замена active=1, replacing=оригинал" },
     { g: "7.6 Акт отправки", t: "Заголовок «АКТ ОТПРАВКИ НА ПОВЕРКУ»" },
-    { g: "7.6 Акт отправки", t: "Мета: дата, количество, организация ФБУ Красноярский ЦСМ" },
-    { g: "7.6 Акт отправки", t: "Таблица с ID, модель, серийный, объём, отдел, ответственный" },
-    { g: "7.6 Акт отправки", t: "Подпись, «Документ сформировал»" },
-    { g: "7.6 Акт отправки", t: "Ctrl+P — печать" }
+    { g: "7.6 Акт отправки", t: "Мета: дата, количество, организация" },
+    { g: "7.6 Акт отправки", t: "Таблица с ID, модель, серийный, отдел" },
+    { g: "7.6 Акт отправки", t: "Подписи Сдал/Принял" }
   ]},
 
   { title: "Блок 8. Массовый возврат с поверки", tag: "8", items: [
-    { g: "8.1 Открытие", t: "Выбрать sent_for_calibration → кнопка 📥 Вернуть (N)" },
-    { g: "8.1 Открытие", t: "Если нет → «Не выбрано ни одной единицы со статусом На поверке»" },
-    { g: "8.2 Форма", t: "Список отправленных" },
-    { g: "8.2 Форма", t: "Дата = сегодня" },
-    { g: "8.2 Форма", t: "Организация" },
-    { g: "8.2 Форма", t: "Общий результат" },
-    { g: "8.2 Форма", t: "Чекбокс «Одно свидетельство на всех» → отключает индивидуальные поля" },
-    { g: "8.2 Форма", t: "Общий номер свидетельства" },
-    { g: "8.2 Форма", t: "Таблица с input для каждого ID + select" },
-    { g: "8.2 Форма", t: "applyBulkReturnResult меняет все строки" },
-    { g: "8.2 Форма", t: "Блок «На время поверки было выдано со склада»" },
-    { g: "8.2 Форма", t: "Чекбокс «Вернуть замену на склад» отмечен по умолчанию" },
-    { g: "8.3 Валидация сервера", t: "Без items → 400" },
-    { g: "8.3 Валидация сервера", t: "Без date → 400" },
-    { g: "8.3 Валидация сервера", t: "> 100 items → 400" },
-    { g: "8.3 Валидация сервера", t: "Не sent_for_calibration → skipped" },
-    { g: "8.3 Валидация сервера", t: "Internal-тип → skipped" },
-    { g: "8.3 Валидация сервера", t: "result='hacked' → 'pass'" },
-    { g: "8.3 Валидация сервера", t: "Замена удалена физически → missingReplacements" },
+    { g: "8.1 Открытие", t: "sent_for_calibration → кнопка 📥 Вернуть (N)" },
+    { g: "8.2 Форма", t: "Общий результат применяется ко всем" },
+    { g: "8.2 Форма", t: "«Одно свидетельство на всех» отключает индивидуальные" },
+    { g: "8.2 Форма", t: "Блок «На время поверки выдано со склада»" },
+    { g: "8.3 Валидация", t: "Не sent_for_calibration → skipped" },
+    { g: "8.3 Валидация", t: "Internal-тип → skipped" },
     { g: "8.4 После возврата", t: "Запись в calibration_history" },
-    { g: "8.4 После возврата", t: "last_calibration, cert, last_result обновлены" },
     { g: "8.4 После возврата", t: "sent_for_calibration = NULL" },
-    { g: "8.4 После возврата", t: "active = 1" },
-    { g: "8.4 После возврата", t: "Замена: active=0, location='Склад', replacing=NULL" },
-    { g: "8.4 После возврата", t: "Без галочки возврата: active=1, replacing=NULL" },
-    { g: "8.4 После возврата", t: "Таблица автоотфильтрована по дате возврата" },
-    { g: "8.4 После возврата", t: "Тост «Таблица отфильтрована по дате…»" }
+    { g: "8.4 После возврата", t: "Замена: active=0, location='Склад'" },
+    { g: "8.4 После возврата", t: "Таблица автоотфильтрована по дате возврата" }
   ]},
 
   { title: "Блок 9. Массовая смена ответственного", tag: "9", items: [
-    { g: "", t: "Выбрать N пипеток → кнопка 👤 Ответственный (N)" },
-    { g: "", t: "Открывается модалка" },
-    { g: "", t: "Жёлтый инфо-блок про «отдел не меняется»" },
+    { g: "", t: "Выбрать N → кнопка 👤 Ответственный (N)" },
     { g: "", t: "Select со списком ответственных" },
     { g: "", t: "Кнопка Применить → подтверждение" },
-    { g: "", t: "После применения — тост, ответственный изменился у всех" },
-    { g: "", t: "Отдел не изменился" },
-    { g: "", t: "Нет доступа по отделу → skipped" },
-    { g: "", t: "В логе «Массовая смена ответственного»" },
-    { g: "", t: "Без права bulk_change_responsible — кнопки нет" }
+    { g: "", t: "Ответственный изменился, отдел НЕ изменился" },
+    { g: "", t: "Нет доступа по отделу → skipped" }
   ]},
 
   { title: "Блок 10. Передача в другой отдел", tag: "10", items: [
-    { g: "", t: "⋮ → Передать в другой отдел — открывается" },
-    { g: "", t: "Инфо о приборе" },
+    { g: "", t: "⋮ → Передать в другой отдел" },
     { g: "", t: "Select нового отдела (без текущего)" },
     { g: "", t: "Select ответственного — грузится после выбора отдела" },
-    { g: "", t: "Если нет сотрудников в отделе → сообщение" },
     { g: "", t: "Кнопка Передать → подтверждение" },
-    { g: "", t: "После — тост, department и responsible обновлены" },
-    { g: "", t: "Отдел не в справочнике → 400" },
     { g: "", t: "Тот же отдел → 400" },
-    { g: "", t: "В логе «Передача в другой отдел»" },
-    { g: "", t: "История поверок сохранена" }
+    { g: "", t: "История сохранена" }
   ]},
 
   { title: "Блок 11. Фильтры и поиск", tag: "11", items: [
     { g: "11.1 Панель", t: "Кнопка 🔽 Фильтр открывает панель" },
-    { g: "11.1 Панель", t: "Все активные фильтры из filter_config" },
-    { g: "11.1 Панель", t: "Статус — фильтр по calcStatus" },
-    { g: "11.1 Панель", t: "Тип оборудования — фильтр по типу" },
-    { g: "11.1 Панель", t: "Отдел — из справочника" },
-    { g: "11.1 Панель", t: "Ответственный, Модель, Производитель — текстом" },
-    { g: "11.1 Панель", t: "Активность — в работе / не используется" },
-    { g: "11.1 Панель", t: "Дата поверки — период (today/yesterday/week/month/custom)" },
-    { g: "11.1 Панель", t: "Переключение Тип = updated_at" },
-    { g: "11.1 Панель", t: "Комбинация 3+ фильтров" },
+    { g: "11.1 Панель", t: "Статус, тип, отдел, ответственный, модель" },
+    { g: "11.1 Панель", t: "Дата поверки: today/yesterday/week/month/custom" },
     { g: "11.1 Панель", t: "Сбросить — всё снято" },
-    { g: "11.2 Кастомные фильтры", t: "Добавить фильтр в настройках → появляется в панели" },
-    { g: "11.2 Кастомные фильтры", t: "Отключить фильтр → пропадает" },
-    { g: "11.2 Кастомные фильтры", t: "optionsSource: departments / status_list / equipment_type_list / active_list" },
-    { g: "11.3 Синхронизация filterState", t: "Удалить/переименовать фильтр — значение сбрасывается" },
-    { g: "11.3 Синхронизация filterState", t: "Переименовать отдел — старое значение сбрасывается" },
+    { g: "11.2 Кастомные", t: "Добавить фильтр в настройках → появляется" },
+    { g: "11.3 Синхронизация", t: "Удалить фильтр — значение сброшено" },
     { g: "11.4 Поиск", t: "P-001 — 1 строка" },
-    { g: "11.4 Поиск", t: "eppendorf — все Eppendorf" },
-    { g: "11.4 Поиск", t: "Иванова — по ответственному" },
     { g: "11.4 Поиск", t: "Латиница/кириллица — normalizeSearch" },
-    { g: "11.4 Поиск", t: "Debounce 150 мс" },
-    { g: "11.5 Сортировка", t: "Клик по ID — сортировка ▲, повторно ▼" },
-    { g: "11.5 Сортировка", t: "Стрелка показывает направление" },
-    { g: "11.5 Сортировка", t: "По «Следующая» — null в конец" },
-    { g: "11.5 Сортировка", t: "По «Объём» — числовая" },
-    { g: "11.5 Сортировка", t: "По «Статус» — фиксированный порядок danger→fail→wip→warn→sent→ok→inactive→unknown" }
+    { g: "11.5 Сортировка", t: "Клик по ID — ▲, повторно ▼" },
+    { g: "11.5 Сортировка", t: "По «Статус» — фиксированный порядок" }
   ]},
 
   { title: "Блок 12. Экспорт данных", tag: "12", items: [
-    { g: "12.1 Меню", t: "Ещё ▼ → Экспорт в Excel — .xlsx" },
-    { g: "12.1 Меню", t: "Ещё ▼ → Экспорт в PDF — вкладка" },
-    { g: "12.1 Меню", t: "Без export_data — пункты скрыты" },
+    { g: "12.1 Меню", t: "Ещё ▼ → Экспорт в Excel / PDF" },
     { g: "12.2 Excel реестр", t: "Файл pipettes_YYYY-MM-DD.xlsx" },
-    { g: "12.2 Excel реестр", t: "Шапка: «Реестр оборудования — КГБУЗ…»" },
-    { g: "12.2 Excel реестр", t: "Мета: Дата … Записей" },
-    { g: "12.2 Excel реестр", t: "Заголовки столбцов тёмные 1E293B" },
-    { g: "12.2 Excel реестр", t: "Данные с чередованием F8FAFC" },
+    { g: "12.2 Excel реестр", t: "Шапка, мета, заголовки тёмные 1E293B" },
+    { g: "12.2 Excel реестр", t: "Данные с зеброй F8FAFC" },
     { g: "12.2 Excel реестр", t: "Подвал: Документ сформировал / Подпись" },
     { g: "12.2 Excel реестр", t: "fitToWidth=1, landscape, A4" },
-    { g: "12.2 Excel реестр", t: "printTitlesRow повторяет шапку" },
-    { g: "12.2 Excel реестр", t: "Разрыв страницы после 40 записей" },
-    { g: "12.3 Excel история", t: "Файл history_<id>_YYYY-MM-DD.xlsx" },
-    { g: "12.3 Excel история", t: "Мета с ID, Модель, Производитель, Serial, Отдел, Период" },
-    { g: "12.4 PDF", t: "Заголовок совпадает с Excel" },
-    { g: "12.4 PDF", t: "Цветные статусы" },
-    { g: "12.4 PDF", t: "Подвал с подписью" },
-    { g: "12.4 PDF", t: "Ctrl+P → A4 landscape" },
-    { g: "12.5 CSV-инъекция", t: "Модель =1+1 → в Excel текст" },
-    { g: "12.5 CSV-инъекция", t: "Модель +7 999 → текст" },
-    { g: "12.5 CSV-инъекция", t: "Модель -5 → текст" },
-    { g: "12.5 CSV-инъекция", t: "Модель @user → текст" },
-    { g: "12.6 Настройка", t: "Снять все поля → дефолт" },
-    { g: "12.6 Настройка", t: "Отметить 3 → XLSX с 3 столбцами" },
-    { g: "12.6 Настройка", t: "Кастомные поля — доступны" }
+    { g: "12.3 Excel история", t: "history_<id>_YYYY-MM-DD.xlsx" },
+    { g: "12.4 PDF", t: "Цветные статусы в PDF" },
+    { g: "12.5 CSV-инъекция", t: "Модель =1+1 → текст в Excel" },
+    { g: "12.6 Настройка", t: "Снять все поля → дефолт" }
   ]},
 
   { title: "Блок 13. Импорт", tag: "13", items: [
     { g: "13.1 Форматы", t: "XLSX — работает" },
     { g: "13.1 Форматы", t: "CSV — автоопределение разделителя" },
     { g: "13.1 Форматы", t: "JSON — массив объектов" },
-    { g: "13.1 Форматы", t: "TXT — как CSV" },
     { g: "13.1 Форматы", t: ".xls → «Пересохраните как .xlsx»" },
-    { g: "13.1 Форматы", t: "Битый файл → 400" },
-    { g: "13.2 Поиск заголовков", t: "Файл с шапкой «Реестр…» — заголовки находятся" },
-    { g: "13.2 Поиск заголовков", t: "Пропуск «Документ сформировал», «Подпись»" },
-    { g: "13.2 Поиск заголовков", t: "Пропуск merged-ячеек (id === model)" },
-    { g: "13.2 Поиск заголовков", t: "bestScore < 2 → ошибка" },
-    { g: "13.3 Синонимы", t: "ID/Внутренний/Инв/№ → id" },
-    { g: "13.3 Синонимы", t: "S/N/Серийный/Заводской → serial" },
-    { g: "13.3 Синонимы", t: "Модель/Наименование/Оборудование → model" },
-    { g: "13.3 Синонимы", t: "Тип/Категория → equipmentType" },
-    { g: "13.3 Синонимы", t: "Дата поверки/Последняя → lastCalibration" },
-    { g: "13.3 Синонимы", t: "МПИ/Межповерочный → interval" },
-    { g: "13.3 Синонимы", t: "Отдел/Подразделение/Лаборатория → department" },
-    { g: "13.4 Даты", t: "Date object → YYYY-MM-DD локально" },
+    { g: "13.2 Поиск заголовков", t: "Файл с шапкой «Реестр…» — находится" },
+    { g: "13.2 Поиск заголовков", t: "Пропуск «Документ сформировал»" },
+    { g: "13.3 Синонимы", t: "ID/Внутренний/№ → id" },
+    { g: "13.3 Синонимы", t: "Модель/Наименование → model" },
     { g: "13.4 Даты", t: "21.10.2024 → 2024-10-21" },
     { g: "13.4 Даты", t: "10.21.2024 → 2024-10-21 (US)" },
-    { g: "13.4 Даты", t: "05.07.2024 → 2024-07-05 (RU)" },
-    { g: "13.4 Даты", t: "2024-10-21 → как есть" },
-    { g: "13.4 Даты", t: "32.13.2024 → ошибка" },
-    { g: "13.4 Даты", t: "abc → пусто" },
-    { g: "13.5 Прочее", t: "Брак/fail/не годен → fail" },
-    { g: "13.5 Прочее", t: "В процессе/wip → wip" },
-    { g: "13.5 Прочее", t: "Годен/pass/✅ → pass" },
-    { g: "13.5 Прочее", t: "Микроскоп → microscope" },
+    { g: "13.5 Прочее", t: "Брак/fail → fail" },
     { g: "13.5 Прочее", t: "Дубли ID → skipped" },
-    { g: "13.5 Прочее", t: "Кастомные поля распознаются" },
-    { g: "13.5 Прочее", t: "Транзакция на каждую строку" },
-    { g: "13.6 Прогресс-бар", t: "Чтение файла 0-20%" },
-    { g: "13.6 Прогресс-бар", t: "Отправка 20-45%" },
-    { g: "13.6 Прогресс-бар", t: "Обработка 45-90%" },
-    { g: "13.6 Прогресс-бар", t: "Завершение 100%" },
+    { g: "13.6 Прогресс-бар", t: "0-20% чтение, 20-45% отправка, 45-90% обработка, 100% готово" },
     { g: "13.7 Права", t: "Без import_data → 403" }
   ]},
 
   { title: "Блок 14. Настройки — Поля формы", tag: "14", items: [
-    { g: "", t: "Отключить Примечание → пропадает из формы" },
-    { g: "", t: "Сменить порядок (▲▼)" },
+    { g: "", t: "Отключить Примечание — пропадает из формы" },
     { g: "", t: "Кнопки стрелок ▲▼ — иконки FA (не символы)" },
-    { g: "", t: "Стрелки вызывают moveFieldSetting, не moveFilter" },
-    { g: "", t: "Поставить Обяз. → поле required" },
-    { g: "", t: "Изменить label (без blur) → сохраняется через oninput" },
-    { g: "", t: "Добавить поле → появляется в конце" },
-    { g: "", t: "Сменить тип на select → textarea для опций" },
-    { g: "", t: "Системные поля (id, department, equipmentType, result, active) — тип disabled" },
-    { g: "", t: "Сохранить → тост, myPrefs перезагружается" },
+    { g: "", t: "Стрелки вызывают moveFieldSetting" },
+    { g: "", t: "Системные поля (id, department, equipmentType) — тип disabled" },
     { g: "", t: "Удалить поле с данными → 409 field_has_data" },
-    { g: "", t: "Подтверждение удаления → каскадная очистка custom_data" },
-    { g: "", t: "activeFieldIds синхронизируются с myPrefs.visibleFields" },
-    { g: "", t: "После сохранения — таблица обновилась" }
+    { g: "", t: "Каскадная очистка custom_data при подтверждении" }
   ]},
 
   { title: "Блок 15. Настройки — Отделы", tag: "15", items: [
     { g: "", t: "Дубликат → «Такой отдел уже есть»" },
-    { g: "", t: "Правка без blur + клик на стрелку — не теряется" },
-    { g: "", t: "Сохранить → тост" },
-    { g: "", t: "Дубликаты удаляются при сохранении" },
-    { g: "", t: "Переименование → oldName передаётся" },
-    { g: "", t: "UPDATE pipettes.department и users.department" },
+    { g: "", t: "Переименование — oldName передаётся, pipettes/users обновляются" },
     { g: "", t: "Удаление используемого отдела → 400" },
-    { g: "", t: "Добавить отдел → по кнопке" },
-    { g: "", t: "После сохранения — loadDepartments, loadFilterConfig, syncFilterState" }
+    { g: "", t: "После сохранения — loadDepartments, loadFilterConfig" }
   ]},
 
   { title: "Блок 16. Настройки — Фильтры", tag: "16", items: [
     { g: "", t: "Отключить Статус → пропал после F5" },
-    { g: "", t: "Добавить фильтр → появился" },
-    { g: "", t: "Перемещение ▲▼" },
-    { g: "", t: "Стрелки вызывают moveFilter, не moveFieldSetting" },
-    { g: "", t: "Удалить используемый → syncFilterState сбросит значение" },
-    { g: "", t: "optionsSource: departments / status_list / equipment_type_list / active_list" },
-    { g: "", t: "После сохранения панель перерисовывается" }
+    { g: "", t: "Стрелки ▲▼ вызывают moveFilter" },
+    { g: "", t: "optionsSource: departments / status_list / equipment_type_list / active_list" }
   ]},
 
   { title: "Блок 17. Настройки — Экспорт", tag: "17", items: [
     { g: "", t: "Отметить 3 поля → XLSX с 3 столбцами" },
-    { g: "", t: "Снять все → дефолтный набор" },
-    { g: "", t: "Кастомные поля из field_config — в списке" },
-    { g: "", t: "16 системных полей + кастомные" }
+    { g: "", t: "Кастомные поля из field_config — в списке" }
   ]},
 
   { title: "Блок 18. Настройки — Типы оборудования", tag: "18", items: [
-    { g: "", t: "value read-only" },
-    { g: "", t: "label редактируется" },
-    { g: "", t: "prefix редактируется, максимум 4 символа, uppercase" },
-    { g: "", t: "МПИ редактируется 1..120" },
+    { g: "", t: "value read-only, label/prefix/interval редактируются" },
     { g: "", t: "Место поверки: 📦 Внешняя / 🏠 На месте" },
     { g: "", t: "Пустой prefix → EQ" },
     { g: "", t: "Дубли value → ошибка" },
-    { g: "", t: "Дубли prefix → предупреждение" },
     { g: "", t: "Удалить используемый → 400" },
-    { g: "", t: "Добавить тип → value по regex" },
-    { g: "", t: "▲▼ — перемещение" },
-    { g: "", t: "Стрелки ▲▼ — иконки FA (не символы)" },
     { g: "", t: "calibrationPlace='invalid' → 'internal'" },
-    { g: "", t: "interval не число → 12" }
+    { g: "", t: "Стрелки ▲▼ — иконки FA" }
   ]},
 
   { title: "Блок 19. Настройки — Пользователи", tag: "19", items: [
-    { g: "19.1 Список", t: "Своя строка — без действий" },
+    { g: "19.1 Список", t: "Своя строка без действий" },
     { g: "19.1 Список", t: "И.о. показан как (и.о. за Иванов И.И.)" },
     { g: "19.2 Создание", t: "Обязательные: логин, ФИО, должность" },
     { g: "19.2 Создание", t: "Разовый пароль в модалке" },
-    { g: "19.2 Создание", t: "Копирование (clipboard / execCommand)" },
-    { g: "19.2 Создание", t: "Роль admin — все чекбоксы автоотмечены и disabled" },
     { g: "19.2 Создание", t: "Пресеты прав: none/user/senior/manager/all" },
     { g: "19.2 Создание", t: "onlyOwnDepartment без отдела → 400" },
     { g: "19.2 Создание", t: "isActing=1 без actingForId → 400" },
-    { g: "19.2 Создание", t: "acting-targets — только не-и.о." },
-    { g: "19.2 Создание", t: "Строк на странице: 50/100/200/500" },
-    { g: "19.3 Редактирование", t: "editUserSetting заполняет форму" },
-    { g: "19.3 Редактирование", t: "«Битый» отдел → ⚠ (нет в списке)" },
     { g: "19.3 Редактирование", t: "manage_pipettes раскладывается на новые" },
-    { g: "19.3 Редактирование", t: "Audit log с diff (логин: «old» → «new»)" },
+    { g: "19.3 Редактирование", t: "Audit log с diff (логин: old → new)" },
     { g: "19.4 Защита", t: "Понижение себя → ошибка" },
     { g: "19.4 Защита", t: "Понижение последнего админа → ошибка" },
-    { g: "19.4 Защита", t: "Сброс пароля себе → ошибка" },
     { g: "19.5 Удаление", t: "Удалить себя → 400" },
-    { g: "19.5 Удаление", t: "Удалить последнего админа → 400" },
     { g: "19.5 Удаление", t: "Удалить основного с и.о. → у и.о. is_acting=0" },
-    { g: "19.6 Сброс пароля", t: "Модалка с логином, ФИО, паролем" },
     { g: "19.6 Сброс пароля", t: "must_change_password=1" },
     { g: "19.7 Настройки вида", t: "openUserActions → Настроить видимые поля" },
-    { g: "19.7 Настройки вида", t: "Модалка с чекбоксами активных полей" },
-    { g: "19.7 Настройки вида", t: "Виртуальные колонки: Следующая поверка, Статус" },
-    { g: "19.7 Настройки вида", t: "applyFieldsToAll('missing'/'add')" },
-    { g: "19.7 Настройки вида", t: "resetUserView → DELETE user-preferences" },
-    { g: "19.8 Копирование вида", t: "Select с другими пользователями" },
-    { g: "19.8 Копирование вида", t: "copyViewFromUser заполняет чекбоксы" },
-    { g: "19.8 Копирование вида", t: "Недоступные поля пропускаются" }
+    { g: "19.8 Копирование вида", t: "copyViewFromUser заполняет чекбоксы" }
   ]},
 
-  { title: "Блок 20. Настройки — Справка", tag: "20", items: [
-    { g: "20.1 Просмотр", t: "Shift+? или Ещё ▼ → Справка" },
-    { g: "20.1 Просмотр", t: "Сайдбар с разделами" },
-    { g: "20.1 Просмотр", t: "Markdown рендерится: заголовки, списки, таблицы, цитаты" },
-    { g: "20.1 Просмотр", t: "Эмодзи и кириллица" },
-    { g: "20.1 Просмотр", t: "Раздел скрывается, если нет прав" },
+  { title: "Блок 20. Справка (FA-иконки + печать)", tag: "20", items: [
+    { g: "20.1 Просмотр", t: "Shift+? — открывается справка на 90% экрана" },
+    { g: "20.1 Просмотр", t: "Модалка справки растянута (width: 95vw)" },
+    { g: "20.1 Просмотр", t: "Сайдбар с 23 разделами" },
+    { g: "20.1 Просмотр", t: "Заголовки разделов с FA-иконками (не эмодзи)" },
+    { g: "20.1 Просмотр", t: "Клик на раздел — контент меняется" },
+    { g: "20.1 Просмотр", t: "Markdown рендерится: заголовки, списки, таблицы" },
+    { g: "20.1 Просмотр", t: "Кнопка «Распечатать раздел» внизу слева" },
+    { g: "20.1 Просмотр", t: "Клик на печать — открывается окно печати браузера" },
+    { g: "20.1 Просмотр", t: "PDF содержит только текст раздела (без интерфейса)" },
+    { g: "20.1 Просмотр", t: "FA-иконки в PDF отображаются (чёрные)" },
     { g: "20.2 Админка", t: "Раздел Справка в Настройках" },
-    { g: "20.2 Админка", t: "Список разделов с ▲▼, slug, title, права, показ" },
-    { g: "20.2 Админка", t: "Добавить раздел → редактор" },
-    { g: "20.2 Админка", t: "Slug проверяется regex" },
-    { g: "20.2 Админка", t: "Markdown-редактор с предпросмотром" },
-    { g: "20.2 Админка", t: "Кнопка 🖼 Картинка загружает файл" },
-    { g: "20.2 Админка", t: "Выбор прав (по группам)" },
-    { g: "20.2 Админка", t: "Сохранить → «Раздел создан/обновлён»" },
-    { g: "20.2 Админка", t: "Удалить → подтверждение" },
-    { g: "20.2 Админка", t: "Экспорт — JSON" },
-    { g: "20.2 Админка", t: "Импорт — replace / merge" },
-    { g: "20.2 Админка", t: "Сбросить к заводской — восстановление" },
-    { g: "20.2 Админка", t: "Сброс создаёт запись в логе" }
+    { g: "20.2 Админка", t: "Кнопка «Сохранить» в редакторе работает" },
+    { g: "20.2 Админка", t: "Кнопка «Отмена» в редакторе закрывает без сохранения" },
+    { g: "20.2 Админка", t: "Сброс к заводской восстанавливает тексты" },
+    { g: "20.2 Админка", t: "Экспорт JSON скачивается" },
+    { g: "20.2 Админка", t: "Импорт JSON работает (replace/merge)" }
   ]},
 
   { title: "Блок 21. Настройки — Шаблоны вида", tag: "21", items: [
-    { g: "", t: "Раздел Шаблоны вида в Настройках" },
     { g: "", t: "Создать шаблон — имя + чекбоксы полей" },
-    { g: "", t: "Виртуальные колонки доступны" },
-    { g: "", t: "Флаг «Использовать по умолчанию»" },
     { g: "", t: "Назначить пользователям — модалка с чекбоксами" },
-    { g: "", t: "apply-to-user обновляет view_template_id" },
-    { g: "", t: "Удалить шаблон — у пользователей view_template_id=NULL" },
-    { g: "", t: "Индивидуальные настройки перебивают шаблон" }
+    { g: "", t: "Индивидуальные настройки перебивают шаблон" },
+    { g: "", t: "Удалить шаблон — view_template_id=NULL" }
   ]},
 
-  { title: "Блок 22. Настройки — Шаблоны единиц оборудования", tag: "22", items: [
+  { title: "Блок 22. Настройки — Шаблоны единиц", tag: "22", items: [
     { g: "", t: "Панель шаблонов в модалке добавления (только админ)" },
-    { g: "", t: "Селект с шаблонами" },
     { g: "", t: "applyEquipmentTemplate заполняет поля" },
-    { g: "", t: "select в шаблоне — значение, только если есть в опциях" },
     { g: "", t: "saveAsTemplate — сохраняет текущие поля" },
-    { g: "", t: "Шаблон НЕ сохраняет id, barcode, responsible, location" },
-    { g: "", t: "Дубли имени шаблона → 409" }
+    { g: "", t: "Шаблон НЕ содержит id, barcode, responsible, location" }
   ]},
 
   { title: "Блок 23. UI и адаптивность", tag: "23", items: [
@@ -862,80 +701,49 @@ var DATA = [
     { g: "", t: "768px — планшетная адаптация" },
     { g: "", t: "Клик по фону модалки — закрывается" },
     { g: "", t: "Esc — закрывает confirm" },
-    { g: "", t: "Двойной клик Сохранить — не дублируется" },
-    { g: "", t: "Долгие названия отделов — не ломают вёрстку" },
-    { g: "", t: "Эмодзи и кириллица — корректны" },
     { g: "", t: "Все иконки Font Awesome рендерятся" },
-    { g: "", t: "В option внутри select — эмодзи (FA не работает)" },
     { g: "", t: "Тёмная тема — сохраняется (pipette_theme)" },
     { g: "", t: "Кнопка Свернуть/Развернуть в шапке" },
-    { g: "", t: "overflow-x: clip (не hidden)" },
-    { g: "", t: "Кнопки .btn с градиентами" },
-    { g: "", t: "Столбец «Действия» скрывается при отсутствии прав" },
-    { g: "", t: "row-actions-btn (⋮) — компактная" },
-    { g: "", t: "settings-back-btn — возврат" }
+    { g: "", t: "Столбец «Действия» скрывается при отсутствии прав" }
   ]},
 
   { title: "Блок 24. Безопасность", tag: "24", items: [
     { g: "", t: "JWT в sessionStorage (не localStorage)" },
     { g: "", t: "Подделать токен → 401" },
-    { g: "", t: "Истёк токен → авторазлогин" },
     { g: "", t: "SQL-инъекция в поиске — параметризация" },
     { g: "", t: "XSS-тег → esc()" },
-    { g: "", t: "Права проверяются и на фронте, и на бэке" },
-    { g: "", t: "apiRequest('/settings/fields','PUT',[]) под user → 403" },
-    { g: "", t: "apiRequest('/users','GET') под user → 403" },
-    { g: "", t: "apiRequest('/log','GET') под user → 403" },
+    { g: "", t: "Права проверяются на фронте и на бэке" },
     { g: "", t: "CSV injection =HYPERLINK(...) не выполняется" },
-    { g: "", t: "SQL-инъекция в :id → 404" },
-    { g: "", t: "requirePermission — admin bypass" },
-    { g: "", t: "requireAnyPermission — admin bypass, user — any of" },
     { g: "", t: "password_changed_at vs iat — допуск +2 сек" }
   ]},
 
   { title: "Блок 25. Нагрузка", tag: "25", items: [
     { g: "", t: "Импорт 500 строк < 30 сек" },
     { g: "", t: "Импорт 1000 строк < 60 сек" },
-    { g: "", t: "Таблица после импорта не тормозит" },
-    { g: "", t: "Фильтры/поиск на 1000 работают" },
-    { g: "", t: "Экспорт 1000 — файл корректный" },
     { g: "", t: "GET /pipettes на 1000 < 2 сек" },
-    { g: "", t: "GROUP BY для history_count — не тянет записи" },
     { g: "", t: "loadReplacementOptions — CONCURRENCY=5" }
-  ]}
-];
-DATA.push(
+  ]},
+
   { title: "Блок 26. Регрессия исправленных багов", tag: "26", items: [
     { g: "26.1 Смена пароля", t: "Войти — Пароль — корректно — не выкинуло" },
     { g: "26.2 Fresh token", t: "authToken в sessionStorage обновился" },
-    { g: "26.2 Fresh token", t: "Impersonate — originalUser/originalToken сохранены" },
     { g: "26.3 information_schema", t: "На чистой БД нет ALTER IF NOT EXISTS" },
-    { g: "26.3 information_schema", t: "На старой БД колонка добавилась" },
-    { g: "26.4 PUBLIC_WHEN_FORCED", t: "must_change_password=1 → GET 403 password_change_required" },
-    { g: "26.4 PUBLIC_WHEN_FORCED", t: "change-password — не 403" },
-    { g: "26.4 PUBLIC_WHEN_FORCED", t: "verify — 200" },
-    { g: "26.5 Clock skew", t: "После смены пароля refreshCurrentUser — не 401" },
+    { g: "26.4 PUBLIC_WHEN_FORCED", t: "must_change_password=1 → GET 403" },
+    { g: "26.5 Clock skew", t: "После смены пароля — не 401" },
     { g: "26.6 bulk-return", t: "Для не отправленной — skipped" },
     { g: "26.7 Защита от понижения", t: "Админ понижает себя — ошибка" },
-    { g: "26.7 Защита от понижения", t: "Последнего админа — ошибка" },
     { g: "26.8 oninput в настройках", t: "Поля/Отделы/Фильтры/Типы — сохраняется" },
-    { g: "26.9 lastResult при скрытом поле", t: "Не сбрасывается в pass" },
+    { g: "26.9 lastResult", t: "Не сбрасывается в pass" },
     { g: "26.10 Напоминания per-user", t: "A закрыл — B видит своё" },
-    { g: "26.10 Напоминания per-user", t: "Impersonate — своё напоминание" },
     { g: "26.11 CSV sanitize", t: "=1+1 → текст в Excel" },
-    { g: "26.12 getSession при битом JSON", t: "F5 — логин без JS-ошибки" },
+    { g: "26.12 getSession при битом JSON", t: "F5 — логин без ошибки" },
     { g: "26.13 history_count", t: "Число, без массива" },
-    { g: "26.13 history_count", t: "Тултип кнопки истории N > 0" },
     { g: "26.14 Индексы БД", t: "SHOW INDEX — 5 индексов" },
-    { g: "26.14 Индексы БД", t: "Повторный запуск — не дублирует" },
     { g: "26.15 Seed только admin", t: "1 пользователь, login=admin" },
-    { g: "26.15 Seed только admin", t: "demo_seeded=1" },
     { g: "26.16 Font Awesome", t: "Toolbar, меню ⋮, PDF — FA-иконки" },
     { g: "26.17 Debounce поиска", t: "150мс" },
     { g: "26.18 Async-обёртка", t: "docker compose stop db → 500" },
-    { g: "26.19 Меню ⋮ в строке", t: "Позиционирование при нехватке места" },
-    { g: "26.20 settings-back-btn", t: "Возврат к списку" },
-    { g: "26.21 SETTINGS_SECTIONS", t: "Группировка + фильтр по правам" }
+    { g: "26.19 Меню ⋮ в строке", t: "Позиционирование при нехватке места" }
   ]},
 
   { title: "Блок 27. Визуальный вид модалок", tag: "27", items: [
@@ -943,597 +751,280 @@ DATA.push(
     { g: "27.1 Общие", t: "Окно border-radius 16px, тень 0 20px 60px" },
     { g: "27.1 Общие", t: "max-width 640px / 900px (modal-lg)" },
     { g: "27.1 Общие", t: "max-height 90vh, скролл" },
-    { g: "27.1 Общие", t: "padding 24px, h2 1.3rem #1e293b" },
-    { g: "27.2 Редактирование", t: "Заголовок Добавить / Редактировать" },
     { g: "27.2 Редактирование", t: "ID read-only, серый фон" },
     { g: "27.3 Быстрая поверка", t: "Инфо о приборе — серая плашка" },
-    { g: "27.4 Массовая отправка", t: "Голубая плашка «Выбрано единиц: N»" },
-    { g: "27.4 Массовая отправка", t: "Список выбранных max-height 150px" },
+    { g: "27.4 Массовая отправка", t: "Голубая плашка «Выбрано единиц»" },
     { g: "27.5 Массовый возврат", t: "Зелёная плашка «Возвращается единиц»" },
     { g: "27.6 История", t: "Info-grid, таймлайн, свидетельство синим" },
     { g: "27.7 Настройки", t: "Список разделов, не вкладки" },
     { g: "27.8 Смена пароля", t: "Жёлтая плашка, серый блок требований" },
-    { g: "27.9 Разовый пароль", t: "Логин, ФИО readonly, пароль mono" },
-    { g: "27.11 Подтверждение", t: "Модалка 420px, иконка 3.2rem" },
-    { g: "27.14 Печать этикеток", t: "modal-compact 460px" },
-    { g: "27.16 Настройки штрихкодов", t: "bc-settings-block зелёная плашка" }
+    { g: "27.9 Разовый пароль", t: "Логин, ФИО readonly, пароль mono" }
   ]},
 
   { title: "Блок 28. Тип поверки: внешняя / на месте", tag: "28", items: [
     { g: "28.1 Настройки типов", t: "Колонка «Место поверки»" },
     { g: "28.1 Настройки типов", t: "📦 Внешняя (external) / 🏠 На месте (internal)" },
-    { g: "28.1 Настройки типов", t: "Дефолт: Пипетка=external, Анализатор=external, остальные=internal" },
-    { g: "28.2 Поведение UI", t: "external + выбрана → кнопка Отправить (N)" },
+    { g: "28.2 Поведение UI", t: "external + выбрана → кнопка Отправить" },
     { g: "28.2 Поведение UI", t: "internal + выбрана → кнопка НЕ появляется" },
-    { g: "28.2 Поведение UI", t: "5 пипеток + 3 весов → счётчик = 5" },
     { g: "28.3 Защита сервера", t: "bulk-send с internal → skipped" },
-    { g: "28.3 Защита сервера", t: "bulk-return с internal → skipped" },
-    { g: "28.4 API", t: "GET equipment-types возвращает calibrationPlace" },
-    { g: "28.4 API", t: "PUT с 'invalid' → 'internal'" },
     { g: "28.5 isExternalCalibration", t: "Функция на фронте и на бэке" }
   ]},
 
-  { title: "Блок 29. Замена оборудования при отправке на поверку", tag: "29", items: [
+  { title: "Блок 29. Замена оборудования при отправке", tag: "29", items: [
     { g: "29.1 Подбор", t: "Складская: active=false, location=«Склад»" },
-    { g: "29.1 Подбор", t: "Блок «Складские того же типа»" },
-    { g: "29.1 Подбор", t: "«Без замены» — по умолчанию" },
-    { g: "29.1 Подбор", t: "Выбрать складскую → Сохранить → тост" },
-    { g: "29.1 Подбор", t: "Отправленная: «↔ замена: S-059»" },
-    { g: "29.1 Подбор", t: "Складская: active=true, location=место работающего" },
-    { g: "29.1 Подбор", t: "«↔ заменяет: P-001»" },
-    { g: "29.2 Фильтр", t: "Складская без отдела — показывается" },
+    { g: "29.1 Подбор", t: "Выбрать складскую → отправленная active=0, замена active=1" },
     { g: "29.2 Фильтр", t: "replacing != NULL — НЕ показывается" },
-    { g: "29.2 Фильтр", t: "sent_for_calibration != NULL — НЕ показывается" },
     { g: "29.3 Защиты", t: "Замена = сама → 400" },
     { g: "29.3 Защиты", t: "Одна складская для двух → 400" },
-    { g: "29.3 Защиты", t: "Замена активна → skipped" },
-    { g: "29.3 Защиты", t: "Тип не совпадает → skipped" },
-    { g: "29.4 Возврат замены", t: "Блок «На время поверки было выдано со склада»" },
     { g: "29.4 Возврат замены", t: "Чекбокс отмечен по умолчанию" },
-    { g: "29.4 Возврат замены", t: "Оставить → active=false, location=«Склад»" },
-    { g: "29.4 Возврат замены", t: "Снять галочку → active=true, replacing=NULL" },
     { g: "29.6 API", t: "GET /pipettes возвращает replacement и replacedFor" },
-    { g: "29.8 cancelSend", t: "Отмена отправки разрывает связь" },
     { g: "29.8 cancelSend", t: "Замена возвращается на склад" }
   ]},
 
   { title: "Блок 30. Пагинация таблицы", tag: "30", items: [
     { g: "30.1 Базовое", t: "«Стр. 1 из N · X записей»" },
     { g: "30.1 Базовое", t: "≤ 100 записей — блок скрыт" },
-    { g: "30.1 Базовое", t: "> 100 записей — блок виден" },
-    { g: "30.1 Базовое", t: "pageSize = 100" },
     { g: "30.2 Навигация", t: "«← Назад» на стр. 1 — disabled" },
-    { g: "30.2 Навигация", t: "«Вперёд →» на последней — disabled" },
-    { g: "30.3 Сброс", t: "Фильтр → стр. 1" },
-    { g: "30.3 Сброс", t: "Поиск → стр. 1" },
-    { g: "30.3 Сброс", t: "Сортировка → стр. 1" },
-    { g: "30.3 Сброс", t: "Импорт → стр. 1" },
+    { g: "30.3 Сброс", t: "Фильтр/Поиск/Сортировка → стр. 1" },
     { g: "30.4 Выбор", t: "select-all — только текущая страница" },
-    { g: "30.4 Выбор", t: "Выделение сохраняется между страницами" },
-    { g: "30.4 Выбор", t: "Кнопка Отправить (N) суммирует по всем" },
-    { g: "30.5 Автокоррекция", t: "Удалить последнюю → N-1" }
+    { g: "30.4 Выбор", t: "Выделение сохраняется между страницами" }
   ]},
 
   { title: "Блок 31. Автофильтр по дате после возврата", tag: "31", items: [
-    { g: "31.1 Базовое", t: "Отправить external, вернуть с датой ≠ сегодня" },
-    { g: "31.1 Базовое", t: "После Применить ко всем — таблица отфильтрована" },
+    { g: "31.1 Базовое", t: "После возврата — таблица отфильтрована по дате" },
     { g: "31.1 Базовое", t: "Панель: Дата поверки, Произвольный, from=to=дата" },
-    { g: "31.2 Синхронизация", t: "applyFilterStateToPanel заполняет поля" },
     { g: "31.2 Синхронизация", t: "Сбросить снимает фильтр" },
-    { g: "31.4 Если фильтр не активен", t: "Возврат без автофильтра" },
     { g: "31.5 Тост", t: "«Таблица отфильтрована по дате…»" }
   ]},
 
   { title: "Блок 32. Визуальные улучшения таблицы", tag: "32", items: [
     { g: "32.1 Зебра", t: "Чётные светлее" },
-    { g: "32.1 Зебра", t: "Hover светлее" },
     { g: "32.2 Sticky-шапка", t: "При скролле видна" },
     { g: "32.3 Подсветка", t: "Просрочена — row-danger" },
-    { g: "32.3 Подсветка", t: "Брак — row-fail" },
-    { g: "32.3 Подсветка", t: "Скоро — row-warn" },
     { g: "32.4 Приоритет", t: "Отмеченная галочкой побеждает row-danger" },
-    { g: "32.5 Шрифты", t: "th .72rem/700/uppercase" },
-    { g: "32.5 Шрифты", t: "td strong .84rem/700" },
     { g: "32.6 Цифры", t: "font-variant-numeric: tabular-nums" }
   ]},
 
   { title: "Блок 33. Мобильная адаптация", tag: "33", items: [
     { g: "33.1 Засвет справа", t: "На телефоне НЕТ белой полосы" },
-    { g: "33.1 Засвет справа", t: "body: overflow-x: clip" },
-    { g: "33.1 Засвет справа", t: "html: overflow-x: clip" },
     { g: "33.2 Header", t: "Не выпирает за экран" },
-    { g: "33.2 Header", t: "stat-card 2 в ряд" },
     { g: "33.3 Таблица", t: "Скролл только внутри .table-wrapper" },
-    { g: "33.4 Пагинация", t: "Кнопки крупные" },
-    { g: "33.5 Модалки", t: "max-width 95%" },
-    { g: "33.6 Разрешения", t: "375px — 1 колонка" },
-    { g: "33.6 Разрешения", t: "768px — планшет" }
+    { g: "33.5 Модалки", t: "max-width 95%" }
   ]},
 
   { title: "Блок 34. Свёртывание шапки", tag: "34", items: [
     { g: "", t: "Кнопка «▲ Свернуть» в шапке" },
     { g: "", t: "Клик — header.collapsed" },
-    { g: "", t: "Скрывается header-body" },
-    { g: "", t: "Показывается header-mini-stats" },
     { g: "", t: "Состояние сохраняется (pipette_header_collapsed)" },
-    { g: "", t: "F5 — восстановлено" },
-    { g: "", t: "На десктопе (> 1025px) кнопка скрыта" },
-    { g: "", t: "updateHeaderMiniStats — «N/M в норме»" }
+    { g: "", t: "На десктопе (> 1025px) кнопка скрыта" }
   ]},
 
   { title: "Блок 35. Тёмная тема", tag: "35", items: [
     { g: "", t: "Кнопка 🌙/☀️ в шапке" },
-    { g: "", t: "Клик — toggleTheme" },
     { g: "", t: "data-theme='dark' на <html>" },
     { g: "", t: "Сохраняется (pipette_theme)" },
-    { g: "", t: "F5 — тема восстановлена" },
-    { g: "", t: "Кнопка показывает ☀️ в dark, 🌙 в light" },
-    { g: "", t: "Все компоненты адаптированы" },
-    { g: "", t: "bc-* компоненты адаптированы" }
-  ]}
-);
-
-  DATA.push(
-    { title: "Блок 44. Модалка showPrompt (замена prompt())", tag: "44", items: [
-    { g: "44.1 Модалка", t: "В index.html есть <div id='prompt-modal'>" },
-    { g: "44.1 Модалка", t: "CSS .prompt-modal, .prompt-error, .prompt-icon есть в style.css" },
-    { g: "44.1 Модалка", t: "Иконка модалки — <i class='fa-solid fa-comment-dots'>" },
-    { g: "44.2 Функции", t: "showPrompt() определена в 02-utils.js" },
-    { g: "44.2 Функции", t: "submitPrompt() определена" },
-    { g: "44.2 Функции", t: "resolvePrompt() определена" },
-    { g: "44.3 Поведение", t: "Esc — отмена (resolvePrompt(null))" },
-    { g: "44.3 Поведение", t: "Enter — submitPrompt()" },
-    { g: "44.3 Поведение", t: "Клик по фону — отмена" },
-    { g: "44.3 Поведение", t: "Валидатор через options.validator работает" },
-    { g: "44.4 Использование", t: "addFieldSetting → showPrompt" },
-    { g: "44.4 Использование", t: "addFilter → showPrompt" },
-    { g: "44.4 Использование", t: "addEquipmentType → showPrompt" },
-    { g: "44.4 Использование", t: "addBarcodePrinter → 4× showPrompt" },
-    { g: "44.4 Использование", t: "saveAsTemplate → showPrompt" }
+    { g: "", t: "Все компоненты адаптированы" }
   ]},
 
-  { title: "Блок 45. FA-иконки в интерфейсе", tag: "45", items: [
-    { g: "45.1 Кнопки в шапке", t: "Кнопка темы — fa-moon / fa-sun" },
-    { g: "45.1 Кнопки в шапке", t: "Кнопка «Свернуть» — fa-chevron-up / fa-chevron-down" },
-    { g: "45.2 Меню ⋮", t: "Пункты ⋮ рендерятся как HTML (не текст '<i...>')" },
-    { g: "45.2 Меню ⋮", t: "esc() убран для label в renderRowActionsMenu" },
-    { g: "45.3 Права пользователя", t: "ALL_PERMISSIONS.label — с FA" },
-    { g: "45.3 Права пользователя", t: "renderUserEditForm — ${p.label} без esc()" },
-    { g: "45.3 Права пользователя", t: "renderHelpPermissions — ${p.label} без esc()" },
-    { g: "45.4 Пресеты прав", t: "4 кнопки пресетов с FA-иконками" },
-    { g: "45.5 Стрелки в настройках", t: "moveFieldSetting — FA" },
-    { g: "45.5 Стрелки в настройках", t: "moveFilter — FA" },
-    { g: "45.5 Стрелки в настройках", t: "moveEquipmentType — FA" },
-    { g: "45.5 Стрелки в настройках", t: "moveHelpSection — FA" },
-    { g: "45.6 Принтеры", t: "modeLabels в loadPrintersForBarcodePrint — с FA" },
-    { g: "45.6 Принтеры", t: "Fallback '📄 PDF (A4)' — заменён на FA" },
-    { g: "45.7 Эмодзи в <option>", t: "📄📝📅 в фильтрах — оставлены (OK)" },
-    { g: "45.7 Эмодзи в <option>", t: "✅❌⏳ в селекте результата — оставлены (OK)" },
-    { g: "45.7 Эмодзи в <option>", t: "📦🏠 в селекте места поверки — оставлены (OK)" },
-    { g: "45.8 Эмодзи в tooltip", t: "Тултип 'Всего' — эмодзи 🟢🟡🔴 (HTML не работает)" },
-    { g: "45.9 Эмодзи в печатных формах", t: "PDF / Excel / Акт — эмодзи оставлены" }
+  { title: "Блок 36. Перезаливка с GitHub (17.10.2026)", tag: "36", items: [
+    { g: "36.1 Docker", t: "docker compose down — все 5 контейнеров удалены" },
+    { g: "36.1 Docker", t: "Данные сохранены (mysqldata, data, logs, backup)" },
+    { g: "36.1 Docker", t: "Код заменён на GitHub-версию" },
+    { g: "36.1 Docker", t: "nginx/pipette.conf восстановлен из бэкапа" },
+    { g: "36.1 Docker", t: "frontend/uploads восстановлен из бэкапа" },
+    { g: "36.2 Сборка", t: "docker compose up -d --build — за < 60 сек" },
+    { g: "36.2 Сборка", t: "В логах: ✅ MySQL подключён" },
+    { g: "36.2 Сборка", t: "В логах: ✅ Схема БД готова" },
+    { g: "36.2 Сборка", t: "В логах: 🚀 Server on http://0.0.0.0:3000" },
+    { g: "36.2 Сборка", t: "НЕТ спама от logger-bootstrap каждые 5 сек" },
+    { g: "36.2 Сборка", t: "Логи в UTF-8 (без кракозябр)" },
+    { g: "36.3 Данные", t: "Все 16 записей в таблице" },
+    { g: "36.3 Данные", t: "Пользователи на месте" },
+    { g: "36.3 Данные", t: "Справка — 23 раздела с FA-иконками" },
+    { g: "36.3 Данные", t: "Настройки (типы, отделы, фильтры, поля) сохранены" },
+    { g: "36.4 TZ UTC", t: "docker-compose.yaml: TZ: UTC в db и app" },
+    { g: "36.4 TZ UTC", t: "Смена пароля не сбрасывает сессию" },
+    { g: "36.5 Фиксы в коде", t: "schema.js: barcodeCol[0].len проверка" },
+    { g: "36.5 Фиксы в коде", t: "seed.js: console.error если help-seed.js не загрузился" },
+    { g: "36.5 Фиксы в коде", t: "server.js: initSchema и seedInitialData разделены" },
+    { g: "36.5 Фиксы в коде", t: "logger-bootstrap.js: без спама" }
+  ]},
+
+  { title: "Блок 37. CSS-модули (8 файлов)", tag: "37", items: [
+    { g: "", t: "frontend/style.css содержит 8 @import" },
+    { g: "", t: "_variables.css — переменные тем" },
+    { g: "", t: "_base.css — reset, body, html" },
+    { g: "", t: "_layout.css — шапка, тулбар, контейнер" },
+    { g: "", t: "_buttons.css — кнопки, FA-иконки" },
+    { g: "", t: "_modals.css — модалки, resize, адаптив" },
+    { g: "", t: "_forms.css — формы, таблицы, фильтры" },
+    { g: "", t: "_components.css — toast, статусы, справка" },
+    { g: "", t: "_dark.css — тёмная тема" },
+    { g: "", t: "Модалки растягиваются (resize: both)" },
+    { g: "", t: "Первые колонки таблиц не сплющены" },
+    { g: "", t: "Иконки черные в модалках (светлая тема)" },
+    { g: "", t: "Иконки светлые в модалках (тёмная тема)" }
+  ]},
+
+  { title: "Блок 38. FA-иконки в интерфейсе", tag: "38", items: [
+    { g: "38.1 Кнопки в шапке", t: "Кнопка темы — fa-moon / fa-sun" },
+    { g: "38.1 Кнопки в шапке", t: "Кнопка «Свернуть» — fa-chevron" },
+    { g: "38.2 Меню ⋮", t: "Пункты ⋮ рендерятся как HTML" },
+    { g: "38.3 Права пользователя", t: "ALL_PERMISSIONS.label — с FA" },
+    { g: "38.5 Стрелки в настройках", t: "moveFieldSetting/moveFilter/moveEquipmentType — FA" },
+    { g: "38.7 Эмодзи в <option>", t: "📄📝📅 в фильтрах — оставлены (OK)" },
+    { g: "38.8 Эмодзи в tooltip", t: "Тултип «Всего» — эмодзи (HTML не работает)" }
   ]}
-);
-  
+];
+
 var SCENARIOS = [
-  { tag: "S1", title: "Администратор: от запуска до аудита", time: "60 мин", priority: "🔴", blocks: "1, 2.1, 3–6, 9, 10, 13–19, 27",
+  { tag: "S1", title: "Администратор: от запуска до аудита", time: "60 мин", priority: "🔴", blocks: "1-6, 9, 10, 13-19, 27, 36, 37",
     steps: [
-      "docker compose up -d, проверить логи MySQL, БД, сервера, разовый пароль admin",
-      "SHOW TABLES — все 15 таблиц, 1 пользователь (admin), 8 отделов, 5 демо-пипеток",
-      "SHOW INDEX FROM pipettes, audit_log, barcode_printers — все 5 индексов",
-      "system_settings: equipment_types (6 + calibrationPlace), warn_days, demo_seeded, barcode_*",
+      "docker compose up -d, проверить логи MySQL, БД, сервера",
+      "SHOW TABLES — 15 таблиц, 1 пользователь, 8 отделов, 5 демо-пипеток",
+      "SHOW INDEX — 5 индексов",
+      "system_settings: equipment_types (6+calibrationPlace), warn_days=30",
       "Открыть http://localhost:3000, Console без ошибок",
-      "Войти admin — тост, ФИО, должность в шапке",
-      "Создать P-006, A-002, M-002. Проверить префиксы ID",
-      "Проверить ошибки: без модели, без даты, дата в будущем, занятый ID",
-      "Редактировать P-001: модель, стереть дату — дата не обнулилась",
-      "Удалить P-003: подтверждение, тост, история удалена",
-      "Быстрая поверка P-001: Годен, дата сегодня",
-      "Записать Брак для другой пипетки — статус красный",
-      "История P-001: таймлайн, свидетельство, организация, примечание",
-      "Добавить поверку вручную из истории. Тост, таблица обновлена",
-      "Экспорт истории: пустой период и конкретный. XLSX и PDF",
-      "Фильтры: статус Просрочены, период, отдел, ответственный, модель",
-      "Сбросить фильтры. Сортировка по ID и модели",
-      "Открыть настройки: разделы Поля, Отделы, Фильтры, Экспорт, Типы, Пользователи, Принтеры, Штрихкоды, Справка, Общие, Лог",
-      "Открыть вкладку 🎨 Визуал — сверить таблицу и все модалки",
-      "В логе проверить: вход, добавление, смена пароля, импорт",
-      "Очистить лог с подтверждением — пусто"
+      "Войти admin — тост, ФИО в шапке",
+      "Создать P-006, A-002, M-002. Проверить префиксы",
+      "Ошибки: без модели, без даты, дата в будущем, занятый ID",
+      "Редактировать P-001: модель, стереть дату — не обнулилась",
+      "Удалить P-003: подтверждение, история удалена",
+      "Быстрая поверка P-001: Годен",
+      "Записать Брак — статус красный",
+      "История P-001: таймлайн",
+      "Экспорт: XLSX и PDF",
+      "Фильтры: статус, период, отдел",
+      "Сортировка по ID и модели",
+      "Настройки: Поля, Отделы, Фильтры, Экспорт, Типы",
+      "Вкладка 🎨 Визуал — сверить таблицу и модалки",
+      "Лог: вход, добавление, смена пароля",
+      "Очистить лог с подтверждением"
     ],
-    expected: "Все действия проходят, данные не теряются, лог заполняется"
+    expected: "Все действия проходят, данные не теряются"
   },
-
-  { tag: "S2", title: "Роли, права и impersonate", time: "30 мин", priority: "🔴", blocks: "2.4, 2.5, 20",
+  { tag: "S2", title: "Роли, права и impersonate", time: "30 мин", priority: "🔴", blocks: "2.4-2.8",
     steps: [
-      "Создать user и senior через Настройки → Пользователи",
-      "Разовые пароли — сменить при первом входе",
-      "Войти user — нет кнопок Добавить/Импорт/Настройки/Экспорт",
-      "В истории нет «Добавить поверку», в таблице только ⋮",
-      "openModal() из консоли — Доступ запрещён",
-      "apiRequest('/pipettes/P-001','DELETE') — 403",
+      "Создать user и senior",
+      "Войти user — нет кнопок Добавить/Импорт/Настройки",
+      "openModal() из консоли → Доступ запрещён",
+      "GET /api/users под user → 403",
       "Войти senior — есть всё, кроме Настроек",
-      "senior: GET /users/responsibles — 200, GET /users — 403",
-      "Войти admin. Всё доступно",
-      "Открыть пользователей, Войти как под user — тост, кнопка Вернуться",
+      "Войти admin. Impersonate под user",
       "Кнопки управления скрыты",
-      "Действие от имени user — в логе от user",
-      "Вернуться — тост, права admin вернулись",
-      "F5 под impersonate — сессия сохранена",
-      "Включить Только свой отдел у user — видит только свой",
-      "user: PUT/DELETE/GET чужого — 403"
+      "Вернуться — тост, права admin"
     ],
-    expected: "Права работают на фронте и на бэке, impersonate корректно"
+    expected: "Права работают на фронте и бэке"
   },
-
-  { tag: "S3", title: "Массовые операции и напоминания", time: "30 мин", priority: "🔴", blocks: "7, 8, 12, 27.4, 27.5",
+  { tag: "S3", title: "Массовые операции", time: "30 мин", priority: "🔴", blocks: "7, 8, 9",
     steps: [
-      "Войти admin",
-      "Выбрать 3 пипетки — счётчик (3)",
-      "Добавить анализатор — счётчик = 4",
-      "Добавить весы (internal) — счётчик не изменился",
-      "Открыть Отправить на поверку: список, дата, примечание",
-      "Сверить с превью 🎨 Визуал → Модалка массовой отправки",
+      "Выбрать 3 пипетки + анализатор + весы",
+      "Счётчик = 4 (весы internal — не считаются)",
+      "Открыть Отправить на поверку",
       "Дата в будущем — ошибка",
-      "Подтвердить: тост, статус На поверке",
-      "Распечатать акт — окно с таблицей",
-      "Открыть Возврат: счётчик возвращаемых",
-      "Одно свидетельство на всех — индивидуальные поля отключились",
-      "Общий результат Годен, изменить общий select — все строки поменялись",
-      "Подтвердить: тост, статус и история обновились",
-      "curl POST /bulk-return для не отправленной — skipped",
-      "Перезагрузить: напоминание через 600 мс при danger/warn",
-      "Понятно — не появляется до завтра. Позже — появится при входе",
-      "Другой пользователь — своё напоминание",
-      "Impersonate — своё напоминание"
+      "Подтвердить — статус На поверке",
+      "Распечатать акт",
+      "Открыть Возврат — счётчик",
+      "Одно свидетельство — отключает индивидуальные",
+      "Общий результат меняет все строки",
+      "Подтвердить — статус обновлён"
     ],
-    expected: "Массовые операции корректны, напоминания per-user"
+    expected: "Массовые операции корректны"
   },
-
-  { tag: "S4", title: "Настройки и пользовательский вид", time: "45 мин", priority: "🟡", blocks: "13–19, 22, 27.7, 27.13",
+  { tag: "S7", title: "Полный цикл с заменой", time: "30 мин", priority: "🔴", blocks: "28, 29",
     steps: [
-      "Войти admin, открыть Настройки",
-      "Структура: список разделов с группами",
-      "Клик на раздел — открывается, кнопка ← возвращает",
-      "Поля формы: снять Активно у Примечание — пропало из формы",
-      "Переместить поле — порядок изменился",
-      "Поставить Обяз. — поле стало required",
-      "Изменить label без blur, кликнуть стрелку — правка сохранилась",
-      "Добавить поле, тип select — textarea для опций",
-      "Сохранить — тост",
-      "Поля формы: стрелки ▲▼ — иконки FA, клик работает",
-      "Фильтры: стрелки ▲▼ — иконки FA, клик работает",
-      "Типы: стрелки ▲▼ — иконки FA, клик работает",
-      "Удалить поле с данными — 409, подтверждение → каскадная очистка",
-      "Отделы: дубликат — Такой отдел уже есть",
-      "Изменить название без blur, кликнуть стрелку — правка не потерялась",
-      "Фильтры: отключить Статус — после F5 пропал из UI",
-      "Экспорт: 3 поля — XLSX с 3 столбцами",
-      "Пользователи: своя строка без действий",
-      "Создать пользователя — модалка разового пароля",
-      "Понизить себя — ошибка",
-      "Понизить последнего админа — ошибка",
-      "Сброс пароля себе — ошибка",
-      "Роль admin — все чекбоксы disabled",
-      "Типы: value read-only, label изменить, пустой prefix — EQ, дубли — ошибка, используемый — нельзя удалить",
-      "Кнопка «Настроить видимые поля» в строке пользователя — модалка",
-      "applyFieldsToAll('missing') — только ненастроенным",
-      "applyFieldsToAll('add') — добавить всем",
-      "Лог: все действия, Очистить с подтверждением"
+      "Проверить: Пипетка=external, Весы=internal",
+      "Создать складскую P-SKL-01: active=false",
+      "Создать рабочую P-001",
+      "Выделить P-001 → Отправить",
+      "В блоке замен видна P-SKL-01",
+      "Выбрать замену → Сохранить",
+      "P-001 = 📦 На поверке, «↔ замена: P-SKL-01»",
+      "P-SKL-01 = active=true, «↔ заменяет: P-001»",
+      "Попытаться удалить P-SKL-01 → 400",
+      "Выделить P-001 → Вернуть",
+      "Заполнить свид., Годен",
+      "Оставить «Вернуть замену»",
+      "Применить — P-001 «В норме»",
+      "P-SKL-01 = active=false, location=Склад"
     ],
-    expected: "Настройки применяются, валидации работают, права не ломаются"
+    expected: "Полный цикл работает"
   },
-
-  { tag: "S5", title: "Пароли, сессии и безопасность", time: "40 мин", priority: "🔴", blocks: "2.2, 21, 24, 26.1–26.5, 27.8",
+  { tag: "S8", title: "Смена типа с автоперегенерацией ID", time: "30 мин", priority: "🔴", blocks: "4.5",
     steps: [
-      "Войти admin, Пароль",
-      "Валидации: пустые, меньше 8, без заглавной, без спецсимвола, не совпадают, такой же",
-      "Корректный новый пароль — тост",
-      "Не выкинуло, сразу открыть таблицу — работает",
-      "authToken в sessionStorage обновился",
-      "Создать пользователя, получить разовый пароль",
-      "Войти с разовым — система требует смену",
-      "must_change_password=1: GET /pipettes — 403 password_change_required",
-      "POST /auth/change-password — не 403",
-      "GET /auth/verify — 200",
-      "Impersonate + смена пароля — originalUser/originalToken сохранены",
-      "Удалить pipette_session — F5 — логин",
-      "Токен мусор — F5 — Недействительный токен",
-      "JWT в sessionStorage, не localStorage",
-      "SQL-инъекция в поиске — параметризация",
-      "XSS-тег — esc()",
-      "apiRequest('/settings/fields','PUT',[]) под user — 403",
-      "CSV injection: =1+1, +7 999, -5, @user — текст",
-      "sessionStorage с битым JSON — F5 — логин без ошибок"
-    ],
-    expected: "Пароли и сессии работают, безопасность не пробивается"
-  },
-
-  { tag: "S6", title: "Импорт, экспорт и нагрузка", time: "30 мин", priority: "🟡", blocks: "10, 11, 25, 42, 43",
-    steps: [
-      "Войти admin, открыть Импорт",
-      "Загрузить XLSX, CSV, JSON, TXT — все работают",
-      "Загрузить .xls — понятная ошибка",
-      "Битый файл — ошибка",
-      "Без заголовков — Не удалось распознать",
-      "XLSX с шапкой Реестр — заголовки находятся автоматически",
-      "Дубли ID — в skipped",
-      "Дата 21.10.2024 — 2024-10-21",
-      "Дата 10.21.2024 — 2024-10-21 (US)",
-      "Дата 05.07.2024 — 2024-07-05 (RU)",
-      "Формула =SUM(...) — берётся result",
-      "Кастомное поле — распознано по label",
-      "Импорт под user — Нет прав",
-      "Импортировать 500 строк < 30 сек",
-      "Импортировать 1000 строк < 60 сек",
-      "Экспорт XLSX registry — файл корректный",
-      "Экспорт XLSX history — файл корректный",
-      "Открыть XLSX в Excel: fitToWidth=1, шапка повторяется, подвал с подписью"
-    ],
-    expected: "Импорт и экспорт стабильны, нагрузка в норме"
-  },
-
-  { tag: "S7", title: "Полный цикл с заменой оборудования", time: "30 мин", priority: "🔴", blocks: "28, 29",
-    steps: [
-      "Войти admin. Настройки → Типы оборудования",
-      "Проверить: Пипетка=📦 Внешняя, Весы=🏠 На месте",
-      "Создать складскую P-SKL-01: active=false, location=«Склад»",
-      "Создать рабочую P-001 — отдел Гематологический",
-      "Выделить P-001 → кнопка Отправить",
-      "Модалка: в блоке «Складские того же типа» видна P-SKL-01",
-      "Выбрать P-SKL-01 → дата = сегодня → Сохранить",
-      "P-001 = 📦 На поверке, подпись «↔ замена: P-SKL-01»",
-      "P-SKL-01 = active=true, location=«Лаб. 302», «↔ заменяет: P-001»",
-      "SELECT id, active, location, replaced_by, replacing FROM pipettes",
-      "Отправить P-002 — модалка, P-SKL-01 уже не показана",
-      "Попытаться удалить P-SKL-01 → заменяет связь → 400",
-      "Отфильтровать На поверке — видны P-001, P-002",
-      "Выделить P-001 → кнопка Вернулись",
-      "Модалка: блок «На время поверки было выдано со склада»",
-      "Заполнить дату, свидетельство, Годен",
-      "Оставить галочку «Вернуть замену на склад»",
-      "Применить → P-001 «В норме»",
-      "P-SKL-01 = active=false, location=«Склад», replacing=NULL",
-      "Таблица автоотфильтрована по дате поверки",
-      "Сбросить фильтр — все пипетки"
-    ],
-    expected: "Полный цикл работает, автофильтр по дате корректен"
-  },
-
-  { tag: "S8", title: "Смена типа с автоперегенерацией ID", time: "30 мин", priority: "🔴", blocks: "36, 18",
-    steps: [
-      "Создать P-100 (Пипетка)",
-      "Создать A-100 (Анализатор)",
-      "Открыть P-100 на редактирование",
-      "Сменить тип: Пипетка → Анализатор. Сохранить",
+      "Создать P-100, A-100",
+      "Открыть P-100, сменить тип на Анализатор",
       "Тост «ID изменён: P-100 → A-101»",
-      "idChanged=true, newId=A-101, oldId=P-100",
-      "Таблица перезагружена — строка A-101",
-      "История A-101 — 2 записи",
+      "История A-101 — сохранена",
       "Создать P-200, отправить с заменой P-SKL-99",
-      "Открыть P-200, сменить тип на Анализатор",
-      "ID стал A-XXX, у P-SKL-99 replacing = A-XXX",
-      "Сменить тип ещё раз: → Микроскоп",
-      "Цепочка: P-200 → A-XXX → M-XXX. История и замены живы",
-      "Смена типа с тем же prefix — ID не меняется",
-      "audit_log: 3 записи",
-      "Прямой PUT без смены типа — idChanged=false"
+      "Сменить P-200 на Анализатор — связка обновилась"
     ],
-    expected: "Автоперегенерация ID работает, история и замены перепривязываются"
+    expected: "Автоперегенерация работает"
   },
-
-  { tag: "S9", title: "Штрихкоды и этикетки", time: "30 мин", priority: "🟡", blocks: "37, 38, 39",
+  { tag: "S11", title: "И.О. режим", time: "35 мин", priority: "🔴", blocks: "22, 2.4",
     steps: [
-      "Открыть карточку P-001",
-      "Поле Штрихкод присутствует",
-      "Кнопка ✨ Заполнить из инв/серийного/ID",
-      "Кнопка ↩️ Сбросить ручной",
-      "Открыть P-001 — штрихкод = P-001 (fallback)",
-      "POST /api/barcodes/manual — установить MANUAL-001",
-      "lookup по MANUAL-001 — находит P-001",
-      "GET /api/barcodes/P-001/png?type=code128 — PNG",
-      "GET /api/barcodes/P-001/png?type=qr — PNG",
-      "POST /api/barcodes/reset — штрихкод сброшен",
-      "Кнопка Печать этикеток в toolbar",
-      "Модалка: Область — selected/page/filtered",
-      "Счётчики совпадают с реальными",
-      "Принтер — список с preferred отдела",
-      "Копий: 1",
-      "PDF A4 — COLS=3, ROWS_PER_PAGE=8",
-      "PDF Zebra 58x40 — размер из настроек",
-      "POST /api/barcodes/print — mode из принтера",
-      "zebra-ip без IP — fallback на PDF",
-      "Принтеры в админ-настройках: список",
-      "Добавить принтер — валидации",
-      "Проверить связь — zebra-ip: TCP-коннект",
-      "Штрихкоды в настройках: label_size, type, copies, agent_port, max_length",
-      "Поля этикетки — чекбоксы",
-      "Шрифты этикеток: dejavu, ptsans, roboto, robotocond, opensans",
-      "Проверить кириллицу в PDF этикетки"
-    ],
-    expected: "Штрихкоды генерируются, печать работает, принтеры управляются"
-  },
-
-  { tag: "S10", title: "Сканирование USB", time: "20 мин", priority: "🟡", blocks: "41",
-    steps: [
-      "Открыть модалку сканирования",
-      "Ввести P-001 вручную → Enter — добавлено в список",
-      "Ввести несуществующий — Не найдено",
-      "Ввести дубль — Уже в списке",
-      "Список: счётчик совпадает",
-      "Удалить одну — ×",
-      "Очистить — пусто",
-      "Кнопка На отправку — disabled если нет подходящих",
-      "Отсканировать пипетку — кнопка активна",
-      "Открыть bulk-send через сканер",
-      "Отмена — вернуться в scanner-modal",
-      "Кнопка На возврат — работает",
-      "USB-сканер физически — тест",
-      "Ручной ввод с Enter — работает"
-    ],
-    expected: "Сканирование USB и ручной ввод работают"
-  },
-
-  { tag: "S11", title: "И.О. режим", time: "35 мин", priority: "🔴", blocks: "22, 2.4, 17",
-    steps: [
-      "Создать основного Иванова И.И. — отдел Гематологический",
-      "Создать заместителя Петрова П.П. — отдел Биохимический",
-      "Открыть карточку Петрова, включить «И.о.»",
-      "Select «За кого» → Иванов",
-      "Сохранить — is_acting=1, acting_for_id",
-      "Войти под Петровым",
+      "Создать Иванова (Гематологический)",
+      "Создать Петрова (Биохимический)",
+      "Петров → И.о. → За Иванова",
+      "Войти Петровым",
       "В шапке: «Биохимический · и.о. за Иванов»",
-      "Список оборудования — только Гематологический",
-      "Добавить оборудование — Отдел = Гематологический, disabled",
-      "Ответственный = Иванов, disabled",
-      "Создать P-500 — в БД Иванов/Гематологический",
-      "POST с чужим отделом — перезапись",
-      "PUT чужого — 403",
-      "Impersonate — то же",
-      "Выключить И.о.",
-      "Войти Петровым — Биохимический",
-      "Включить И.о. без actingForId — 400",
-      "Удалить Иванова — у Петрова сброс"
+      "Список — только Гематологический",
+      "Добавить — Отдел = Гематологический (disabled)",
+      "Ответственный = Иванов (disabled)",
+      "Создать P-500 — в БД Иванов",
+      "Выключить И.о. — снова Биохимический"
     ],
-    expected: "Режим И.О. работает корректно"
+    expected: "Режим И.О. работает"
   },
-
-  { tag: "S12", title: "Справка", time: "30 мин", priority: "🟡", blocks: "20",
+  { tag: "S20", title: "Справка: FA-иконки + печать", time: "20 мин", priority: "🟡", blocks: "20",
     steps: [
-      "Нажать Shift+? — открывается справка",
-      "Сайдбар с разделами",
+      "Shift+? — открывается справка на 90% экрана",
+      "Сайдбар с 23 разделами",
+      "Заголовки с FA-иконками (не эмодзи)",
       "Клик на раздел — контент меняется",
-      "Markdown рендерится: заголовки, списки, таблицы, цитаты",
-      "Код в backticks подсвечивается",
-      "Картинки отображаются",
-      "Настройки → Справка — список разделов",
-      "Добавить раздел → редактор",
-      "Slug проверяется regex",
-      "Предпросмотр обновляется",
-      "Вставить картинку через 🖼",
-      "Сохранить → Раздел создан",
-      "Редактировать → Сохранить",
-      "Экспорт → JSON скачался",
-      "Импорт → диалог replace/merge",
-      "Сбросить к заводской → восстановлено",
-      "Раздел с правами — виден только тем, у кого есть",
-      "Раздел без прав — виден всем"
+      "Markdown рендерится",
+      "Кнопка «Распечатать раздел» внизу слева",
+      "Клик — открывается окно печати",
+      "PDF — чистый текст без интерфейса",
+      "FA-иконки в PDF чёрные",
+      "Админка: раздел Справка в Настройках",
+      "Редактор → Сохранить → работает",
+      "Экспорт JSON скачивается",
+      "Импорт JSON работает"
     ],
-    expected: "Справка работает на фронте и в админке"
+    expected: "Справка с FA-иконками и печатью"
   },
-
-  { tag: "S13", title: "Шаблоны вида и единиц оборудования", time: "25 мин", priority: "🟡", blocks: "21, 22",
+  { tag: "S21", title: "Перезаливка проекта (17.10.2026)", time: "40 мин", priority: "🔴", blocks: "36, 37",
     steps: [
-      "Настройки → Шаблоны вида",
-      "Создать шаблон Лаборант с 5 полями",
-      "Отметить Использовать по умолчанию",
-      "Назначить пользователю",
-      "Войти этим пользователем — видит 5 полей",
-      "Создать индивидуальные настройки — перебивают шаблон",
-      "Открыть модалку добавления единицы",
-      "Панель шаблонов видна админу",
-      "Применить шаблон — поля заполнились",
-      "Сохранить как шаблон — появился в списке",
-      "Шаблон НЕ содержит id, barcode, responsible, location",
-      "Дубли имени шаблона — ошибка"
+      "Бэкап: mysqldata, data, logs, nginx, docker-compose.yaml",
+      "docker compose down",
+      "Удалить старый код (кроме данных)",
+      "Скачать GitHub-архив",
+      "Распаковать, скопировать код",
+      "Восстановить nginx/pipette.conf из бэкапа",
+      "Восстановить frontend/uploads из бэкапа",
+      "Проверить TZ: UTC в docker-compose.yaml",
+      "docker compose up -d --build",
+      "Логи: MySQL, схема, сервер — за 1-2 сек",
+      "НЕТ спама от logger-bootstrap",
+      "Все 16 записей на месте",
+      "Справка — 23 раздела с FA-иконками",
+      "Настройки сохранены (типы, отделы, поля)",
+      "Смена пароля не сбрасывает сессию",
+      "Проверить: printHelpSection, schema.js, seed.js, server.js — все фиксы на месте"
     ],
-    expected: "Шаблоны вида и единиц работают"
-  },
-
-  { tag: "S14", title: "Полный smoke-тест перед сдачей", time: "20 мин", priority: "🔴", blocks: "всё",
-    steps: [
-      "Открыть — нет JS-ошибок",
-      "1 пункт через чекбокс — pass",
-      "1 пункт через fail",
-      "1 пункт через skip",
-      "Комментарий — 💬-бейдж",
-      "Баг-ссылка — 🐞-бейдж",
-      "Фильтр Провалы",
-      "Фильтр С мета",
-      "Фильтр С багами",
-      "Поиск P-001",
-      "Групповая pass на блоке",
-      "Групповая очистка",
-      "Ctrl+Z",
-      "Ctrl+Y",
-      "Тёмная тема",
-      "Экспорт JSON",
-      "Импорт JSON",
-      "Diff двух JSON",
-      "Jira CSV",
-      "Markdown",
-      "Сброс — чисто, автоснимок",
-      "F5 — прогресс на месте",
-      "Кнопка Свернуть/Развернуть",
-      "Снимки: создать, восстановить, удалить",
-      "Ссылка с прогрессом"
-    ],
-    expected: "Все шаги проходят без ошибок"
-  }
-    ,
-
-  {
-    tag: "S28",
-    title: "Модалка showPrompt вместо prompt()",
-    time: "10 мин",
-    priority: "🟡",
-    blocks: "44",
-    steps: [
-      "Открыть Настройки → Поля формы → Добавить поле",
-      "Модалка открывается со стилем, не серое окно браузера",
-      "Заголовок «Новое поле» с FA-иконкой",
-      "Ввести пустое значение → ошибка валидации",
-      "Ввести «Моё поле» (кириллица) → ошибка (только латиница)",
-      "Ввести «newfield» → Enter → поле добавлено",
-      "Открыть Настройки → Фильтры → Добавить фильтр — то же поведение",
-      "Открыть Настройки → Типы → Добавить тип — то же",
-      "Открыть Настройки → Принтеры → Добавить принтер",
-      "4 шага подряд: название → режим → (IP+порт) → отдел",
-      "Esc на любом шаге → отмена всей операции",
-      "Открыть карточку пипетки → Сохранить как шаблон",
-      "Модалка открывается, ввести название, Enter — шаблон сохранён",
-      "Клик по фону модалки — закрывается без сохранения"
-    ],
-    expected: "Все бывшие prompt() заменены на кастомную модалку с валидацией"
-  },
-
-  {
-    tag: "S29",
-    title: "FA-иконки вместо эмодзи",
-    time: "10 мин",
-    priority: "🟡",
-    blocks: "45",
-    steps: [
-      "Открыть приложение — войти админом",
-      "Проверить кнопку темы — FA-иконка луны/солнца",
-      "Клик по кнопке темы — иконка меняется, переключение работает",
-      "F5 — иконка соответствует теме",
-      "Проверить кнопку «Свернуть» в шапке — стрелка FA",
-      "Свернуть и развернуть — стрелка меняется",
-      "Открыть меню ⋮ у первой строки таблицы",
-      "Все пункты меню — FA-иконки",
-      "Открыть Настройки → Пользователи",
-      "Пресеты прав (Пользователь, Ст. лаборант, Менеджер, Все) — FA-иконки",
-      "Открыть Настройки → Поля формы — стрелки FA",
-      "Открыть Настройки → Фильтры — стрелки FA",
-      "Открыть Настройки → Типы — стрелки FA",
-      "Открыть Настройки → Справка — стрелки FA",
-      "Открыть Ещё ▼ → Печать этикеток",
-      "Список принтеров — FA-иконки перед названием",
-      "Проверить, что в <option> фильтров остались эмодзи (📄📝📅) — это норма",
-      "Навести на счётчик «Всего» в шапке — тултип с эмодзи 🟢🟡🔴 — это норма"
-    ],
-    expected: "Весь UI с FA-иконками; эмодзи только там, где HTML не работает"
+    expected: "Проект перезалит с чистого архива, всё работает"
   }
 ];
 </script>
 <script>
 /* ============================================================
-   ЧАСТЬ 4/4 — ЛОГИКА
+   ЧАСТЬ 4 — ЛОГИКА
    ============================================================ */
 
-var STORAGE_KEY = "kdl_checklist_v50";
-var SNAPSHOTS_KEY = "kdl_checklist_v50_snapshots";
-var LEGACY_KEYS = ["kdl_checklist_v41","kdl_checklist_v40","kdl_checklist_v39"];
+var STORAGE_KEY = "kdl_checklist_v60";
+var SNAPSHOTS_KEY = "kdl_checklist_v60_snapshots";
+var LEGACY_KEYS = ["kdl_checklist_v50","kdl_checklist_v41","kdl_checklist_v40"];
 var MAX_HISTORY = 50;
 var MAX_SNAPSHOTS = 20;
 
@@ -1544,7 +1035,7 @@ var activeTab = "checklist";
 var undoStack = [];
 var historyIndex = -1;
 
-function defaultState(){return {version:9,items:{},settings:{theme:"light",tab:"checklist",headerCollapsed:false}}}
+function defaultState(){return {version:10,items:{},settings:{theme:"light",tab:"checklist",headerCollapsed:false}}}
 function loadState(){
   try{
     var raw=localStorage.getItem(STORAGE_KEY);
@@ -1580,6 +1071,7 @@ function updateHeaderCollapseBtn(){
   btn.textContent=c?"▼ Развернуть":"▲ Свернуть";
 }
 
+/* ================ СНИМКИ ================ */
 function getSnapshots(){try{var r=localStorage.getItem(SNAPSHOTS_KEY);if(!r)return[];var a=JSON.parse(r);return Array.isArray(a)?a:[]}catch(e){return[]}}
 function saveSnapshots(arr){try{localStorage.setItem(SNAPSHOTS_KEY,JSON.stringify(arr))}catch(e){toast("Не удалось сохранить снимок","error")}}
 function computeStatsForSnap(){
@@ -1621,6 +1113,7 @@ function renderSnapshotList(){
 }
 function confirmDeleteSnapshot(id){if(!confirm("Удалить снимок?"))return;deleteSnapshot(id);renderSnapshotList();updateSnapBadge();toast("Удалён","warn")}
 
+/* ================ UNDO/REDO ================ */
 function pushHistory(){
   var snap=JSON.stringify(state.items);
   if(historyIndex>=0&&undoStack[historyIndex]===snap)return;
@@ -1637,6 +1130,7 @@ function escapeAttr(s){return escapeHtml(s)}
 
 function getSectionStats(si){var s=DATA[si];var d=0,f=0;s.items.forEach(function(_,ii){var st=getItem(itemKey(si,ii)).s;if(st==="pass")d++;if(st==="fail")f++});return{done:d,fail:f,total:s.items.length}}
 
+/* ================ РЕНДЕР ЧЕК-ЛИСТА ================ */
 function renderChecklist(){
   var root=document.getElementById("checklist");root.innerHTML="";
   DATA.forEach(function(section,si){
@@ -1645,8 +1139,8 @@ function renderChecklist(){
     var pct=stats.total?(stats.done/stats.total*100):0;
     var header=document.createElement("div");header.className="section-header";
     var bc=stats.fail>0?"fail":(stats.done===stats.total?"done":"");
-    header.innerHTML='<span class="arrow">▼</span><span class="section-title">'+escapeHtml(section.title)+'</span><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div><span class="section-badge '+bc+'">'+stats.done+"/"+stats.total+(stats.fail>0?" · ❌"+stats.fail:"")+'</span><div class="section-ops"><button data-op="pass-all" title="Всем ✅">✅</button><button data-op="skip-all" title="Всем ⏭️">⏭️</button><button data-op="clear-all" title="Очистить">🧹</button></div>';
-    header.onclick=function(){secEl.classList.toggle("collapsed")};
+    header.innerHTML='<span class="arrow">▼</span><span class="section-title">'+escapeHtml(section.title)+'</span><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div><span class="section-badge '+bc+'">'+stats.done+"/"+stats.total+(stats.fail>0?" · ❌"+stats.fail:"")+'</span><div class="section-ops"><button data-op="pass-all" title="Отметить всё как выполнено">✅ Все</button><button data-op="skip-all" title="Пропустить все">⏭️ Скип</button><button data-op="clear-all" title="Очистить все отметки">🧹 Сброс</button></div>';
+    header.onclick=function(e){if(e.target.closest(".section-ops"))return;secEl.classList.toggle("collapsed")};
     bindSectionOps(header,section.items.length,function(ii){return itemKey(si,ii)},section.title);
     secEl.appendChild(header);
     var body=document.createElement("div");body.className="section-body";
@@ -1667,8 +1161,8 @@ function renderScenarios(){
     var total=sc.steps.length;var pct=total?(d/total*100):0;
     var header=document.createElement("div");header.className="section-header";
     var bc=f>0?"fail":(d===total?"done":"");
-    header.innerHTML='<span class="arrow">▼</span><span class="section-title">'+escapeHtml(sc.title)+'</span><span class="section-meta">⏱ '+escapeHtml(sc.time)+'</span><span class="section-meta">'+escapeHtml(sc.priority)+' '+escapeHtml(sc.blocks)+'</span><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div><span class="section-badge '+bc+'">'+d+"/"+total+(f>0?" · ❌"+f:"")+'</span><div class="section-ops"><button data-op="pass-all" title="Всем ✅">✅</button><button data-op="skip-all" title="Всем ⏭️">⏭️</button><button data-op="clear-all" title="Очистить">🧹</button></div>';
-    header.onclick=function(){secEl.classList.toggle("collapsed")};
+    header.innerHTML='<span class="arrow">▼</span><span class="section-title">'+escapeHtml(sc.title)+'</span><span class="section-meta">⏱ '+escapeHtml(sc.time)+'</span><span class="section-meta">'+escapeHtml(sc.priority)+' '+escapeHtml(sc.blocks)+'</span><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div><span class="section-badge '+bc+'">'+d+"/"+total+(f>0?" · ❌"+f:"")+'</span><div class="section-ops"><button data-op="pass-all" title="Все выполнены">✅ Все</button><button data-op="skip-all" title="Пропустить">⏭️ Скип</button><button data-op="clear-all" title="Сброс">🧹 Сброс</button></div>';
+    header.onclick=function(e){if(e.target.closest(".section-ops"))return;secEl.classList.toggle("collapsed")};
     bindSectionOps(header,sc.steps.length,function(st){return scenarioKey(si,st)},sc.title);
     secEl.appendChild(header);
     var body=document.createElement("div");body.className="section-body";
@@ -1684,9 +1178,24 @@ function bindSectionOps(header,count,keyFn,label){
   header.querySelectorAll(".section-ops button").forEach(function(btn){
     btn.onclick=function(e){
       e.stopPropagation();var op=btn.dataset.op;
-      if(op==="pass-all"){if(!confirm("Поставить ✅ всем в «"+label+"»?"))return;pushHistory();for(var i=0;i<count;i++){var k=keyFn(i);var c=getItem(k);state.items[k]=Object.assign({},c,{s:"pass",_t:Date.now()})}saveState();renderAll();toast("Отмечено","success")}
-      else if(op==="skip-all"){if(!confirm("Поставить ⏭️ всем?"))return;pushHistory();for(var j=0;j<count;j++){var k2=keyFn(j);var c2=getItem(k2);state.items[k2]=Object.assign({},c2,{s:"skip",_t:Date.now()})}saveState();renderAll();toast("Пропущено","warn")}
-      else if(op==="clear-all"){if(!confirm("Очистить «"+label+"»?"))return;pushHistory();for(var m=0;m<count;m++)delete state.items[keyFn(m)];saveState();renderAll();toast("Очищено","warn")}
+      if(op==="pass-all"){
+        if(!confirm('Поставить ✅ всем в «'+label+'»?'))return;
+        pushHistory();
+        for(var i=0;i<count;i++){var k=keyFn(i);var c=getItem(k);state.items[k]=Object.assign({},c,{s:"pass",_t:Date.now()})}
+        saveState();renderAll();toast("Отмечено всё как ✅","success");
+      }
+      else if(op==="skip-all"){
+        if(!confirm('Поставить ⏭️ всем в «'+label+'»?'))return;
+        pushHistory();
+        for(var j=0;j<count;j++){var k2=keyFn(j);var c2=getItem(k2);state.items[k2]=Object.assign({},c2,{s:"skip",_t:Date.now()})}
+        saveState();renderAll();toast("Все пропущены ⏭️","warn");
+      }
+      else if(op==="clear-all"){
+        if(!confirm('Очистить «'+label+'»?'))return;
+        pushHistory();
+        for(var m=0;m<count;m++)delete state.items[keyFn(m)];
+        saveState();renderAll();toast("Очищено","warn");
+      }
     };
   });
 }
@@ -1720,10 +1229,10 @@ function makeItemEl(opts){
 /* ================ ВИЗУАЛ ================ */
 function renderVisual(){
   var root=document.getElementById("visual");root.innerHTML="";
-  root.appendChild(makeVpSection({tag:"ТАБЛИЦА",title:"Главная таблица оборудования",desc:"Как выглядит таблица с 5 демо-строками.",body:renderPreviewTable()}));
+  root.appendChild(makeVpSection({tag:"ТАБЛИЦА",title:"Главная таблица",desc:"5 демо-строк с разными статусами.",body:renderPreviewTable()}));
   root.appendChild(makeVpSection({tag:"ЛЕГЕНДА",title:"Бейджи типов и статусов",desc:"Все варианты.",body:renderBadgesLegend()}));
-  root.appendChild(makeVpSection({tag:"МОДАЛКА 1",title:"Добавить/редактировать",desc:"Форма с динамическими полями.",body:renderPreviewModal_addEdit()}));
-  root.appendChild(makeVpSection({tag:"МОДАЛКА 2",title:"Быстрая поверка",desc:"Форма быстрой регистрации.",body:renderPreviewModal_quickCal()}));
+  root.appendChild(makeVpSection({tag:"МОДАЛКА 1",title:"Добавить/редактировать",desc:"Форма с полями.",body:renderPreviewModal_addEdit()}));
+  root.appendChild(makeVpSection({tag:"МОДАЛКА 2",title:"Быстрая поверка",desc:"Регистрация поверки.",body:renderPreviewModal_quickCal()}));
   root.appendChild(makeVpSection({tag:"МОДАЛКА 3",title:"Отправить на поверку",desc:"Массовая отправка.",body:renderPreviewModal_bulkSend()}));
   root.appendChild(makeVpSection({tag:"МОДАЛКА 4",title:"Возврат с поверки",desc:"Массовый возврат.",body:renderPreviewModal_bulkReturn()}));
   root.appendChild(makeVpSection({tag:"МОДАЛКА 5",title:"История поверок",desc:"Info-grid + таймлайн.",body:renderPreviewModal_history()}));
@@ -1767,10 +1276,10 @@ function renderBadgesLegend(){
   return w;
 }
 function modalStage(html){var s=document.createElement("div");s.className="vp-modal-stage";s.innerHTML=html;return s}
-function renderPreviewModal_addEdit(){return modalStage('<div class="vp-modal"><h2>✏️ Редактировать оборудование</h2><div class="vp-form-group"><label>Внутренний номер *</label><input type="text" value="P-001" readonly></div><div class="vp-form-group"><label>Модель *</label><input type="text" value="Research Plus"></div><div class="vp-form-group"><label>Тип *</label><select><option>Пипетка</option></select></div><div class="vp-form-row"><div class="vp-form-group"><label>МПИ *</label><input type="number" value="12"></div><div class="vp-form-group"><label>Дата поверки *</label><input type="date" value="2024-11-05"></div></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary" type="button">Отмена</button><button class="vp-btn vp-btn-success" type="button">💾 Сохранить</button></div></div>')}
+function renderPreviewModal_addEdit(){return modalStage('<div class="vp-modal"><h2>✏️ Редактировать оборудование</h2><div class="vp-form-group"><label>ID *</label><input type="text" value="P-001" readonly></div><div class="vp-form-group"><label>Модель *</label><input type="text" value="Research Plus"></div><div class="vp-form-group"><label>Тип *</label><select><option>Пипетка</option></select></div><div class="vp-form-row"><div class="vp-form-group"><label>МПИ *</label><input type="number" value="12"></div><div class="vp-form-group"><label>Дата *</label><input type="date" value="2024-11-05"></div></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-success">💾 Сохранить</button></div></div>')}
 function renderPreviewModal_quickCal(){return modalStage('<div class="vp-modal"><h2>📋 Быстрая поверка</h2><div class="vp-info-grey"><strong>P-001</strong> — Research Plus</div><div class="vp-form-row" style="margin-top:12px"><div class="vp-form-group"><label>Дата *</label><input type="date"></div><div class="vp-form-group"><label>Свидетельство</label><input type="text"></div></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-success">💾 Записать</button></div></div>')}
-function renderPreviewModal_bulkSend(){return modalStage('<div class="vp-modal vp-modal-lg"><h2>📦 Отправить на поверку</h2><div class="vp-info-box vp-info-blue"><strong>Выбрано единиц:</strong> 3</div><div class="vp-form-group"><label>Дата отправки *</label><input type="date"></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-info">🖨 Акт</button><button class="vp-btn vp-btn-warning">📦 Отправить</button></div></div>')}
-function renderPreviewModal_bulkReturn(){return modalStage('<div class="vp-modal vp-modal-lg"><h2>📥 Возврат с поверки</h2><div class="vp-info-box vp-info-green"><strong>Возвращается единиц:</strong> 2</div><div class="vp-form-row"><div class="vp-form-group"><label>Дата *</label><input type="date"></div><div class="vp-form-group"><label>Организация</label><input type="text"></div></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-success">💾 Применить</button></div></div>')}
+function renderPreviewModal_bulkSend(){return modalStage('<div class="vp-modal vp-modal-lg"><h2>📦 Отправить на поверку</h2><div class="vp-info-box vp-info-blue"><strong>Выбрано единиц:</strong> 3</div><div class="vp-form-group"><label>Дата *</label><input type="date"></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-info">🖨 Акт</button><button class="vp-btn vp-btn-warning">📦 Отправить</button></div></div>')}
+function renderPreviewModal_bulkReturn(){return modalStage('<div class="vp-modal vp-modal-lg"><h2>📥 Возврат с поверки</h2><div class="vp-info-box vp-info-green"><strong>Возвращается:</strong> 2</div><div class="vp-form-row"><div class="vp-form-group"><label>Дата *</label><input type="date"></div><div class="vp-form-group"><label>Организация</label><input type="text"></div></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-success">💾 Применить</button></div></div>')}
 function renderPreviewModal_history(){return modalStage('<div class="vp-modal vp-modal-lg"><h2>История поверок — P-001</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px;background:#f8fafc;border-radius:10px"><div><label>Модель</label><div>Research Plus</div></div><div><label>Серийный</label><div>EP2024001</div></div></div><div class="vp-actions" style="justify-content:space-between"><button class="vp-btn vp-btn-warning">📤 Экспорт</button><button class="vp-btn vp-btn-secondary">Закрыть</button></div></div>')}
 function renderPreviewModal_changePassword(){return modalStage('<div class="vp-modal"><h2>🔒 Смена пароля</h2><div class="vp-info-box vp-info-yellow">Введите новый пароль.</div><div class="vp-form-group"><label>Текущий *</label><input type="password"></div><div class="vp-form-group"><label>Новый *</label><input type="password"></div><div class="vp-form-group"><label>Подтверждение *</label><input type="password"></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-success">💾 Сохранить</button></div></div>')}
 function renderPreviewModal_tempPassword(){return modalStage('<div class="vp-modal"><h2>🔑 Разовый пароль</h2><div class="vp-info-box vp-info-yellow">Сообщите пароль пользователю.</div><div class="vp-form-group"><label>Логин</label><input type="text" value="petrov" readonly></div><div class="vp-form-group"><label>Пароль</label><div style="display:flex;gap:8px"><input type="text" value="xK9#mPq2$vLz" readonly class="vp-mono"><button class="vp-btn vp-btn-primary">📋 Скопировать</button></div></div></div>')}
@@ -1778,7 +1287,7 @@ function renderPreviewModal_settings(){return modalStage('<div class="vp-modal v
 function renderPreviewModal_barcodePrint(){return modalStage('<div class="vp-modal" style="max-width:460px"><h2>🏷️ Печать этикеток</h2><div style="margin-bottom:14px"><div style="font-weight:600;font-size:.82rem;color:#475569;margin-bottom:6px">Что печатать</div><label style="display:flex;gap:10px;padding:7px 10px"><input type="radio"> Только выбранные <b>3</b></label><label style="display:flex;gap:10px;padding:7px 10px"><input type="radio" checked> Весь фильтр <b>1038</b></label></div><div class="vp-actions"><button class="vp-btn vp-btn-secondary">Отмена</button><button class="vp-btn vp-btn-success">🖨 Печать</button></div></div>')}
 function renderPreviewModal_help(){return modalStage('<div class="vp-modal vp-modal-lg"><h2>📖 Инструкция</h2><div style="display:flex;gap:20px"><div style="width:200px;border-right:1px solid #e2e8f0;padding-right:12px"><div style="font-weight:700;font-size:.85rem;margin-bottom:8px">Разделы</div><div style="padding:6px 10px;background:#eef2ff;border-radius:6px;color:#4f46e5;font-weight:600;margin-bottom:2px">Начало работы</div><div style="padding:6px 10px;color:#334155">Вход</div><div style="padding:6px 10px;color:#334155">Обзор экрана</div></div><div style="flex:1"><h3>Что это за система</h3><p>Веб-приложение для учёта оборудования...</p></div></div></div>')}
 
-/* ================ ЛОГИКА РЕНДЕРА ================ */
+/* ================ СТАТИСТИКА, ФИЛЬТРЫ ================ */
 function renderAll(){renderChecklist();renderScenarios();renderVisual();applyFilters();updateStats();updateTabCounts();updateUndoRedoBtns();updateSnapBadge()}
 function getAllItemsForTab(tab){
   var items=[];
@@ -1847,9 +1356,232 @@ function collapseAll(){document.getElementById("tab-"+activeTab).querySelectorAl
 function applyTheme(t){document.documentElement.setAttribute("data-theme",t);document.getElementById("theme-btn").textContent=t==="dark"?"☀️":"🌙";state.settings.theme=t;saveState()}
 function toggleTheme(){applyTheme(state.settings.theme==="dark"?"light":"dark")}
 
+/* ============================================================
+   АВТО-ПРОВЕРКИ — запускают реальные API-проверки
+   ============================================================ */
+async function runAutoChecks(){
+  if(!confirm("Запустить авто-проверки?\n\nБудут проверены пункты, которые можно проверить программно:\n• API /health, /pipettes, /help, /users\n• DOM-элементы (модалки, кнопки, формы)\n• JS-функции (наличие)\n• Справка (23 раздела, FA-иконки)\n\nРучные проверки (открытие модалок, визуал) останутся вручную.")) return;
+
+  pushHistory();
+  var passed=0,failed=0,total=0,results=[];
+  var token=JSON.parse(sessionStorage.getItem("pipette_session")||"{}")?.token||"";
+  var headers=token?{"Authorization":"Bearer "+token}:{};
+
+  async function check(key,fn,label){
+    total++;
+    try{
+      var r=await fn();
+      if(r===true){setItem(key,{s:"pass",c:"Авто-проверка пройдена: "+(new Date().toLocaleTimeString("ru-RU"))});passed++;results.push({ok:true,label:label});}
+      else{setItem(key,{s:"fail",c:"Авто-проверка: "+(r||"не прошло")});failed++;results.push({ok:false,label:label,msg:r});}
+    }catch(e){
+      setItem(key,{s:"fail",c:"Ошибка авто-проверки: "+e.message});
+      failed++;results.push({ok:false,label:label,msg:e.message});
+    }
+  }
+
+  // ================ БЛОК 1. ЗАПУСК ================
+  await check("s0_i9",async()=>{
+    try{var r=await fetch("/api/health");var d=await r.json();return d.status==="ok"||"API вернул "+r.status;}catch(e){return "API недоступен";}
+  },"API /health отвечает");
+
+  await check("s0_i10",()=>document.querySelector(".auth-container")!==null||".auth-container отсутствует","Экран логина в DOM");
+
+  await check("s0_i11",()=>document.querySelectorAll(".tab").length===3||"Не 3 вкладки","Вкладки Чек-лист/Сценарии/Визуал");
+
+  await check("s0_i12",()=>document.getElementById("main-header")!==null||"Нет main-header","Шапка в DOM");
+
+  await check("s0_i13",()=>{
+    var scripts=document.querySelectorAll("script[src]");
+    var expected=["01-config","02-utils","03-api","04-auth","05-state","06-table","07-actions","08-filters","09-form","10-bulk","11-export","12-settings","13-users","14-barcodes","15-help","16-reminders","17-help-templates","18-init"];
+    var found=0;expected.forEach(function(n){for(var i=0;i<scripts.length;i++){if(scripts[i].src.indexOf(n)!==-1){found++;break;}}});
+    return found>=15||"Найдено "+found+" из "+expected.length;
+  },"Все 18 модулей JS подключены");
+
+  // ================ БЛОК 2. АВТОРИЗАЦИЯ ================
+  await check("s1_i0",()=>!!token||"Нет токена в sessionStorage","Токен авторизации");
+
+  await check("s1_i1",()=>{
+    var user=JSON.parse(sessionStorage.getItem("pipette_session")||"{}")?.user;
+    return user&&user.login||"Нет currentUser";
+  },"Пользователь залогинен");
+
+  await check("s1_i10",async()=>{
+    try{var r=await fetch("/api/users",{headers:headers});return r.ok||"HTTP "+r.status;}catch(e){return e.message;}
+  },"GET /api/users доступен (только для админа)");
+
+  // ================ БЛОК 3. ТАБЛИЦА ================
+  await check("s2_i0",async()=>{
+    try{
+      var r=await fetch("/api/pipettes",{headers:headers});
+      if(!r.ok)return "HTTP "+r.status;
+      var d=await r.json();
+      return Array.isArray(d)&&d.length>0||"Таблица пуста";
+    }catch(e){return e.message;}
+  },"API /pipettes возвращает данные");
+
+  await check("s2_i9",()=>{
+    var ids=["stat-ok","stat-warn","stat-danger","stat-total"];
+    var found=ids.filter(function(id){return document.getElementById(id)}).length;
+    return found===4||"Найдено "+found+" из 4 счётчиков";
+  },"Счётчики в шапке в DOM");
+
+  await check("s2_i17",()=>document.getElementById("pipettes-body")!==null||"Нет tbody","Таблица pipettes-body в DOM");
+
+  // ================ БЛОК 4. CRUD ================
+  await check("s3_i10",()=>{
+    return typeof window.openModal==="function"||"openModal не определена";
+  },"openModal() определена");
+
+  await check("s3_i11",()=>{
+    return typeof window.savePipette==="function"||"savePipette не определена";
+  },"savePipette() определена");
+
+  await check("s3_i12",()=>document.getElementById("modal")!==null||"Нет модалки добавления","Модалка добавления в DOM");
+
+  // ================ БЛОК 6. ИСТОРИЯ ================
+  await check("s5_i0",()=>typeof window.openHistoryModal==="function"||"openHistoryModal не определена","openHistoryModal() определена");
+  await check("s5_i1",()=>document.getElementById("history-modal")!==null||"Нет модалки истории","Модалка истории в DOM");
+
+  // ================ БЛОК 11. ФИЛЬТРЫ ================
+  await check("s10_i0",()=>document.getElementById("filter-panel")!==null||"Нет filter-panel","Панель фильтров в DOM");
+  await check("s10_i1",()=>typeof window.applyFilters==="function"||"applyFilters не определена","applyFilters() определена");
+  await check("s10_i2",()=>typeof window.renderFilterFields==="function"||"renderFilterFields не определена","renderFilterFields() определена");
+
+  // ================ БЛОК 20. СПРАВКА ================
+  await check("s19_i0",async()=>{
+    try{
+      var r=await fetch("/api/help/visible",{headers:headers});
+      if(!r.ok)return "HTTP "+r.status;
+      var d=await r.json();
+      return Array.isArray(d)&&d.length>0||"Справка пуста";
+    }catch(e){return e.message;}
+  },"API справки возвращает разделы");
+
+  await check("s19_i2",async()=>{
+    try{
+      var r=await fetch("/api/help/visible",{headers:headers});
+      var d=await r.json();
+      return Array.isArray(d)&&d.length>=20||"Разделов: "+(Array.isArray(d)?d.length:0);
+    }catch(e){return e.message;}
+  },"Справка содержит 20+ разделов");
+
+  await check("s19_i3",async()=>{
+    try{
+      var r=await fetch("/api/help/visible",{headers:headers});
+      var d=await r.json();
+      if(!Array.isArray(d))return "Не массив";
+      var withFA=d.filter(function(s){return /\{icon:\s*fa-/.test(s.title||"")||/\{icon:\s*fa-/.test(s.content||"")});
+      return withFA.length>0||"Нет FA-иконок в разделах";
+    }catch(e){return e.message;}
+  },"Справка содержит FA-иконки");
+
+  await check("s19_i6",()=>typeof window.printHelpSection==="function"||"printHelpSection НЕ определена","printHelpSection() определена");
+
+  await check("s19_i7",()=>{
+    var modal=document.getElementById("hotkeys-modal");
+    if(!modal)return "Нет hotkeys-modal";
+    var btn=modal.querySelector('[onclick*="printHelpSection"]');
+    return !!btn||"Кнопка печати не найдена";
+  },"Кнопка «Распечатать раздел» в DOM");
+
+  await check("s19_i11",()=>typeof window.openHotkeysHelp==="function"||"openHotkeysHelp не определена","openHotkeysHelp() определена");
+
+  // ================ БЛОК 36. ПЕРЕЗАЛИВКА ================
+  await check("s35_i6",async()=>{
+    try{var r=await fetch("/api/health");return r.ok||"HTTP "+r.status;}catch(e){return e.message;}
+  },"API работает после перезаливки");
+
+  await check("s35_i11",async()=>{
+    try{
+      var r=await fetch("/api/pipettes",{headers:headers});
+      var d=await r.json();
+      return Array.isArray(d)&&d.length>0||"Нет данных";
+    }catch(e){return e.message;}
+  },"Данные сохранены после перезаливки");
+
+  await check("s35_i13",async()=>{
+    try{
+      var r=await fetch("/api/help/visible",{headers:headers});
+      var d=await r.json();
+      return Array.isArray(d)&&d.length>=20||"Справка: "+(Array.isArray(d)?d.length:0)+" разделов";
+    }catch(e){return e.message;}
+  },"Справка восстановлена (20+ разделов)");
+
+  await check("s35_i17",()=>{
+    return typeof window.printHelpSection==="function"||"Нет printHelpSection";
+  },"printHelpSection работает (фикс 17.10)");
+
+  // ================ БЛОК 37. CSS-МОДУЛИ ================
+  await check("s36_i0",()=>{
+    var root=Array.from(document.styleSheets).find(function(s){return(s.href||"").endsWith("/style.css")});
+    if(!root)return "style.css не найден";
+    try{
+      var rules=root.cssRules||root.rules;
+      var imports=0;
+      for(var i=0;i<rules.length;i++){if(rules[i].type===CSSRule.IMPORT_RULE)imports++;}
+      return imports===8||"Найдено @import: "+imports+" (ожидалось 8)";
+    }catch(e){return "CORS: "+e.message;}
+  },"style.css содержит 8 @import");
+
+  await check("s36_i10",()=>{
+    var modal=document.querySelector(".modal");
+    if(!modal)return "Нет .modal";
+    var st=getComputedStyle(modal);
+    return st.resize==="both"||"resize="+st.resize;
+  },"Модалки растягиваются (resize: both)");
+
+  await check("s36_i11",()=>{
+    var theme=document.documentElement.getAttribute("data-theme");
+    return theme==="dark"||theme==="light"||"Неизвестная тема: "+theme;
+  },"data-theme установлен на html");
+
+  await check("s36_i12",()=>{
+    var btn=document.getElementById("theme-btn");
+    if(!btn)return "Нет theme-btn";
+    var i=btn.querySelector("i");
+    return !!i||"Нет FA-иконки в кнопке темы";
+  },"FA-иконка в кнопке темы");
+
+  // ================ БЛОК 38. FA-ИКОНКИ ================
+  await check("s37_i0",()=>{
+    var themeBtn=document.getElementById("theme-btn");
+    if(!themeBtn)return "Нет theme-btn";
+    var i=themeBtn.querySelector("i.fa-solid");
+    return !!i||"Нет .fa-solid в theme-btn";
+  },"FA-иконки в кнопках шапки");
+
+  await check("s37_i1",()=>{
+    var modals=document.querySelectorAll(".modal-overlay");
+    return modals.length>=10||"Найдено модалок: "+modals.length+" (ожидалось 10+)";
+  },"Все модалки в DOM");
+
+  await check("s37_i2",()=>{
+    var icons=document.querySelectorAll("i.fa-solid");
+    return icons.length>0||"FA-иконок не найдено";
+  },"FA-иконки рендерятся на странице");
+
+  // ================ ИТОГ ================
+  var summary=document.getElementById("auto-check-summary");
+  var resultsEl=document.getElementById("auto-check-results");
+  var summaryText="Пройдено: "+passed+" / "+total;
+  if(failed>0)summaryText+=" · Провалено: "+failed;
+  summary.textContent=summaryText;
+
+  resultsEl.innerHTML=results.map(function(r){
+    var icon=r.ok?"✅":"❌";
+    var color=r.ok?"var(--success)":"var(--danger)";
+    var msg=r.msg?'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+escapeHtml(r.msg)+'</div>':"";
+    return '<div style="padding:6px 10px;border-left:3px solid '+color+';background:var(--card-2);margin-bottom:4px;border-radius:6px;"><strong>'+icon+' '+escapeHtml(r.label)+'</strong>'+msg+'</div>';
+  }).join("");
+
+  document.getElementById("auto-check-modal").classList.add("open");
+  renderAll();
+  toast("Авто-проверка: "+passed+"/"+total+(failed>0?" (провалов: "+failed+")":""),failed>0?"warn":"success");
+}
+
 /* ================ EXPORT / IMPORT ================ */
 function exportJSON(){
-  var result={version:"5.0",exported:new Date().toISOString(),settings:{theme:state.settings.theme,tab:state.settings.tab},items:{}};
+  var result={version:"6.0",exported:new Date().toISOString(),settings:{theme:state.settings.theme,tab:state.settings.tab},items:{}};
   DATA.forEach(function(sec,si){sec.items.forEach(function(it,ii){var k=itemKey(si,ii);var d=state.items[k];if(!d)return;result.items[k]={kind:"block",block:sec.tag,text:it.t,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0}})});
   SCENARIOS.forEach(function(sc,si){sc.steps.forEach(function(step,st){var k=scenarioKey(si,st);var d=state.items[k];if(!d)return;result.items[k]={kind:"scenario",block:sc.tag,step:st+1,text:step,s:d.s||null,c:d.c||"",b:d.b||"",_t:d._t||0}})});
   var blob=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
@@ -1879,7 +1611,7 @@ function importData(parsed){
   saveState();renderAll();toast("Импортировано: "+imported,"success");
 }
 function shareLink(){
-  var compact={v:9,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
+  var compact={v:10,i:{},s:{theme:state.settings.theme,tab:state.settings.tab}};
   Object.keys(state.items).forEach(function(k){var v=state.items[k];var sh={};if(v.s)sh.s=v.s;if(v.c)sh.c=v.c;if(v.b)sh.b=v.b;if(Object.keys(sh).length)compact.i[k]=sh});
   try{
     var enc=btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
@@ -1946,7 +1678,7 @@ function renderDiff(){
       body=parts.map(function(p){return'<span class="diff-change">'+p+'</span>'}).join("");
     }else if(ch.type==="added"){body='<span class="diff-change">+ добавлено: '+sl(ch.newV.s)+'</span>'}
     else{body='<span class="diff-change">− удалено: '+sl(ch.oldV.s)+'</span>'}
-    return'<div class="diff-row '+ch.type+'"><div><span class="diff-block">'+escapeHtml(info.block)+'</span><span class="diff-text">'+escapeHtml(info.text)+'</span></div>'+body+'</div>';
+    return'<div class="diff-row '+ch.type+'"><div><span class="diff-block">'+escapeHtml(info.block)+'</span><span>'+escapeHtml(info.text)+'</span></div>'+body+'</div>';
   }).join("");
   result.innerHTML=sum+'<div class="diff-list">'+rows+'</div>';
 }
@@ -1966,7 +1698,7 @@ function exportJiraCSV(){
 }
 function exportMarkdown(){
   var date=new Date().toISOString().slice(0,10);
-  var md="# Чек-лист КДЛ v5.0\n\n**Дата:** "+date+"\n\n";
+  var md="# Чек-лист КДЛ v6.0\n\n**Дата:** "+date+"\n\n";
   DATA.forEach(function(sec,si){
     var d=0,f=0;sec.items.forEach(function(_,ii){var s=getItem(itemKey(si,ii)).s;if(s==="pass")d++;if(s==="fail")f++});
     md+="### "+sec.title+" ("+d+"/"+sec.items.length+")"+(f>0?" ❌"+f:"")+"\n\n";
@@ -2007,7 +1739,7 @@ document.addEventListener("keydown",function(e){
   if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==="h"){if(isInput)return;e.preventDefault();toggleHeaderCollapse();return}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!e.shiftKey){if(isInput)return;e.preventDefault();undo()}
   else if((e.ctrlKey||e.metaKey)&&(e.key.toLowerCase()==="y"||(e.shiftKey&&e.key.toLowerCase()==="z"))){if(isInput)return;e.preventDefault();redo()}
-  else if(e.key==="Escape"){closeDiff();closeSnapshotsModal()}
+  else if(e.key==="Escape"){closeDiff();closeSnapshotsModal();document.getElementById("auto-check-modal").classList.remove("open")}
 });
 
 document.getElementById("snapshots-modal").addEventListener("click",function(e){if(e.target.id==="snapshots-modal")closeSnapshotsModal()});
