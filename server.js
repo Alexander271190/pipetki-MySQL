@@ -104,10 +104,15 @@ async function waitForDatabase(maxAttempts = 90) {
 
   if (connected) {
     try {
-      const seeded = await db.initSchema();
+      await db.initSchema();
       console.log('✅ Схема БД готова');
-      if (seeded) {
-        console.log('👤 Начальные пользователи и данные созданы');
+      try {
+        const seeded = await db.seedInitialData();
+        if (seeded) {
+          console.log('👤 Начальные пользователи и данные созданы');
+        }
+      } catch (seedErr) {
+        console.error('⚠️ Ошибка seed (схема создана):', seedErr.message);
       }
     } catch (e) {
       console.error('❌ Ошибка инициализации схемы:', e);
@@ -128,10 +133,15 @@ async function waitForDatabase(maxAttempts = 90) {
         console.log('✅ MySQL подключён (отложенное подключение)');
 
         try {
-          const seeded = await db.initSchema();
+          await db.initSchema();
           console.log('✅ Схема БД готова');
-          if (seeded) {
-            console.log('👤 Начальные пользователи и данные созданы');
+          try {
+            const seeded = await db.seedInitialData();
+            if (seeded) {
+              console.log('👤 Начальные пользователи и данные созданы');
+            }
+          } catch (seedErr) {
+            console.error('⚠️ Ошибка seed (схема создана):', seedErr.message);
           }
         } catch (e) {
           console.error('❌ Ошибка инициализации схемы:', e);
