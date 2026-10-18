@@ -205,6 +205,7 @@ const BULK_MAX_ROWS = 100;
 
 async function openModal(id) {
   await refreshCurrentUser();
+  if (!requirePasswordChange()) return;
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const tabsEl = document.getElementById('add-tabs');
@@ -698,6 +699,7 @@ async function deletePipette(id) {
 // ============================================================
 async function openQuickCalModal(id) {
    await refreshCurrentUser();
+  if (!requirePasswordChange()) return;
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const p = pipettes.find(x => x.id === id);
   if (!p) { showToast('Оборудование не найдено', 'error'); return; }
