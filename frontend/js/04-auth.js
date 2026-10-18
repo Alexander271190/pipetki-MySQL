@@ -150,6 +150,16 @@ function canManagePrinters(){ return hasPermission('manage_printers'); }
 function canViewLog()       { return hasPermission('view_log'); }
 function canViewHistory()   { return true; }
 
+// 🆕 Проверка необходимости смены пароля для блокировки других действий
+function requirePasswordChange() {
+  if (currentUser && (currentUser.mustSetPassword || currentUser.mustChangePassword)) {
+    const mode = currentUser.mustSetPassword ? 'setup' : 'change';
+    openChangePasswordModal(true, mode);
+    return false;
+  }
+  return true;
+}
+
 // ============================================================
 // ВХОД / ВЫХОД
 // ============================================================
