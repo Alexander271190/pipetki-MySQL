@@ -777,18 +777,17 @@ function openChangePasswordModal(force, mode = 'change') {
 
   if (modal) modal.dataset.mode = mode;
 
-    const isImpersonatingNow = isImpersonating();
+   const isImpersonatingNow = isImpersonating();
   
-  // 🆕 Если смена пароля принудительная (mustChange/mustSet) и мы не в режиме имперсонации — прячем кнопку «Отмена/Позже»
-  const isForced = (currentUser && (currentUser.mustSetPassword || currentUser.mustChangePassword)) && !isImpersonatingNow;
-  const reallyForce = force || isForced;
+  // 🆕 Если мы в режиме имперсонации (админ зашел под юзером), ВСЕГДА показываем кнопку «Позже»,
+  // чтобы админ не застрял. Иначе — скрываем, если смена принудительная.
+  const reallyForce = !isImpersonatingNow && (force || (currentUser && (currentUser.mustSetPassword || currentUser.mustChangePassword)));
 
   if (cancelBtn) {
-    // Прячем кнопку, если это принудительная смена
     cancelBtn.style.display = reallyForce ? 'none' : 'inline-flex';
-    cancelBtn.textContent = (force && isImpersonatingNow) ? 'Позже' : 'Отмена';
+    // 🆕 Если мы под другим пользователем — кнопка всегда называется «Позже»
+    cancelBtn.textContent = isImpersonatingNow ? 'Позже' : 'Отмена';
   }
-
   if (modal) modal.classList.add('active');
   const focusTarget = isSetup ? newInput : currentInput;
   if (focusTarget) setTimeout(() => focusTarget.focus(), 100);
