@@ -6,3 +6,6 @@ mysqldata
 data
 .env
 *.md
+logs
+*.log
+backups
