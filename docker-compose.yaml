@@ -34,6 +34,12 @@ services:
       retries: 20
       start_period: 60s
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # ═══════════════════════════════════════════════════════════
   # app — Node.js приложение
   # Порт 3000 наружу НЕ пробрасывается.
@@ -56,20 +62,8 @@ services:
       DB_USER: pipette
       DB_PASSWORD: Seno16/1978S
       JWT_SECRET: 7f3a9c2e8b1d4f6a0e5c7b9d2f4a6c8e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a
-      # 🆕 Логирование без правок кода
-      NODE_OPTIONS: "-r /app/logger-bootstrap.js"
-      LOG_DIR: "/app/logs"
-    
-    volumes:
-      - ./logs:/app/logs
-      - ./frontend:/app/frontend
-      - ./routes:/app/routes
-      - ./middleware:/app/middleware
-      - ./server.js:/app/server.js
-      - ./db:/app/db
-      - ./utils:/app/utils
-      - ./help-seed.js:/app/help-seed.js
-      
+      # 🧹 Очистка audit_log (90 дней, работает автоматически)
+      AUDIT_LOG_RETENTION_DAYS: "90"
 
     depends_on:
       db:
@@ -82,6 +76,12 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ═══════════════════════════════════════════════════════════
   # nginx — HTTPS-терминация + reverse proxy
@@ -112,6 +112,12 @@ services:
       timeout: 5s
       retries: 3
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # ═══════════════════════════════════════════════════════════
   # certbot — получение + автообновление SSL-сертификатов
   # Каждые 12 часов: certbot renew → HUP nginx (graceful reload)
@@ -137,3 +143,9 @@ services:
           sleep 12h & wait $${!}
         done
       '
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
