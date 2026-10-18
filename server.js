@@ -119,9 +119,17 @@ async function waitForDatabase(maxAttempts = 90) {
     }
   }
 
-  app.listen(PORT, () => {
+    app.listen(PORT, () => {
     console.log(`🚀 Server on http://0.0.0.0:${PORT}`);
   });
+
+  // 🧹 Очистка audit_log (из коробки)
+  try {
+    const { startCleanupScheduler } = require('./utils/cleanup');
+    startCleanupScheduler();
+  } catch (e) {
+    console.error('⚠️ Cleanup scheduler не запущен:', e.message);
+  }
 
   // Если БД не поднялась при старте — пытаемся догнать её фоном
   if (!connected) {
