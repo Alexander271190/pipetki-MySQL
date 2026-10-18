@@ -541,18 +541,38 @@ async function saveBulkRows(e) {
     return;
   }
 
+   const bulkFieldIds = new Set(_bulkFields.map(f => f.id));
   const errors = [];
+  
   _bulkRows.forEach((r, i) => {
     const n = i + 1;
-    if (!String(r.model || '').trim())            errors.push(`Строка ${n}: модель`);
-    if (!String(r.lastCalibration || '').trim())  errors.push(`Строка ${n}: дата поверки`);
-    if (!String(r.responsible || '').trim())      errors.push(`Строка ${n}: ответственный`);
+    if (bulkFieldIds.has('model') && !String(r.model || '').trim()) errors.push(`Строка ${n}: модель`);
+    if (bulkFieldIds.has('lastCalibration') && !String(r.lastCalibration || '').trim()) errors.push(`Строка ${n}: дата`);
+    if (bulkFieldIds.has('responsible') && !String(r.responsible || '').trim()) errors.push(`Строка ${n}: ответственный`);
+    
+    // Проверяем остальные обязательные поля (если админ поставил им галку "Обязательно")
+    const SYSTEM_REQUIRED = new Set(['model', 'lastCalibration', 'responsible']);
+    _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id) && bulkFieldIds.has(f.id)).forEach(f => {
+      if (!String(r[f.id] || '').trim()) errors.push(`Строка ${n}: ${f.label}`);
+    });
   });
+
   if (errors.length > 0) {
     errEl.textContent = 'Заполните: ' + errors.slice(0, 5).join('; ') +
       (errors.length > 5 ? ` (+${errors.length - 5})` : '');
     return;
   }
+
+  // Автоподстановка для СКРЫТЫХ обязательных полей в партии
+  const defaultResp = currentUser.isActing && currentUser.actingForName
+    ? currentUser.actingForName
+    : currentUser.fullName;
+    
+  _bulkRows.forEach(r => {
+    if (!bulkFieldIds.has('model')) r.model = 'Не указана';
+    if (!bulkFieldIds.has('lastCalibration')) r.lastCalibration = todayStr();
+    if (!bulkFieldIds.has('responsible')) r.responsible = defaultResp;
+  });
 
   if (_bulkRows.length >= 20) {
     const ok = await showConfirm(
