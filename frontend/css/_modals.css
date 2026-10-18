@@ -411,3 +411,18 @@
 .modal .usr-perm-cb + span i {
   color: var(--icon-default) !important;
 }
+
+/* ─── Мобильный адаптив модалок ─── */
+@media (max-width: 768px) {
+  .modal {
+    width: 95vw !important;
+    min-width: 0 !important;
+    max-width: 95vw !important;
+    padding: 16px !important;
+    resize: none !important;
+    border-radius: 12px;
+  }
+  .modal h2 {
+    font-size: 1.1rem !important;
+  }
+}
