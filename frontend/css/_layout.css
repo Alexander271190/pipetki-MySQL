@@ -286,3 +286,28 @@ html[data-theme="dark"] #search {
     flex-basis: 100%;
   }
 }
+
+/* ─── Мобильный адаптив тулбара ─── */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar > #search,
+  .toolbar > .btn,
+  .toolbar > .dropdown,
+  .toolbar > .dropdown > .btn {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .toolbar-bulk {
+    flex-direction: column;
+  }
+  .toolbar-bulk .btn {
+    width: 100%;
+  }
+  .stat-card {
+    flex: 1;
+    min-width: 45%;
+  }
+}
