@@ -5,6 +5,7 @@
 // ============================================================
 async function openBulkSendModal() {
   await refreshCurrentUser();
+  if (!requirePasswordChange()) return;
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const selected = [...selectedPipettes].filter(id =>
@@ -324,6 +325,7 @@ const win = window.open('', '_blank');
 // ============================================================
 async function openBulkReturnModal() {
   await refreshCurrentUser();
+  if (!requirePasswordChange()) return;
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
   const selected = [...selectedPipettes].filter(id =>
@@ -560,6 +562,7 @@ let _bulkResponsibleIds = [];
 
 async function openBulkResponsibleModal() {
   await refreshCurrentUser();
+  if (!requirePasswordChange()) return;
   if (!canBulkChangeResponsible()) {
     showToast('Нет прав на смену ответственного', 'error');
     return;
