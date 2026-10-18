@@ -6,6 +6,7 @@
 async function openSettingsModal() {
   await refreshCurrentUser();
   if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
+  if (!requirePasswordChange()) return;
 
   document.getElementById('settings-list').style.display = '';
   document.getElementById('settings-section').style.display = 'none';
