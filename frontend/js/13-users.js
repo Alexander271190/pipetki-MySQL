@@ -777,10 +777,14 @@ function openChangePasswordModal(force, mode = 'change') {
 
   if (modal) modal.dataset.mode = mode;
 
-  const isImpersonatingNow = isImpersonating();
-  const reallyForce = force && !isImpersonatingNow;
+    const isImpersonatingNow = isImpersonating();
+  
+  // 🆕 Если смена пароля принудительная (mustChange/mustSet) и мы не в режиме имперсонации — прячем кнопку «Отмена/Позже»
+  const isForced = (currentUser && (currentUser.mustSetPassword || currentUser.mustChangePassword)) && !isImpersonatingNow;
+  const reallyForce = force || isForced;
 
   if (cancelBtn) {
+    // Прячем кнопку, если это принудительная смена
     cancelBtn.style.display = reallyForce ? 'none' : 'inline-flex';
     cancelBtn.textContent = (force && isImpersonatingNow) ? 'Позже' : 'Отмена';
   }
