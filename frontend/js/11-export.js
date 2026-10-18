@@ -69,10 +69,11 @@ function getActiveExportFields() {
 async function exportToXlsx() {
   await refreshCurrentUser();
   if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
+  if (!requirePasswordChange()) return;
 
   const data = getFilteredPipettes();
   if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
-
+  
  const fields = getActiveExportFields();
   const headers = fields.map(f => {
     const def = getExportField(f);
@@ -139,6 +140,7 @@ async function exportToXlsx() {
 async function exportToPDF() {
   await refreshCurrentUser();
   if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
+  if (!requirePasswordChange()) return; 
   const data = getFilteredPipettes();
   if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
@@ -328,6 +330,7 @@ document.addEventListener('click', (e) => {
 // ЭКСПОРТ ИСТОРИИ ПОВЕРОК КОНКРЕТНОГО ОБОРУДОВАНИЯ
 // ============================================================
 function openHistoryExportModal() {
+  if (!requirePasswordChange()) return;
   if (!currentHistoryId) {
     showToast('Сначала откройте историю оборудования', 'error');
     return;
