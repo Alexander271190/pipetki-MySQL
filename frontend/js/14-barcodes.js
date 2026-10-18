@@ -6,6 +6,7 @@
 let _barcodeScanList = [];
 
 function openBarcodeScannerModal() {
+  if (!requirePasswordChange()) return;
   _barcodeScanList = [];
   renderBarcodeScanList();
   const modal = document.getElementById('barcode-scanner-modal');
@@ -138,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ПЕЧАТЬ ЭТИКЕТОК
 // ============================================================
 function openBarcodePrintModal() {
+  if (!requirePasswordChange()) return;
   updateBarcodePrintScopeCounts();
   const hasSelected = selectedPipettes.size > 0;
   const selRadio = document.getElementById('bc-scope-selected');
