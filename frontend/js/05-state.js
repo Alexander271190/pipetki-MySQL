@@ -467,31 +467,11 @@ function getActiveTableColumns() {
 
 function getActiveFormFields(allFields) {
   const enabled = allFields.filter(f => f.enabled);
-
-  // Если настроек нет — показываем всё
   if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
     return enabled;
   }
-
   const visible = new Set(myPrefs.visibleFields);
-
-  const SYSTEM_IDS = new Set([
-    'id', 'serial', 'manufacturer', 'model', 'equipmentType',
-    'volume', 'department', 'interval', 'lastCalibration', 'cert',
-    'result', 'active', 'responsible', 'location', 'notes'
-  ]);
-
-  const currentCustom = enabled
-    .map(f => f.id)
-    .filter(id => !SYSTEM_IDS.has(id));
-
-  // Кастомные поля показываем ВСЕГДА — независимо от prefs
-  const allowedIds = new Set([...visible, ...currentCustom]);
-
-  return enabled.filter(f => {
-    if (SYSTEM_IDS.has(f.id)) return visible.has(f.id);
-    return allowedIds.has(f.id);
-  });
+  return enabled.filter(f => visible.has(f.id));
 }
 
 // ============================================================
