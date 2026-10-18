@@ -7,7 +7,7 @@ let _rowActionsMenu = null;
 
 async function openUserActions(ev, userId) {
   ev.stopPropagation();
-
+  if (!requirePasswordChange()) return;
   const anchorEl = ev.currentTarget;
 
   const curId = currentUser.id;
@@ -61,6 +61,7 @@ function renderUserActionsMenu(anchorEl, items) {
 
 function openRowActions(ev, id) {
   ev.stopPropagation();
+  if (!requirePasswordChange()) return;
 
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
@@ -209,6 +210,7 @@ let _transferPipetteId = null;
 
 async function openTransferModal(id) {
   await refreshCurrentUser();
+  if (!requirePasswordChange()) return;
   if (!canTransferPipette()) {
     showToast('Нет прав на передачу оборудования', 'error');
     return;
@@ -333,6 +335,7 @@ document.addEventListener('click', (e) => {
 // ИСТОРИЯ
 // ============================================================
 async function openHistoryModal(id) {
+  if (!requirePasswordChange()) return;
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
   currentHistoryId = id;
