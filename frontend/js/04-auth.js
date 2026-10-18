@@ -155,6 +155,8 @@ function requirePasswordChange() {
   if (currentUser && (currentUser.mustSetPassword || currentUser.mustChangePassword)) {
     const mode = currentUser.mustSetPassword ? 'setup' : 'change';
     openChangePasswordModal(true, mode);
+    // 🆕 Показываем сообщение, чтобы было понятно, почему клики не работают
+    showToast('Для продолжения работы необходимо сменить пароль', 'warn');
     return false;
   }
   return true;
