@@ -592,17 +592,37 @@ async function savePipette(e) {
   if (!isEdit && !canAddPipette())     { showToast('Нет прав на добавление', 'error'); return; }
   if (isEdit  && !canEditPipette())    { showToast('Нет прав на редактирование', 'error'); return; }
 
-  const payload = {};
+    const payload = {};
+  const fieldElements = {};
+  
   document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
     const key = el.dataset.fieldId;
+    fieldElements[key] = el; // Запоминаем, какие поля реально есть в форме
     if (key === 'id') return;
     payload[key] = el.value;
   });
 
   const errors = [];
-  if (!String(payload.model           || '').trim()) errors.push('Модель');
-  if (!String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
-  if (!String(payload.responsible     || '').trim()) errors.push('Ответственный');
+  // Проверяем только те поля, которые видит пользователь
+  if (fieldElements.model && !String(payload.model || '').trim()) errors.push('Модель');
+  if (fieldElements.lastCalibration && !String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
+  if (fieldElements.responsible && !String(payload.responsible || '').trim()) errors.push('Ответственный');
+  
+  // Проверяем остальные обязательные поля (если админ поставил им галку "Обязательно")
+  const SYSTEM_REQUIRED = new Set(['model', 'lastCalibration', 'responsible']);
+  _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id)).forEach(f => {
+    if (fieldElements[f.id] && !String(payload[f.id] || '').trim()) errors.push(f.label);
+  });
+
+  // Автоподстановка для скрытых обязательных полей
+  if (!fieldElements.model) payload.model = 'Не указана';
+  if (!fieldElements.lastCalibration) payload.lastCalibration = todayStr();
+  if (!fieldElements.responsible) {
+    payload.responsible = currentUser.isActing && currentUser.actingForName
+      ? currentUser.actingForName
+      : currentUser.fullName;
+  }
+
   if (errors.length > 0) {
     showToast('Заполните: ' + errors.join(', '), 'error');
     return;
