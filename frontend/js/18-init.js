@@ -283,6 +283,7 @@ function animateImportProgress(from, to, durationMs, text) {
 async function openImportModal() {
   await refreshCurrentUser();
   if (!canImport()) { showToast('Нет прав на импорт', 'error'); return; }
+  if (!requirePasswordChange()) return; 
   document.getElementById('import-modal').classList.add('active');
 }
 
@@ -400,12 +401,9 @@ document.getElementById('barcode-print-modal').addEventListener('click', e => { 
 document.getElementById('settings-modal').addEventListener('click', e => { if (e.target.id === 'settings-modal') closeSettingsModal(); });
 document.getElementById('change-password-modal').addEventListener('click', e => {
   if (e.target.id === 'change-password-modal') {
-    const mustSetup = currentUser && currentUser.mustSetPassword;
-    const mustChange = currentUser && currentUser.mustChangePassword;
-    const canClose = !mustSetup && !mustChange || isImpersonating();
-    if (canClose) {
-      closeChangePasswordModal();
-    }
+    // 🆕 Полностью блокируем закрытие по клику на фон.
+    // Закрыть можно только кнопками "Сохранить" или "Отмена" (если она доступна).
+    return;
   }
 });
 document.getElementById('history-export-modal').addEventListener('click', e => {
