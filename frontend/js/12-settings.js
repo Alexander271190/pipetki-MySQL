@@ -4,22 +4,23 @@
 // НАСТРОЙКИ
 // ============================================================
 async function openSettingsModal() {
-  await refreshCurrentUser();
-  if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
-  if (!requirePasswordChange()) return;
+  await UI.guard(
+    { role: 'admin', errorMsg: 'Доступно только администратору' },
+    async () => {
+      document.getElementById('settings-list').style.display = '';
+      document.getElementById('settings-section').style.display = 'none';
+      document.getElementById('settings-back-btn').style.display = 'none';
+      document.getElementById('settings-header-text').textContent = 'Настройки системы';
+      document.getElementById('settings-footer').style.display = '';
 
-  document.getElementById('settings-list').style.display = '';
-  document.getElementById('settings-section').style.display = 'none';
-  document.getElementById('settings-back-btn').style.display = 'none';
-  document.getElementById('settings-header-text').textContent = 'Настройки системы';
-  document.getElementById('settings-footer').style.display = '';
-
-  renderSettingsList();
-  document.getElementById('settings-modal').classList.add('active');
+      renderSettingsList();
+      UI.modal.open('settings-modal');
+    }
+  );
 }
 
 function closeSettingsModal() {
-  document.getElementById('settings-modal').classList.remove('active');
+  UI.modal.close('settings-modal');
 }
 
 async function closeSettingsSection() {
@@ -93,6 +94,7 @@ async function openSettingsSection(id) {
     else if (id === 'barcodes')    await renderBarcodesSettings();
     else if (id === 'help')        await renderHelpSettings();
     else if (id === 'view-templates') await renderViewTemplatesSettings();
+    else if (id === 'trash')       await renderTrashSettings(); 
     else if (id === 'general')     await renderGeneralSettings();
     else if (id === 'log')         await renderLogSettings();
   } catch (e) {
@@ -124,24 +126,15 @@ async function renderFieldsSettings(skipFetch = false) {
           <th style="width:60px;"></th>
         </tr></thead><tbody>`;
 
-    _cachedFields.forEach((f, i) => {
+        _cachedFields.forEach((f, i) => {
   html += `<tr>
-    <td>
-      <div class="order-btns">
-        <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},-1)" title="Выше">
-          <i class="fa-solid fa-arrow-up"></i>
-        </button>
-        <button class="btn btn-secondary btn-sm" onclick="moveFieldSetting(${i},1)" title="Ниже">
-          <i class="fa-solid fa-arrow-down"></i>
-        </button>
-      </div>
-    </td>
+    <td>${UI.moveBtns(i, _cachedFields.length, 'moveFieldSetting')}</td>
     <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
         <td>${renderFieldTypeSelect(i, f)}</td>
-        <td style="text-align:center;"><input type="checkbox" ${f.required ? 'checked' : ''} onchange="_cachedFields[${i}].required=this.checked"></td>
-        <td style="text-align:center;"><input type="checkbox" ${f.enabled ? 'checked' : ''} onchange="_cachedFields[${i}].enabled=this.checked"></td>
+        <td style="text-align:center;">${UI.checkbox(`_cachedFields[${i}].required=this.checked`, f.required)}</td>
+        <td style="text-align:center;">${UI.checkbox(`_cachedFields[${i}].enabled=this.checked`, f.enabled)}</td>
        <td>${renderFieldOptionsCell(i, f.type)}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteFieldSetting(${i})"><i class="fa-solid fa-trash"></i></button></td>
+        <td>${UI.iconBtn('trash', `deleteFieldSetting(${i})`, 'Удалить поле', 'btn-danger')}</td>
       </tr>`;
     });
    html += `</tbody></table>
@@ -152,6 +145,7 @@ async function renderFieldsSettings(skipFetch = false) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
 }
+
 function renderFieldOptionsCell(idx, type) {
   if (type === 'select') {
     const opts = (_cachedFields[idx].options || []).join('\n');
@@ -351,16 +345,10 @@ async function renderDepartmentsSettings(skipFetch = false) {
 
     _cachedDepartmentsFull.forEach((d, i) => {
       html += `<tr>
-        <td style="text-align:center;">
-          <input type="checkbox" ${d.enabled ? 'checked' : ''} 
-                 onchange="_cachedDepartmentsFull[${i}].enabled=this.checked">
-        </td>
+        <td style="text-align:center;">${UI.checkbox(`_cachedDepartmentsFull[${i}].enabled=this.checked`, d.enabled)}</td>
         <td><input type="text" value="${esc(d.name)}" 
                    oninput="onDepartmentNameChange(${i}, this.value)"></td>
-        <td><button class="btn btn-danger btn-sm btn-icon-only" 
-                    onclick="deleteDepartmentItem(${i})" title="Удалить">
-          <i class="fa-solid fa-trash"></i>
-        </button></td>
+        <td>${UI.iconBtn('trash', `deleteDepartmentItem(${i})`, 'Удалить отдел', 'btn-danger')}</td>
       </tr>`;
     });
     html += `</tbody></table>
@@ -469,18 +457,21 @@ async function saveDepartmentsFull() {
     showToast(`Удалены дубликаты: было ${_cachedDepartmentsFull.length}, стало ${cleaned.length}`, 'success');
   }
 
-    try {
-    await apiRequest('/settings/departments', 'PUT', cleaned);
-    _cachedDepartmentsFull = cleaned;
-    showToast(`Отделы сохранены (${cleaned.length})`, 'success');
-    await loadDepartments();
-    await loadFilterConfig();
-
-    syncFilterState();
-    currentPage = 1;
-    render();
-    closeSettingsModal();
-  } catch (e) { showToast(e.message, 'error'); }
+      try {
+    await UI.saveAction({
+      successMsg: `Отделы сохранены (${cleaned.length})`,
+      closeFn: closeSettingsModal,
+      reload: false
+    }, async () => {
+     await apiRequest('/settings/departments', 'PUT', cleaned);
+      _cachedDepartmentsFull = cleaned;
+      await loadDepartments();
+      await loadFilterConfig();
+      syncFilterState();
+      currentPage = 1;
+      render();
+    });
+  } catch (e) {}
 }
 
 // ============================================================
@@ -508,46 +499,31 @@ async function renderFiltersSettings(skipFetch = false) {
           <th style="width:60px;"></th>
         </tr></thead><tbody>`;
 
-    _cachedFilters.forEach((f, i) => {
-      html += `<tr>
-        <td>
-          <div class="order-btns">
-         <button class="btn btn-secondary btn-sm" onclick="moveFilter(${i},-1)" title="Выше">
-            <i class="fa-solid fa-arrow-up"></i>
-         </button>
-         <button class="btn btn-secondary btn-sm" onclick="moveFilter(${i},1)" title="Ниже">
-            <i class="fa-solid fa-arrow-down"></i>
-          </button>
-          </div>
-        </td>
-        <td style="text-align:center;">
-          <input type="checkbox" ${f.enabled ? 'checked' : ''} 
-                 onchange="_cachedFilters[${i}].enabled=this.checked">
-        </td>
-           <td><input type="text" value="${esc(f.label)}" 
-                   oninput="_cachedFilters[${i}].label=this.value"></td>
-        
-         <td><select onchange="_cachedFilters[${i}].type=this.value">
-            <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
-            <option value="select" ${f.type === 'select' ? 'selected' : ''}>Список</option>
-            <option value="date-period" ${f.type === 'date-period' ? 'selected' : ''}>Период дат</option>
-          </select>
-        </td>
-        <td>
-          <select onchange="_cachedFilters[${i}].optionsSource=this.value">
-            <option value="" ${!f.optionsSource ? 'selected' : ''}>—</option>
-            <option value="departments" ${f.optionsSource === 'departments' ? 'selected' : ''}>Отделы</option>
-            <option value="status_list" ${f.optionsSource === 'status_list' ? 'selected' : ''}>Статусы</option>
-            <option value="active_list" ${f.optionsSource === 'active_list' ? 'selected' : ''}>Активность</option>
-            <option value="equipment_type_list" ${f.optionsSource === 'equipment_type_list' ? 'selected' : ''}>Типы оборудования</option>
-          </select>
-        </td>
-        <td><button class="btn btn-danger btn-sm btn-icon-only" 
-         onclick="deleteFilter(${i})" title="Удалить">
-          <i class="fa-solid fa-trash"></i>
-        </button></td>
-      </tr>`;
-    });
+       _cachedFilters.forEach((f, i) => {
+  html += `<tr>
+    <td>${UI.moveBtns(i, _cachedFilters.length, 'moveFilter')}</td>
+    <td style="text-align:center;">${UI.checkbox(`_cachedFilters[${i}].enabled=this.checked`, f.enabled)}</td>
+    <td><input type="text" value="${esc(f.label)}" 
+               oninput="_cachedFilters[${i}].label=this.value"></td>
+    <td><select onchange="_cachedFilters[${i}].type=this.value">
+        <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
+        <option value="select" ${f.type === 'select' ? 'selected' : ''}>Список</option>
+        <option value="date-period" ${f.type === 'date-period' ? 'selected' : ''}>Период дат</option>
+      </select>
+    </td>
+    <td>
+      <select onchange="_cachedFilters[${i}].optionsSource=this.value">
+        <option value="" ${!f.optionsSource ? 'selected' : ''}>—</option>
+        <option value="departments" ${f.optionsSource === 'departments' ? 'selected' : ''}>Отделы</option>
+        <option value="status_list" ${f.optionsSource === 'status_list' ? 'selected' : ''}>Статусы</option>
+        <option value="active_list" ${f.optionsSource === 'active_list' ? 'selected' : ''}>Активность</option>
+        <option value="equipment_type_list" ${f.optionsSource === 'equipment_type_list' ? 'selected' : ''}>Типы оборудования</option>
+      </select>
+    </td>
+    <td>${UI.iconBtn('trash', `deleteFilter(${i})`, 'Удалить фильтр', 'btn-danger')}</td>
+  </tr>`;
+});
+    
     html += `</tbody></table>
       <button class="btn btn-primary" onclick="addFilter()" style="margin-top:12px;">
         <i class="fa-solid fa-plus"></i> Добавить фильтр
@@ -607,23 +583,25 @@ async function deleteFilter(idx) {
 
 async function saveFilters() {
   try {
-    await apiRequest('/settings/filters', 'PUT', _cachedFilters);
-    showToast('Фильтры сохранены', 'success');
-    await loadFilterConfig();
-    _filterRendered = false;
+    await UI.saveAction({
+      successMsg: 'Фильтры сохранены',
+      closeFn: closeSettingsModal,
+      reload: false
+    }, async () => {
+      await apiRequest('/settings/filters', 'PUT', _cachedFilters);
+      await loadFilterConfig();
+      _filterRendered = false;
 
-    const panel = document.getElementById('filter-panel');
-    if (panel && panel.classList.contains('show')) {
-      renderFilterFields();
-    }
-
-    syncFilterState();
-    currentPage = 1;
-    render();
-    closeSettingsModal();
-  } catch (e) { showToast(e.message, 'error'); }
+      const panel = document.getElementById('filter-panel');
+      if (panel && panel.classList.contains('show')) {
+        renderFilterFields();
+      }
+      syncFilterState();
+      currentPage = 1;
+      render();
+    });
+  } catch (e) {}
 }
-
 // ============================================================
 // ВКЛАДКА: ЭКСПОРТ
 // ============================================================
@@ -682,13 +660,15 @@ async function renderExportSettings() {
 async function saveExportSettings() {
   const selected = Array.from(document.querySelectorAll('.exp-field-cb:checked')).map(cb => cb.value);
   try {
-    await apiRequest('/settings/export', 'PUT', selected);
-    exportFields = selected;
-    showToast('Настройки экспорта сохранены', 'success');
-    closeSettingsModal();
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
+    await UI.saveAction({
+      successMsg: 'Настройки экспорта сохранены',
+      closeFn: closeSettingsModal,
+      reload: false
+    }, async () => {
+      await apiRequest('/settings/export', 'PUT', selected);
+      exportFields = selected;
+    });
+  } catch (e) {}
 }
 
 // ============================================================
@@ -730,14 +710,16 @@ async function renderGeneralSettings() {
 async function saveSystemSetting() {
   const wd = document.getElementById('sys-warn-days').value;
   try {
-    await apiRequest('/settings/system', 'PUT', { warn_days: String(wd) });
-    settings.warnDays = parseInt(wd) || 30;
-    showToast('Настройки сохранены', 'success');
-    closeSettingsModal();
-    render();
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
+    await UI.saveAction({
+      successMsg: 'Настройки сохранены',
+      closeFn: closeSettingsModal,
+      reload: false
+    }, async () => {
+      await apiRequest('/settings/system', 'PUT', { warn_days: String(wd) });
+      settings.warnDays = parseInt(wd) || 30;
+      render();
+    });
+  } catch (e) {}
 }
 
 // ============================================================
@@ -800,53 +782,39 @@ function renderEquipmentTypesTable() {
     return;
   }
 
-    tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
-    <tr>
-      <td>
-        <div class="order-btns">
-           <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Выше">
-              <i class="fa-solid fa-arrow-up"></i>
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="moveEquipmentType(${i}, 1)" ${i === _cachedEquipmentTypes.length - 1 ? 'disabled' : ''} title="Ниже">
-                <i class="fa-solid fa-arrow-down"></i>
-            </button>
-        </div>
-      </td>
-      <td>
-        <input type="text" value="${esc(t.value)}" readonly
-               style="background:#f1f5f9;cursor:not-allowed;"
-               title="value менять нельзя — это служебный ключ">
-      </td>
-      <td>
-        <input type="text" value="${esc(t.label)}"
-               oninput="updateEquipmentType(${i}, 'label', this.value)">
-      </td>
-     <td>
-        <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
-               style="text-align:center;text-transform:uppercase;"
-               oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
-     </td>
-      <td>
-       <input type="number"
-          value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}"
-          min="1" max="120"
-          style="text-align:center;"
-          oninput="updateEquipmentType(${i}, 'interval', this.value)">
+     tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
+  <tr>
+    <td>${UI.moveBtns(i, _cachedEquipmentTypes.length, 'moveEquipmentType')}</td>
+    <td>
+      <input type="text" value="${esc(t.value)}" readonly
+             style="background:#f1f5f9;cursor:not-allowed;"
+             title="value менять нельзя — это служебный ключ">
     </td>
-      <td>
-        <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
-          <option value="external" ${t.calibrationPlace === 'external' ? 'selected' : ''}>📦 Внешняя (с отправкой)</option>
-          <option value="internal" ${(!t.calibrationPlace || t.calibrationPlace === 'internal') ? 'selected' : ''}>🏠 На месте</option>
-        </select>
-      </td>
-      <td>
-        <button class="btn btn-danger btn-sm btn-icon-only"
-                onclick="deleteEquipmentType(${i})" title="Удалить">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </td>
-    </tr>
-  `).join('');
+    <td>
+      <input type="text" value="${esc(t.label)}"
+             oninput="updateEquipmentType(${i}, 'label', this.value)">
+    </td>
+    <td>
+      <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
+             style="text-align:center;text-transform:uppercase;"
+             oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
+    </td>
+    <td>
+      <input type="number"
+        value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}"
+        min="1" max="120"
+        style="text-align:center;"
+        oninput="updateEquipmentType(${i}, 'interval', this.value)">
+    </td>
+    <td>
+      <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
+        <option value="external" ${t.calibrationPlace === 'external' ? 'selected' : ''}>📦 Внешняя (с отправкой)</option>
+        <option value="internal" ${(!t.calibrationPlace || t.calibrationPlace === 'internal') ? 'selected' : ''}>🏠 На месте</option>
+      </select>
+    </td>
+    <td>${UI.iconBtn('trash', `deleteEquipmentType(${i})`, 'Удалить тип', 'btn-danger')}</td>
+  </tr>
+`).join('');
 
   updateEquipmentTypesWarning();
 }
@@ -981,18 +949,19 @@ async function saveEquipmentTypes() {
     t.interval = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
   });
 
-    try {
-    await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
-    showToast('Типы оборудования сохранены', 'success');
-    _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
-    await loadFilterConfig();
-
-    syncFilterState();
-    currentPage = 1;
-    render();
-  } catch (e) {
-    showToast(e.message || 'Ошибка сохранения', 'error');
-  }
+      try {
+    await UI.saveAction({
+      successMsg: 'Типы оборудования сохранены',
+      reload: false
+    }, async () => {
+      await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
+      _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
+      await loadFilterConfig();
+      syncFilterState();
+      currentPage = 1;
+      render();
+    });
+  } catch (e) {}
 }
 
 // ============================================================
@@ -1160,5 +1129,84 @@ async function resetAllDataSetting() {
     closeSettingsModal();
   } catch (e) {
     showToast(e.message || 'Ошибка сброса данных', 'error');
+  }
+}
+
+// ============================================================
+// ВКЛАДКА: КОРЗИНА
+// ============================================================
+async function renderTrashSettings() {
+  const c = document.getElementById('settings-section-content');
+  c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
+
+  try {
+    const deleted = await apiRequest('/pipettes/trash');
+
+    if (!deleted || deleted.length === 0) {
+      c.innerHTML = '<p style="color:#94a3b8; padding:20px; text-align:center;">Корзина пуста</p>';
+      return;
+    }
+
+    let html = `<h3>Удалённое оборудование (${deleted.length})</h3>
+      <p style="color:${COLORS.muted};margin-bottom:12px;">
+        Восстановите прибор, если удалили его по ошибке.
+      </p>
+      <table class="field-settings-table">
+        <thead><tr>
+          <th>ID</th>
+          <th>Модель</th>
+          <th>Отдел</th>
+          <th>Дата удаления</th>
+          <th style="width:220px;">Действия</th>
+        </tr></thead><tbody>`;
+
+    deleted.forEach(p => {
+      html += `<tr>
+        <td><strong>${esc(p.id)}</strong></td>
+        <td>${esc(p.model)}</td>
+        <td>${esc(p.department || '—')}</td>
+        <td>${new Date(p.deleted_at).toLocaleString('ru-RU')}</td>
+        <td class="actions">
+          <button class="btn btn-success btn-sm" onclick="restorePipette('${esc(p.id)}')">
+            <i class="fa-solid fa-rotate-left"></i> Восстановить
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="hardDeletePipette('${esc(p.id)}')">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<p style="color:${COLORS.danger};">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+async function restorePipette(id) {
+  try {
+    await apiRequest(`/pipettes/${id}/restore`, 'POST', {});
+    showToast(`Оборудование ${id} восстановлено`, 'success');
+    renderTrashSettings();
+    if (typeof loadPipetteData === 'function') loadPipetteData();
+  } catch (e) {
+    showToast(e.message || 'Ошибка восстановления', 'error');
+  }
+}
+
+async function hardDeletePipette(id) {
+  const ok = await showConfirm(
+    `Удалить «${id}» навсегда?\n\nВосстановить его будет невозможно. История поверок также удалится.`,
+    { icon: '🗑️', title: 'Окончательное удаление', okText: 'Удалить навсегда', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
+
+  try {
+    await apiRequest(`/pipettes/${id}/hard`, 'DELETE');
+    showToast('Оборудование удалено навсегда', 'success');
+    renderTrashSettings();
+  } catch (e) {
+    showToast(e.message || 'Ошибка удаления', 'error');
   }
 }
