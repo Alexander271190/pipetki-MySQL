@@ -3,7 +3,7 @@
 // ============================================================
 // СОСТОЯНИЕ
 // ============================================================
-let pipettes = [];          // ⚠️ ТЕКУЩАЯ СТРАНИЦА (не весь список!)
+let pipettes = [];          
 let settings = { warnDays: 30 };
 let sortField = 'nextCalibration';
 let sortDir = 1;
@@ -237,6 +237,36 @@ async function loadIdsForExport() {
     return Array.isArray(data.ids) ? data.ids : [];
   } catch (e) {
     console.error('loadIdsForExport error:', e);
+    return [];
+  }
+}
+
+// ============================================================
+// 🆕 Все записи по фильтру — для экспорта Excel/PDF (этап C)
+// ============================================================
+async function loadAllForExport() {
+  try {
+    const params = new URLSearchParams();
+    params.set('sort', sortField);
+    params.set('dir', sortDir > 0 ? 'asc' : 'desc');
+
+    const searchVal = (document.getElementById('search')?.value || '').trim();
+    if (searchVal) params.set('search', searchVal);
+
+    const filtersObj = {};
+    for (const [k, v] of Object.entries(filterState || {})) {
+      if (v === undefined || v === null || v === '') continue;
+      if (typeof v === 'object' && v.period === '') continue;
+      filtersObj[k] = v;
+    }
+    if (Object.keys(filtersObj).length > 0) {
+      params.set('filters', JSON.stringify(filtersObj));
+    }
+
+    const data = await apiRequest('/pipettes/all?' + params.toString());
+    return Array.isArray(data.items) ? data.items : [];
+  } catch (e) {
+    console.error('loadAllForExport error:', e);
     return [];
   }
 }
