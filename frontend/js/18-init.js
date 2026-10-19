@@ -281,14 +281,14 @@ function animateImportProgress(from, to, durationMs, text) {
 }
 
 async function openImportModal() {
-  await refreshCurrentUser();
-  if (!canImport()) { showToast('Нет прав на импорт', 'error'); return; }
-  if (!requirePasswordChange()) return; 
-  document.getElementById('import-modal').classList.add('active');
+  await UI.guard(
+    { permission: 'import_data', errorMsg: 'Нет прав на импорт' },
+    async () => UI.modal.open('import-modal')
+  );
 }
 
 function closeImportModal() {
-  document.getElementById('import-modal').classList.remove('active');
+  UI.modal.close('import-modal');
   document.getElementById('import-file').value = '';
   hideImportProgress();
 }
@@ -389,28 +389,34 @@ document.getElementById('search').addEventListener('input', () => {
   }, 150);
 });
 
-document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
-document.getElementById('quick-cal-modal').addEventListener('click', e => { if (e.target.id === 'quick-cal-modal') closeQuickCalModal(); });
-document.getElementById('history-modal').addEventListener('click', e => { if (e.target.id === 'history-modal') closeHistoryModal(); });
-document.getElementById('bulk-send-modal').addEventListener('click', e => { if (e.target.id === 'bulk-send-modal') closeBulkSendModal(); });
-document.getElementById('bulk-return-modal').addEventListener('click', e => { if (e.target.id === 'bulk-return-modal') closeBulkReturnModal(); });
-document.getElementById('bulk-responsible-modal').addEventListener('click', e => { if (e.target.id === 'bulk-responsible-modal') closeBulkResponsibleModal(); });
-document.getElementById('import-modal').addEventListener('click', e => { if (e.target.id === 'import-modal') closeImportModal(); });
-document.getElementById('barcode-scanner-modal').addEventListener('click', e => { if (e.target.id === 'barcode-scanner-modal') closeBarcodeScannerModal(); });
-document.getElementById('barcode-print-modal').addEventListener('click', e => { if (e.target.id === 'barcode-print-modal') closeBarcodePrintModal(); });
-document.getElementById('settings-modal').addEventListener('click', e => { if (e.target.id === 'settings-modal') closeSettingsModal(); });
+// ============================================================
+// ОБРАБОТЧИКИ «КЛИК МИМО» ДЛЯ ВСЕХ МОДАЛОК
+// ============================================================
+const modalCloseMap = {
+  'modal':                  closeModal,
+  'quick-cal-modal':        closeQuickCalModal,
+  'history-modal':          closeHistoryModal,
+  'bulk-send-modal':        closeBulkSendModal,
+  'bulk-return-modal':      closeBulkReturnModal,
+  'bulk-responsible-modal': closeBulkResponsibleModal,
+  'import-modal':           closeImportModal,
+  'barcode-scanner-modal':  closeBarcodeScannerModal,
+  'barcode-print-modal':    closeBarcodePrintModal,
+  'settings-modal':         closeSettingsModal,
+  'history-export-modal':   closeHistoryExportModal,
+  'temp-password-modal':    closeTempPasswordModal,
+  'transfer-modal':         closeTransferModal,
+  'user-view-modal':        closeUserViewModal,
+  'hotkeys-modal':          closeHotkeysHelp,
+  'help-editor-modal':      closeHelpEditor,
+};
+Object.entries(modalCloseMap).forEach(([id, fn]) => UI.modal.bindOutsideClick(id, fn));
+
+// 🆕 change-password-modal — особый случай, НЕ закрывается кликом мимо
 document.getElementById('change-password-modal').addEventListener('click', e => {
   if (e.target.id === 'change-password-modal') {
-    // 🆕 Полностью блокируем закрытие по клику на фон.
-    // Закрыть можно только кнопками "Сохранить" или "Отмена" (если она доступна).
     return;
   }
-});
-document.getElementById('history-export-modal').addEventListener('click', e => {
-  if (e.target.id === 'history-export-modal') closeHistoryExportModal();
-});
-document.getElementById('temp-password-modal').addEventListener('click', e => {
-  if (e.target.id === 'temp-password-modal') closeTempPasswordModal();
 });
 
 const session = getSession();
