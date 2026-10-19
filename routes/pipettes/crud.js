@@ -112,6 +112,270 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// GET /paged — список с серверной пагинацией, фильтрами, сортировкой
+// ═══════════════════════════════════════════════════════════
+router.get('/paged', authenticate, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
+    const sort = req.query.sort || 'id';
+    const dir = req.query.dir || 'asc';
+    const search = req.query.search || '';
+    const offset = (page - 1) * limit;
+
+    let filters = {};
+    if (req.query.filters) {
+      try { filters = JSON.parse(req.query.filters); }
+      catch (e) { return res.status(400).json({ error: 'Некорректный filters (ожидается JSON)' }); }
+    }
+
+    const warnDays = await getWarnDays();
+    const statusExpr = sqlComputedStatus(warnDays);
+
+    const baseWhere = [];
+    const baseParams = [];
+    const isActing = !!req.user.is_acting;
+    const actingDept = req.user.acting_department || null;
+    const onlyOwn = !isActing && req.user.role !== 'admin' && req.user.only_own_department;
+    const userDept = req.user.department || null;
+
+    if (isActing) {
+      if (!actingDept) {
+        return res.json({ items: [], total: 0, page: 1, limit, totalPages: 0,
+          counters: { ok: 0, warn: 0, danger: 0, total: 0 } });
+      }
+      baseWhere.push('department = ?'); baseParams.push(actingDept);
+    } else if (onlyOwn) {
+      if (!userDept) {
+        return res.json({ items: [], total: 0, page: 1, limit, totalPages: 0,
+          counters: { ok: 0, warn: 0, danger: 0, total: 0 } });
+      }
+      baseWhere.push('department = ?'); baseParams.push(userDept);
+    }
+
+    const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
+    let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
+    whereSql += filterSql;
+    const allParams = [...baseParams, ...filterParams];
+
+    let statusFilterSql = '';
+    const statusFilterParams = [];
+    if (filters && typeof filters === 'object' && filters.status) {
+      statusFilterSql = ` AND (${statusExpr}) = ?`;
+      statusFilterParams.push(String(filters.status));
+    }
+
+    const finalWhere = whereSql + statusFilterSql;
+    const finalParams = [...allParams, ...statusFilterParams];
+
+    const [counterRows] = await db.query(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN (${statusExpr}) = 'ok' THEN 1 ELSE 0 END) AS ok,
+         SUM(CASE WHEN (${statusExpr}) = 'warn' THEN 1 ELSE 0 END) AS warn,
+         SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger
+       FROM pipettes${whereSql}`,
+      allParams
+    );
+    const counters = {
+      total: Number(counterRows[0].total) || 0,
+      ok: Number(counterRows[0].ok) || 0,
+      warn: Number(counterRows[0].warn) || 0,
+      danger: Number(counterRows[0].danger) || 0,
+    };
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) AS c FROM pipettes${finalWhere}`,
+      finalParams
+    );
+    const total = Number(countRows[0].c) || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const orderSql = sqlOrderBy(sort, dir, warnDays);
+    const [rows] = await db.query(
+      `SELECT *, (${statusExpr}) AS computed_status
+       FROM pipettes${finalWhere}
+       ORDER BY ${orderSql}, id
+       LIMIT ? OFFSET ?`,
+      [...finalParams, limit, offset]
+    );
+
+    if (rows.length > 0) {
+      const ids = rows.map(r => r.id);
+      const ph = ids.map(() => '?').join(',');
+      const [counts] = await db.query(
+        `SELECT pipette_id, COUNT(*) AS cnt FROM calibration_history
+         WHERE pipette_id IN (${ph}) GROUP BY pipette_id`,
+        ids
+      );
+      const byId = {};
+      for (const c of counts) byId[c.pipette_id] = c.cnt;
+      for (const r of rows) {
+        r.active = !!r.active;
+        r.history_count = byId[r.id] || 0;
+      }
+
+      const replIds = rows.flatMap(r => [r.replaced_by, r.replacing]).filter(Boolean);
+      if (replIds.length > 0) {
+        const uniq = [...new Set(replIds)];
+        const ph2 = uniq.map(() => '?').join(',');
+        const [replRows] = await db.query(
+          `SELECT id, model, manufacturer, location, active, department
+           FROM pipettes WHERE id IN (${ph2})`,
+          uniq
+        );
+        const replById = {};
+        for (const r of replRows) replById[r.id] = r;
+        for (const r of rows) {
+          if (r.replaced_by && replById[r.replaced_by]) r.replacement = replById[r.replaced_by];
+          if (r.replacing && replById[r.replacing]) r.replacedFor = replById[r.replacing];
+        }
+      }
+
+      mergeCustomList(rows);
+    }
+
+    res.json({ items: rows, total, page, limit, totalPages, counters });
+  } catch (e) {
+    console.error('GET /pipettes/paged:', e);
+    res.status(500).json({ error: 'Ошибка загрузки' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// GET /ids — все ID по фильтру (для экспорта и печати этикеток)
+// ═══════════════════════════════════════════════════════════
+router.get('/ids', authenticate, async (req, res) => {
+  try {
+    const search = req.query.search || '';
+    let filters = {};
+    if (req.query.filters) {
+      try { filters = JSON.parse(req.query.filters); }
+      catch (e) { return res.status(400).json({ error: 'Некорректный filters' }); }
+    }
+
+    const warnDays = await getWarnDays();
+    const statusExpr = sqlComputedStatus(warnDays);
+
+    const baseWhere = [];
+    const baseParams = [];
+    const isActing = !!req.user.is_acting;
+    const actingDept = req.user.acting_department || null;
+    const onlyOwn = !isActing && req.user.role !== 'admin' && req.user.only_own_department;
+    const userDept = req.user.department || null;
+
+    if (isActing) {
+      if (!actingDept) return res.json({ ids: [] });
+      baseWhere.push('department = ?'); baseParams.push(actingDept);
+    } else if (onlyOwn) {
+      if (!userDept) return res.json({ ids: [] });
+      baseWhere.push('department = ?'); baseParams.push(userDept);
+    }
+
+    const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
+    let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
+    whereSql += filterSql;
+    const allParams = [...baseParams, ...filterParams];
+
+    let statusFilterSql = '';
+    const statusFilterParams = [];
+    if (filters && typeof filters === 'object' && filters.status) {
+      statusFilterSql = ` AND (${statusExpr}) = ?`;
+      statusFilterParams.push(String(filters.status));
+    }
+
+    const finalWhere = whereSql + statusFilterSql;
+    const finalParams = [...allParams, ...statusFilterParams];
+
+    const [rows] = await db.query(
+      `SELECT id FROM pipettes${finalWhere} ORDER BY id`,
+      finalParams
+    );
+    res.json({ ids: rows.map(r => r.id) });
+  } catch (e) {
+    console.error('GET /pipettes/ids:', e);
+    res.status(500).json({ error: 'Ошибка загрузки ID' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// GET /stats — счётчики + напоминания (danger/fail/warn)
+// ═══════════════════════════════════════════════════════════
+router.get('/stats', authenticate, async (req, res) => {
+  try {
+    const warnDays = await getWarnDays();
+    const statusExpr = sqlComputedStatus(warnDays);
+
+    const baseWhere = [];
+    const baseParams = [];
+    const isActing = !!req.user.is_acting;
+    const actingDept = req.user.acting_department || null;
+    const onlyOwn = !isActing && req.user.role !== 'admin' && req.user.only_own_department;
+    const userDept = req.user.department || null;
+
+    if (isActing) {
+      if (!actingDept) {
+        return res.json({ counters: { ok: 0, warn: 0, danger: 0, total: 0 },
+          reminders: { danger: [], warn: [] } });
+      }
+      baseWhere.push('department = ?'); baseParams.push(actingDept);
+    } else if (onlyOwn) {
+      if (!userDept) {
+        return res.json({ counters: { ok: 0, warn: 0, danger: 0, total: 0 },
+          reminders: { danger: [], warn: [] } });
+      }
+      baseWhere.push('department = ?'); baseParams.push(userDept);
+    }
+
+    const whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : '';
+
+    const [counterRows] = await db.query(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN (${statusExpr}) = 'ok' THEN 1 ELSE 0 END) AS ok,
+         SUM(CASE WHEN (${statusExpr}) = 'warn' THEN 1 ELSE 0 END) AS warn,
+         SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger
+       FROM pipettes${whereSql}`,
+      baseParams
+    );
+
+    const counters = {
+      total: Number(counterRows[0].total) || 0,
+      ok: Number(counterRows[0].ok) || 0,
+      warn: Number(counterRows[0].warn) || 0,
+      danger: Number(counterRows[0].danger) || 0,
+    };
+
+    const reminderWhere = whereSql
+      ? `${whereSql} AND (${statusExpr}) IN ('danger','fail','warn')`
+      : `WHERE (${statusExpr}) IN ('danger','fail','warn')`;
+
+    const [reminderRows] = await db.query(
+      `SELECT id, model, department, responsible, last_calibration, \`interval\`,
+              last_result, active, sent_for_calibration,
+              (${statusExpr}) AS computed_status
+       FROM pipettes${reminderWhere}
+       ORDER BY (${sqlStatusOrder(warnDays)}) ASC, id`,
+      baseParams
+    );
+
+    const reminders = { danger: [], warn: [] };
+    for (const r of reminderRows) {
+      if (r.computed_status === 'danger' || r.computed_status === 'fail') {
+        reminders.danger.push(r);
+      } else if (r.computed_status === 'warn') {
+        reminders.warn.push(r);
+      }
+    }
+
+    res.json({ counters, reminders });
+  } catch (e) {
+    console.error('GET /pipettes/stats:', e);
+    res.status(500).json({ error: 'Ошибка загрузки статистики' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // GET /:id — одна пипетка (read-only)
 // ═══════════════════════════════════════════════════════════
 router.get('/:id', authenticate, async (req, res) => {
@@ -583,270 +847,6 @@ router.delete('/:id', authenticate, requireAnyPermission(['delete_pipette', 'man
     if (e.status === 404) return res.status(404).json({ error: e.message });
     console.error('Delete error:', e);
     res.status(500).json({ error: 'Ошибка удаления' });
-  }
-});
-
-// ═══════════════════════════════════════════════════════════
-// GET /paged — список с серверной пагинацией, фильтрами, сортировкой
-// ═══════════════════════════════════════════════════════════
-router.get('/paged', authenticate, async (req, res) => {
-  try {
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
-    const sort = req.query.sort || 'id';
-    const dir = req.query.dir || 'asc';
-    const search = req.query.search || '';
-    const offset = (page - 1) * limit;
-
-    let filters = {};
-    if (req.query.filters) {
-      try { filters = JSON.parse(req.query.filters); }
-      catch (e) { return res.status(400).json({ error: 'Некорректный filters (ожидается JSON)' }); }
-    }
-
-    const warnDays = await getWarnDays();
-    const statusExpr = sqlComputedStatus(warnDays);
-
-    const baseWhere = [];
-    const baseParams = [];
-    const isActing = !!req.user.is_acting;
-    const actingDept = req.user.acting_department || null;
-    const onlyOwn = !isActing && req.user.role !== 'admin' && req.user.only_own_department;
-    const userDept = req.user.department || null;
-
-    if (isActing) {
-      if (!actingDept) {
-        return res.json({ items: [], total: 0, page: 1, limit, totalPages: 0,
-          counters: { ok: 0, warn: 0, danger: 0, total: 0 } });
-      }
-      baseWhere.push('department = ?'); baseParams.push(actingDept);
-    } else if (onlyOwn) {
-      if (!userDept) {
-        return res.json({ items: [], total: 0, page: 1, limit, totalPages: 0,
-          counters: { ok: 0, warn: 0, danger: 0, total: 0 } });
-      }
-      baseWhere.push('department = ?'); baseParams.push(userDept);
-    }
-
-    const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
-    let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
-    whereSql += filterSql;
-    const allParams = [...baseParams, ...filterParams];
-
-    let statusFilterSql = '';
-    const statusFilterParams = [];
-    if (filters && typeof filters === 'object' && filters.status) {
-      statusFilterSql = ` AND (${statusExpr}) = ?`;
-      statusFilterParams.push(String(filters.status));
-    }
-
-    const finalWhere = whereSql + statusFilterSql;
-    const finalParams = [...allParams, ...statusFilterParams];
-
-    const [counterRows] = await db.query(
-      `SELECT
-         COUNT(*) AS total,
-         SUM(CASE WHEN (${statusExpr}) = 'ok' THEN 1 ELSE 0 END) AS ok,
-         SUM(CASE WHEN (${statusExpr}) = 'warn' THEN 1 ELSE 0 END) AS warn,
-         SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger
-       FROM pipettes${whereSql}`,
-      allParams
-    );
-    const counters = {
-      total: Number(counterRows[0].total) || 0,
-      ok: Number(counterRows[0].ok) || 0,
-      warn: Number(counterRows[0].warn) || 0,
-      danger: Number(counterRows[0].danger) || 0,
-    };
-
-    const [countRows] = await db.query(
-      `SELECT COUNT(*) AS c FROM pipettes${finalWhere}`,
-      finalParams
-    );
-    const total = Number(countRows[0].c) || 0;
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-
-    const orderSql = sqlOrderBy(sort, dir, warnDays);
-    const [rows] = await db.query(
-      `SELECT *, (${statusExpr}) AS computed_status
-       FROM pipettes${finalWhere}
-       ORDER BY ${orderSql}, id
-       LIMIT ? OFFSET ?`,
-      [...finalParams, limit, offset]
-    );
-
-    if (rows.length > 0) {
-      const ids = rows.map(r => r.id);
-      const ph = ids.map(() => '?').join(',');
-      const [counts] = await db.query(
-        `SELECT pipette_id, COUNT(*) AS cnt FROM calibration_history
-         WHERE pipette_id IN (${ph}) GROUP BY pipette_id`,
-        ids
-      );
-      const byId = {};
-      for (const c of counts) byId[c.pipette_id] = c.cnt;
-      for (const r of rows) {
-        r.active = !!r.active;
-        r.history_count = byId[r.id] || 0;
-      }
-
-      const replIds = rows.flatMap(r => [r.replaced_by, r.replacing]).filter(Boolean);
-      if (replIds.length > 0) {
-        const uniq = [...new Set(replIds)];
-        const ph2 = uniq.map(() => '?').join(',');
-        const [replRows] = await db.query(
-          `SELECT id, model, manufacturer, location, active, department
-           FROM pipettes WHERE id IN (${ph2})`,
-          uniq
-        );
-        const replById = {};
-        for (const r of replRows) replById[r.id] = r;
-        for (const r of rows) {
-          if (r.replaced_by && replById[r.replaced_by]) r.replacement = replById[r.replaced_by];
-          if (r.replacing && replById[r.replacing]) r.replacedFor = replById[r.replacing];
-        }
-      }
-
-      mergeCustomList(rows);
-    }
-
-    res.json({ items: rows, total, page, limit, totalPages, counters });
-  } catch (e) {
-    console.error('GET /pipettes/paged:', e);
-    res.status(500).json({ error: 'Ошибка загрузки' });
-  }
-});
-
-// ═══════════════════════════════════════════════════════════
-// GET /ids — все ID по фильтру (для экспорта и печати этикеток)
-// ═══════════════════════════════════════════════════════════
-router.get('/ids', authenticate, async (req, res) => {
-  try {
-    const search = req.query.search || '';
-    let filters = {};
-    if (req.query.filters) {
-      try { filters = JSON.parse(req.query.filters); }
-      catch (e) { return res.status(400).json({ error: 'Некорректный filters' }); }
-    }
-
-    const warnDays = await getWarnDays();
-    const statusExpr = sqlComputedStatus(warnDays);
-
-    const baseWhere = [];
-    const baseParams = [];
-    const isActing = !!req.user.is_acting;
-    const actingDept = req.user.acting_department || null;
-    const onlyOwn = !isActing && req.user.role !== 'admin' && req.user.only_own_department;
-    const userDept = req.user.department || null;
-
-    if (isActing) {
-      if (!actingDept) return res.json({ ids: [] });
-      baseWhere.push('department = ?'); baseParams.push(actingDept);
-    } else if (onlyOwn) {
-      if (!userDept) return res.json({ ids: [] });
-      baseWhere.push('department = ?'); baseParams.push(userDept);
-    }
-
-    const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
-    let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
-    whereSql += filterSql;
-    const allParams = [...baseParams, ...filterParams];
-
-    let statusFilterSql = '';
-    const statusFilterParams = [];
-    if (filters && typeof filters === 'object' && filters.status) {
-      statusFilterSql = ` AND (${statusExpr}) = ?`;
-      statusFilterParams.push(String(filters.status));
-    }
-
-    const finalWhere = whereSql + statusFilterSql;
-    const finalParams = [...allParams, ...statusFilterParams];
-
-    const [rows] = await db.query(
-      `SELECT id FROM pipettes${finalWhere} ORDER BY id`,
-      finalParams
-    );
-    res.json({ ids: rows.map(r => r.id) });
-  } catch (e) {
-    console.error('GET /pipettes/ids:', e);
-    res.status(500).json({ error: 'Ошибка загрузки ID' });
-  }
-});
-
-// ═══════════════════════════════════════════════════════════
-// GET /stats — счётчики + напоминания (danger/fail/warn)
-// ═══════════════════════════════════════════════════════════
-router.get('/stats', authenticate, async (req, res) => {
-  try {
-    const warnDays = await getWarnDays();
-    const statusExpr = sqlComputedStatus(warnDays);
-
-    const baseWhere = [];
-    const baseParams = [];
-    const isActing = !!req.user.is_acting;
-    const actingDept = req.user.acting_department || null;
-    const onlyOwn = !isActing && req.user.role !== 'admin' && req.user.only_own_department;
-    const userDept = req.user.department || null;
-
-    if (isActing) {
-      if (!actingDept) {
-        return res.json({ counters: { ok: 0, warn: 0, danger: 0, total: 0 },
-          reminders: { danger: [], warn: [] } });
-      }
-      baseWhere.push('department = ?'); baseParams.push(actingDept);
-    } else if (onlyOwn) {
-      if (!userDept) {
-        return res.json({ counters: { ok: 0, warn: 0, danger: 0, total: 0 },
-          reminders: { danger: [], warn: [] } });
-      }
-      baseWhere.push('department = ?'); baseParams.push(userDept);
-    }
-
-    const whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : '';
-
-    const [counterRows] = await db.query(
-      `SELECT
-         COUNT(*) AS total,
-         SUM(CASE WHEN (${statusExpr}) = 'ok' THEN 1 ELSE 0 END) AS ok,
-         SUM(CASE WHEN (${statusExpr}) = 'warn' THEN 1 ELSE 0 END) AS warn,
-         SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger
-       FROM pipettes${whereSql}`,
-      baseParams
-    );
-
-    const counters = {
-      total: Number(counterRows[0].total) || 0,
-      ok: Number(counterRows[0].ok) || 0,
-      warn: Number(counterRows[0].warn) || 0,
-      danger: Number(counterRows[0].danger) || 0,
-    };
-
-    const reminderWhere = whereSql
-      ? `${whereSql} AND (${statusExpr}) IN ('danger','fail','warn')`
-      : `WHERE (${statusExpr}) IN ('danger','fail','warn')`;
-
-    const [reminderRows] = await db.query(
-      `SELECT id, model, department, responsible, last_calibration, \`interval\`,
-              last_result, active, sent_for_calibration,
-              (${statusExpr}) AS computed_status
-       FROM pipettes${reminderWhere}
-       ORDER BY (${sqlStatusOrder(warnDays)}) ASC, id`,
-      baseParams
-    );
-
-    const reminders = { danger: [], warn: [] };
-    for (const r of reminderRows) {
-      if (r.computed_status === 'danger' || r.computed_status === 'fail') {
-        reminders.danger.push(r);
-      } else if (r.computed_status === 'warn') {
-        reminders.warn.push(r);
-      }
-    }
-
-    res.json({ counters, reminders });
-  } catch (e) {
-    console.error('GET /pipettes/stats:', e);
-    res.status(500).json({ error: 'Ошибка загрузки статистики' });
   }
 });
 
