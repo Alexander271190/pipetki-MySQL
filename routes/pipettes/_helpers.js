@@ -116,6 +116,26 @@ function canAccessDepartment(user, department) {
   return department === user.department;
 }
 
+// ============================================================
+// Поиск прибора с проверкой доступа (для роутов)
+// Возвращает объект или null. Если null — res уже отправлен.
+// ============================================================
+async function findPipetteOrFail(executor, id, user, res) {
+  const [rows] = await executor.query(
+    'SELECT * FROM pipettes WHERE id = ?',
+    [id]
+  );
+  if (!rows.length) {
+    res.status(404).json({ error: 'Оборудование не найдено' });
+    return null;
+  }
+  if (!canAccessDepartment(user, rows[0].department)) {
+    res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
+    return null;
+  }
+  return rows[0];
+}
+
 module.exports = {
   validateISODate,
   normalizeInterval,
@@ -130,4 +150,6 @@ module.exports = {
   maybeRegenerateId,
   applyIdChange,
   canAccessDepartment,
+  findPipetteOrFail,
 };
+
