@@ -712,4 +712,6 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
   }
 });
 
+router.invalidateSettings = invalidateSettings;
+
 module.exports = router;
