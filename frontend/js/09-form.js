@@ -19,128 +19,30 @@ async function generateFormFields(data = null) {
       return;
     }
 
-    for (const f of fields) {
-      if (f.id === 'id' && (!data || !data.id)) {
-        continue;
-      }
+        for (const f of fields) {
+      if (f.id === 'id' && (!data || !data.id)) continue;
 
       const div = document.createElement('div');
       div.className = 'form-group';
-      
+
       const label = document.createElement('label');
       label.textContent = f.label + (f.required ? ' *' : '');
       div.appendChild(label);
 
-      let val;
-      if (data && data[f.id] !== undefined && data[f.id] !== null) {
-        val = data[f.id];
-      } else {
-        val = f.default || '';
+      const val = (data && data[f.id] !== undefined && data[f.id] !== null) 
+        ? data[f.id] 
+        : (f.default || '');
+
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = UI.renderField(f, val);
+      const input = wrapper.firstElementChild;
+
+      // Заполняем опции для select
+      if (f.type === 'select') {
+        fillSelectOptions(input, f, val);
       }
 
-      let input;
-
-      if (f.type === 'textarea') {
-        input = document.createElement('textarea');
-        input.rows = 2;
-        input.placeholder = f.label;
-        input.value = val;
-      } else if (f.type === 'select') {
-        input = document.createElement('select');
-
-        let opts = [];
-
-        if (f.id === 'department') {
-          let deps = departmentsList;
-
-          if (currentUser.isActing && currentUser.actingDepartment) {
-            deps = [currentUser.actingDepartment];
-          } else if (currentUser.role !== 'admin'
-              && currentUser.onlyOwnDepartment
-              && currentUser.department) {
-            deps = [currentUser.department];
-          }
-          opts = deps.length ? deps : (f.options || []);
-
-      } else if (f.id === 'equipmentType') {
-      opts = _equipmentTypes.length > 0
-      ? _equipmentTypes.map(t => ({ value: t.value, label: t.label }))
-      : [{ value: 'pipette', label: 'Пипетка' }];
-    
-      } else if (f.id === 'result') {
-          opts = [
-            { value: 'pass', label: '✅ Годен' },
-            { value: 'fail', label: '❌ Брак' },
-            { value: 'wip', label: '⏳ В процессе' }
-          ];
-                } else if (f.id === 'active') {
-          opts = [
-            { value: 'true', label: '✅ В работе' },
-            { value: 'false', label: '⛔ Не используется' }
-          ];
-         } else if (f.id === 'responsible') {
-          if (currentUser.role === 'admin') {
-            opts = _responsibles.map(u => ({ value: u.fullName, label: u.fullName }));
-            if (!f.required) {
-              opts = [{ value: '', label: '— не указан —' }, ...opts];
-            }
-          } else if (currentUser.isActing && currentUser.actingForName) {
-            opts = [{
-              value: currentUser.actingForName,
-              label: currentUser.actingForName + ' (основной)'
-            }];
-          } else {
-            const self = currentUser.fullName || '';
-            opts = self
-              ? [{ value: self, label: self }]
-              : [{ value: '', label: '— не указан —' }];
-          }
-        } else {
-          opts = f.options || [];
-        }
-
-        const valStr = (val == null) ? '' : String(val);
-        const hasEmpty = opts.some(o => String(typeof o === 'object' ? o.value : o) === '');
-        if (!f.required && !hasEmpty && opts.length > 0) {
-          opts = [{ value: '', label: '— не указан —' }, ...opts];
-        }
-
-        const hasVal = opts.some(o => String(typeof o === 'object' ? o.value : o) === valStr);
-        if (valStr && !hasVal) {
-          opts = [...opts, { value: valStr, label: `${valStr}  ⚠ (нет в списке)` }];
-        }
-
-        if (opts.length === 0) opts = [{ value: '', label: '—' }];
-
-        opts.forEach(opt => {
-          const optValue = (typeof opt === 'object') ? opt.value : opt;
-          const optLabel = (typeof opt === 'object') ? opt.label : (opt || '—');
-          const option = document.createElement('option');
-          option.value = optValue;
-          option.textContent = optLabel;
-          if (String(val) === String(optValue)) option.selected = true;
-          input.appendChild(option);
-        });
-            } else {
-        input = document.createElement('input');
-        input.type = f.type === 'date' ? 'date'
-          : f.type === 'number' ? 'number'
-          : 'text';
-        input.placeholder = f.label;
-
-        if (f.type === 'date' && val) {
-          const s = String(val).trim();
-          const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-          input.value = m ? `${m[1]}-${m[2]}-${m[3]}` : '';
-        } else {
-          input.value = val;
-        }
-      }
-
-      input.id = `p-${f.id}`;
-      input.dataset.fieldId = f.id;
-      if (f.required) input.required = true;
-           
+      // Спец-состояния
       if (f.id === 'id' && data && data.id) {
         input.readOnly = true;
         input.style.background = '#f1f5f9';
@@ -161,7 +63,6 @@ async function generateFormFields(data = null) {
 
       div.appendChild(input);
       container.appendChild(div);
-      
     }
     
     const eqSelect = document.getElementById('p-equipmentType');
@@ -204,78 +105,84 @@ let _bulkFields = [];
 const BULK_MAX_ROWS = 100;
 
 async function openModal(id) {
-  await refreshCurrentUser();
-  if (!requirePasswordChange()) return;
-  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
-
-  const tabsEl = document.getElementById('add-tabs');
   const isEdit = !!id;
+  await UI.guard(
+    { 
+      permission: isEdit 
+        ? ['edit_pipette', 'manage_pipettes'] 
+        : ['add_pipette', 'manage_pipettes'], 
+      errorMsg: isEdit ? 'Нет прав на редактирование' : 'Нет прав на добавление'
+    },
+    async () => {
+      const tabsEl = document.getElementById('add-tabs');
+     
+      if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
 
-  if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
+      _addTab = 'single';
+      switchAddTab('single');
 
-  _addTab = 'single';
-  switchAddTab('single');
+      UI.modal.open('modal');
 
-  document.getElementById('modal').classList.add('active');
+      if (!id) {
+        loadEquipmentTemplates();
+      } else {
+        const bar = document.getElementById('template-bar');
+        if (bar) bar.style.display = 'none';
+      }
 
-  if (!id) {
-    loadEquipmentTemplates();
-  } else {
-    const bar = document.getElementById('template-bar');
-    if (bar) bar.style.display = 'none';
-  }
+      if (isEdit) {
+        const p = pipettes.find(x => x.id === id);
+        if (!p) { showToast('Оборудование не найдено', 'error'); return; }
 
-  if (isEdit) {
-    const p = pipettes.find(x => x.id === id);
-    if (!p) { showToast('Оборудование не найдено', 'error'); return; }
+        document.getElementById('modal-title').innerHTML =
+          '<i class="fa-solid fa-pen"></i> Редактировать оборудование';
+        document.getElementById('edit-id').value = p.id;
 
-    document.getElementById('modal-title').innerHTML =
-      '<i class="fa-solid fa-pen"></i> Редактировать оборудование';
-    document.getElementById('edit-id').value = p.id;
+        let lastCal = '';
+        if (p.last_calibration) {
+          const m = String(p.last_calibration).match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (m) lastCal = `${m[1]}-${m[2]}-${m[3]}`;
+        }
+        const editData = {
+          ...p,
+          equipmentType:   p.equipment_type || 'pipette',
+          lastCalibration: lastCal,
+          result:          p.last_result || 'pass',
+          active:          p.active ? 'true' : 'false'
+        };
+        await generateFormFields(editData);
+      } else {
+        document.getElementById('modal-title').innerHTML =
+          '<i class="fa-solid fa-plus"></i> Добавить оборудование';
+        document.getElementById('edit-id').value = '';
 
-    let lastCal = '';
-    if (p.last_calibration) {
-      const m = String(p.last_calibration).match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (m) lastCal = `${m[1]}-${m[2]}-${m[3]}`;
-    }
-    const editData = {
-      ...p,
-      equipmentType:   p.equipment_type || 'pipette',
-      lastCalibration: lastCal,
-      result:          p.last_result || 'pass',
-      active:          p.active ? 'true' : 'false'
-    };
-    await generateFormFields(editData);
-  } else {
-    document.getElementById('modal-title').innerHTML =
-      '<i class="fa-solid fa-plus"></i> Добавить оборудование';
-    document.getElementById('edit-id').value = '';
+        const defaults = {
+          lastCalibration: todayStr(),
+          interval: 12,
+          result: 'pass',
+          active: 'true'
+        };
 
-    const defaults = {
-      lastCalibration: todayStr(),
-      interval: 12,
-      result: 'pass',
-      active: 'true'
-    };
+        if (currentUser.role === 'admin') {
+          // admin — ничего
+        } else if (currentUser.isActing && currentUser.actingForName) {
+          defaults.responsible = currentUser.actingForName;
+          if (currentUser.actingDepartment) defaults.department = currentUser.actingDepartment;
+        } else {
+          defaults.responsible = currentUser.fullName || '';
+          if (currentUser.onlyOwnDepartment && currentUser.department) {
+            defaults.department = currentUser.department;
+          }
+        }
 
-    if (currentUser.role === 'admin') {
-      // admin — ничего
-    } else if (currentUser.isActing && currentUser.actingForName) {
-      defaults.responsible = currentUser.actingForName;
-      if (currentUser.actingDepartment) defaults.department = currentUser.actingDepartment;
-    } else {
-      defaults.responsible = currentUser.fullName || '';
-      if (currentUser.onlyOwnDepartment && currentUser.department) {
-        defaults.department = currentUser.department;
+        await generateFormFields(defaults);
       }
     }
-
-    await generateFormFields(defaults);
-  }
+  );
 }
 
 function closeModal() {
-  document.getElementById('modal').classList.remove('active');
+  UI.modal.close('modal');
   document.getElementById('edit-id').value = '';
   document.getElementById('form-fields-container').innerHTML = '';
 
@@ -583,20 +490,14 @@ async function saveBulkRows(e) {
     if (!ok) return;
   }
 
-  const btn = document.getElementById('bc-submit-btn');
-  const origHtml = btn ? btn.innerHTML : null;
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Создание…'; }
-
-  try {
-    const res = await apiRequest('/pipettes/bulk-create', 'POST', { rows: _bulkRows });
-    showToast(`Создано ${res.count} единиц`, 'success');
-    closeModal();
-    currentPage = 1;
-    await loadPipetteData();
+    try {
+    await UI.saveAction({
+      btn: '#bc-submit-btn',
+      successMsg: `Создано ${_bulkRows.length} единиц`,
+      closeFn: closeModal
+    }, () => apiRequest('/pipettes/bulk-create', 'POST', { rows: _bulkRows }));
   } catch (err) {
     errEl.textContent = err.message || 'Ошибка создания';
-  } finally {
-    if (btn && origHtml) { btn.disabled = false; btn.innerHTML = origHtml; }
   }
 }
 
@@ -649,30 +550,21 @@ async function savePipette(e) {
     return;
   }
 
-  const btn = document.querySelector('#pipette-form button[type="submit"]');
-  const origHtml = btn ? btn.innerHTML : null;
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Сохранение…'; }
-
-  try {
+    await UI.saveAction({
+    btn: '#pipette-form button[type="submit"]',
+    successMsg: isEdit ? 'Оборудование обновлено' : 'Оборудование создано',
+    closeFn: closeModal
+  }, async () => {
     if (isEdit) {
       const res = await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
       if (res.idChanged && res.newId) {
         showToast(`Сохранено. Новый ID: ${res.newId}`, 'success');
-      } else {
-        showToast('Оборудование обновлено', 'success');
       }
     } else {
       const res = await apiRequest('/pipettes', 'POST', payload);
       showToast(`Оборудование создано (${res.id})`, 'success');
     }
-    closeModal();
-    currentPage = 1;
-    await loadPipetteData();
-  } catch (err) {
-    showToast(err.message || 'Ошибка сохранения', 'error');
-  } finally {
-    if (btn && origHtml) { btn.disabled = false; btn.innerHTML = origHtml; }
-  }
+  });
 }
 
 async function deletePipette(id) {
@@ -698,23 +590,25 @@ async function deletePipette(id) {
 // БЫСТРАЯ ПОВЕРКА
 // ============================================================
 async function openQuickCalModal(id) {
-   await refreshCurrentUser();
-  if (!requirePasswordChange()) return;
-  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
-  const p = pipettes.find(x => x.id === id);
-  if (!p) { showToast('Оборудование не найдено', 'error'); return; }
-  document.getElementById('quick-cal-id').value = id;
-  document.getElementById('quick-cal-pipette-info').innerHTML = `<strong>${esc(p.id)}</strong> — ${esc(p.model)} (${esc(p.department || 'без отдела')})`;
-  document.getElementById('quick-cal-date').value = todayStr();
-  document.getElementById('quick-cal-cert').value = '';
-  document.getElementById('quick-cal-result').value = 'pass';
-  document.getElementById('quick-cal-org').value = '';
-  document.getElementById('quick-cal-note').value = '';
-  document.getElementById('quick-cal-modal').classList.add('active');
+  await UI.guard(
+    { permission: ['quick_calibration', 'manage_pipettes'], errorMsg: 'Доступ запрещён' },
+    async () => {
+      const p = pipettes.find(x => x.id === id);
+      if (!p) { showToast('Оборудование не найдено', 'error'); return; }
+      document.getElementById('quick-cal-id').value = id;
+      document.getElementById('quick-cal-pipette-info').innerHTML = `<strong>${esc(p.id)}</strong> — ${esc(p.model)} (${esc(p.department || 'без отдела')})`;
+      document.getElementById('quick-cal-date').value = todayStr();
+      document.getElementById('quick-cal-cert').value = '';
+      document.getElementById('quick-cal-result').value = 'pass';
+      document.getElementById('quick-cal-org').value = '';
+      document.getElementById('quick-cal-note').value = '';
+      UI.modal.open('quick-cal-modal');
+    }
+  );
 }
 
 function closeQuickCalModal() {
-  document.getElementById('quick-cal-modal').classList.remove('active');
+  UI.modal.close('quick-cal-modal');
 }
 
 async function saveQuickCalibration() {
@@ -772,6 +666,68 @@ async function cancelSend(id) {
   } catch (e) {
     showToast(e.message || 'Ошибка отмены', 'error');
   }
+}
+
+// ============================================================
+// ХЕЛПЕР: заполнение <select> опциями
+// ============================================================
+function fillSelectOptions(selectEl, field, currentVal) {
+  let opts = [];
+
+  if (field.id === 'department') {
+    let deps = departmentsList;
+    if (currentUser.isActing && currentUser.actingDepartment) deps = [currentUser.actingDepartment];
+    else if (currentUser.role !== 'admin' && currentUser.onlyOwnDepartment && currentUser.department) {
+      deps = [currentUser.department];
+    }
+    opts = deps.length ? deps.map(d => ({ value: d, label: d })) : (field.options || []);
+  } else if (field.id === 'equipmentType') {
+    opts = _equipmentTypes.length > 0
+      ? _equipmentTypes.map(t => ({ value: t.value, label: t.label }))
+      : [{ value: 'pipette', label: 'Пипетка' }];
+  } else if (field.id === 'result') {
+    opts = [
+      { value: 'pass', label: '✅ Годен' },
+      { value: 'fail', label: '❌ Брак' },
+      { value: 'wip',  label: '⏳ В процессе' }
+    ];
+  } else if (field.id === 'active') {
+    opts = [
+      { value: 'true',  label: '✅ В работе' },
+      { value: 'false', label: '⛔ Не используется' }
+    ];
+  } else if (field.id === 'responsible') {
+    if (currentUser.role === 'admin') {
+      opts = _responsibles.map(u => ({ value: u.fullName, label: u.fullName }));
+      if (!field.required) opts.unshift({ value: '', label: '— не указан —' });
+    } else if (currentUser.isActing && currentUser.actingForName) {
+      opts = [{ value: currentUser.actingForName, label: currentUser.actingForName + ' (основной)' }];
+    } else {
+      const self = currentUser.fullName || '';
+      opts = self ? [{ value: self, label: self }] : [{ value: '', label: '— не указан —' }];
+    }
+  } else {
+    opts = field.options || [];
+    if (!field.required && !opts.some(o => String(typeof o === 'object' ? o.value : o) === '')) {
+      opts = [{ value: '', label: '— не указан —' }, ...opts];
+    }
+  }
+
+  const valStr = currentVal == null ? '' : String(currentVal);
+  if (valStr && !opts.some(o => String(typeof o === 'object' ? o.value : o) === valStr)) {
+    opts = [...opts, { value: valStr, label: `${valStr}  ⚠ (нет в списке)` }];
+  }
+  if (opts.length === 0) opts = [{ value: '', label: '—' }];
+
+  opts.forEach(opt => {
+    const v = (typeof opt === 'object') ? opt.value : opt;
+    const l = (typeof opt === 'object') ? opt.label : (opt || '—');
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = l;
+    if (String(currentVal) === String(v)) o.selected = true;
+    selectEl.appendChild(o);
+  });
 }
 
 // ============================================================
