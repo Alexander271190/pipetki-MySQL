@@ -331,20 +331,6 @@ function calcStatus(p) {
   return 'ok';
 }
 
-function calcStatusByDate(p) {
-  if (p.last_result === 'fail') return null;
-  if (p.last_result === 'wip')  return null;
-  if (!p.last_calibration || !p.interval) return null;
-  const last = parseLocalDate(p.last_calibration);
-  if (!last) return null;
-  const next = addMonths(last, p.interval);
-  const now = new Date(); now.setHours(0, 0, 0, 0);
-  const daysLeft = Math.ceil((next - now) / 86400000);
-  if (daysLeft < 0) return 'danger';
-  if (daysLeft <= settings.warnDays) return 'warn';
-  return 'ok';
-}
-
 function getNextDate(p) {
   if (!p.last_calibration || !p.interval) return null;
   const d = parseLocalDate(p.last_calibration);
@@ -513,10 +499,6 @@ function getActiveFormFields(allFields) {
   }
   const visible = new Set(myPrefs.visibleFields);
   return enabled.filter(f => visible.has(f.id));
-}
-
-function getSortedPipettes() {
-  return pipettes;
 }
 
 function getFilteredPipettes() {
