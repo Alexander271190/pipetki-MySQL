@@ -267,27 +267,30 @@ html[data-theme="dark"] .template-bar { background: rgba(14, 165, 233, .12); }
 html[data-theme="dark"] .template-bar-label { color: #93c5fd; }
 html[data-theme="dark"] .template-bar select { background: var(--card); border-color: var(--border); color: var(--text); }
 
-/* Inline-фоны в модалках */
-html[data-theme="dark"] .modal [style*="background:#f0f9ff"],
-html[data-theme="dark"] .modal [style*="background: #f0f9ff"] { background: rgba(14, 165, 233, .12) !important; color: #93c5fd !important; }
-html[data-theme="dark"] .modal [style*="background:#f0f9ff"] strong,
-html[data-theme="dark"] .modal [style*="background: #f0f9ff"] strong { color: #93c5fd !important; }
 
-html[data-theme="dark"] .modal [style*="background:#fef9c3"],
-html[data-theme="dark"] .modal [style*="background: #fef9c3"] { background: rgba(234, 179, 8, .12) !important; color: #fcd34d !important; }
-html[data-theme="dark"] .modal [style*="background:#fef9c3"] strong,
-html[data-theme="dark"] .modal [style*="background: #fef9c3"] strong { color: #fcd34d !important; }
-
-html[data-theme="dark"] .modal [style*="background:#ecfdf5"],
-html[data-theme="dark"] .modal [style*="background: #ecfdf5"] { background: rgba(22, 163, 74, .12) !important; color: #86efac !important; }
-html[data-theme="dark"] .modal [style*="background:#ecfdf5"] strong,
-html[data-theme="dark"] .modal [style*="background: #ecfdf5"] strong { color: #86efac !important; }
-
-html[data-theme="dark"] .modal [style*="background:#fee2e2"],
-html[data-theme="dark"] .modal [style*="background: #fee2e2"] { background: rgba(220, 38, 38, .12) !important; color: #fca5a5 !important; }
-html[data-theme="dark"] .modal [style*="background:#fee2e2"] strong,
-html[data-theme="dark"] .modal [style*="background: #fee2e2"] strong { color: #fca5a5 !important; }
-
+/* ============================================================
+   БЛОКИ-ПОДСКАЗКИ (тёмная тема)
+   ============================================================ */
+html[data-theme="dark"] .info-block {
+  background: rgba(14, 165, 233, .12);
+  color: #93c5fd;
+  border-left-color: #0ea5e9;
+}
+html[data-theme="dark"] .warning-block {
+  background: rgba(234, 179, 8, .12);
+  color: #fcd34d;
+  border-left-color: #eab308;
+}
+html[data-theme="dark"] .success-block {
+  background: rgba(22, 163, 74, .12);
+  color: #86efac;
+  border-left-color: #16a34a;
+}
+html[data-theme="dark"] .danger-block {
+  background: rgba(220, 38, 38, .12);
+  color: #fca5a5;
+  border-left-color: #dc2626;
+}
 html[data-theme="dark"] .modal [style*="background:#f8fafc"],
 html[data-theme="dark"] .modal [style*="background: #f8fafc"],
 html[data-theme="dark"] .modal [style*="background:#f1f5f9"],
@@ -297,12 +300,6 @@ html[data-theme="dark"] .modal [style*="background:#eff6ff"],
 html[data-theme="dark"] .modal [style*="background: #eff6ff"] { background: rgba(59, 130, 246, .12) !important; color: #93c5fd !important; }
 
 html[data-theme="dark"] .modal [style*="background:#fff;"] { background: var(--card) !important; color: var(--text) !important; }
-
-html[data-theme="dark"] .modal [style*="background:#f0f9ff"] span,
-html[data-theme="dark"] .modal [style*="background:#fef9c3"] span,
-html[data-theme="dark"] .modal [style*="background:#ecfdf5"] span,
-html[data-theme="dark"] .modal [style*="background:#fee2e2"] span,
-html[data-theme="dark"] .modal [style*="background:#eff6ff"] span { color: inherit !important; }
 
 /* Иконки secondary в тёмной теме */
 html[data-theme="dark"] .btn-secondary i { color: #93c5fd !important; }
@@ -334,37 +331,3 @@ html[data-theme="dark"] .modal .usr-perm-cb + span i {
   color: var(--text) !important; /* Светлый цвет для тёмной темы */
 }
 
-/* Расширенная справка */
-#hotkeys-modal .modal-xl {
-  width: 95vw !important;
-  max-width: 1600px !important;
-  height: 90vh !important;
-}
-#hotkeys-modal .docs-layout {
-  height: calc(90vh - 160px);
-}
-
-/* ============================================================
-   ФИКС ЦВЕТА МЕЛКИХ ПОДСКАЗОК В МОДАЛКАХ (Тёмная тема)
-   ============================================================ */
-
-/* Перекрашиваем в светлый все <small> и <p> внутри модалок, 
-   у которых задан захардкоженный тёмный цвет */
-html[data-theme="dark"] .modal small,
-html[data-theme="dark"] .modal p {
-  color: var(--text-muted) !important;
-}
-
-/* Отдельно для блока "Права доступа" (там где подсказка про Администратора) */
-html[data-theme="dark"] .modal .settings-form small,
-html[data-theme="dark"] .modal [style*="color:#0c4a6e"],
-html[data-theme="dark"] .modal [style*="color:#64748b"],
-html[data-theme="dark"] .modal [style*="color:#475569"] {
-  color: var(--text-muted) !important;
-}
-
-/* Но жирный текст внутри этих подсказок должен быть ярче */
-html[data-theme="dark"] .modal small b,
-html[data-theme="dark"] .modal small strong {
-  color: var(--text-strong) !important;
-}
