@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>README — Система учёта оборудования КДЛ</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  html { scroll-behavior: smooth; }
+  h1[id], h2[id], h3[id], h4[id] { scroll-margin-top: 20px; }
+  body {
+    font-family: 'Segoe UI', 'Calibri', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1a1a2e;
+    margin: 0;
+  }
+  h1 { font-size: 22pt; color: #1e293b; border-bottom: 3px solid #4f46e5; padding-bottom: 8px; }
+  h2 { font-size: 15pt; color: #1e293b; margin-top: 28px; padding: 8px 12px; background: #f1f5f9; border-left: 5px solid #4f46e5; }
+  h3 { font-size: 12pt; color: #334155; margin-top: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+  h4 { font-size: 11pt; color: #475569; margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9.5pt; }
+  th { background: #1e293b; color: #fff; padding: 7px 9px; text-align: left; font-weight: 600; }
+  td { padding: 5px 9px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 9pt; color: #be123c; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 12px 16px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 8.5pt; overflow-x: auto; line-height: 1.4; }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  .tree { font-family: 'Consolas', monospace; font-size: 9pt; background: #f8fafc; padding: 14px 18px; border-radius: 6px; border-left: 4px solid #4f46e5; white-space: pre; line-height: 1.5; }
+  .info { background: #dbeafe; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; border-radius: 5px; font-size: 10pt; }
+  .warn { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px 14px; margin: 12px 0; border-radius: 5px; font-size: 10pt; }
+  .success { background: #dcfce7; border-left: 4px solid #16a34a; padding: 10px 14px; margin: 12px 0; border-radius: 5px; font-size: 10pt; }
+  ul, ol { padding-left: 22px; margin: 6px 0; }
+  li { margin-bottom: 3px; }
+  hr { border: none; border-top: 1px solid #cbd5e1; margin: 20px 0; }
+  .page-break { page-break-before: always; }
+  .toc { background: #f8fafc; padding: 16px 24px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 16px 0; }
+  .toc ol { margin: 0; }
+  .toc a { color: #4f46e5; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 8.5pt; font-weight: 700; font-family: monospace; }
+  .get { background: #dcfce7; color: #166534; }
+  .post { background: #dbeafe; color: #1e40af; }
+  .put { background: #fef3c7; color: #854d0e; }
+  .delete { background: #fee2e2; color: #991b1b; }
+</style>
+</head>
+<body>
+
+<h1>README — Система учёта оборудования КДЛ</h1>
+
+<p><strong>Версия:</strong> 3.1.0<br>
+<strong>Стек:</strong> Node.js 20 + Express 4 + MySQL 8 + Vanilla JS + Nginx<br>
+<strong>Деплой:</strong> Docker Compose (4 контейнера)<br>
+<strong>Дата:</strong> 19.10.2026</p>
+
+<div class="success">
+<strong>Назначение:</strong> веб-приложение для учёта лабораторного оборудования и контроля сроков поверки. Работает в браузере, данные — на сервере лаборатории.
+</div>
+
+<div class="toc">
+<strong>📑 Содержание</strong>
+<ol>
+<li><a href="#stack">Технологический стек</a></li>
+<li><a href="#structure">Структура проекта</a></li>
+<li><a href="#backend">Бэкенд — модули</a></li>
+<li><a href="#frontend">Фронтенд — модули</a></li>
+<li><a href="#api">API — все endpoints</a></li>
+<li><a href="#db">Схема БД</a></li>
+<li><a href="#env">Переменные окружения</a></li>
+<li><a href="#start">Быстрый старт</a></li>
+<li><a href="#docker">Docker — контейнеры</a></li>
+<li><a href="#tests">Проверки (SMOKE)</a></li>
+<li><a href="#nav">Навигация по коду — что где искать</a></li>
+</ol>
+</div>
+
+<hr>
+
+<h2 id="stack">1. Технологический стек</h2>
+
+<table>
+<tr><th style="width:20%">Слой</th><th style="width:35%">Технология</th><th>Назначение</th></tr>
+<tr><td>Backend</td><td>Node.js 20 + Express 4</td><td>HTTP-сервер, API</td></tr>
+<tr><td>БД</td><td>MySQL 8.0</td><td>Хранение данных</td></tr>
+<tr><td>Драйвер БД</td><td>mysql2/promise</td><td>Пул соединений, транзакции</td></tr>
+<tr><td>Аутентификация</td><td>JWT (jsonwebtoken) + bcryptjs</td><td>Токены, хэши паролей</td></tr>
+<tr><td>Excel</td><td>exceljs</td><td>Импорт/экспорт XLSX</td></tr>
+<tr><td>PDF</td><td>pdfkit</td><td>Печать этикеток</td></tr>
+<tr><td>Штрихкоды</td><td>bwip-js, qrcode</td><td>Code-128, QR</td></tr>
+<tr><td>Файлы</td><td>multer</td><td>Загрузка картинок справки</td></tr>
+<tr><td>Frontend</td><td>Vanilla JS (20 модулей)</td><td>SPA без фреймворков</td></tr>
+<tr><td>CSS</td><td>8 модулей + тёмная тема</td><td>Через @import</td></tr>
+<tr><td>Иконки</td><td>Font Awesome 7</td><td>UI</td></tr>
+<tr><td>Reverse proxy</td><td>Nginx 1.31</td><td>HTTPS-терминация</td></tr>
+<tr><td>SSL</td><td>Let's Encrypt (certbot)</td><td>Автообновление</td></tr>
+<tr><td>Контейнеризация</td><td>Docker Compose</td><td>4 сервиса</td></tr>
+</table>
+
+<hr>
+
+<h2 id="structure">2. Структура проекта</h2>
+
+<div class="tree">pipetki-mysql-main/
+├── docker-compose.yaml          # 4 сервиса: db, app, nginx, certbot
+├── dockerfile                   # Сборка Node.js приложения
+├── package.json                 # Зависимости и скрипт start
+├── server.js                    # Точка входа Express
+├── help-seed.js                 # 23 раздела справки (Markdown)
+├── .env.example                 # Шаблон переменных
+├── .dockerignore
+│
+├── db/                          # Слой БД
+│   ├── index.js                 # Экспорт: pool, query, getConnection, initSchema, seed
+│   ├── pool.js                  # createPool + трекинг FK_CHECKS + safeParse
+│   ├── schema.js                # CREATE TABLE + ensureColumns/Indexes
+│   └── seed.js                  # Начальные данные (admin, типы, фильтры, справка)
+│
+├── routes/                      # API-роуты
+│   ├── auth.js                  # login, verify, impersonate, change-password
+│   ├── users.js                 # CRUD пользователей, reset-password
+│   ├── settings.js              # departments, fields, filters, system, types
+│   ├── log.js                   # GET/DELETE audit_log
+│   ├── import.js                # POST /api/import (XLSX/CSV/JSON)
+│   ├── export.js                # POST /api/export/xlsx
+│   ├── barcodes.js              # PNG, lookup, labels.pdf, print
+│   ├── barcode-printers.js      # CRUD принтеров
+│   ├── help.js                  # CRUD справки + upload картинок
+│   ├── view-templates.js        # Шаблоны вида
+│   ├── equipment-templates.js   # Шаблоны единиц
+│   └── pipettes/                # Всё про оборудование
+│       ├── index.js             # Порядок подключения
+│       ├── _helpers.js          # общие утилиты (см. 3.5)
+│       ├── crud.js              # GET, GET/:id, POST, PUT, DELETE
+│       ├── bulk.js              # bulk-create, bulk-send, bulk-return, bulk-change-responsible
+│       ├── calibration.js       # POST/GET /:id/calibration
+│       └── transfers.js         # /available-for-replacement, /:id/transfer, /:id/cancel-send
+│
+├── middleware/
+│   ├── auth.js                  # authenticate, requireRole, requirePermission
+│   ├── passwordPolicy.js        # validatePassword
+│   └── validate.js              # validateISODate, normalizeInterval
+│
+├── utils/
+│   ├── db-helper.js             # withTransaction — единая транзакция
+│   ├── audit.js                 # logAction — единая запись в audit_log
+│   ├── cleanup.js               # Планировщик очистки audit_log (раз в 24 ч)
+│   └── equipment-types.js       # Кэш типов (60 сек), prefix, interval, isExternal
+│
+├── nginx/
+│   └── pipette.conf             # HTTPS, rate limit на /api/auth/login
+│
+├── frontend/                    # Статика
+│   ├── index.html               # SPA-каркас (20 скриптов + модалки)
+│   ├── style.css                # 8 @import
+│   ├── css/
+│   │   ├── _variables.css       # Переменные светлой/тёмной темы
+│   │   ├── _base.css            # reset, body
+│   │   ├── _layout.css          # шапка, тулбар, контейнер
+│   │   ├── _buttons.css         # кнопки + FA-иконки
+│   │   ├── _modals.css          # модалки, resize, адаптив
+│   │   ├── _forms.css           # формы, таблицы, фильтры
+│   │   ├── _components.css      # toast, статусы, справка, блоки-подсказки
+│   │   └── _dark.css            # тёмная тема
+│   ├── js/
+│   │   ├── 00-constants.js      # STATUS_LABELS, ICONS, COLORS, ROLE_LABELS
+│   │   ├── 01-config.js         # API_URL, ALL_PERMISSIONS, SETTINGS_SECTIONS
+│   │   ├── 02-utils.js          # esc, formatDate, showConfirm, showPrompt
+│   │   ├── 03-api.js            # apiRequest (обёртка fetch)
+│   │   ├── 04-auth.js           # login/logout, canAddPipette, impersonate
+│   │   ├── 05-state.js          # loadPipetteData, calcStatus, getSortedPipettes
+│   │   ├── 06-table.js          # render, пагинация, select-all
+│   │   ├── 07-actions.js        # меню ⋮, transfer, history
+│   │   ├── 08-filters.js        # filterState, matchCalPeriodDynamic
+│   │   ├── 09-form.js           # generateFormFields, bulk-таблица
+│   │   ├── 10-bulk.js           # openBulkSend/Return/Responsible, акт
+│   │   ├── 11-export.js         # exportToXlsx/PDF, экспорт истории
+│   │   ├── 12-settings.js       # настройки: поля, отделы, типы
+│   │   ├── 13-users.js          # пользователи, смена пароля, temp-password
+│   │   ├── 14-barcodes.js       # сканер, печать, настройки принтеров
+│   │   ├── 15-help.js           # справка + Markdown-рендер + админка
+│   │   ├── 16-reminders.js      # напоминания о поверках (per-user)
+│   │   ├── 17-help-templates.js # шаблоны единиц (панель в модалке)
+│   │   ├── 18-init.js           # инициализация, горячие клавиши, импорт
+│   │   └── 99-components.js     # window.UI: icon, iconBtn, modal, guard, saveAction, infoBlock/warningBlock/successBlock/dangerBlock
+│   ├── fontawesome/             # FA 7 (css + webfonts)
+│   ├── fonts/                   # DejaVu, PT Sans и др. (для PDF)
+│   ├── images/                  # login-bg.jpg
+│   └── uploads/help/            # Загруженные картинки справки
+│
+├── data/certbot/                # SSL-сертификаты (том)
+│   ├── conf/
+│   └── www/
+│
+└── mysqldata/                   # Том MySQL (данные)</div>
+
+<div class="info">
+<strong>ℹ️ Принцип:</strong> backend-модули лежат в <code>routes/</code>, каждый экспортирует <code>express.Router()</code>. Все подключаются в <code>server.js</code> через <code>app.use('/api/...', wrapRouter(...))</code>.
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="backend">3. Бэкенд — модули</h2>
+
+<h3>3.1. Точка входа — <code>server.js</code></h3>
+<ul>
+<li>Настройка Express (json limit 50mb, static <code>frontend/</code>)</li>
+<li><code>wrapRouter()</code> — оборачивает async-обработчики в <code>asyncHandler</code></li>
+<li>Подключение 13 роутов: <code>/api/auth</code>, <code>/api/pipettes</code>, <code>/api/users</code>, <code>/api/settings</code>, <code>/api/log</code>, <code>/api/import</code>, <code>/api/export</code>, <code>/api/barcodes</code>, <code>/api/barcode-printers</code>, <code>/api/help</code>, <code>/api/view-templates</code>, <code>/api/equipment-templates</code></li>
+<li><code>GET /api/health</code> — healthcheck</li>
+<li>Старт: ждёт MySQL (90 попыток × 2 сек = 3 мин), затем <code>initSchema()</code> + <code>seedInitialData()</code>, потом <code>app.listen(3000)</code></li>
+<li>Если БД не поднялась — фоновый интервал (5 сек) догоняет</li>
+<li>Запускает <code>utils/cleanup.js → startCleanupScheduler()</code> — очистка <code>audit_log</code> старше <code>AUDIT_LOG_RETENTION_DAYS</code></li>
+</ul>
+
+<h3>3.2. Слой БД — <code>db/</code></h3>
+<table>
+<tr><th style="width:20%">Файл</th><th>Что делает</th></tr>
+<tr><td><code>pool.js</code></td><td>Пул соединений MySQL (10 соединений, utf8mb4, TZ UTC). <strong>Обёртка <code>getConnection()</code></strong> трекает <code>SET FOREIGN_KEY_CHECKS = 0/1</code> и гарантирует, что соединение вернётся в пул с <code>FK_CHECKS = 1</code> (или будет <code>destroy()</code> при сбое). Экспортирует <code>pool</code>, <code>query()</code>, <code>getConnection()</code> (обёртка с <code>query</code>, <code>beginTransaction</code>, <code>commit</code>, <code>rollback</code>, <code>release</code>), <code>safeParse()</code></td></tr>
+<tr><td><code>schema.js</code></td><td><code>initSchema()</code> — CREATE TABLE IF NOT EXISTS для 15 таблиц + <code>ensureColumns()</code> + <code>ensureIndexes()</code>. Идемпотентно</td></tr>
+<tr><td><code>seed.js</code></td><td><code>seedInitialData()</code> — admin (без пароля), 8 отделов, 6 типов, 16 полей, 8 фильтров, 5 демо-приборов (флаг <code>demo_seeded</code>). <code>generatePipetteId(prefix, conn)</code> — с <code>FOR UPDATE</code>. <code>seedHelpDocs(conn)</code></td></tr>
+<tr><td><code>index.js</code></td><td>Реэкспорт всех функций из <code>pool.js</code>, <code>schema.js</code>, <code>seed.js</code> под общим именем <code>db</code></td></tr>
+</table>
+
+<h3>3.3. Middleware</h3>
+<table>
+<tr><th style="width:20%">Файл</th><th>Что</th></tr>
+<tr><td><code>auth.js</code></td><td><code>authenticate</code> — проверяет JWT, подгружает user, проверяет <code>password_changed_at &gt; iat + 2</code>, обрабатывает impersonate. <code>requireRole(['admin'])</code>, <code>requirePermission('edit_pipette')</code>, <code>requireAnyPermission(['a','b'])</code>. <strong>Если <code>must_set_password</code> или <code>must_change_password</code> — блокирует всё, кроме роутов с флагом <code>req.allowWhenPasswordMustChange</code></strong></td></tr>
+<tr><td><code>passwordPolicy.js</code></td><td><code>validatePassword()</code> — 8+, a-z, A-Z, 0-9, спецсимвол, без пробелов</td></tr>
+<tr><td><code>validate.js</code></td><td><code>validateISODate()</code>, <code>normalizeInterval()</code>, <code>todayLocalStr()</code></td></tr>
+</table>
+
+<h3>3.4. Утилиты — <code>utils/</code></h3>
+<table>
+<tr><th style="width:20%">Файл</th><th>Что</th></tr>
+<tr><td><code>db-helper.js</code></td><td><code>withTransaction(fn)</code> — единая обёртка: <code>getConnection → beginTransaction → fn(conn) → commit</code>, при ошибке <code>rollback</code>, всегда <code>release</code></td></tr>
+<tr><td><code>audit.js</code></td><td><code>logAction(req, action, details, conn?)</code> — единая запись в <code>audit_log</code>. Ошибки не бросает (только <code>console.error</code>)</td></tr>
+<tr><td><code>cleanup.js</code></td><td><code>startCleanupScheduler()</code> — первый запуск через 60 сек, потом раз в 24 ч. <code>cleanupAuditLog()</code> — DELETE старше N дней. N = <code>AUDIT_LOG_RETENTION_DAYS</code> (default 90)</td></tr>
+<tr><td><code>equipment-types.js</code></td><td>Кэш типов (TTL 60 сек). <code>getEquipmentTypes()</code>, <code>getPrefix(type)</code>, <code>getDefaultInterval(type)</code>, <code>isExternal(type)</code>, <code>invalidateCache()</code></td></tr>
+</table>
+
+<h3>3.5. <code>routes/pipettes/_helpers.js</code> — общие функции для всех pipettes-роутов</h3>
+<table>
+<tr><th style="width:30%">Функция</th><th>Назначение</th></tr>
+<tr><td><code>validateISODate / todayLocalStr / normalizeInterval</code></td><td>Реэкспорт из <code>middleware/validate.js</code></td></tr>
+<tr><td><code>STANDARD_FIELDS</code>, <code>FORBIDDEN_CUSTOM_KEYS</code>, <code>BARCODE_MAX_LEN</code></td><td>Константы (какие поля системные, какие ключи в <code>custom_data</code> запрещены, макс. длина штрихкода)</td></tr>
+<tr><td><code>parseCustomData / mergeCustom / mergeCustomList</code></td><td>Работа с <code>custom_data</code> (JSON-поле пипетки): распарсить, развернуть в объект, развернуть у массива</td></tr>
+<tr><td><code>computeBarcodeValue(p)</code></td><td>Штрихкод: <code>inventorynumber</code> → <code>serial</code> → <code>id</code></td></tr>
+<tr><td><code>maybeRegenerateId(oldId, oldType, newType, conn)</code></td><td>При смене типа (<code>pipette → scales</code>): подобрать новый ID (<code>P-001 → S-001</code>)</td></tr>
+<tr><td><code>applyIdChange(oldId, newId, conn)</code></td><td>Перепривязать историю и связи при смене ID (FK_CHECKS=0 → UPDATE → FK_CHECKS=1)</td></tr>
+<tr><td><code>canAccessDepartment(user, department)</code></td><td>Проверка доступа: admin — всё, и.о. — отдел основного, only_own_department — свой</td></tr>
+<tr><td><code>findPipetteOrFail(executor, id, user, { forUpdate })</code></td><td><code>SELECT * FROM pipettes WHERE id = ?</code> с опциональным <code>FOR UPDATE</code>. Бросает <code>err.status = 404</code> / <code>err.status = 403</code>. Совместима с <code>withTransaction</code></td></tr>
+</table>
+
+<div class="info">
+<strong>ℹ️ Дедубликация:</strong> все пипетки-роуты (<code>crud.js</code>, <code>bulk.js</code>, <code>calibration.js</code>, <code>transfers.js</code>) используют:
+<ul>
+<li><code>withTransaction</code> — вместо <code>db.getConnection</code> + <code>beginTransaction/commit/rollback/release</code></li>
+<li><code>logAction</code> — вместо <code>INSERT INTO audit_log</code> (после коммита)</li>
+<li><code>findPipetteOrFail(conn, id, user, { forUpdate })</code> — вместо инлайн <code>SELECT ... FOR UPDATE + res.status(404/403)</code></li>
+<li><code>canAccessDepartment</code> — только в bulk-циклах (пропуск + <code>skipped.push</code>, не 403 на всю операцию)</li>
+</ul>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="frontend">4. Фронтенд — модули</h2>
+
+<h3>4.1. HTML</h3>
+<p><code>frontend/index.html</code> — SPA-каркас: 20 модалок, 20 <code>&lt;script defer&gt;</code>, шрифты, FA. Вся логика — в JS-модулях.</p>
+
+<h3>4.2. JS-модули (20)</h3>
+<table>
+<tr><th style="width:5%">#</th><th style="width:30%">Файл</th><th>Назначение</th></tr>
+<tr><td>00</td><td><code>00-constants.js</code></td><td>STATUS_LABELS, STATUS_ICONS, STATUS_COLORS, STATUS_ORDER, RESULT_LABELS, ROLE_LABELS, ICONS (FA-классы), COLORS</td></tr>
+<tr><td>01</td><td><code>01-config.js</code></td><td>API_URL, ALL_PERMISSIONS (18 шт.), SETTINGS_SECTIONS, глобальные переменные</td></tr>
+<tr><td>02</td><td><code>02-utils.js</code></td><td><code>todayStr, esc, parseLocalDate, addMonths, formatDate, pluralizeType, showToast, showConfirm, showPrompt, validatePasswordClient</code></td></tr>
+<tr><td>03</td><td><code>03-api.js</code></td><td><code>apiRequest(endpoint, method, data)</code> — обёртка fetch + 401/403 (password_change_required → открывает окно смены)</td></tr>
+<tr><td>04</td><td><code>04-auth.js</code></td><td>getSession/setSession/clearSession, impersonate, 20 функций <code>can*</code></td></tr>
+<tr><td>05</td><td><code>05-state.js</code></td><td><code>loadPipetteData()</code>, <code>calcStatus()</code>, <code>getSortedPipettes()</code>, <code>getAllTableColumns()</code></td></tr>
+<tr><td>06</td><td><code>06-table.js</code></td><td><code>render()</code> — главная таблица, счётчики, пагинация, select-all</td></tr>
+<tr><td>07</td><td><code>07-actions.js</code></td><td>Меню ⋮, передача в отдел, история поверок, «Быстрая поверка»</td></tr>
+<tr><td>08</td><td><code>08-filters.js</code></td><td><code>filterState</code>, <code>getFilteredPipettes()</code>, <code>matchCalPeriodDynamic()</code>, <code>syncFilterState()</code></td></tr>
+<tr><td>09</td><td><code>09-form.js</code></td><td><code>generateFormFields()</code>, вкладка «Партия», <code>savePipette</code>, <code>saveBulkRows</code>, <code>deletePipette</code></td></tr>
+<tr><td>10</td><td><code>10-bulk.js</code></td><td>Массовая отправка/возврат/смена ответственного, печать акта</td></tr>
+<tr><td>11</td><td><code>11-export.js</code></td><td><code>exportToXlsx</code>, <code>exportToPDF</code>, экспорт истории</td></tr>
+<tr><td>12</td><td><code>12-settings.js</code></td><td>Настройки: поля, отделы, фильтры, экспорт, типы, принтеры, общие, лог. <strong>Без корзины</strong></td></tr>
+<tr><td>13</td><td><code>13-users.js</code></td><td>Пользователи, пресеты прав, impersonate, reset-password, temp-password modal, смена пароля. <strong>Блоки «Права доступа», «Только свой отдел», «И.о.» — на UI.infoBlock / UI.warningBlock</strong></td></tr>
+<tr><td>14</td><td><code>14-barcodes.js</code></td><td>Сканер, печать этикеток, настройки штрихкодов, принтеры</td></tr>
+<tr><td>15</td><td><code>15-help.js</code></td><td>Справка: <code>renderMarkdown</code>, <code>inlineMd</code>, admin-CRUD, экспорт/импорт JSON, печать раздела</td></tr>
+<tr><td>16</td><td><code>16-reminders.js</code></td><td>Напоминания при входе (per-user, localStorage)</td></tr>
+<tr><td>17</td><td><code>17-help-templates.js</code></td><td>Шаблоны новых единиц (панель в модалке добавления)</td></tr>
+<tr><td>18</td><td><code>18-init.js</code></td><td><code>renderAuthUI</code>, меню «Ещё ▼», компакт-режим, тема, импорт данных, горячие клавиши</td></tr>
+<tr><td>99</td><td><code>99-components.js</code></td><td><strong><code>window.UI</code></strong>: <code>icon, iconBtn, checkbox, moveBtns, settingsTable, modal.{open,close,closeAll,bindOutsideClick}, guard, saveAction, renderStatusBadge, renderStatusDot, renderField, infoBlock, warningBlock, successBlock, dangerBlock</code></td></tr>
+</table>
+
+<h3>4.3. CSS-модули (8)</h3>
+<p>Подключаются через <code>@import</code> в <code>style.css</code> строго в этом порядке:</p>
+<pre><code>_variables.css → _base.css → _layout.css → _buttons.css 
+→ _modals.css → _forms.css → _components.css → _dark.css</code></pre>
+
+<div class="info">
+<strong>ℹ️ Правило:</strong> <code>_variables.css</code> — обязательно первый (объявляет CSS-переменные), <code>_dark.css</code> — обязательно последний (переопределяет для тёмной темы).
+</div>
+
+<div class="success">
+<strong>✅ Блоки-подсказки (в <code>_components.css</code> + <code>_dark.css</code>):</strong>
+<ul>
+<li><code>.info-block</code> — синий (голубой фон, тёмно-синий текст)</li>
+<li><code>.warning-block</code> — жёлтый</li>
+<li><code>.success-block</code> — зелёный</li>
+<li><code>.danger-block</code> — красный</li>
+<li><code>.info-label</code> — синий label-чекбокс (для «Одно свидетельство на всех»)</li>
+</ul>
+Все — с наследованием цвета для вложенных <code>strong</code>/<code>small</code> и тёмной темой. В JS вызываются как <code>UI.infoBlock(...)</code>, <code>UI.warningBlock(...)</code> и т.д.
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="api">5. API — все endpoints</h2>
+
+<h3>5.1. Аутентификация — <code>/api/auth</code></h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:40%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/login</code></td><td>Вход (login + password)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/verify</code></td><td>Проверка токена</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/impersonate/:userId</code></td><td>Вход под другим (только admin)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/stop-impersonate</code></td><td>Возврат к своей учётке. <strong>С <code>allowWhenPasswordMustChange</code></strong> — админ не застревает под юзером с <code>must_change_password</code></td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/change-password</code></td><td>Смена своего пароля</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/setup-password</code></td><td>Первый вход админа</td></tr>
+</table>
+
+<h3>5.2. Оборудование — <code>/api/pipettes</code></h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:40%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/</code></td><td>Список (фильтр по отделу для onlyOwnDepartment)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/available-for-replacement</code></td><td>Складские того же типа</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/:id</code></td><td>Одна единица + история</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/</code></td><td>Создание</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/:id</code></td><td>Редактирование (с перегенерацией ID при смене типа)</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/:id</code></td><td>Удаление (с защитой связок)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/bulk-create</code></td><td>Пакетное создание (до 100)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/bulk-send</code></td><td>Массовая отправка (с заменами)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/bulk-return</code></td><td>Массовый возврат</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/bulk-change-responsible</code></td><td>Массовая смена ответственного</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/:id/calibration</code></td><td>Добавить поверку</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/:id/calibration</code></td><td>История поверок</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/:id/transfer</code></td><td>Передача в другой отдел</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/:id/cancel-send</code></td><td>Отмена отправки</td></tr>
+</table>
+
+<h3>5.3. Пользователи — <code>/api/users</code></h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:40%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/</code></td><td>Список (admin)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/responsibles</code></td><td>Список для поля «Ответственный»</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/acting-targets</code></td><td>Список для и.о.</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/</code></td><td>Создание (возвращает tempPassword, must_change_password=1)</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/:id</code></td><td>Редактирование (с diff в audit_log)</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/:id</code></td><td>Удаление</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/:id/reset-password</code></td><td>Сброс пароля</td></tr>
+</table>
+
+<h3>5.4. Настройки — <code>/api/settings</code></h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:45%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/departments</code> / <code>/departments-full</code></td><td>Отделы (краткий / полный)</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/departments</code></td><td>Список отделов (с переименованием)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/fields</code></td><td>Поля формы</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/fields</code></td><td>Список полей (защита от удаления с данными → 409)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/export</code></td><td>Поля экспорта</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/export</code></td><td>Поля экспорта (сохранить)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/system</code></td><td>Системные настройки</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/system</code></td><td>Системные настройки</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/filters</code></td><td>Фильтры</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/filters</code></td><td>Фильтры (сохранить)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/equipment-types</code></td><td>Типы оборудования</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/equipment-types</code></td><td>Типы (валидация value, prefix, calibrationPlace, interval)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/reset-data</code></td><td>Сброс всех данных (pipettes + calibration_history + audit_log)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/reset-help</code></td><td>Сброс справки к заводской</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/apply-fields-to-all</code></td><td>Массовое применение полей (modes: missing / add / all)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/my-preferences</code></td><td>Мои настройки вида</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/my-preferences/effective</code></td><td>Эффективный вид (individual → template → default)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/user-preferences/:userId</code></td><td>Настройки пользователя (admin)</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/user-preferences/:userId</code></td><td>Сохранить настройки (admin)</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/user-preferences/:userId</code></td><td>Сбросить настройки (admin)</td></tr>
+</table>
+
+<h3>5.5. Импорт/Экспорт</h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:30%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/api/import</code></td><td>Импорт XLSX/CSV/JSON (batch по 50 + fallback)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/api/export/xlsx</code></td><td>Экспорт реестра или истории</td></tr>
+</table>
+
+<h3>5.6. Штрихкоды — <code>/api/barcodes</code></h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:35%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/fonts</code></td><td>Доступные шрифты этикеток</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/:id/png?type=code128|qr</code></td><td>PNG штрихкода</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/lookup</code></td><td>Поиск по штрихкоду</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/manual</code></td><td>Ручной ввод (admin)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/reset</code></td><td>Сброс к авто (admin)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/labels.pdf</code></td><td>PDF с этикетками</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/printer-status</code></td><td>TCP-проверка принтера</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/print</code></td><td>Печать (ZPL / PDF)</td></tr>
+</table>
+
+<h3>5.7. Принтеры — <code>/api/barcode-printers</code></h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:35%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/</code></td><td>Все (admin)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/available</code></td><td>Доступные пользователю + preferredId</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/</code></td><td>Создать</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/:id</code></td><td>Обновить</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/:id</code></td><td>Удалить</td></tr>
+</table>
+
+<h3>5.8. Справка — <code>/api/help</code></h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:35%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/visible</code></td><td>Доступные разделы (без requiredPermissions)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/</code></td><td>Все разделы (admin)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/:slug</code></td><td>Один раздел</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/</code></td><td>Создать</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/:slug</code></td><td>Обновить</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/:slug</code></td><td>Удалить</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/reorder</code></td><td>Изменить порядок</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/import</code></td><td>Импорт JSON (replace/merge)</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/export/all</code></td><td>Экспорт JSON</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/images/upload</code></td><td>Загрузить картинку</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/images/:filename</code></td><td>Удалить картинку</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/images/list</code></td><td>Список картинок</td></tr>
+</table>
+
+<h3>5.9. Шаблоны</h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:40%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/api/view-templates</code></td><td>Шаблоны вида</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/api/view-templates</code></td><td>Создать</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>/api/view-templates/:id</code></td><td>Обновить</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/api/view-templates/:id</code></td><td>Удалить</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/api/view-templates/:id/apply-to-user/:userId</code></td><td>Назначить</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/api/equipment-templates</code></td><td>Шаблоны единиц</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>/api/equipment-templates</code></td><td>Создать</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/api/equipment-templates/:id</code></td><td>Удалить</td></tr>
+</table>
+
+<h3>5.10. Прочее</h3>
+<table>
+<tr><th style="width:12%">Метод</th><th style="width:30%">Путь</th><th>Описание</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/api/log?limit=100</code></td><td>Журнал (admin)</td></tr>
+<tr><td><span class="method delete">DELETE</span></td><td><code>/api/log</code></td><td>Очистить журнал</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>/api/health</code></td><td>Healthcheck</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2 id="db">6. Схема БД</h2>
+
+<p>15 таблиц. Все — <code>utf8mb4_unicode_ci</code>, InnoDB.</p>
+
+<table>
+<tr><th style="width:20%">Таблица</th><th>Назначение</th><th style="width:30%">Ключевые поля</th></tr>
+<tr><td><code>users</code></td><td>Пользователи</td><td>id, login, password, role, extra_permissions, is_acting, acting_for_id, only_own_department, must_change_password, must_set_password, password_changed_at, view_template_id</td></tr>
+<tr><td><code>pipettes</code></td><td>Оборудование</td><td>id (PK), model, equipment_type, department, interval, last_calibration, last_result, active, responsible, replaced_by, replacing, barcode, barcode_source, custom_data (JSON)</td></tr>
+<tr><td><code>calibration_history</code></td><td>История поверок</td><td>id, pipette_id (FK), date, cert, result, org, note</td></tr>
+<tr><td><code>audit_log</code></td><td>Журнал действий</td><td>id, user_id, user_full_name, action, details, timestamp</td></tr>
+<tr><td><code>departments</code></td><td>Справочник отделов</td><td>id, name (UNIQUE), enabled</td></tr>
+<tr><td><code>field_config</code></td><td>Поля формы</td><td>id, label, type, required, enabled, options, default_value, field_order</td></tr>
+<tr><td><code>filter_config</code></td><td>Фильтры</td><td>id, label, type, field_id, enabled, options_source, filter_order</td></tr>
+<tr><td><code>export_settings</code></td><td>Поля экспорта</td><td>id (всегда 1), fields (JSON)</td></tr>
+<tr><td><code>system_settings</code></td><td>Системные настройки</td><td>setting_key, setting_value: equipment_types, warn_days, barcode_*, demo_seeded</td></tr>
+<tr><td><code>user_preferences</code></td><td>Настройки вида</td><td>user_id (PK/FK), preferences (JSON: visibleFields, defaultPageSize)</td></tr>
+<tr><td><code>barcode_printers</code></td><td>Принтеры этикеток</td><td>id, name, department, mode (pdf-a4/pdf-zebra/zebra-ip/zebra-agent), ip, port, label_size, enabled, is_default</td></tr>
+<tr><td><code>help_docs</code></td><td>Справка</td><td>id, slug (UNIQUE), title, content, required_permissions (JSON), sort_order, enabled</td></tr>
+<tr><td><code>help_images</code></td><td>Картинки справки</td><td>id, filename, original_name, mime_type, size_bytes, uploaded_by</td></tr>
+<tr><td><code>view_templates</code></td><td>Шаблоны вида</td><td>id, name (UNIQUE), visible_fields (JSON), is_default</td></tr>
+<tr><td><code>equipment_templates</code></td><td>Шаблоны единиц</td><td>id, name (UNIQUE), data (JSON)</td></tr>
+</table>
+
+<h3>Индексы</h3>
+<ul>
+<li><code>idx_pipettes_department</code> — на department</li>
+<li><code>idx_pipettes_equipment_type</code> — на equipment_type</li>
+<li><code>idx_pipettes_barcode</code> — на barcode</li>
+<li><code>idx_audit_log_timestamp</code> — на timestamp DESC</li>
+<li><code>idx_barcode_printers_department</code> — на department</li>
+</ul>
+
+<div class="info">
+<strong>ℹ️ Нет корзины:</strong> колонки <code>deleted_at</code> нет. <code>DELETE /:id</code> — <strong>физическое удаление</strong> с защитой связок (нельзя удалить, если используется как замена, отправлен на поверку и т.п.). UI спрашивает подтверждение <strong>дважды</strong>.
+</div>
+
+<h2 id="env">7. Переменные окружения</h2>
+
+<p>Шаблон — <code>.env.example</code>. В <code>docker-compose.yaml</code> переменные передаются через <code>environment:</code>.</p>
+
+<table>
+<tr><th style="width:25%">Переменная</th><th style="width:20%">Пример</th><th>Назначение</th></tr>
+<tr><td><code>PORT</code></td><td>3000</td><td>Порт приложения</td></tr>
+<tr><td><code>TZ</code></td><td>UTC</td><td>Часовой пояс</td></tr>
+<tr><td><code>DB_HOST</code></td><td>db</td><td>Имя сервиса MySQL в Docker-сети</td></tr>
+<tr><td><code>DB_PORT</code></td><td>3306</td><td>Порт MySQL</td></tr>
+<tr><td><code>DB_NAME</code></td><td>pipette</td><td>Имя БД</td></tr>
+<tr><td><code>DB_USER</code></td><td>pipette</td><td>Пользователь БД</td></tr>
+<tr><td><code>DB_PASSWORD</code></td><td>...</td><td>Пароль БД</td></tr>
+<tr><td><code>JWT_SECRET</code></td><td>...</td><td>Секрет для подписи токенов</td></tr>
+<tr><td><code>AUDIT_LOG_RETENTION_DAYS</code></td><td>90</td><td>Сколько дней хранить <code>audit_log</code> (cleanup.js)</td></tr>
+</table>
+
+<div class="warn">
+<strong>⚠️ Безопасность:</strong> в <code>docker-compose.yaml</code> сейчас <code>DB_PASSWORD</code> и <code>JWT_SECRET</code> — открытым текстом. Перед публикацией в git:
+<ol>
+<li>Вынести в <code>.env</code> → <code>DB_PASSWORD: ${DB_PASSWORD}</code> в compose</li>
+<li><code>.env</code> — в <code>.gitignore</code></li>
+<li><code>JWT_SECRET</code> — сгенерировать: <code>openssl rand -hex 32</code></li>
+</ol>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="start">8. Быстрый старт</h2>
+
+<h3>Через Docker (production)</h3>
+<pre><code>cd pipetki-mysql-main
+
+# 1. Запустить (сборка + старт)
+docker-compose up -d --build
+
+# 2. Логи
+docker-compose logs --tail=30 app
+
+# 3. Проверка
+curl http://localhost:3000/api/health
+# {"status":"ok"}</code></pre>
+
+<div class="warn">
+<strong>⚠️ <code>--build</code> обязателен</strong> после каждой правки в <code>routes/</code>, <code>frontend/</code>, <code>db/</code>, <code>utils/</code>, <code>middleware/</code>, <code>server.js</code>, <code>help-seed.js</code>. Volume mount в <code>docker-compose.yaml</code> <strong>не настроен</strong> — изменения попадают в контейнер только через пересборку.
+<br><br>
+Если правишь <strong>только</strong> 1–2 файла — можно быстрее:
+<pre><code>docker cp frontend\js\12-settings.js pipette_app:/app/frontend/js/12-settings.js
+docker restart pipette_app</code></pre>
+</div>
+
+<h3>Первый вход</h3>
+<ol>
+<li>Открыть <code>https://&lt;host&gt;</code> в браузере</li>
+<li>Логин: <code>admin</code>, пароль — пустой</li>
+<li>Система попросит установить пароль (8+, a-z, A-Z, 0-9, спецсимвол)</li>
+<li>Дальше — Настройки → Пользователи → создать остальных</li>
+</ol>
+
+<h3>Локально без Docker (dev)</h3>
+<pre><code># Требуется: Node 20+, MySQL 8
+npm install
+node server.js
+# Server on http://0.0.0.0:3000</code></pre>
+
+<h2 id="docker">9. Docker — 4 контейнера</h2>
+
+<table>
+<tr><th style="width:15%">Сервис</th><th style="width:15%">Образ</th><th>Назначение</th><th style="width:15%">Порты</th></tr>
+<tr><td><code>db</code></td><td>mysql:8.0.46</td><td>MySQL, том <code>./mysqldata</code>, healthcheck через mysqladmin</td><td>не проброшен</td></tr>
+<tr><td><code>app</code></td><td>node:20-alpine (сборка)</td><td>Node.js приложение, <code>expose 3000</code>, healthcheck <code>/api/health</code></td><td>expose 3000</td></tr>
+<tr><td><code>nginx</code></td><td>nginx:1.31-alpine</td><td>HTTPS-терминация, reverse proxy → app:3000, rate limit на логин</td><td>80, 443</td></tr>
+<tr><td><code>certbot</code></td><td>certbot/certbot</td><td>Автообновление сертификатов каждые 12 ч, HUP nginx</td><td>—</td></tr>
+</table>
+
+<h3>Тома</h3>
+<ul>
+<li><code>./mysqldata</code> → <code>/var/lib/mysql</code> (данные БД)</li>
+<li><code>./data/certbot/conf</code> → <code>/etc/letsencrypt</code> (сертификаты)</li>
+<li><code>./data/certbot/www</code> → <code>/var/www/certbot</code> (ACME-challenge)</li>
+</ul>
+
+<h2 id="tests">10. Проверки (SMOKE)</h2>
+
+<p>В проекте <strong>нет автотестов</strong>, но есть рекомендуемый порядок проверки после пересборки:</p>
+
+<h3>10.1. Синтаксис (в контейнере)</h3>
+<pre><code>$files = @(
+  'server.js',
+  'routes/auth.js','routes/users.js','routes/settings.js','routes/import.js',
+  'routes/export.js','routes/help.js','routes/log.js','routes/barcodes.js',
+  'routes/barcode-printers.js','routes/view-templates.js','routes/equipment-templates.js',
+  'routes/pipettes/index.js','routes/pipettes/_helpers.js','routes/pipettes/crud.js',
+  'routes/pipettes/bulk.js','routes/pipettes/calibration.js','routes/pipettes/transfers.js',
+  'db/index.js','db/pool.js','db/schema.js','db/seed.js',
+  'utils/audit.js','utils/cleanup.js','utils/db-helper.js','utils/equipment-types.js',
+  'middleware/auth.js','middleware/passwordPolicy.js','middleware/validate.js',
+  'frontend/js/00-constants.js','frontend/js/01-config.js','frontend/js/02-utils.js',
+  'frontend/js/03-api.js','frontend/js/04-auth.js','frontend/js/05-state.js',
+  'frontend/js/06-table.js','frontend/js/07-actions.js','frontend/js/08-filters.js',
+  'frontend/js/09-form.js','frontend/js/10-bulk.js','frontend/js/11-export.js',
+  'frontend/js/12-settings.js','frontend/js/13-users.js','frontend/js/14-barcodes.js',
+  'frontend/js/15-help.js','frontend/js/16-reminders.js','frontend/js/17-help-templates.js',
+  'frontend/js/18-init.js','frontend/js/99-components.js'
+)
+$fail = 0
+foreach ($f in $files) {
+  $out = docker exec pipette_app node --check "/app/$f" 2>&1
+  if ($out) { Write-Host "❌ $f — $out" -ForegroundColor Red; $fail++ }
+}
+if ($fail -eq 0) { Write-Host "✅ Все $($files.Count) файлов — синтаксис OK" -ForegroundColor Green }</code></pre>
+
+<h3>10.2. В браузере (F12 → Console)</h3>
+<ul>
+<li><code>GET /api/health</code> → <code>{"status":"ok"}</code></li>
+<li><code>typeof UI === 'object'</code>, <code>typeof esc === 'function'</code>, <code>typeof apiRequest === 'function'</code></li>
+<li>Все 20 JS-модулей загружены (<code>document.querySelectorAll('script[src]')</code>)</li>
+<li>Все 19 модалок есть в DOM (<code>document.getElementById</code>)</li>
+<li>CSS ФАЗЫ 5: <code>.info-block</code> → <code>rgb(240, 249, 255)</code> / тёмная → <code>rgba(14, 165, 233, 0.12)</code></li>
+</ul>
+
+<div class="success">
+<strong>✅ Ручной чек-лист (после Ctrl+F5):</strong>
+<ol>
+<li>Создать прибор (одна единица + партия)</li>
+<li>Редактировать, сменить тип <code>P-001 → S-001</code> (история привязалась)</li>
+<li>Отправить на поверку с заменой (2–3 шт.)</li>
+<li>Вернуть с поверки (одно свидетельство + индивидуальные)</li>
+<li>Передать в отдел</li>
+<li>Сменить ответственного (массово)</li>
+<li>Удалить (2 подтверждения)</li>
+<li>Импорт XLSX</li>
+<li>Экспорт Excel, PDF</li>
+<li>Печать этикеток</li>
+<li>Справка: 23 раздела, редактирование</li>
+<li><strong>Переключить тёмную тему</strong> — все блоки-подсказки читаются</li>
+</ol>
+</div>
+
+<div class="page-break"></div>
+
+<h2 id="nav">11. Навигация по коду — что где искать</h2>
+
+<table>
+<tr><th style="width:42%">Хочу...</th><th>Смотреть в</th></tr>
+<tr><td>Понять, как работает транзакция</td><td><code>utils/db-helper.js</code> → <code>withTransaction()</code></td></tr>
+<tr><td>Понять, как пишется аудит</td><td><code>utils/audit.js</code> → <code>logAction()</code></td></tr>
+<tr><td>Понять, как ищется пипетка с проверкой доступа</td><td><code>routes/pipettes/_helpers.js</code> → <code>findPipetteOrFail()</code></td></tr>
+<tr><td>Изменить правила доступа к отделу</td><td><code>routes/pipettes/_helpers.js</code> → <code>canAccessDepartment()</code></td></tr>
+<tr><td>Изменить логику смены типа (P→S)</td><td><code>routes/pipettes/_helpers.js</code> → <code>maybeRegenerateId()</code> + <code>applyIdChange()</code></td></tr>
+<tr><td>Изменить поля формы добавления</td><td><code>routes/settings.js</code> (GET/PUT /fields) + <code>db/seed.js</code> (дефолтные)</td></tr>
+<tr><td>Изменить типы оборудования</td><td><code>routes/settings.js</code> + <code>utils/equipment-types.js</code></td></tr>
+<tr><td>Изменить статусы (ok/warn/danger)</td><td><code>frontend/js/05-state.js</code> → <code>calcStatus()</code></td></tr>
+<tr><td>Изменить «следующая поверка»</td><td><code>frontend/js/05-state.js</code> → <code>getNextDate()</code> + <code>02-utils.js</code> → <code>addMonths()</code></td></tr>
+<tr><td>Добавить колонку в таблицу</td><td><code>frontend/js/05-state.js</code> → <code>SYSTEM_TABLE_COLUMNS</code> + <code>06-table.js</code> → <code>switch(colId)</code></td></tr>
+<tr><td>Добавить фильтр</td><td><code>db/seed.js</code> → <code>filter_config</code> + <code>08-filters.js</code> → <code>renderFilterFields()</code></td></tr>
+<tr><td>Добавить endpoint</td><td>Создать в <code>routes/&lt;модуль&gt;.js</code>, подключить в <code>server.js</code></td></tr>
+<tr><td>Добавить право (permission)</td><td><code>frontend/js/01-config.js</code> → <code>ALL_PERMISSIONS</code> + <code>routes/&lt;...&gt;.js</code> → <code>requirePermission('...')</code></td></tr>
+<tr><td>Добавить UI-компонент</td><td><code>frontend/js/99-components.js</code> → <code>window.UI = { ... }</code></td></tr>
+<tr><td>Добавить CSS-класс/блок</td><td><code>frontend/css/_components.css</code> + тёмная в <code>_dark.css</code></td></tr>
+<tr><td>Добавить модалку</td><td><code>frontend/index.html</code> (разметка) + JS-модуль (логика) + <code>UI.modal.bindOutsideClick</code></td></tr>
+<tr><td>Изменить логику импорта</td><td><code>routes/import.js</code> (batch по 50 + fallback)</td></tr>
+<tr><td>Изменить экспорт</td><td><code>routes/export.js</code> (XLSX) + <code>frontend/js/11-export.js</code> (PDF)</td></tr>
+<tr><td>Изменить справку</td><td><code>help-seed.js</code> (стартовые) + <code>routes/help.js</code> + <code>15-help.js</code></td></tr>
+<tr><td>Изменить схему БД</td><td><code>db/schema.js</code> → <code>CREATE TABLE</code> + <code>ensureColumns()</code></td></tr>
+<tr><td>Добавить начальные данные</td><td><code>db/seed.js</code> → <code>seedInitialData()</code></td></tr>
+<tr><td>Изменить Nginx (SSL, rate limit)</td><td><code>nginx/pipette.conf</code></td></tr>
+<tr><td>Изменить Docker</td><td><code>docker-compose.yaml</code></td></tr>
+<tr><td>Настроить retention <code>audit_log</code></td><td><code>utils/cleanup.js</code> + <code>AUDIT_LOG_RETENTION_DAYS</code></td></tr>
+<tr><td>Починить имперсонацию (не застревать)</td><td><code>routes/auth.js</code> → <code>allowWhenPasswordMustChange</code> на <code>/stop-impersonate</code></td></tr>
+</table>
+
+<hr>
+
+<div class="success">
+<strong>🎯 Резюме</strong><br>
+Проект — классический Express + MySQL + Vanilla JS SPA. 13 роутов, 20 JS-модулей, 8 CSS-модулей, 15 таблиц БД. Всё модульное, изолированное. Единые хелперы: <code>withTransaction</code> (транзакции), <code>logAction</code> (аудит), <code>findPipetteOrFail</code> (поиск с доступом). Корзина не реализована (удаление физическое с двойным подтверждением). Блоки-подсказки — через <code>UI.infoBlock/warningBlock/successBlock/dangerBlock</code>.
+</div>
+
+<p style="margin-top:30px; color:#64748b; font-size:8.5pt; text-align:center;">
+Клинико-диагностическая лаборатория · README v3.1.0 · 19.10.2026
+</p>
+
+<script>
+  // Надёжная прокрутка для TOC (работает даже если нативный якорь глючит)
+  document.querySelectorAll('.toc a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.pushState(null, '', a.getAttribute('href'));
+    });
+  });
+</script>
+
+</body>
+</html>
