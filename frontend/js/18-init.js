@@ -378,10 +378,11 @@ async function handleImport() {
 let _searchTimeout = null;
 document.getElementById('search').addEventListener('input', () => {
   clearTimeout(_searchTimeout);
-  _searchTimeout = setTimeout(() => {
+  _searchTimeout = setTimeout(async () => {
     const savedScroll = window.scrollY;
     document.getElementById('filter-panel').classList.remove('show');
     currentPage = 1;
+    await loadPaged();
     render();
     updateSelectAllCheckbox();
     updateBulkCalButton();
