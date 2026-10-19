@@ -348,8 +348,7 @@ router.get('/stats', authenticate, async (req, res) => {
 
     const reminderWhere = whereSql
       ? `${whereSql} AND (${statusExpr}) IN ('danger','fail','warn')`
-      : `WHERE (${statusExpr}) IN ('danger','fail','warn')`;
-
+      : ` WHERE (${statusExpr}) IN ('danger','fail','warn')`;
     const [reminderRows] = await db.query(
       `SELECT id, model, department, responsible, last_calibration, \`interval\`,
               last_result, active, sent_for_calibration,
