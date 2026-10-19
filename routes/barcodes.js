@@ -124,7 +124,16 @@ async function generateBarcodePng(value, type = 'code128') {
   });
 }
 
+// 🆕 Кэш настроек штрихкодов (60 сек)
+let _settingsCache = null;
+let _settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 60_000;
+
 async function getSettings() {
+  const now = Date.now();
+  if (_settingsCache && now - _settingsCacheTime < SETTINGS_CACHE_TTL) {
+    return _settingsCache;
+  }
   const keys = [
     'barcode_type', 'barcode_label_fields', 'barcode_mode',
     'barcode_label_size', 'barcode_fallback_to_pdf', 'barcode_default_copies',
@@ -138,7 +147,14 @@ async function getSettings() {
   );
   const s = {};
   for (const r of rows) s[r.setting_key] = r.setting_value;
+  _settingsCache = s;
+  _settingsCacheTime = now;
   return s;
+}
+
+function invalidateSettings() {
+  _settingsCache = null;
+  _settingsCacheTime = 0;
 }
 
 function getLabelFields(s) {
