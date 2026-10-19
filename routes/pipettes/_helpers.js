@@ -102,6 +102,32 @@ async function applyIdChange(oldId, newId, conn) {
 }
 
 // ============================================================
+// 🆕 Скоуп по отделу — общий для /paged, /ids, /stats, /all.
+// Возвращает: { empty, baseWhere, baseParams }.
+//   empty = true — у и.о./пользователя нет отдела, роут должен
+//                  вернуть пустой результат (что именно — решает роут).
+//   baseWhere/baseParams — массив частей WHERE и параметров.
+// ============================================================
+function buildDepartmentScope(user) {
+  const baseWhere = [];
+  const baseParams = [];
+
+  if (!user) return { empty: true, baseWhere, baseParams };
+
+  if (user.is_acting) {
+    if (!user.acting_department) return { empty: true, baseWhere, baseParams };
+    baseWhere.push('department = ?');
+    baseParams.push(user.acting_department);
+  } else if (user.role !== 'admin' && user.only_own_department) {
+    if (!user.department) return { empty: true, baseWhere, baseParams };
+    baseWhere.push('department = ?');
+    baseParams.push(user.department);
+  }
+
+  return { empty: false, baseWhere, baseParams };
+}
+
+// ============================================================
 // ДОСТУП ПО ОТДЕЛУ
 // ============================================================
 function canAccessDepartment(user, department) {
@@ -337,6 +363,7 @@ module.exports = {
   applyIdChange,
   canAccessDepartment,
   findPipetteOrFail,
+  buildDepartmentScope,
   sqlComputedStatus,
   sqlStatusOrder,
   buildFiltersWhere,
