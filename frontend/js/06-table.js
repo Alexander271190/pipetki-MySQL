@@ -4,15 +4,16 @@
 // РЕНДЕР ТАБЛИЦЫ
 // ============================================================
 function render() {
-  let filtered = getSortedPipettes();
+  // 🆕 Данные уже пришли с сервера отфильтрованными и отсортированными
+  const items = pagedState.items;
+  const totalPages = pagedState.totalPages;
+  const total = pagedState.total;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  // Синхронизация номера страницы (сервер мог вернуть другую)
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
-  const startIdx = (currentPage - 1) * pageSize;
-  const pageItems = filtered.slice(startIdx, startIdx + pageSize);
-
+  // ── Пагинация ──
   const pageCurrentEl = document.getElementById('page-current');
   const pageTotalEl = document.getElementById('page-total');
   const pageCountEl = document.getElementById('page-count');
@@ -21,124 +22,63 @@ function render() {
 
   if (pageCurrentEl) pageCurrentEl.textContent = currentPage;
   if (pageTotalEl)   pageTotalEl.textContent = totalPages;
-  if (pageCountEl)   pageCountEl.textContent = filtered.length;
+  if (pageCountEl)   pageCountEl.textContent = total;
   if (pagePrevEl)    pagePrevEl.disabled = currentPage <= 1;
   if (pageNextEl)    pageNextEl.disabled = currentPage >= totalPages;
 
   const paginationEl = document.getElementById('pagination');
   if (paginationEl) {
-    paginationEl.style.display = filtered.length > pageSize ? 'flex' : 'none';
+    paginationEl.style.display = total > pageSize ? 'flex' : 'none';
   }
 
- // ── Подсчёт индикаторов ──
-const counters = {
-  ok: 0,
-  warn: 0,
-  danger: 0,
-  sent: 0,
-  wipActive: 0,
-  wipInactive: 0,
-  failInactive: 0,
-  noDateActive: 0,
-  noDateInactive: 0,
-};
+  // ── Счётчики (из pagedState.counters — учитывают фильтры) ──
+  const c = pagedState.counters || { ok: 0, warn: 0, danger: 0, total: 0 };
+  const statOkEl = document.getElementById('stat-ok');
+  const statWarnEl = document.getElementById('stat-warn');
+  const statDangerEl = document.getElementById('stat-danger');
+  const statTotalEl = document.getElementById('stat-total');
 
-pipettes.forEach(p => {
-  const s = calcStatus(p);
+  if (statOkEl)     statOkEl.textContent = c.ok;
+  if (statWarnEl)   statWarnEl.textContent = c.warn;
+  if (statDangerEl) statDangerEl.textContent = c.danger;
+  if (statTotalEl)  statTotalEl.textContent = c.total;
 
-  if (s === 'sent') { counters.sent++; return; }
-
-  if (s === 'wip') {
-    if (!p.active) counters.wipInactive++;
-    else           counters.wipActive++;
-    return;
-  }
-
-  if (s === 'fail') {
-    if (!p.active) counters.failInactive++;
-    else           counters.danger++;
-    return;
-  }
-
-  const sByDate = calcStatusByDate(p);
-
-  if (sByDate === null) {
-    if (!p.active) counters.noDateInactive++;
-    else           counters.noDateActive++;
-    return;
-  }
-
-  if (sByDate === 'ok')          counters.ok++;
-  else if (sByDate === 'warn')   counters.warn++;
-  else if (sByDate === 'danger') counters.danger++;
-});
-
-document.getElementById('stat-ok').textContent     = counters.ok;
-document.getElementById('stat-warn').textContent   = counters.warn;
-document.getElementById('stat-danger').textContent = counters.danger;
-document.getElementById('stat-total').textContent  = pipettes.length;
-
-// 🆕 Тултип на «Всего»
-const totalEl = document.getElementById('stat-total');
-if (totalEl) {
-  const lines = [];
-
-  lines.push(`Всего: ${pipettes.length}`);
-  lines.push('');
-  lines.push('В индикаторах:');
-  lines.push(`  🟢 В норме:                ${counters.ok}`);
-  lines.push(`  🟡 Скоро поверка:          ${counters.warn}`);
-  lines.push(`  🔴 Просрочены:             ${counters.danger}`);
-  lines.push(`  ─────────────────────────────`);
-  lines.push(`  Сумма:                     ${counters.ok + counters.warn + counters.danger}`);
-
-  const hidden =
-    counters.sent +
-    counters.wipActive +
-    counters.wipInactive +
-    counters.failInactive +
-    counters.noDateActive +
-    counters.noDateInactive;
-
-  if (hidden > 0) {
+  // 🆕 Тултип на «Всего» — из серверных counters
+  if (statTotalEl) {
+    const sumIn = (c.ok || 0) + (c.warn || 0) + (c.danger || 0);
+    const outside = (c.total || 0) - sumIn;
+    const lines = [];
+    lines.push(`Всего: ${c.total}`);
     lines.push('');
-    lines.push('Не вошло в индикаторы:');
-    if (counters.sent > 0)
-      lines.push(`  📦 На поверке:              ${counters.sent}`);
-    if (counters.wipActive > 0)
-      lines.push(`  ⏳ В процессе:              ${counters.wipActive}`);
-    if (counters.wipInactive > 0)
-      lines.push(`  ⏳ В процессе (неактив):    ${counters.wipInactive}`);
-    if (counters.failInactive > 0)
-      lines.push(`  ❌ Брак (неактив):          ${counters.failInactive}`);
-    if (counters.noDateActive > 0)
-     lines.push(`  ❓ Без даты/МПИ (актив):    ${counters.noDateActive}`);
-    if (counters.noDateInactive > 0)
-      lines.push(`  ❓ Без даты/МПИ (неактив):  ${counters.noDateInactive}`);
+    lines.push('В индикаторах:');
+    lines.push(`  🟢 В норме:                ${c.ok}`);
+    lines.push(`  🟡 Скоро поверка:          ${c.warn}`);
+    lines.push(`  🔴 Просрочены:             ${c.danger}`);
     lines.push(`  ─────────────────────────────`);
-    lines.push(`  Сумма вне индикаторов:     ${hidden}`);
+    lines.push(`  Сумма:                     ${sumIn}`);
+    if (outside > 0) {
+      lines.push('');
+      lines.push(`Вне индикаторов (на поверке, в процессе, без даты, неактивные): ${outside}`);
+    }
+    statTotalEl.title = lines.join('\n');
   }
 
-  const mainSum = counters.ok + counters.warn + counters.danger;
-  lines.push('');
-  lines.push('Проверка:');
-  lines.push(`  ${mainSum} (в индикаторах) + ${hidden} (вне) = ${mainSum + hidden}`);
-  lines.push(`  Всего единиц: ${pipettes.length}`);
-  lines.push(`  ${mainSum + hidden === pipettes.length ? '✅ Всё сходится' : '❌ Ошибка подсчёта'}`);
-
-    totalEl.title = lines.join('\n');
-}
-
+  // ── Баннер просрочек ──
   const banner = document.getElementById('alert-banner');
-  if (counters.danger > 0) {
-    document.getElementById('alert-text').textContent = `У ${counters.danger} ${counters.danger === 1 ? 'единицы' : 'единиц'} проблема с поверкой!`;
-    banner.classList.add('show');
-  } else if (counters.warn > 0) {
-    document.getElementById('alert-text').textContent = `У ${counters.warn} ${counters.warn === 1 ? 'единицы' : 'единиц'} подходит срок поверки в течение ${settings.warnDays} дн.`;
-    banner.classList.add('show');
-  } else {
-    banner.classList.remove('show');
+  const alertText = document.getElementById('alert-text');
+  if (banner) {
+    if (c.danger > 0) {
+      if (alertText) alertText.textContent = `У ${c.danger} ${c.danger === 1 ? 'единицы' : 'единиц'} проблема с поверкой!`;
+      banner.classList.add('show');
+    } else if (c.warn > 0) {
+      if (alertText) alertText.textContent = `У ${c.warn} ${c.warn === 1 ? 'единицы' : 'единиц'} подходит срок поверки в течение ${settings.warnDays} дн.`;
+      banner.classList.add('show');
+    } else {
+      banner.classList.remove('show');
+    }
   }
+
+  // ── Таблица ──
   const tbody = document.getElementById('pipettes-body');
   const empty = document.getElementById('empty-state');
   const table = document.getElementById('pipettes-table');
@@ -165,11 +105,16 @@ if (totalEl) {
     <th id="actions-header" ${!hasAnyRowAction ? 'style="display:none"' : ''}>Действия</th>
   `;
 
-  if (filtered.length === 0) {
+  if (items.length === 0) {
     tbody.innerHTML = '';
     table.style.display = 'none';
     empty.style.display = 'block';
-    if (pipettes.length > 0) empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+    if (total > 0) empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+    else if (total === 0 && !document.getElementById('search')?.value && Object.keys(filterState || {}).length === 0) {
+      empty.querySelector('p').textContent = 'Оборудования пока нет. Нажмите «Добавить оборудование», чтобы начать.';
+    } else {
+      empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+    }
     updateSortArrows();
     updateSelectAllCheckbox();
     updateBulkCalButton();
@@ -179,14 +124,14 @@ if (totalEl) {
   table.style.display = '';
   empty.style.display = 'none';
 
-  tbody.innerHTML = pageItems.map(p => {
+  tbody.innerHTML = items.map(p => {
     const status = calcStatus(p);
     const next = getNextDate(p);
     const dl = daysLeft(p);
     const daysText = status === 'inactive' || status === 'sent' || status === 'wip' || status === 'unknown' ? '' :
-  status === 'fail' ? ' (брак)' :
-  status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
-  ` (${dl} дн.)`;
+      status === 'fail' ? ' (брак)' :
+      status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
+      ` (${dl} дн.)`;
     const histCount = p.history_count || 0;
     const isChecked = selectedPipettes.has(p.id) ? 'checked' : '';
 
@@ -195,7 +140,7 @@ if (totalEl) {
     const _canQuickCal = canQuickCal();
     const _canHistory  = canViewHistory();
 
-        const hasAnyAction = _canHistory || _canEdit || _canDelete || _canQuickCal;
+    const hasAnyAction = _canHistory || _canEdit || _canDelete || _canQuickCal;
 
     let actionsHtml = '';
     if (hasAnyAction) {
@@ -205,68 +150,65 @@ if (totalEl) {
     const cellsHtml = columns.map(colId => {
       switch (colId) {
       case 'id': {
-  const statusDot = UI.renderStatusDot(status);
-
-  let replLine = '';
-  if (p.replaced_by && p.replacement) {
-    replLine = `<br><small style="color:${COLORS.info};">↔ замена: ${esc(p.replaced_by)}</small>`;
-  } else if (p.replaced_by) {
-    replLine = `<br><small style="color:${COLORS.danger};">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
-  }
-  if (p.replacing && p.replacedFor) {
-    replLine = `<br><small style="color:${COLORS.warning};">↔ заменяет: ${esc(p.replacing)}</small>`;
-  }
-
-  return `<td><span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}</td>`;
-}
-      
-  case 'type': {
-  const t = _equipmentTypes.find(x => x.value === p.equipment_type);
-  const label = t ? t.label : 'Прочее';
-  const cls   = p.equipment_type === 'pipette' ? 'badge-pipette' : 'badge-other';
-  return `<td><span class="badge-type ${cls}">${esc(label)}</span></td>`;
-    }
-        case 'model':
-          return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
-        case 'volume':
-          return `<td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>`;
-        case 'department':
-          return `<td>${esc(p.department || '—')}</td>`;
-        case 'lastCalibration':
-          return `<td>${formatDate(p.last_calibration)}</td>`;
-       case 'nextCalibration':
-          return `<td>${status === 'sent'
-            ? `<small style="color:${COLORS.info};font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
-            : status === 'wip'
-            ? `<small style="color:${COLORS.warning};font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
-            : status === 'unknown'
-            ? `<small style="color:${COLORS.faint};">Дата не задана</small>`
-            : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? COLORS.danger : status === 'warn' ? COLORS.warning : COLORS.success}">${daysText}</small>` : ''}`}</td>`;
-        case 'responsible':
-          return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
-        case 'location':
-          return `<td>${esc(p.location || '—')}</td>`;
-        case 'manufacturer':
-          return `<td>${esc(p.manufacturer || '—')}</td>`;
-        case 'serial':
-          return `<td>${esc(p.serial || '—')}</td>`;
-        case 'cert':
-          return `<td>${esc(p.cert || '—')}</td>`;
-        case 'status':
-          return `<td>${UI.renderStatusBadge(status)}</td>`;
-        case 'interval':
-          return `<td>${p.interval != null ? esc(p.interval) + ' мес.' : '—'}</td>`;
-        case 'notes':
-          return `<td>${esc(p.notes || '—')}</td>`;
-        case 'result':
-          return `<td>${esc(RESULT_LABELS[p.last_result] || p.last_result || '—')}</td>`;
-        case 'active':
-          return `<td>${p.active ? 'В работе' : 'Не используется'}</td>`;
-        default: {
-          const raw = p[colId];
-          const val = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
-          return `<td>${val}</td>`;
+        const statusDot = UI.renderStatusDot(status);
+        let replLine = '';
+        if (p.replaced_by && p.replacement) {
+          replLine = `<br><small style="color:${COLORS.info};">↔ замена: ${esc(p.replaced_by)}</small>`;
+        } else if (p.replaced_by) {
+          replLine = `<br><small style="color:${COLORS.danger};">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
         }
+        if (p.replacing && p.replacedFor) {
+          replLine = `<br><small style="color:${COLORS.warning};">↔ заменяет: ${esc(p.replacing)}</small>`;
+        }
+        return `<td><span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}</td>`;
+      }
+      case 'type': {
+        const t = _equipmentTypes.find(x => x.value === p.equipment_type);
+        const label = t ? t.label : 'Прочее';
+        const cls   = p.equipment_type === 'pipette' ? 'badge-pipette' : 'badge-other';
+        return `<td><span class="badge-type ${cls}">${esc(label)}</span></td>`;
+      }
+      case 'model':
+        return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
+      case 'volume':
+        return `<td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>`;
+      case 'department':
+        return `<td>${esc(p.department || '—')}</td>`;
+      case 'lastCalibration':
+        return `<td>${formatDate(p.last_calibration)}</td>`;
+      case 'nextCalibration':
+        return `<td>${status === 'sent'
+          ? `<small style="color:${COLORS.info};font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
+          : status === 'wip'
+          ? `<small style="color:${COLORS.warning};font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
+          : status === 'unknown'
+          ? `<small style="color:${COLORS.faint};">Дата не задана</small>`
+          : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? COLORS.danger : status === 'warn' ? COLORS.warning : COLORS.success}">${daysText}</small>` : ''}`}</td>`;
+      case 'responsible':
+        return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
+      case 'location':
+        return `<td>${esc(p.location || '—')}</td>`;
+      case 'manufacturer':
+        return `<td>${esc(p.manufacturer || '—')}</td>`;
+      case 'serial':
+        return `<td>${esc(p.serial || '—')}</td>`;
+      case 'cert':
+        return `<td>${esc(p.cert || '—')}</td>`;
+      case 'status':
+        return `<td>${UI.renderStatusBadge(status)}</td>`;
+      case 'interval':
+        return `<td>${p.interval != null ? esc(p.interval) + ' мес.' : '—'}</td>`;
+      case 'notes':
+        return `<td>${esc(p.notes || '—')}</td>`;
+      case 'result':
+        return `<td>${esc(RESULT_LABELS[p.last_result] || p.last_result || '—')}</td>`;
+      case 'active':
+        return `<td>${p.active ? 'В работе' : 'Не используется'}</td>`;
+      default: {
+        const raw = p[colId];
+        const val = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
+        return `<td>${val}</td>`;
+      }
       }
     }).join('');
 
@@ -281,7 +223,6 @@ if (totalEl) {
         <input type="checkbox" class="row-checkbox" data-id="${esc(p.id)}" ${isChecked}
                onchange="togglePipetteSelection('${esc(p.id)}', this.checked)">
       </td>
-      
       ${cellsHtml}
       <td ${!hasAnyAction ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
@@ -292,12 +233,12 @@ if (totalEl) {
   updateBulkCalButton();
   fitTableWrapperHeight();
   requestAnimationFrame(() => {
-  requestAnimationFrame(fitTableWrapperHeight);
+    requestAnimationFrame(fitTableWrapperHeight);
   });
 }
 
 // ============================================================
-// 🆕 ДИНАМИЧЕСКАЯ ВЫСОТА ОБЁРТКИ ТАБЛИЦЫ
+// ДИНАМИЧЕСКАЯ ВЫСОТА ОБЁРТКИ ТАБЛИЦЫ
 // ============================================================
 function fitTableWrapperHeight() {
   const wrapper = document.querySelector('.table-wrapper');
@@ -311,31 +252,26 @@ function fitTableWrapperHeight() {
     bottomGap += pagination.offsetHeight + 16;
   }
 
-  // Первый проход — примерная высота
   let available = window.innerHeight - wrapperTop - bottomGap;
   let h = Math.max(200, Math.floor(available));
   wrapper.style.height = h + 'px';
 
-  // Калибровка: добиваем остаточный gap (субпиксели, рамки)
   const gap = Math.round(window.innerHeight - wrapper.getBoundingClientRect().bottom);
   if (gap > 0) {
     wrapper.style.height = (h + gap) + 'px';
   }
 }
 
-// 🆕 Пересчёт при resize окна (с debounce) — ОДИН раз на весь файл
 let _resizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(fitTableWrapperHeight, 100);
 });
-// 🆕 Пересчёт после полной загрузки (шрифты/картинки сдвигают верх)
 window.addEventListener('load', () => {
   setTimeout(fitTableWrapperHeight, 100);
   setTimeout(fitTableWrapperHeight, 400);
 });
 
-// 🆕 ResizeObserver — ловит зум, появление скролла, любые сдвиги
 let _roScheduled = false;
 if (window.ResizeObserver) {
   const _ro = new ResizeObserver(() => {
@@ -349,8 +285,6 @@ if (window.ResizeObserver) {
   _ro.observe(document.documentElement);
 }
 
-
-// 🆕 Пересчёт при сворачивании шапки — ОДИН раз на весь файл
 const _origToggleHeader = window.toggleHeaderCollapse;
 if (typeof _origToggleHeader === 'function') {
   window.toggleHeaderCollapse = function() {
@@ -368,25 +302,30 @@ function updateSortArrows() {
   });
 }
 
-function sortBy(field) {
+// ============================================================
+// 🆕 СОРТИРОВКА — на сервер
+// ============================================================
+async function sortBy(field) {
   if (sortField === field) sortDir *= -1;
   else { sortField = field; sortDir = 1; }
   currentPage = 1;
-  render();
-}
-
-function changePage(delta) {
-  const filtered = getFilteredPipettes();
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const newPage = currentPage + delta;
-
-  if (newPage < 1 || newPage > totalPages) return;
-  currentPage = newPage;
+  await loadPaged();
   render();
 }
 
 // ============================================================
-// МАССОВЫЙ ВЫБОР
+// 🆕 ПАГИНАЦИЯ — на сервер
+// ============================================================
+async function changePage(delta) {
+  const newPage = currentPage + delta;
+  if (newPage < 1 || newPage > pagedState.totalPages) return;
+  currentPage = newPage;
+  await loadPaged();
+  render();
+}
+
+// ============================================================
+// МАССОВЫЙ ВЫБОР (в пределах текущей страницы)
 // ============================================================
 function togglePipetteSelection(id, checked) {
   if (checked) selectedPipettes.add(id);
@@ -395,12 +334,9 @@ function togglePipetteSelection(id, checked) {
   updateBulkCalButton();
 }
 
+// 🆕 ID текущей страницы — для выделения
 function getVisiblePageIds() {
-  const filtered = getSortedPipettes();
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const page = Math.min(Math.max(1, currentPage), totalPages);
-  const startIdx = (page - 1) * pageSize;
-  return filtered.slice(startIdx, startIdx + pageSize).map(p => p.id);
+  return pipettes.map(p => p.id);
 }
 
 function toggleSelectAll(checked) {
