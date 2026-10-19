@@ -7,25 +7,22 @@ let _docsSections = [];
 let _docsCurrentSection = null;
 
 async function openHotkeysHelp() {
-  const modal = document.getElementById('hotkeys-modal');
-  if (!modal) return;
-
-  document.getElementById('docs-sidebar').innerHTML = '<p style="color:#94a3b8;padding:10px;">Загрузка…</p>';
+  document.getElementById('docs-sidebar').innerHTML = `<p style="color:${COLORS.faint};padding:10px;">Загрузка…</p>`;
   document.getElementById('docs-content').innerHTML = '';
-  modal.classList.add('active');
+  UI.modal.open('hotkeys-modal');
 
   try {
     _docsSections = await apiRequest('/help/visible');
   } catch (e) {
     document.getElementById('docs-sidebar').innerHTML = '';
     document.getElementById('docs-content').innerHTML =
-      '<p style="color:#dc2626;padding:10px;">Ошибка загрузки справки: ' + esc(e.message) + '</p>';
+      `<p style="color:${COLORS.danger};padding:10px;">Ошибка загрузки справки: ${esc(e.message)}</p>`;
     return;
   }
 
   if (!Array.isArray(_docsSections) || _docsSections.length === 0) {
     document.getElementById('docs-content').innerHTML =
-      '<p style="color:#94a3b8;padding:10px;">Разделы справки пока не добавлены.</p>';
+      `<p style="color:${COLORS.faint};padding:10px;">Разделы справки пока не добавлены.</p>`;
     return;
   }
 
@@ -38,8 +35,7 @@ async function openHotkeysHelp() {
 }
 
 function closeHotkeysHelp() {
-  const modal = document.getElementById('hotkeys-modal');
-  if (modal) modal.classList.remove('active');
+  UI.modal.close('hotkeys-modal');
 }
 
 function switchDocsSection(slug) {
@@ -154,10 +150,6 @@ function inlineMd(text) {
   return s;
 }
 
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'hotkeys-modal') closeHotkeysHelp();
-});
-
 // ============================================================
 // АДМИНКА СПРАВКИ
 // ============================================================
@@ -168,19 +160,19 @@ let _helpEditorSlug = null;
 async function renderHelpSettings() {
   const c = document.getElementById('settings-section-content');
   if (!c) return;
-  c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
+  c.innerHTML = `<p style="color:${COLORS.faint};">Загрузка…</p>`;
 
   try {
     _helpSections = await apiRequest('/help');
   } catch (e) {
-    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+    c.innerHTML = `<p style="color:${COLORS.danger};">Ошибка: ${esc(e.message)}</p>`;
     return;
   }
   if (!Array.isArray(_helpSections)) _helpSections = [];
   _helpSections.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   let html = `
-    <p style="color:#64748b;font-size:.88rem;margin:0 0 14px;">
+    <p style="color:${COLORS.muted};font-size:.88rem;margin:0 0 14px;">
       Справка для пользователей. Разделы автоматически скрываются у тех, у кого нет нужных прав.
       Поддерживается Markdown: заголовки, списки, таблицы, ссылки, картинки.
     </p>
@@ -224,7 +216,7 @@ async function renderHelpSettings() {
   _helpSections.forEach((s, i) => {
     const permsText = (s.requiredPermissions && s.requiredPermissions.length > 0)
       ? String(s.requiredPermissions.length)
-      : '<span style="color:#94a3b8;">все</span>';
+      : `<span style="color:${COLORS.faint};">все</span>`;
 
     html += `<tr>
       <td class="help-order-cell">
@@ -239,13 +231,9 @@ async function renderHelpSettings() {
       <td>${esc(s.title)}</td>
       <td style="text-align:center;">${permsText}</td>
       <td style="text-align:center;">${s.enabled ? '✅' : '❌'}</td>
-      <td class="help-admin-actions">
-        <button class="btn btn-primary btn-sm bc-icon-btn" onclick="openHelpEditor('edit', '${esc(s.slug)}')" title="Изменить">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button class="btn btn-danger btn-sm bc-icon-btn" onclick="deleteHelpSection('${esc(s.slug)}')" title="Удалить">
-          <i class="fa-solid fa-trash"></i>
-        </button>
+        <td class="help-admin-actions">
+        ${UI.iconBtn('edit',  `openHelpEditor('edit', '${esc(s.slug)}')`, 'Изменить', 'btn-primary')}
+        ${UI.iconBtn('trash', `deleteHelpSection('${esc(s.slug)}')`, 'Удалить', 'btn-danger')}
       </td>
     </tr>`;
   });
@@ -285,11 +273,11 @@ async function openHelpEditor(mode, slug) {
   }
 
   updateHelpPreview();
-  document.getElementById('help-editor-modal').classList.add('active');
+  UI.modal.open('help-editor-modal');
 }
 
 function closeHelpEditor() {
-  document.getElementById('help-editor-modal').classList.remove('active');
+  UI.modal.close('help-editor-modal');
 }
 
 function renderHelpPermissions(selected) {
@@ -327,7 +315,7 @@ function updateHelpPreview() {
   const preview = document.getElementById('he-preview');
   if (!el || !preview) return;
   const md = el.value || '';
-  preview.innerHTML = md.trim() ? renderMarkdown(md) : '<span style="color:#94a3b8;">Предпросмотр…</span>';
+  preview.innerHTML = md.trim() ? renderMarkdown(md) : `<span style="color:${COLORS.faint};">Предпросмотр…</span>`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -447,16 +435,21 @@ async function saveHelpEditor() {
 
   const payload = { title, content, requiredPermissions, sortOrder, enabled };
 
-  try {
+    try {
     if (_helpEditorMode === 'create') {
       payload.slug = slug;
-      await apiRequest('/help', 'POST', payload);
-      showToast('Раздел создан', 'success');
+      await UI.saveAction({
+        successMsg: 'Раздел создан',
+        closeFn: closeHelpEditor,
+        reload: false
+      }, () => apiRequest('/help', 'POST', payload));
     } else {
-      await apiRequest('/help/' + encodeURIComponent(_helpEditorSlug), 'PUT', payload);
-      showToast('Раздел обновлён', 'success');
+      await UI.saveAction({
+        successMsg: 'Раздел обновлён',
+        closeFn: closeHelpEditor,
+        reload: false
+      }, () => apiRequest('/help/' + encodeURIComponent(_helpEditorSlug), 'PUT', payload));
     }
-    closeHelpEditor();
     renderHelpSettings();
   } catch (e) {
     errEl.textContent = e.message || 'Ошибка';
@@ -517,10 +510,6 @@ async function resetHelpToFactory() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'help-editor-modal') closeHelpEditor();
-});
-
 // ============================================================
 // РАЗДЕЛ: ШАБЛОНЫ ВИДА
 // ============================================================
@@ -534,7 +523,7 @@ async function renderViewTemplatesSettings() {
     _cachedViewTemplates = await apiRequest('/view-templates');
 
     let html = `
-      <p style="color:#64748b;font-size:.88rem;margin:0 0 14px;">
+      <p style="color:${COLORS.muted};font-size:.88rem;margin:0 0 14px;">
         Шаблоны вида — именованные наборы полей. Назначьте шаблон пользователю,
         и он увидит этот набор. <strong>Индивидуальные настройки перебивают шаблон.</strong>
       </p>
@@ -564,22 +553,16 @@ async function renderViewTemplatesSettings() {
         <td>${t.visibleFields.length}</td>
         <td>${t.isDefault ? '✅' : '—'}</td>
         <td class="help-admin-actions">
-          <button class="btn btn-primary btn-sm bc-icon-btn" onclick="openViewTemplateEditor(${t.id})" title="Изменить">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button class="btn btn-secondary btn-sm bc-icon-btn" onclick="openApplyTemplateModal(${t.id})" title="Назначить">
-            <i class="fa-solid fa-users"></i>
-          </button>
-          <button class="btn btn-danger btn-sm bc-icon-btn" onclick="deleteViewTemplate(${t.id})" title="Удалить">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+          ${UI.iconBtn('edit',  `openViewTemplateEditor(${t.id})`, 'Изменить', 'btn-primary')}
+          ${UI.iconBtn('users', `openApplyTemplateModal(${t.id})`, 'Назначить', 'btn-secondary')}
+          ${UI.iconBtn('trash', `deleteViewTemplate(${t.id})`,    'Удалить',  'btn-danger')}
         </td>
       </tr>`;
     });
     html += `</tbody></table>`;
     c.innerHTML = html;
   } catch (e) {
-    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+    c.innerHTML = `<p style="color:${COLORS.danger};">Ошибка: ${esc(e.message)}</p>`;
   }
 }
 
@@ -600,7 +583,7 @@ function openViewTemplateEditor(templateId) {
   const selected = new Set(tpl ? tpl.visibleFields : defaultSelected);
 
   const fieldsHtml = `
-    <div style="font-weight:600;margin-bottom:6px;font-size:.85rem;color:#475569;">Поля формы</div>
+    <div style="font-weight:600;margin-bottom:6px;font-size:.85rem;color:${COLORS.muted};">Поля формы</div>
     <div class="help-perms-grid">
       ${activeFields.map(f => `
         <label class="help-perm-item">
@@ -609,7 +592,7 @@ function openViewTemplateEditor(templateId) {
         </label>
       `).join('')}
     </div>
-    <div style="font-weight:600;margin:12px 0 6px;font-size:.85rem;color:#475569;">Виртуальные колонки</div>
+    <div style="font-weight:600;margin:12px 0 6px;font-size:.85rem;color:${COLORS.muted};">Виртуальные колонки</div>
     <div class="help-perms-grid">
       ${VIRTUAL_COLUMNS.map(v => `
         <label class="help-perm-item">
@@ -655,13 +638,17 @@ async function saveViewTemplate() {
   if (!name) { errEl.textContent = 'Укажите название'; return; }
   if (fields.length === 0) { errEl.textContent = 'Выберите хотя бы одно поле'; return; }
 
-  try {
+    try {
     if (_editingTemplateId) {
-      await apiRequest('/view-templates/' + _editingTemplateId, 'PUT', { name, visibleFields: fields, isDefault });
-      showToast('Шаблон обновлён', 'success');
+      await UI.saveAction({
+        successMsg: 'Шаблон обновлён',
+        reload: false
+      }, () => apiRequest('/view-templates/' + _editingTemplateId, 'PUT', { name, visibleFields: fields, isDefault }));
     } else {
-      await apiRequest('/view-templates', 'POST', { name, visibleFields: fields, isDefault });
-      showToast('Шаблон создан', 'success');
+      await UI.saveAction({
+        successMsg: 'Шаблон создан',
+        reload: false
+      }, () => apiRequest('/view-templates', 'POST', { name, visibleFields: fields, isDefault }));
     }
     _editingTemplateId = null;
     renderViewTemplatesSettings();
@@ -702,7 +689,7 @@ async function openApplyTemplateModal(templateId) {
   const c = document.getElementById('settings-section-content');
   c.innerHTML = `
     <h3>Назначить шаблон «${esc(tpl.name)}»</h3>
-    <p style="color:#64748b;font-size:.85rem;">
+    <p style="color:${COLORS.muted};font-size:.85rem;">
       Отметьте пользователей. <strong>Индивидуальные настройки перебивают шаблон</strong>.
     </p>
     <div style="max-height:400px;overflow-y:auto;margin:12px 0;padding:8px;background:#f8fafc;border-radius:8px;">
