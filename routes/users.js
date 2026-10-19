@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { logAction } = require('../utils/audit');
 const router = express.Router();
 
 // ============================================================
@@ -177,11 +178,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
        isActing ? 1 : 0, isActing && actingForId ? actingForId : null]
     );
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Создание пользователя',
-       `Создан ${login} (${fullName}), выдан разовый пароль`]
-    );
+    await logAction(req, 'Создание пользователя', `Создан ${login} (${fullName}), выдан разовый пароль`);
 
     res.status(201).json({
       message: 'Пользователь создан',
@@ -323,10 +320,7 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
       ? `${login} (${fullName}): ${changes.join('; ')}`
       : `${login} (${fullName}): без значимых изменений`;
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, action, details]
-    );
+    await logAction(req, action, details);
 
     res.json({ message: 'Пользователь обновлён' });
   } catch (e) {
@@ -382,10 +376,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
       `роль: ${target.role}`,
     ].join(', ');
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Удаление пользователя', details]
-    );
+    await logAction(req, 'Удаление пользователя', details);
 
     res.json({ message: 'Пользователь удалён' });
   } catch (e) {
@@ -425,11 +416,7 @@ router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (
       [hash, new Date(), userId]
     );
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Сброс пароля',
-       `Выдан разовый пароль для ${user.login} (${user.full_name})`]
-    );
+    await logAction(req, 'Сброс пароля', `Выдан разовый пароль для ${user.login} (${user.full_name})`);
 
     res.json({
       message: 'Разовый пароль выдан',
