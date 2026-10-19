@@ -90,7 +90,8 @@ const ICONS = {
   rotateLeft: 'fa-rotate-left',
   wand:       'fa-wand-magic-sparkles',
   plug:       'fa-plug',
-  fileLines:  'fa-file-lines'
+  fileLines:  'fa-file-lines',
+  bell:       'fa-bell'
 };
 
 // ── Цвета (для JS-рендера) ──
