@@ -5,7 +5,7 @@ const equipmentTypes = require('../utils/equipment-types');
 const { logAction } = require('../utils/audit');            
 const { withTransaction } = require('../utils/db-helper');   
 const pipettesHelpers = require('./pipettes/_helpers');
-
+const barcodesRouter = require('./barcodes');
 const router = express.Router();
 // ============================================================
 // ОТДЕЛЫ
@@ -317,6 +317,7 @@ router.put('/system', authenticate, requireRole(['admin']), async (req, res) => 
     if ('warn_days' in settings) {
       try { pipettesHelpers.invalidateWarnDaysCache(); } catch (e) {}
     }
+    try { barcodesRouter.invalidateSettings(); } catch (e) {}
     res.json({ message: 'Настройки обновлены' });
   } catch (e) {
     console.error(e);
