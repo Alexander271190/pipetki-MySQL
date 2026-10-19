@@ -232,11 +232,19 @@ function updateBarcodePrintScopeCounts() {
   if (el3) el3.textContent = filtered.length;
 }
 
-function getBarcodePrintIds() {
+async function getBarcodePrintIds() {
   const scope = document.querySelector('input[name="bc-scope"]:checked')?.value || 'filtered';
-  if (scope === 'selected') return [...selectedPipettes].filter(id => pipettes.some(p => p.id === id));
-  if (scope === 'page')     return getVisiblePageIds();
-  if (scope === 'filtered') return getFilteredPipettes().map(p => p.id);
+
+  if (scope === 'selected') {
+    return [...selectedPipettes].filter(id => pipettes.some(p => p.id === id));
+  }
+  if (scope === 'page') {
+    return getVisiblePageIds();
+  }
+  if (scope === 'filtered') {
+    // 🆕 Весь фильтр — с сервера, а не текущая страница
+    return await loadIdsForExport();
+  }
   return [];
 }
 
@@ -244,9 +252,8 @@ async function submitBarcodePrint(ev) {
   const errEl = document.getElementById('barcode-print-error');
   if (errEl) errEl.textContent = '';
 
-  const ids = getBarcodePrintIds();
+  const ids = await getBarcodePrintIds();
   if (ids.length === 0) { if (errEl) errEl.textContent = 'Ничего не выбрано'; return; }
-
   if (ids.length > 500) {
     const ok = await showConfirm(
       `Печатается ${ids.length} этикеток. Продолжить?`,
