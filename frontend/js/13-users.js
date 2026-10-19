@@ -7,8 +7,7 @@ async function renderUsersSettings() {
   const c = document.getElementById('settings-section-content');
   try {
     const users = await apiRequest('/users');
-    const roleLabels = { user: 'Пользователь', senior_lab: 'Ст. лаборант', admin: 'Администратор' };
-
+    
     let html = '<h3>Управление пользователями</h3>';
     html += `<table class="field-settings-table users-table-fix" style="margin-bottom:20px;">
   <colgroup>
@@ -40,7 +39,7 @@ async function renderUsersSettings() {
           ? ` <span style="color:${COLORS.warning};font-weight:600;">(и.о.${u.actingForName ? ' за ' + esc(u.actingForName) : ''})</span>`
           : ''}</td>
         <td>${esc(u.department || '—')}</td>
-        <td>${roleLabels[u.role] || u.role}</td>
+        <td>${ROLE_LABELS[u.role] || u.role}</td>
         <td class="perm-cell">${permText}</td>
                 <td class="actions">
           <button class="row-actions-btn"
