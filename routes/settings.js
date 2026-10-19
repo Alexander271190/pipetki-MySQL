@@ -4,9 +4,9 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const equipmentTypes = require('../utils/equipment-types');
 const { logAction } = require('../utils/audit');            
 const { withTransaction } = require('../utils/db-helper');   
+const pipettesHelpers = require('./pipettes/_helpers');
 
 const router = express.Router();
-
 // ============================================================
 // ОТДЕЛЫ
 // ============================================================
@@ -157,9 +157,8 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
   const fields = req.body;
   if (!Array.isArray(fields)) return res.status(400).json({ error: 'Ожидается массив' });
 
-  const conn = await db.getConnection();
   try {
-    await conn.beginTransaction();
+    await withTransaction(async (conn) => {
 
     // 🛡️ Защита от удаления полей, у которых уже есть данные
     const [oldFields] = await conn.query('SELECT id FROM field_config');
@@ -207,14 +206,15 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
       }
 
       // ── Случай 1: есть данные и нет подтверждения — 409 ──
-      if (affectedRecords > 0 && !confirmDelete) {
-        await conn.rollback();
-        return res.status(409).json({
-          error: `Поля заполнены у ${affectedRecords} запис${affectedRecords === 1 ? 'и' : 'ей'}`,
-          code: 'field_has_data',
-          affected: affectedRecords,
-          fields: [...usedFields]
-        });
+     if (affectedRecords > 0 && !confirmDelete) {
+        const err = new Error(
+          `Поля заполнены у ${affectedRecords} запис${affectedRecords === 1 ? 'и' : 'ей'}`
+        );
+        err.status = 409;
+        err.code = 'field_has_data';
+        err.affected = affectedRecords;
+        err.fields = [...usedFields];
+        throw err;
       }
 
       // ── Случай 2: подтверждено (или данных нет) — каскадная очистка ──
@@ -244,14 +244,20 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
          JSON.stringify(f.options || []), f.default || '', f.order || 0]
       );
     }
-    await conn.commit();
+    }); 
+
     res.json({ message: 'Поля обновлены' });
-  } catch (e) {
-    await conn.rollback();
+   } catch (e) {
+    if (e.status === 409) {
+      return res.status(409).json({
+        error: e.message,
+        code: e.code,
+        affected: e.affected,
+        fields: e.fields
+      });
+    }
     console.error(e);
     res.status(500).json({ error: 'Ошибка обновления полей' });
-  } finally {
-    conn.release();
   }
 });
 
@@ -305,8 +311,11 @@ router.put('/system', authenticate, requireRole(['admin']), async (req, res) => 
         [k, String(v)]
       );
     }
-    if ('equipment_types' in settings) {
+   if ('equipment_types' in settings) {
       equipmentTypes.invalidateCache();
+    }
+    if ('warn_days' in settings) {
+      try { pipettesHelpers.invalidateWarnDaysCache(); } catch (e) {}
     }
     res.json({ message: 'Настройки обновлены' });
   } catch (e) {
