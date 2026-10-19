@@ -7,131 +7,86 @@ let _rowActionsMenu = null;
 
 async function openUserActions(ev, userId) {
   ev.stopPropagation();
-  if (!requirePasswordChange()) return;
-  const anchorEl = ev.currentTarget;
+  await UI.guard({ role: 'admin', errorMsg: 'Только для администратора' }, async () => {
+    const anchorEl = ev.currentTarget;
+    const curId = currentUser.id;
+    const isSelf = userId === curId;
 
-  const curId = currentUser.id;
-  const isSelf = userId === curId;
+    let u = {};
+    try {
+      const users = await apiRequest('/users');
+      u = users.find(x => x.id === userId) || {};
+    } catch (e) {
+      console.warn('Не удалось подтянуть данные пользователя:', e.message);
+    }
 
-  let u = {};
-  try {
-    const users = await apiRequest('/users');
-    u = users.find(x => x.id === userId) || {};
-  } catch (e) {
-    console.warn('Не удалось подтянуть данные пользователя:', e.message);
-  }
+    const items = [
+      { label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => editUserSetting(userId) },
+      { label: '<i class="fa-solid fa-list-check"></i> Настроить видимые поля', action: () => openUserViewModal(userId, u.fullName || '') },
+    ];
 
-  const items = [
-    {
-      label: '<i class="fa-solid fa-pen"></i> Редактировать',
-      action: () => editUserSetting(userId),
-    },
-    {
-      label: '<i class="fa-solid fa-list-check"></i> Настроить видимые поля',
-      action: () => openUserViewModal(userId, u.fullName || ''),
-    },
-  ];
+    if (!isSelf) {
+      items.push({ divider: true });
+      items.push({ label: '<i class="fa-solid fa-right-to-bracket"></i> Войти как этот пользователь', class: 'item-warning', action: () => impersonateUser(userId) });
+      items.push({ label: '<i class="fa-solid fa-key"></i> Сбросить пароль', class: 'item-warning', action: () => resetUserPassword(userId, u.login || '') });
+      items.push({ divider: true });
+      items.push({ label: '<i class="fa-solid fa-trash"></i> Удалить пользователя', class: 'item-danger', action: () => deleteUserSetting(userId, u.fullName || '') });
+    }
 
-  if (!isSelf) {
-    items.push({ divider: true });
-    items.push({
-      label: '<i class="fa-solid fa-right-to-bracket"></i> Войти как этот пользователь',
-      class: 'item-warning',
-      action: () => impersonateUser(userId),
-    });
-    items.push({
-      label: '<i class="fa-solid fa-key"></i> Сбросить пароль',
-      class: 'item-warning',
-      action: () => resetUserPassword(userId, u.login || ''),
-    });
-    items.push({ divider: true });
-    items.push({
-      label: '<i class="fa-solid fa-trash"></i> Удалить пользователя',
-      class: 'item-danger',
-      action: () => deleteUserSetting(userId, u.fullName || ''),
-    });
-  }
-
-  renderUserActionsMenu(anchorEl, items);
+    renderUserActionsMenu(anchorEl, items);
+  });
 }
 
 function renderUserActionsMenu(anchorEl, items) {
   renderRowActionsMenu(anchorEl, items);
 }
 
-function openRowActions(ev, id) {
+async function openRowActions(ev, id) {
   ev.stopPropagation();
-  if (!requirePasswordChange()) return;
+  await UI.guard({}, async () => {
+    const p = pipettes.find(x => x.id === id);
+    if (!p) return;
 
-  const p = pipettes.find(x => x.id === id);
-  if (!p) return;
+    const status = calcStatus(p);
+    const histCount = p.history_count || 0;
 
-  const status = calcStatus(p);
-  const histCount = p.history_count || 0;
+    const items = [];
 
-  const _canEdit     = canEditPipette();
-  const _canDelete   = canDeletePipette();
-  const _canQuickCal = canQuickCal();
-  const _canHistory  = canViewHistory();
+    if (canViewHistory()) {
+      items.push({
+        label: '<i class="fa-solid fa-clock-rotate-left"></i> История поверок' + (histCount > 0 ? ` (${histCount})` : ''),
+        action: () => openHistoryModal(id),
+      });
+    }
 
-  const items = [];
+    if (canEditPipette()) {
+      items.push({ label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => openModal(id) });
+    }
 
-  if (_canHistory) {
-    items.push({
-      label: '<i class="fa-solid fa-clock-rotate-left"></i> История поверок' + (histCount > 0 ? ` (${histCount})` : ''),
-      action: () => openHistoryModal(id),
-    });
-  }
+    if (canTransferPipette()) {
+      items.push({ label: '<i class="fa-solid fa-right-left"></i> Передать в другой отдел', action: () => openTransferModal(id) });
+    }
 
-   if (_canEdit) {
-  items.push({
-    label: '<i class="fa-solid fa-pen"></i> Редактировать',
-    action: () => openModal(id),
+    if (canQuickCal()) {
+      items.push({ divider: true });
+      if (status === 'sent') {
+        items.push({ label: '<i class="fa-solid fa-rotate-left"></i> Вернулась с поверки', class: 'item-success', action: () => openQuickCalModal(id) });
+      } else {
+        items.push({ label: '<i class="fa-solid fa-clipboard-check"></i> Быстрая поверка', class: 'item-success', action: () => openQuickCalModal(id) });
+      }
+    }
+
+    if (status === 'sent' && canBulkSend()) {
+      items.push({ label: '<i class="fa-solid fa-xmark"></i> Отменить отправку', class: 'item-warning', action: () => cancelSend(id) });
+    }
+
+    if (canDeletePipette()) {
+      items.push({ divider: true });
+      items.push({ label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: () => deletePipette(id) });
+    }
+
+    renderRowActionsMenu(ev.currentTarget, items);
   });
-}
-
-if (canTransferPipette()) {
-  items.push({
-    label: '<i class="fa-solid fa-right-left"></i> Передать в другой отдел',
-    action: () => openTransferModal(id),
-  });
-}
-
-if (_canQuickCal) {
-  items.push({ divider: true });
-  if (status === 'sent') {
-    items.push({
-      label: '<i class="fa-solid fa-rotate-left"></i> Вернулась с поверки',
-      class: 'item-success',
-      action: () => openQuickCalModal(id),
-    });
-  } else {
-    items.push({
-      label: '<i class="fa-solid fa-clipboard-check"></i> Быстрая поверка',
-      class: 'item-success',
-      action: () => openQuickCalModal(id),
-    });
-  }
-}
-
-if (status === 'sent' && canBulkSend()) {
-  items.push({
-    label: '<i class="fa-solid fa-xmark"></i> Отменить отправку',
-    class: 'item-warning',
-    action: () => cancelSend(id),
-  });
-}
-
-if (_canDelete) {
-  items.push({ divider: true });
-  items.push({
-    label: '<i class="fa-solid fa-trash"></i> Удалить',
-    class: 'item-danger',
-    action: () => deletePipette(id),
-  });
-}
-
-  renderRowActionsMenu(ev.currentTarget, items);
 }
 
 function renderRowActionsMenu(anchorEl, items) {
@@ -209,43 +164,37 @@ function closeRowActionsMenu() {
 let _transferPipetteId = null;
 
 async function openTransferModal(id) {
-  await refreshCurrentUser();
-  if (!requirePasswordChange()) return;
-  if (!canTransferPipette()) {
-    showToast('Нет прав на передачу оборудования', 'error');
-    return;
-  }
+  await UI.guard(
+    { permission: ['transfer_pipette', 'manage_pipettes'], errorMsg: 'Нет прав на передачу' },
+    async () => {
+      const p = pipettes.find(x => x.id === id);
+      if (!p) { showToast('Оборудование не найдено', 'error'); return; }
 
-  const p = pipettes.find(x => x.id === id);
-  if (!p) {
-    showToast('Оборудование не найдено', 'error');
-    return;
-  }
+      _transferPipetteId = id;
 
-  _transferPipetteId = id;
+      document.getElementById('transfer-pipette-info').innerHTML =
+        `<strong>${esc(p.id)}</strong> — ${esc(p.model)}<br>
+         <small style="color:${COLORS.muted};">Текущий отдел: ${esc(p.department || 'без отдела')}</small>`;
 
-  document.getElementById('transfer-pipette-info').innerHTML =
-    `<strong>${esc(p.id)}</strong> — ${esc(p.model)}<br>
-     <small style="color:#64748b;">Текущий отдел: ${esc(p.department || 'без отдела')}</small>`;
+      const currentDept = p.department || '';
+      const available = departmentsList.filter(d => d !== currentDept);
 
-  const currentDept = p.department || '';
-  const available = departmentsList.filter(d => d !== currentDept);
+      const deptSel = document.getElementById('transfer-department');
+      deptSel.innerHTML = '<option value="">— выберите отдел —</option>' +
+        available.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
 
-  const deptSel = document.getElementById('transfer-department');
-  deptSel.innerHTML = '<option value="">— выберите отдел —</option>' +
-    available.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+      const respSel = document.getElementById('transfer-responsible');
+      respSel.innerHTML = '<option value="">— сначала выберите отдел —</option>';
+      respSel.disabled = true;
 
-  const respSel = document.getElementById('transfer-responsible');
-  respSel.innerHTML = '<option value="">— сначала выберите отдел —</option>';
-  respSel.disabled = true;
-
-  document.getElementById('transfer-error').textContent = '';
-
-  document.getElementById('transfer-modal').classList.add('active');
+      document.getElementById('transfer-error').textContent = '';
+      UI.modal.open('transfer-modal');
+    }
+  );
 }
 
 function closeTransferModal() {
-  document.getElementById('transfer-modal').classList.remove('active');
+  UI.modal.close('transfer-modal');
   _transferPipetteId = null;
 }
 
@@ -327,27 +276,24 @@ async function saveTransfer() {
   }
 }
 
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'transfer-modal') closeTransferModal();
-});
-
 // ============================================================
 // ИСТОРИЯ
 // ============================================================
 async function openHistoryModal(id) {
-  if (!requirePasswordChange()) return;
-  const p = pipettes.find(x => x.id === id);
-  if (!p) return;
-  currentHistoryId = id;
-  document.getElementById('history-title').innerHTML =
-    `<i class="fa-solid fa-clock-rotate-left"></i> История поверок — ${esc(p.id)}`;
-  await renderHistoryContent(p);
-  closeCalibrationForm();
-  document.getElementById('history-modal').classList.add('active');
+  await UI.guard({ permission: 'view_history' }, async () => {
+    const p = pipettes.find(x => x.id === id);
+    if (!p) return;
+    currentHistoryId = id;
+    document.getElementById('history-title').innerHTML =
+      `<i class="fa-solid fa-clock-rotate-left"></i> История поверок — ${esc(p.id)}`;
+    await renderHistoryContent(p);
+    closeCalibrationForm();
+    UI.modal.open('history-modal');
+  });
 }
 
 function closeHistoryModal() {
-  document.getElementById('history-modal').classList.remove('active');
+  UI.modal.close('history-modal');
   currentHistoryId = null;
   closeCalibrationForm();
 }
@@ -356,18 +302,9 @@ async function renderHistoryContent(p) {
   const content = document.getElementById('history-content');
   const next = getNextDate(p);
   const status = calcStatus(p);
-const statusLabels = {
-  ok:       '<i class="fa-solid fa-circle-check"></i> В норме',
-  warn:     '<i class="fa-solid fa-clock"></i> Скоро поверка',
-  danger:   '<i class="fa-solid fa-triangle-exclamation"></i> Просрочена',
-  inactive: '<i class="fa-solid fa-circle-pause"></i> Неактивна',
-  sent:     '<i class="fa-solid fa-box"></i> На поверке',
-  fail:     '<i class="fa-solid fa-xmark"></i> Брак',
-  wip:      '<i class="fa-solid fa-hourglass-half"></i> В процессе',
-  unknown:  '<i class="fa-solid fa-circle-question"></i> Не задано'
-};
 
-    let history = [];
+  // 1. Загружаем историю
+  let history = [];
   try {
     history = await apiRequest(`/pipettes/${p.id}/calibration`);
     history.sort((a, b) => {
@@ -379,6 +316,7 @@ const statusLabels = {
     console.error('Error loading history:', error);
   }
 
+  // 2. Карточка прибора
   let infoHtml = `
     <div class="info-grid">
       <div><label>Модель</label><span>${esc(p.model)}${p.manufacturer ? ' (' + esc(p.manufacturer) + ')' : ''}</span></div>
@@ -388,7 +326,7 @@ const statusLabels = {
       <div><label>МПИ</label><span>${p.interval} мес.</span></div>
       <div><label>Последняя поверка</label><span>${formatDate(p.last_calibration)}</span></div>
       <div><label>Следующая поверка</label><span>${formatDate(next)}</span></div>
-      <div><label>Статус</label><span><span class="status-badge status-${status}"><span class="status-dot"></span>${statusLabels[status]}</span></span></div>
+      <div><label>Статус</label><span>${UI.renderStatusBadge(status)}</span></div>
       <div><label>Ответственный</label><span>${esc(p.responsible || '—')}</span></div>
       <div><label>Место хранения</label><span>${esc(p.location || '—')}</span></div>
       ${p.sent_for_calibration ? `<div><label>Отправлена на поверку</label><span>${formatDate(p.sent_for_calibration)}</span></div>` : ''}
@@ -396,9 +334,8 @@ const statusLabels = {
     </div>
   `;
 
+  // 3. Timeline истории
   let histHtml = '';
-  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
-
   if (history.length === 0) {
     histHtml = '<div class="history-empty">Записей о поверках пока нет.<br>Нажмите «Добавить поверку», чтобы создать первую.</div>';
   } else {
@@ -409,7 +346,7 @@ const statusLabels = {
       histHtml += `<div class="timeline-item ${itemClass}" style="position:relative;padding-bottom:20px;border-left:2px solid #e2e8f0;padding-left:20px;">
         <div style="font-weight:600;font-size:.85rem;color:#475569;">${formatDate(h.date)}</div>
         ${h.cert ? `<div style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;"><i class="fa-solid fa-file-lines"></i> Свидетельство № ${esc(h.cert)}</div>` : ''}
-        <span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;margin-left:6px;${h.result === 'pass' ? 'background:#dcfce7;color:#166534;' : h.result === 'fail' ? 'background:#fee2e2;color:#991b1b;' : 'background:#e0f2fe;color:#0369a1;'}">${resultLabels[h.result] || h.result}</span>
+        <span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;margin-left:6px;${h.result === 'pass' ? 'background:#dcfce7;color:#166534;' : h.result === 'fail' ? 'background:#fee2e2;color:#991b1b;' : 'background:#e0f2fe;color:#0369a1;'}">${RESULT_LABELS[h.result] || h.result}</span>
         ${h.org ? `<div style="font-size:.85rem;color:#64748b;margin-top:4px;">Организация: ${esc(h.org)}</div>` : ''}
         ${h.note ? `<div style="font-size:.85rem;color:#64748b;margin-top:4px;">${esc(h.note)}</div>` : ''}
       </div>`;
