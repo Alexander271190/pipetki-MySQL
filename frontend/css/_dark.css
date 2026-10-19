@@ -291,6 +291,10 @@ html[data-theme="dark"] .danger-block {
   color: #fca5a5;
   border-left-color: #dc2626;
 }
+html[data-theme="dark"] .info-label {
+  background: rgba(14, 165, 233, .12);
+  color: #93c5fd;
+}
 html[data-theme="dark"] .modal [style*="background:#f8fafc"],
 html[data-theme="dark"] .modal [style*="background: #f8fafc"],
 html[data-theme="dark"] .modal [style*="background:#f1f5f9"],
