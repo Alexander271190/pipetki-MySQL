@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const multer = require('multer');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { logAction } = require('../utils/audit');        
+const { withTransaction } = require('../utils/db-helper'); 
 
 const router = express.Router();
 
@@ -126,10 +128,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
        enabled === false ? 0 : 1]
     );
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Создание раздела справки', slug]
-    );
+   await logAction(req, 'Создание раздела справки', slug);
     res.status(201).json({ message: 'Создан' });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -153,10 +152,7 @@ router.put('/:slug', authenticate, requireRole(['admin']), async (req, res) => {
        req.params.slug]
     );
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Редактирование справки', req.params.slug]
-    );
+    await logAction(req, 'Редактирование справки', req.params.slug);
     res.json({ message: 'Обновлён' });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -167,13 +163,10 @@ router.delete('/:slug', authenticate, requireRole(['admin']), async (req, res) =
     const [ex] = await db.query('SELECT title FROM help_docs WHERE slug = ?', [req.params.slug]);
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
     await db.query('DELETE FROM help_docs WHERE slug = ?', [req.params.slug]);
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Удаление раздела справки', ex[0].title]
-    );
+    await logAction(req, 'Удаление раздела справки', ex[0].title);
     res.json({ message: 'Удалён' });
-  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
+   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+ });
 
 // POST /api/help/reorder
 router.post('/reorder', authenticate, requireRole(['admin']), async (req, res) => {
@@ -193,9 +186,7 @@ router.post('/import', authenticate, requireRole(['admin']), async (req, res) =>
     const { sections, mode } = req.body || {};
     if (!Array.isArray(sections)) return res.status(400).json({ error: 'sections — массив' });
 
-    const conn = await db.getConnection();
-    try {
-      await conn.beginTransaction();
+    await withTransaction(async (conn) => {
       if (mode === 'replace') await conn.query('DELETE FROM help_docs');
       for (const s of sections) {
         if (!s.slug || !s.title || !s.content) continue;
@@ -212,8 +203,7 @@ router.post('/import', authenticate, requireRole(['admin']), async (req, res) =>
            s.enabled === false ? 0 : 1]
         );
       }
-      await conn.commit();
-    } catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
+    });
 
     res.json({ message: `Загружено: ${sections.length}` });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
