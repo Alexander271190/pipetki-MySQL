@@ -94,7 +94,6 @@ async function openSettingsSection(id) {
     else if (id === 'barcodes')    await renderBarcodesSettings();
     else if (id === 'help')        await renderHelpSettings();
     else if (id === 'view-templates') await renderViewTemplatesSettings();
-    else if (id === 'trash')       await renderTrashSettings(); 
     else if (id === 'general')     await renderGeneralSettings();
     else if (id === 'log')         await renderLogSettings();
   } catch (e) {
@@ -1132,81 +1131,3 @@ async function resetAllDataSetting() {
   }
 }
 
-// ============================================================
-// ВКЛАДКА: КОРЗИНА
-// ============================================================
-async function renderTrashSettings() {
-  const c = document.getElementById('settings-section-content');
-  c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
-
-  try {
-    const deleted = await apiRequest('/pipettes/trash');
-
-    if (!deleted || deleted.length === 0) {
-      c.innerHTML = '<p style="color:#94a3b8; padding:20px; text-align:center;">Корзина пуста</p>';
-      return;
-    }
-
-    let html = `<h3>Удалённое оборудование (${deleted.length})</h3>
-      <p style="color:${COLORS.muted};margin-bottom:12px;">
-        Восстановите прибор, если удалили его по ошибке.
-      </p>
-      <table class="field-settings-table">
-        <thead><tr>
-          <th>ID</th>
-          <th>Модель</th>
-          <th>Отдел</th>
-          <th>Дата удаления</th>
-          <th style="width:220px;">Действия</th>
-        </tr></thead><tbody>`;
-
-    deleted.forEach(p => {
-      html += `<tr>
-        <td><strong>${esc(p.id)}</strong></td>
-        <td>${esc(p.model)}</td>
-        <td>${esc(p.department || '—')}</td>
-        <td>${new Date(p.deleted_at).toLocaleString('ru-RU')}</td>
-        <td class="actions">
-          <button class="btn btn-success btn-sm" onclick="restorePipette('${esc(p.id)}')">
-            <i class="fa-solid fa-rotate-left"></i> Восстановить
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="hardDeletePipette('${esc(p.id)}')">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </td>
-      </tr>`;
-    });
-
-    html += `</tbody></table>`;
-    c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = `<p style="color:${COLORS.danger};">Ошибка: ${esc(e.message)}</p>`;
-  }
-}
-
-async function restorePipette(id) {
-  try {
-    await apiRequest(`/pipettes/${id}/restore`, 'POST', {});
-    showToast(`Оборудование ${id} восстановлено`, 'success');
-    renderTrashSettings();
-    if (typeof loadPipetteData === 'function') loadPipetteData();
-  } catch (e) {
-    showToast(e.message || 'Ошибка восстановления', 'error');
-  }
-}
-
-async function hardDeletePipette(id) {
-  const ok = await showConfirm(
-    `Удалить «${id}» навсегда?\n\nВосстановить его будет невозможно. История поверок также удалится.`,
-    { icon: '🗑️', title: 'Окончательное удаление', okText: 'Удалить навсегда', okClass: 'btn-danger' }
-  );
-  if (!ok) return;
-
-  try {
-    await apiRequest(`/pipettes/${id}/hard`, 'DELETE');
-    showToast('Оборудование удалено навсегда', 'success');
-    renderTrashSettings();
-  } catch (e) {
-    showToast(e.message || 'Ошибка удаления', 'error');
-  }
-}
