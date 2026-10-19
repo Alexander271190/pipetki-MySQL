@@ -67,7 +67,7 @@ async function exportToXlsx() {
   await UI.guard(
     { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
     async () => {
-      const data = getFilteredPipettes();
+      const data = await loadAllForExport();
       if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
       const fields = getActiveExportFields();
@@ -138,8 +138,8 @@ async function exportToXlsx() {
 async function exportToPDF() {
   await UI.guard(
     { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
-    async () => {
-      const data = getFilteredPipettes();
+  async () => {
+      const data = await loadAllForExport();
       if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
   const fields = getActiveExportFields();
