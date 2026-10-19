@@ -525,3 +525,54 @@ body.can-manage .senior-only { display: inline-flex; }
 /* Подсказка на «Всего» */
 .stat-card .num[title] { cursor: help; transition: opacity .15s; }
 .stat-card .num[title]:hover { opacity: .75; }
+
+/* ============================================================
+   БЛОКИ-ПОДСКАЗКИ (замена inline-стилей)
+   ============================================================ */
+.info-block {
+  background: #f0f9ff;
+  border-left: 3px solid #0ea5e9;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .82rem;
+  color: #0c4a6e;
+  margin-bottom: 12px;
+}
+.warning-block {
+  background: #fef9c3;
+  border-left: 3px solid #eab308;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .82rem;
+  color: #854d0e;
+  margin-bottom: 12px;
+}
+.success-block {
+  background: #ecfdf5;
+  border-left: 3px solid #16a34a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .82rem;
+  color: #14532d;
+  margin-bottom: 12px;
+}
+.danger-block {
+  background: #fee2e2;
+  border-left: 3px solid #dc2626;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .82rem;
+  color: #991b1b;
+  margin-bottom: 12px;
+}
+
+/* Наследование цвета внутри блоков — чтобы вложенные <strong>/<small> не «спорили» */
+.info-block strong, .info-block b,
+.warning-block strong, .warning-block b,
+.success-block strong, .success-block b,
+.danger-block strong, .danger-block b { color: inherit; font-weight: 700; }
+.info-block small,
+.warning-block small,
+.success-block small,
+.danger-block small { color: inherit; opacity: 0.85; }
+
