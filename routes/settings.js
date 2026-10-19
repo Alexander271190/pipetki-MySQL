@@ -2,6 +2,8 @@ const express = require('express');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const equipmentTypes = require('../utils/equipment-types');
+const { logAction } = require('../utils/audit');            
+const { withTransaction } = require('../utils/db-helper');   
 
 const router = express.Router();
 
@@ -28,7 +30,6 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
     return res.status(400).json({ error: 'Добавьте хотя бы один отдел' });
   }
 
-  // 🆕 Нормализация: принимаем и строки, и {name, enabled, oldName}
   const normalized = departments
     .map(d => {
       const rawName = typeof d === 'string' ? d : (d && d.name ? d.name : '');
@@ -45,7 +46,6 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
     return res.status(400).json({ error: 'Добавьте хотя бы один отдел' });
   }
 
-  // Проверка дублей
   const seen = new Set();
   const duplicates = [];
   for (const d of normalized) {
@@ -59,72 +59,70 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
     });
   }
 
-  const conn = await db.getConnection();
   try {
-    await conn.beginTransaction();
+    const result = await withTransaction(async (conn) => {
+      // 1) Читаем старый список
+      const [oldRows] = await conn.query('SELECT name FROM departments');
+      const oldNames = oldRows.map(r => r.name);
 
-    // 1) Читаем старый список из БД
-    const [oldRows] = await conn.query('SELECT name FROM departments');
-    const oldNames = oldRows.map(r => r.name);
+      // 2) Обновляем привязки при переименовании
+      for (const d of normalized) {
+        if (d.oldName && d.oldName !== d.name) {
+          await conn.query(
+            'UPDATE pipettes SET department = ? WHERE department = ?',
+            [d.name, d.oldName]
+          );
+          await conn.query(
+            'UPDATE users SET department = ? WHERE department = ?',
+            [d.name, d.oldName]
+          );
+        }
+      }
 
-    // 2) Обновляем привязки при переименовании
-    for (const d of normalized) {
-      if (d.oldName && d.oldName !== d.name) {
-        await conn.query(
-          'UPDATE pipettes SET department = ? WHERE department = ?',
-          [d.name, d.oldName]
+      // 3) Проверяем что удаляемые отделы не используются
+      const newNames = new Set(normalized.map(d => d.name));
+      const removed = oldNames.filter(n => !newNames.has(n));
+      if (removed.length > 0) {
+        const ph = removed.map(() => '?').join(',');
+        const [used] = await conn.query(
+          `SELECT department, COUNT(*) AS c
+           FROM pipettes
+           WHERE department IN (${ph})
+           GROUP BY department`,
+          removed
         );
+        if (used.length > 0) {
+          const details = used.map(r => `«${r.department}» (${r.c} шт.)`).join(', ');
+          const err = new Error(
+            `Нельзя удалить используемые отделы: ${details}. Переименуйте их, чтобы сохранить привязку.`
+          );
+          err.status = 400;
+          throw err;
+        }
+      }
+
+      // 4) Полная замена справочника
+      await conn.query('DELETE FROM departments');
+      for (const d of normalized) {
         await conn.query(
-          'UPDATE users SET department = ? WHERE department = ?',
-          [d.name, d.oldName]
+          'INSERT INTO departments (name, enabled) VALUES (?, ?)',
+          [d.name, d.enabled]
         );
       }
-    }
 
-    // 3) Проверяем, что удаляемые отделы не используются
-    const newNames = new Set(normalized.map(d => d.name));
-    const removed = oldNames.filter(n => !newNames.has(n));
-    if (removed.length > 0) {
-      const ph = removed.map(() => '?').join(',');
-      const [used] = await conn.query(
-        `SELECT department, COUNT(*) AS c
-         FROM pipettes
-         WHERE department IN (${ph})
-         GROUP BY department`,
-        removed
-      );
-      if (used.length > 0) {
-        await conn.rollback();
-        const details = used
-          .map(r => `«${r.department}» (${r.c} шт.)`)
-          .join(', ');
-        return res.status(400).json({
-          error: `Нельзя удалить используемые отделы: ${details}. ` +
-                 `Переименуйте их, чтобы сохранить привязку.`
-        });
-      }
-    }
+      return { message: 'Отделы обновлены', count: normalized.length };
+    });
 
-    // 4) Полная замена справочника
-    await conn.query('DELETE FROM departments');
-    for (const d of normalized) {
-      await conn.query(
-        'INSERT INTO departments (name, enabled) VALUES (?, ?)',
-        [d.name, d.enabled]
-      );
-    }
-
-    await conn.commit();
-    res.json({ message: 'Отделы обновлены', count: normalized.length });
+    res.json(result);
   } catch (e) {
-    await conn.rollback();
+    if (e.status === 400) {
+      return res.status(400).json({ error: e.message });
+    }
     console.error('Ошибка обновления отделов:', e.message, '| code:', e.code);
     res.status(500).json({
       error: 'Ошибка обновления отделов',
       details: e.message
     });
-  } finally {
-    conn.release();
   }
 });
 
@@ -341,28 +339,27 @@ router.get('/filters', authenticate, async (req, res) => {
 router.put('/filters', authenticate, requireRole(['admin']), async (req, res) => {
   const filters = req.body;
   if (!Array.isArray(filters)) return res.status(400).json({ error: 'Ожидается массив' });
-  const conn = await db.getConnection();
+  
   try {
-    await conn.beginTransaction();
-    await conn.query('DELETE FROM filter_config');
-    for (const f of filters) {
-      await conn.query(
-        `INSERT INTO filter_config
-         (id, label, type, field_id, enabled, options_source, filter_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [f.id, f.label, f.type, f.fieldId || '',
-         f.enabled ? 1 : 0, f.optionsSource || '', f.order || 0]
-      );
-    }
-    await conn.commit();
+    await withTransaction(async (conn) => {
+      await conn.query('DELETE FROM filter_config');
+      for (const f of filters) {
+        await conn.query(
+          `INSERT INTO filter_config
+           (id, label, type, field_id, enabled, options_source, filter_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [f.id, f.label, f.type, f.fieldId || '',
+           f.enabled ? 1 : 0, f.optionsSource || '', f.order || 0]
+        );
+      }
+    });
     res.json({ message: 'Фильтры обновлены' });
   } catch (e) {
-    await conn.rollback();
+    console.error(e);
     res.status(500).json({ error: 'Ошибка обновления фильтров' });
-  } finally {
-    conn.release();
   }
 });
+
 // ============================================================
 // ТИПЫ ОБОРУДОВАНИЯ
 // ============================================================
@@ -545,20 +542,16 @@ router.get('/my-preferences', authenticate, async (req, res) => {
 // СБРОС ВСЕХ ДАННЫХ (только для админа)
 // ============================================================
 router.post('/reset-data', authenticate, requireRole(['admin']), async (req, res) => {
-  const conn = await db.getConnection();
   try {
-    await conn.beginTransaction();
-    await conn.query('DELETE FROM calibration_history');
-    await conn.query('DELETE FROM pipettes');
-    await conn.query('DELETE FROM audit_log');
-    await conn.commit();
+    await withTransaction(async (conn) => {
+      await conn.query('DELETE FROM calibration_history');
+      await conn.query('DELETE FROM pipettes');
+      await conn.query('DELETE FROM audit_log');
+    });
     res.json({ message: 'Все данные удалены' });
   } catch (e) {
-    await conn.rollback();
     console.error('Reset data error:', e);
     res.status(500).json({ error: 'Ошибка сброса данных' });
-  } finally {
-    conn.release();
   }
 });
 
@@ -597,11 +590,8 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
       catch { prefsByUser[r.user_id] = {}; }
     }
 
-    const conn = await db.getConnection();
-    let updated = 0;
-    try {
-      await conn.beginTransaction();
-
+        let updated = 0;
+    await withTransaction(async (conn) => {
       for (const u of users) {
         const cur = prefsByUser[u.id] || {};
         let nextVisibleFields;
@@ -609,11 +599,9 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
         if (m === 'all') {
           nextVisibleFields = [...visibleFields];
         } else if (m === 'missing') {
-          // Тем, у кого уже есть свои настройки — не трогаем
           if (Array.isArray(cur.visibleFields) && cur.visibleFields.length > 0) continue;
           nextVisibleFields = [...visibleFields];
         } else if (m === 'add') {
-          // Добавить перечисленные поля, не трогая остальные
           const existing = Array.isArray(cur.visibleFields) ? cur.visibleFields : [];
           const set = new Set(existing);
           for (const id of visibleFields) set.add(id);
@@ -634,19 +622,10 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
         );
         updated++;
       }
-      await conn.commit();
-    } catch (e) {
-      await conn.rollback();
-      throw e;
-    } finally {
-      conn.release();
-    }
+    });
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Массовое применение полей',
-       `Режим: ${m}, полей: ${visibleFields.length}, обновлено: ${updated}`]
-    );
+    await logAction(req, 'Массовое применение полей',
+      `Режим: ${m}, полей: ${visibleFields.length}, обновлено: ${updated}`);
 
     res.json({
       message: `Обновлено пользователей: ${updated}`,
@@ -661,20 +640,16 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
 
 router.post('/reset-help', authenticate, requireRole(['admin']), async (req, res) => {
   try {
-    const conn = await db.getConnection();
-    try {
-      await conn.beginTransaction();
+    await withTransaction(async (conn) => {
       await conn.query('DELETE FROM help_docs');
       await db.seedHelpDocs(conn);
-      await conn.commit();
-    } catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
-
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Сброс справки к заводской', '']
-    );
+    });
+    await logAction(req, 'Сброс справки к заводской', '');
     res.json({ message: 'Справка восстановлена к заводской' });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка сброса' }); }
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Ошибка сброса' });
+  }
 });
 
 // ============================================================
