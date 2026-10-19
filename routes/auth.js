@@ -151,7 +151,7 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
 // ============================================================
 // ВОЗВРАТ К СВОЕЙ УЧЁТНОЙ ЗАПИСИ (конец impersonate-сессии)
 // ============================================================
-router.post('/stop-impersonate', authenticate, async (req, res) => {
+router.post('/stop-impersonate', allowWhenPasswordMustChange, authenticate, async (req, res) => {
   try {
     // Достаём id админа из JWT (установлен в middleware/auth.js)
     const adminId = req.impersonatedBy;
