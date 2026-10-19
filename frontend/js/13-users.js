@@ -123,64 +123,64 @@ function renderUserEditForm() {
         Пароль генерируется автоматически. Пользователь обязан сменить его при первом входе.
       </small>
 
-      <div style="background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;padding:14px;margin:16px 0;">
-        <div style="font-weight:700;font-size:.95rem;color:#0369a1;margin-bottom:6px;">
+      ${UI.infoBlock(`
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:6px;">
           <i class="fa-solid fa-key"></i> Права доступа
         </div>
-        <small style="color:#0c4a6e;display:block;margin-bottom:10px;font-size:.8rem;">
+        <small style="display:block;margin-bottom:10px;font-size:.8rem;">
           Отмеченные права определяют, <strong>какие кнопки и действия доступны пользователю</strong>.
           Если право не выдано — элемент скрыт. По умолчанию все права выключены.
           Для роли «Администратор» все права выдаются автоматически.
         </small>
 
-      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')">
-             <i class="fa-solid fa-eraser"></i> Очистить
-        </button>
-         <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')">
-              <i class="fa-solid fa-user"></i> Пользователь
-         </button>
-         <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')">
-              <i class="fa-solid fa-flask"></i> Ст. лаборант
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')">
+               <i class="fa-solid fa-eraser"></i> Очистить
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')">
+                <i class="fa-solid fa-user"></i> Пользователь
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')">
+                <i class="fa-solid fa-flask"></i> Ст. лаборант
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('manager')">
-              <i class="fa-solid fa-chart-line"></i> Менеджер
-           </button>
-           <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')">
-              <i class="fa-solid fa-star"></i> Все права
-           </button>
+                <i class="fa-solid fa-chart-line"></i> Менеджер
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')">
+                <i class="fa-solid fa-star"></i> Все права
+          </button>
         </div>
 
         <div id="usr-permissions">${permsHtml}</div>
-      </div>
+      `)}
 
-      <div style="background:#fef9c3;border-left:3px solid #eab308;border-radius:8px;padding:12px;margin-bottom:12px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#854d0e;">
+      ${UI.warningBlock(`
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
           <input type="checkbox" id="usr-only-own-dept" style="width:18px;height:18px;">
           <i class="fa-solid fa-eye-slash"></i>
           Показывать только свой отдел
         </label>
-        <small style="color:#92400e;display:block;margin-top:6px;margin-left:26px;font-size:.78rem;">
+        <small style="display:block;margin-top:6px;margin-left:26px;font-size:.78rem;">
           Если включено — пользователь увидит только пипетки своего отдела. Отдел должен быть указан выше.
         </small>
-      </div>
+      `)}
 
-      <div style="background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;padding:12px;margin-bottom:16px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;color:#0369a1;">
+      ${UI.infoBlock(`
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
           <input type="checkbox" id="usr-is-acting" style="width:18px;height:18px;" onchange="onActingChange(this.checked)">
           <i class="fa-solid fa-user-clock"></i>
           Исполняющий обязанности (и.о.)
         </label>
-        <small style="color:#0c4a6e;display:block;margin-top:6px;margin-left:26px;font-size:.78rem;">
+        <small style="display:block;margin-top:6px;margin-left:26px;font-size:.78rem;">
           И.о. видит оборудование отдела основного и работает под его ФИО.
         </small>
         <div id="usr-acting-for-wrap" style="display:none;margin-top:10px;">
-          <label style="font-size:.85rem;font-weight:600;color:#0369a1;margin-bottom:4px;display:block;">За кого исполняет *</label>
+          <label style="font-size:.85rem;font-weight:600;margin-bottom:4px;display:block;">За кого исполняет *</label>
           <select id="usr-acting-for" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;">
             <option value="">— выберите —</option>
           </select>
         </div>
-      </div>
+      `)}
 
       <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
         <button class="btn btn-secondary" onclick="resetUserSettingForm()">
