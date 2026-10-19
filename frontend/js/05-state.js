@@ -1,9 +1,9 @@
 'use strict';
 
 // ============================================================
-// ЗАГРУЗКА ДАННЫХ
+// СОСТОЯНИЕ
 // ============================================================
-let pipettes = [];
+let pipettes = [];          // ⚠️ ТЕКУЩАЯ СТРАНИЦА (не весь список!)
 let settings = { warnDays: 30 };
 let sortField = 'nextCalibration';
 let sortDir = 1;
@@ -12,90 +12,100 @@ let pageSize = 100;
 let currentHistoryId = null;
 let departmentsList = [];
 
+// 🆕 Состояние серверной пагинации
+let pagedState = {
+  items: [],
+  total: 0,
+  page: 1,
+  limit: 100,
+  totalPages: 1,
+  counters: { ok: 0, warn: 0, danger: 0, total: 0 },
+};
+
+// 🆕 Статистика + напоминания (с сервера)
+let statsState = {
+  counters: { ok: 0, warn: 0, danger: 0, total: 0 },
+  reminders: { danger: [], warn: [] },
+};
+
+// ============================================================
+// ЗАГРУЗКА ДАННЫХ
+// ============================================================
 async function loadPipetteData() {
   if (!isAuthenticated()) return;
   try {
     if (!myPrefs._loaded) {
-  try {
-    // 🆕 Эффективный вид: индивидуальное → шаблон → дефолт
-    myPrefs = await apiRequest('/settings/my-preferences/effective') || {};
-    myPrefs._loaded = true;
-  } catch (e) {
-    // 🛡️ Fallback на старый эндпоинт
-    try {
-      myPrefs = await apiRequest('/settings/my-preferences') || {};
-      myPrefs._loaded = true;
-    } catch (e2) {
-      myPrefs = { _loaded: true };
+      try {
+        myPrefs = await apiRequest('/settings/my-preferences/effective') || {};
+        myPrefs._loaded = true;
+      } catch (e) {
+        try {
+          myPrefs = await apiRequest('/settings/my-preferences') || {};
+          myPrefs._loaded = true;
+        } catch (e2) {
+          myPrefs = { _loaded: true };
+        }
+      }
     }
-  }
-}
-    const data = await apiRequest('/pipettes');
-    pipettes = data;
+
+    // 🆕 Настройки (warn_days и т.п.)
     const settingsData = await apiRequest('/settings/system');
     settings = { warnDays: parseInt(settingsData.warn_days) || 30 };
+
     try {
       _equipmentTypes = await apiRequest('/settings/equipment-types');
     } catch (e) {
- _equipmentTypes = [
-  { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
-  { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
-  { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
-  { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
-  { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
-  { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 }
-];
+      _equipmentTypes = [
+        { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
+        { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
+        { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
+        { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
+        { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
+        { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 }
+      ];
     }
 
-   try {
+    try {
       exportFields = await apiRequest('/settings/export');
     } catch (e) {
       exportFields = null;
     }
 
-    // 🆕 Обновляем кэш полей — иначе кастомные колонки/экспорт не подхватятся
+    // 🆕 Кэш полей — иначе кастомные колонки/экспорт не подхватятся
     try {
       _cachedFields = await apiRequest('/settings/fields');
     } catch (e) {
       _cachedFields = _cachedFields || [];
     }
 
-        // 🆕 СИНХРОНИЗАЦИЯ visibleFields с активными полями field_config.
-if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
-  const activeFieldIds = _cachedFields
-    .filter(f => f.enabled)
-    .map(f => f.id);
+    // 🆕 СИНХРОНИЗАЦИЯ visibleFields с активными полями field_config
+    if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
+      const activeFieldIds = _cachedFields
+        .filter(f => f.enabled)
+        .map(f => f.id);
 
-  // 🆕 Виртуальные колонки — их нет в field_config, но их надо сохранять
-  const VIRTUAL_IDS = ['status', 'nextCalibration'];
+      const VIRTUAL_IDS = ['status', 'nextCalibration'];
+      const hasUserSettings =
+        Array.isArray(myPrefs.visibleFields) &&
+        myPrefs.visibleFields.length > 0;
 
-  const hasUserSettings =
-    Array.isArray(myPrefs.visibleFields) &&
-    myPrefs.visibleFields.length > 0;
+      if (!hasUserSettings) {
+        myPrefs.visibleFields = [...activeFieldIds, ...VIRTUAL_IDS];
+      } else {
+        const allowedSet = new Set([...activeFieldIds, ...VIRTUAL_IDS]);
+        const visibleSet = new Set(myPrefs.visibleFields);
 
-    if (!hasUserSettings) {
-    // Настроек нет — показываем все активные + виртуальные
-    myPrefs.visibleFields = [...activeFieldIds, ...VIRTUAL_IDS];
-  } else {
-    // Настройки есть — сохраняем только валидные (активные + виртуальные)
-    const allowedSet = new Set([...activeFieldIds, ...VIRTUAL_IDS]);
-    const visibleSet = new Set(myPrefs.visibleFields);
+        if (!myPrefs._virtualsInitialized) {
+          for (const vid of VIRTUAL_IDS) {
+            if (!visibleSet.has(vid)) visibleSet.add(vid);
+          }
+        }
 
-    // 🆕 Виртуальные добавляем ТОЛЬКО если пользователь ещё не открывал
-    // модалку «Настроить видимые поля» после внедрения виртуальных.
-    // Если он их видел и явно выключил — не навязываем обратно.
-    if (!myPrefs._virtualsInitialized) {
-      for (const vid of VIRTUAL_IDS) {
-        if (!visibleSet.has(vid)) visibleSet.add(vid);
+        myPrefs.visibleFields = [...visibleSet].filter(id => allowedSet.has(id));
       }
     }
 
-    myPrefs.visibleFields = [...visibleSet].filter(id => allowedSet.has(id));
-  }
-}
-
-   // 🛡️ Список ответственных — для тех, кому он реально нужен
-    // (админ, ст. лаборант, владелец transfer_pipette / bulk_change_responsible)
+    // 🛡️ Список ответственных
     const needsResponsibles =
       currentUser.role === 'admin' ||
       isSeniorLab() ||
@@ -112,9 +122,12 @@ if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
     } else {
       _responsibles = [];
     }
-    
+
     await loadDepartments();
     await loadFilterConfig();
+    await loadPaged();           // 🆕 вместо GET /pipettes
+    await loadStats();           // 🆕 напоминания с сервера
+
     render();
     checkReminder();
   } catch (error) {
@@ -124,6 +137,113 @@ if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
   }
 }
 
+// ============================================================
+// 🆕 СЕРВЕРНАЯ ПАГИНАЦИЯ — загрузка одной страницы
+// ============================================================
+async function loadPaged() {
+  if (!isAuthenticated()) return;
+
+  try {
+    const params = new URLSearchParams();
+    params.set('page', String(currentPage));
+    params.set('limit', String(pageSize));
+    params.set('sort', sortField);
+    params.set('dir', sortDir > 0 ? 'asc' : 'desc');
+
+    const searchVal = (document.getElementById('search')?.value || '').trim();
+    if (searchVal) params.set('search', searchVal);
+
+    // Фильтры — только непустые значения
+    const filtersObj = {};
+    for (const [k, v] of Object.entries(filterState || {})) {
+      if (v === undefined || v === null || v === '') continue;
+      if (typeof v === 'object' && v.period === '') continue;
+      filtersObj[k] = v;
+    }
+    if (Object.keys(filtersObj).length > 0) {
+      params.set('filters', JSON.stringify(filtersObj));
+    }
+
+    const data = await apiRequest('/pipettes/paged?' + params.toString());
+
+    pagedState = {
+      items: Array.isArray(data.items) ? data.items : [],
+      total: Number(data.total) || 0,
+      page: Number(data.page) || 1,
+      limit: Number(data.limit) || pageSize,
+      totalPages: Math.max(1, Number(data.totalPages) || 1),
+      counters: data.counters || { ok: 0, warn: 0, danger: 0, total: 0 },
+    };
+
+    // Если сервер вернул другую страницу — синхронизируемся
+    if (currentPage > pagedState.totalPages) {
+      currentPage = pagedState.totalPages;
+    }
+
+    // 🆕 pipettes = текущая страница (для 07-actions, 09-form, 10-bulk)
+    pipettes = pagedState.items;
+  } catch (e) {
+    console.error('loadPaged error:', e);
+    showToast('Ошибка загрузки данных', 'error');
+    pagedState = {
+      items: [], total: 0, page: 1, limit: pageSize, totalPages: 1,
+      counters: { ok: 0, warn: 0, danger: 0, total: 0 },
+    };
+    pipettes = [];
+  }
+}
+
+// ============================================================
+// 🆕 СТАТИСТИКА (напоминания) — для 16-reminders.js (этап B)
+// ============================================================
+async function loadStats() {
+  if (!isAuthenticated()) return;
+
+  try {
+    const data = await apiRequest('/pipettes/stats');
+    statsState = {
+      counters: data.counters || { ok: 0, warn: 0, danger: 0, total: 0 },
+      reminders: data.reminders || { danger: [], warn: [] },
+    };
+  } catch (e) {
+    console.error('loadStats error:', e);
+    statsState = {
+      counters: { ok: 0, warn: 0, danger: 0, total: 0 },
+      reminders: { danger: [], warn: [] },
+    };
+  }
+}
+
+// ============================================================
+// 🆕 ID по фильтру (для экспорта/печати всего фильтра) — этап C
+// ============================================================
+async function loadIdsForExport() {
+  try {
+    const params = new URLSearchParams();
+    const searchVal = (document.getElementById('search')?.value || '').trim();
+    if (searchVal) params.set('search', searchVal);
+
+    const filtersObj = {};
+    for (const [k, v] of Object.entries(filterState || {})) {
+      if (v === undefined || v === null || v === '') continue;
+      if (typeof v === 'object' && v.period === '') continue;
+      filtersObj[k] = v;
+    }
+    if (Object.keys(filtersObj).length > 0) {
+      params.set('filters', JSON.stringify(filtersObj));
+    }
+
+    const data = await apiRequest('/pipettes/ids?' + params.toString());
+    return Array.isArray(data.ids) ? data.ids : [];
+  } catch (e) {
+    console.error('loadIdsForExport error:', e);
+    return [];
+  }
+}
+
+// ============================================================
+// Отделы / фильтры (без изменений)
+// ============================================================
 async function loadDepartments() {
   try {
     departmentsList = await apiRequest('/settings/departments');
@@ -141,7 +261,6 @@ async function loadFilterConfig() {
       if (f.type === 'select') {
         if (f.optionsSource === 'departments') {
           f.options = departmentsList.map(d => ({ value: d, label: d }));
-        
         } else if (f.optionsSource === 'status_list') {
           f.options = [
             { value: 'ok', label: 'В норме' },
@@ -152,13 +271,12 @@ async function loadFilterConfig() {
             { value: 'fail', label: '❌ Брак' },
             { value: 'wip', label: '⏳ В процессе' },
             { value: 'unknown', label: 'Не задано' }
-             ];
-           } else if (f.optionsSource === 'equipment_type_list') {
-           f.options = _equipmentTypes.map(t => ({
-           value: t.value,
-           label: pluralizeType(t.label)
-           }));
-
+          ];
+        } else if (f.optionsSource === 'equipment_type_list') {
+          f.options = _equipmentTypes.map(t => ({
+            value: t.value,
+            label: pluralizeType(t.label)
+          }));
         } else if (f.optionsSource === 'active_list') {
           f.options = [
             { value: 'true', label: 'В работе' },
@@ -176,43 +294,28 @@ async function loadFilterConfig() {
   }
 }
 
-// ============================================================
-// Синхронизирует filterState с актуальными _activeFilters
-// Делает две вещи:
-//   1) убирает ключи фильтров, которых больше нет в _activeFilters
-//      (удалены или выключены в настройках)
-//   2) у оставшихся select-фильтров сбрасывает значение,
-//      если его больше нет среди опций (переименование отдела,
-//      удаление типа оборудования и т.п.)
-// ============================================================
 function syncFilterState() {
-  // 1) ключи удалённых/выключенных фильтров
   const activeIds = new Set(_activeFilters.map(f => f.id));
   for (const id of Object.keys(filterState)) {
-    if (!activeIds.has(id)) {
-      delete filterState[id];
-    }
+    if (!activeIds.has(id)) delete filterState[id];
   }
 
-  // 2) невалидные значения у оставшихся select-фильтров
   for (const f of _activeFilters) {
-    if (f.type !== 'select' || !Array.isArray(f.options) || f.options.length === 0) {
-      continue;
-    }
+    if (f.type !== 'select' || !Array.isArray(f.options) || f.options.length === 0) continue;
     const current = filterState[f.id];
     if (current === undefined || current === null || current === '') continue;
-
     const validValues = new Set(f.options.map(o => String(o.value)));
-    if (!validValues.has(String(current))) {
-      delete filterState[f.id];
-    }
+    if (!validValues.has(String(current))) delete filterState[f.id];
   }
 }
 
 // ============================================================
-// СТАТУСЫ
+// СТАТУСЫ (клиентский fallback)
 // ============================================================
 function calcStatus(p) {
+  // 🆕 Если сервер прислал computed_status — доверяем ему
+  if (p.computed_status) return p.computed_status;
+
   if (p.sent_for_calibration) return 'sent';
   if (p.last_result === 'fail') return 'fail';
   if (!p.active) return 'inactive';
@@ -229,20 +332,14 @@ function calcStatus(p) {
 }
 
 function calcStatusByDate(p) {
-  // Брак и "в процессе" — дата не показательна
   if (p.last_result === 'fail') return null;
   if (p.last_result === 'wip')  return null;
-
-  // Нет даты или интервала — не классифицируем
   if (!p.last_calibration || !p.interval) return null;
-
   const last = parseLocalDate(p.last_calibration);
   if (!last) return null;
-
   const next = addMonths(last, p.interval);
   const now = new Date(); now.setHours(0, 0, 0, 0);
   const daysLeft = Math.ceil((next - now) / 86400000);
-
   if (daysLeft < 0) return 'danger';
   if (daysLeft <= settings.warnDays) return 'warn';
   return 'ok';
@@ -263,9 +360,8 @@ function daysLeft(p) {
 }
 
 // ============================================================
-// ОПРЕДЕЛЕНИЯ КОЛОНОК ТАБЛИЦЫ
+// КОЛОНКИ ТАБЛИЦЫ
 // ============================================================
-// Системные колонки
 const SYSTEM_TABLE_COLUMNS = [
   { id: 'id',              label: 'ID',            sortable: true,  field: 'id' },
   { id: 'type',            label: 'Тип',           sortable: true,  field: 'equipmentType' },
@@ -287,44 +383,33 @@ const DEFAULT_TABLE_COLUMNS = [
   'lastCalibration', 'nextCalibration', 'responsible', 'status'
 ];
 
-// 🆕 Список системных id из field_config — они НЕ должны попадать
-// в кастомные колонки, даже если id не совпадает с SYSTEM_TABLE_COLUMNS
 const SYSTEM_FIELD_IDS_IN_CONFIG = new Set([
   'id', 'serial', 'manufacturer', 'model', 'equipmentType',
   'volume', 'department', 'interval', 'lastCalibration', 'cert',
   'result', 'active', 'responsible', 'location', 'notes'
 ]);
 
-// 🆕 Все доступные колонки: системные + кастомные (для настроек вида)
 function getAllTableColumns() {
   const result = [];
   const added = new Set();
 
-  // 1. Проходим по field_config в его порядке — добавляем всё, что активно
   const fields = [...(_cachedFields || [])].sort(
     (a, b) => (a.order || 0) - (b.order || 0)
   );
 
   for (const f of fields) {
     if (!f.enabled) continue;
-
     const tableId = (f.id === 'equipmentType') ? 'type' : f.id;
-
     const sysDef = SYSTEM_TABLE_COLUMNS.find(c => c.id === tableId);
     if (sysDef) {
       result.push(sysDef);
       added.add(tableId);
     } else if (!SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)) {
-      // Кастомное поле
       result.push({ id: f.id, label: f.label, sortable: true, field: f.id });
       added.add(f.id);
     }
   }
 
-    // 2. Виртуальные и дополнительные системные колонки — добавляем их
-  //    в СПРАВОЧНИК, чтобы findColumn() мог их найти, если они включены
-  //    в visibleFields. Но в саму таблицу они попадут только по решению
-  //    getActiveTableColumns().
   const SYSTEM_EXTRA_COLUMNS = [
     { id: 'interval',        label: 'МПИ',         sortable: true,  field: 'interval' },
     { id: 'notes',           label: 'Примечание',  sortable: false, field: 'notes' },
@@ -334,7 +419,6 @@ function getAllTableColumns() {
   ];
 
   const allSystemDefs = [...SYSTEM_TABLE_COLUMNS, ...SYSTEM_EXTRA_COLUMNS];
-
   for (const sys of allSystemDefs) {
     if (!added.has(sys.id)) {
       result.push(sys);
@@ -346,33 +430,21 @@ function getAllTableColumns() {
 }
 
 function getDefaultTableColumns() {
-  // Системные поля, которые уже представлены в таблице
-  // под другими id (не дублируем)
-  const SYSTEM_SKIP_IN_TABLE = new Set([
-    'id',            // уже есть как колонка 'id'
-    'equipmentType', // уже есть как колонка 'type'
-  ]);
-
+  const SYSTEM_SKIP_IN_TABLE = new Set(['id', 'equipmentType']);
   const cols = [];
 
-  // Идём по field_config в его порядке
   for (const f of (_cachedFields || [])) {
     if (!f.enabled) continue;
-
     if (SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)) {
-      // Системное — пропускаем только те, что уже отражены как 'id'/'type'
       if (!SYSTEM_SKIP_IN_TABLE.has(f.id)) {
         const tableId = (f.id === 'equipmentType') ? 'type' : f.id;
         cols.push(tableId);
       }
     } else {
-      // Кастомное — всегда
       cols.push(f.id);
     }
   }
 
-  // Виртуальные колонки — их нет в field_config
-  // «Следующая» — сразу после «Поверка»
   const lastCalIdx = cols.indexOf('lastCalibration');
   if (lastCalIdx !== -1) {
     cols.splice(lastCalIdx + 1, 0, 'nextCalibration');
@@ -380,16 +452,9 @@ function getDefaultTableColumns() {
     cols.push('nextCalibration');
   }
 
-  // «Статус» — в конец
-  if (!cols.includes('status')) {
-    cols.push('status');
-  }
+  if (!cols.includes('status')) cols.push('status');
 
-  // Страховка: если field_config пустой — fallback на классический набор
-  if (cols.length <= 2) {
-    return [...DEFAULT_TABLE_COLUMNS];
-  }
-
+  if (cols.length <= 2) return [...DEFAULT_TABLE_COLUMNS];
   return cols;
 }
 
@@ -400,28 +465,19 @@ function findColumn(id) {
 function getActiveTableColumns() {
   const allOrdered = getAllTableColumns();
 
-  // 🆕 Единый источник правды — prefs.visibleFields.
-  // Что включено у пользователя в форме, то и показываем в таблице.
-  // Если индивидуальных настроек нет — дефолтный набор.
   if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
     return getDefaultTableColumns();
   }
 
-  // Маппинг: id поля в field_config → id колонки в таблице
   const TABLE_ID_MAP = { equipmentType: 'type' };
-
   const visible = new Set(myPrefs.visibleFields);
-
   const cols = [];
   const added = new Set();
 
-  // Идём по field_config в порядке field_order — берём только включённые
   for (const f of (_cachedFields || [])) {
     if (!f.enabled) continue;
     if (!visible.has(f.id)) continue;
-
     const tableId = TABLE_ID_MAP[f.id] || f.id;
-
     const def = allOrdered.find(c => c.id === tableId);
     if (def) {
       cols.push(tableId);
@@ -429,39 +485,24 @@ function getActiveTableColumns() {
     }
   }
 
-  // 🆕 Виртуальные колонки — их нет в field_config, но они есть в visibleFields
   const VIRTUAL_IDS = ['status', 'nextCalibration'];
-
   for (const vid of VIRTUAL_IDS) {
     if (!visible.has(vid)) continue;
     if (added.has(vid)) continue;
-
     const def = allOrdered.find(c => c.id === vid);
     if (!def) continue;
 
-    // «Следующая» должна идти сразу после «Поверка»,
-    // а если её нет — после «Дата поверки».
     if (vid === 'nextCalibration') {
       const lastCalIdx = cols.indexOf('lastCalibration');
-      if (lastCalIdx !== -1) {
-        cols.splice(lastCalIdx + 1, 0, vid);
-      } else {
-        cols.push(vid);
-      }
+      if (lastCalIdx !== -1) cols.splice(lastCalIdx + 1, 0, vid);
+      else cols.push(vid);
     } else {
-      // «Статус» — в конец
       cols.push(vid);
     }
     added.add(vid);
   }
 
-  // Никаких принудительных колонок — только то, что пользователь включил
-  // в «Настроить видимые поля». Если пользователь ничего не выбрал —
-  // показываем дефолт, чтобы таблица не была совсем пустой.
-  if (cols.length === 0) {
-    return getDefaultTableColumns();
-  }
-
+  if (cols.length === 0) return getDefaultTableColumns();
   return cols;
 }
 
@@ -474,37 +515,10 @@ function getActiveFormFields(allFields) {
   return enabled.filter(f => visible.has(f.id));
 }
 
-// ============================================================
-// ОТСОРТИРОВАННЫЙ СПИСОК (единый источник для render и pageIds)
-// ============================================================
 function getSortedPipettes() {
-  const filtered = getFilteredPipettes();
-  filtered.sort((a, b) => {
-    let va, vb;
-    if (sortField === 'nextCalibration') {
-      va = getNextDate(a) || new Date(8640000000000000);
-      vb = getNextDate(b) || new Date(8640000000000000);
-    } else if (sortField === 'volume') {
-      va = parseFloat(a.volume) || 0;
-      vb = parseFloat(b.volume) || 0;
-    } else if (sortField === 'equipmentType') {
-      va = (a.equipment_type || 'pipette');
-      vb = (b.equipment_type || 'pipette');
-    } else if (sortField === 'lastCalibration') {
-      va = String(a.last_calibration || '').toLowerCase();
-      vb = String(b.last_calibration || '').toLowerCase();
-  
-   } else if (sortField === 'status') {           
-      va = STATUS_ORDER[calcStatus(a)] || 99;
-      vb = STATUS_ORDER[calcStatus(b)] || 99;
-      
-  } else {
-      va = (a[sortField] || '').toString().toLowerCase();
-      vb = (b[sortField] || '').toString().toLowerCase();
-    }
-    if (va < vb) return -1 * sortDir;
-    if (va > vb) return 1 * sortDir;
-    return 0;
-  });
-  return filtered;
+  return pipettes;
+}
+
+function getFilteredPipettes() {
+  return pipettes;
 }
