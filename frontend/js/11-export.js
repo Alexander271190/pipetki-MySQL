@@ -69,77 +69,78 @@ async function exportToXlsx() {
     async () => {
       const data = getFilteredPipettes();
       if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
-  
- const fields = getActiveExportFields();
-  const headers = fields.map(f => {
-    const def = getExportField(f);
-    return def ? def.label : f;
-  });
-  const rows = data.map(p => {
-    const obj = {};
-    fields.forEach((f, i) => {
-      const def = getExportField(f);
-      obj[headers[i]] = def ? def.get(p) : '';
-    });
-    return obj;
-  });
-  
-  showToast('Формирование Excel…', 'success');
 
-    try {
-    const sess = sessionStorage.getItem('pipette_session');
-    if (!sess) {
-      showToast('Сессия истекла, войдите заново', 'error');
-      return;
+      const fields = getActiveExportFields();
+      const headers = fields.map(f => {
+        const def = getExportField(f);
+        return def ? def.label : f;
+      });
+      const rows = data.map(p => {
+        const obj = {};
+        fields.forEach((f, i) => {
+          const def = getExportField(f);
+          obj[headers[i]] = def ? def.get(p) : '';
+        });
+        return obj;
+      });
+
+      showToast('Формирование Excel…', 'success');
+
+      try {
+        const sess = sessionStorage.getItem('pipette_session');
+        if (!sess) {
+          showToast('Сессия истекла, войдите заново', 'error');
+          return;
+        }
+        const token = JSON.parse(sess).token;
+
+        const res = await fetch('/api/export/xlsx', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            mode: 'registry',
+            meta: {
+              title: 'Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ',
+              date: new Date().toLocaleDateString('ru-RU'),
+              recordCount: data.length,
+              user: currentUser ? currentUser.fullName : '',
+              userPosition: currentUser ? (currentUser.position || '') : ''
+            },
+            headers,
+            rows,
+            fields
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Ошибка экспорта');
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pipettes_${todayStr()}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(`Экспортировано: ${data.length} записей`, 'success');
+      } catch (e) {
+        showToast(e.message || 'Ошибка экспорта', 'error');
+      }
     }
-    const token = JSON.parse(sess).token;
-
-    const res = await fetch('/api/export/xlsx', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
-        body: JSON.stringify({
-        mode: 'registry',
-        meta: {
-          title: 'Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ',
-          date: new Date().toLocaleDateString('ru-RU'),
-          recordCount: data.length,
-          user: currentUser ? currentUser.fullName : '',
-          userPosition: currentUser ? (currentUser.position || '') : ''
-        },
-        headers,
-        rows,
-        fields
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Ошибка экспорта');
-    }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pipettes_${todayStr()}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast(`Экспортировано: ${data.length} записей`, 'success');
-  } catch (e) {
-    showToast(e.message || 'Ошибка экспорта', 'error');
-   }
   );
 }
 
 async function exportToPDF() {
-  await refreshCurrentUser();
-  if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
-  if (!requirePasswordChange()) return; 
-  const data = getFilteredPipettes();
-  if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
+  await UI.guard(
+    { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
+    async () => {
+      const data = getFilteredPipettes();
+      if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
   const fields = getActiveExportFields();
   const today = new Date().toLocaleDateString('ru-RU');
@@ -300,53 +301,38 @@ async function exportToPDF() {
     </body></html>`);
   win.document.close();
   showToast(`PDF: ${fields.length} полей, ${data.length} записей`, 'success');
-}
-
-// ============================================================
-// МЕНЮ ЭКСПОРТА
-// ============================================================
-function toggleExportMenu(e) {
-  if (e) e.stopPropagation();
-  const menu = document.getElementById('export-menu');
-  menu.classList.toggle('show');
-}
-
-function closeExportMenu() {
-  const menu = document.getElementById('export-menu');
-  if (menu) menu.classList.remove('show');
-}
-
-document.addEventListener('click', (e) => {
-  const dropdown = document.getElementById('export-dropdown');
-  if (dropdown && !dropdown.contains(e.target)) {
-    closeExportMenu();
+      }
+    );
   }
-});
 
 // ============================================================
 // ЭКСПОРТ ИСТОРИИ ПОВЕРОК КОНКРЕТНОГО ОБОРУДОВАНИЯ
 // ============================================================
-function openHistoryExportModal() {
-  if (!requirePasswordChange()) return;
-  if (!currentHistoryId) {
-    showToast('Сначала откройте историю оборудования', 'error');
-    return;
-  }
-  const p = pipettes.find(x => x.id === currentHistoryId);
-  if (!p) return;
+async function openHistoryExportModal() {
+  await UI.guard(
+    { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
+    async () => {
+      if (!currentHistoryId) {
+        showToast('Сначала откройте историю оборудования', 'error');
+        return;
+      }
+      const p = pipettes.find(x => x.id === currentHistoryId);
+      if (!p) return;
 
-  document.getElementById('history-export-target').innerHTML =
-    `Оборудование: <strong>${esc(p.id)}</strong> — ${esc(p.model)}`;
+      document.getElementById('history-export-target').innerHTML =
+        `Оборудование: <strong>${esc(p.id)}</strong> — ${esc(p.model)}`;
 
-  document.getElementById('he-from').value = '';
-  document.getElementById('he-to').value = '';
-  document.getElementById('he-error').textContent = '';
+      document.getElementById('he-from').value = '';
+      document.getElementById('he-to').value = '';
+      document.getElementById('he-error').textContent = '';
 
-  document.getElementById('history-export-modal').classList.add('active');
+      UI.modal.open('history-export-modal');
+    }
+  );
 }
 
 function closeHistoryExportModal() {
-  document.getElementById('history-export-modal').classList.remove('active');
+  UI.modal.close('history-export-modal');
 }
 
 async function getFilteredHistoryForExport() {
@@ -385,14 +371,12 @@ async function exportHistoryToXlsx() {
 
   const from = document.getElementById('he-from').value;
   const to   = document.getElementById('he-to').value;
-
-  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
-
+ 
   const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
   const rows = history.map(h => ({
     'Дата поверки':   h.date ? formatDate(h.date) : '',
     'Свидетельство':  h.cert || '',
-    'Результат':      resultLabels[h.result] || h.result || '',
+    'Результат':      RESULT_LABELS[h.result] || h.result || '',
     'Организация':    h.org || '',
     'Примечание':     h.note || ''
   }));
@@ -469,14 +453,13 @@ async function exportHistoryToPDF() {
   const user = currentUser ? currentUser.fullName : '';
   const userPosition = currentUser ? (currentUser.position || '') : '';
   const today = new Date().toLocaleDateString('ru-RU');
-  const resultLabels = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
-
+  
   const rows = history.map((h, i) => `
     <tr>
       <td style="text-align:center;">${i + 1}</td>
       <td>${esc(formatDate(h.date))}</td>
       <td>${esc(h.cert || '—')}</td>
-      <td>${esc(resultLabels[h.result] || h.result || '—')}</td>
+      <td>${esc(RESULT_LABELS[h.result] || h.result || '—')}</td>
       <td>${esc(h.org || '—')}</td>
       <td>${esc(h.note || '')}</td>
     </tr>
