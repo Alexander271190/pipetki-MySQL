@@ -1,19 +1,39 @@
 'use strict';
 
 // ============================================================
-// РЕНДЕР ТАБЛИЦЫ
+// ГЛАВНЫЙ РЕНДЕР
 // ============================================================
 function render() {
-  // 🆕 Данные уже пришли с сервера отфильтрованными и отсортированными
-  const items = pagedState.items;
   const totalPages = pagedState.totalPages;
-  const total = pagedState.total;
-
-  // Синхронизация номера страницы (сервер мог вернуть другую)
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
-  // ── Пагинация ──
+  renderPagination();
+  renderCounters();
+
+  const columns = getActiveTableColumns().filter(col => !!findColumn(col));
+  const hasAnyRowAction =
+    canViewHistory() || canEditPipette() || canDeletePipette() || canQuickCal();
+
+  renderTableHeader(columns, hasAnyRowAction);
+  renderTableBody(pagedState.items, columns, hasAnyRowAction);
+
+  updateSortArrows();
+  updateSelectAllCheckbox();
+  updateBulkCalButton();
+  fitTableWrapperHeight();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(fitTableWrapperHeight);
+  });
+}
+
+// ============================================================
+// ПАГИНАЦИЯ
+// ============================================================
+function renderPagination() {
+  const totalPages = pagedState.totalPages;
+  const total = pagedState.total;
+
   const pageCurrentEl = document.getElementById('page-current');
   const pageTotalEl = document.getElementById('page-total');
   const pageCountEl = document.getElementById('page-count');
@@ -30,8 +50,12 @@ function render() {
   if (paginationEl) {
     paginationEl.style.display = total > pageSize ? 'flex' : 'none';
   }
+}
 
-  // ── Счётчики (из pagedState.counters — учитывают фильтры) ──
+// ============================================================
+// СЧЁТЧИКИ + ТУЛТИП + БАННЕР
+// ============================================================
+function renderCounters() {
   const c = pagedState.counters || { ok: 0, warn: 0, danger: 0, total: 0 };
   const statOkEl = document.getElementById('stat-ok');
   const statWarnEl = document.getElementById('stat-warn');
@@ -43,7 +67,7 @@ function render() {
   if (statDangerEl) statDangerEl.textContent = c.danger;
   if (statTotalEl)  statTotalEl.textContent = c.total;
 
-  // 🆕 Тултип на «Всего» — из серверных counters
+  // Тултип на «Всего» — из серверных counters
   if (statTotalEl) {
     const sumIn = (c.ok || 0) + (c.warn || 0) + (c.danger || 0);
     const outside = (c.total || 0) - sumIn;
@@ -63,7 +87,7 @@ function render() {
     statTotalEl.title = lines.join('\n');
   }
 
-  // ── Баннер просрочек ──
+  // Баннер просрочек
   const banner = document.getElementById('alert-banner');
   const alertText = document.getElementById('alert-text');
   if (banner) {
@@ -77,19 +101,16 @@ function render() {
       banner.classList.remove('show');
     }
   }
+}
 
-  // ── Таблица ──
-  const tbody = document.getElementById('pipettes-body');
-  const empty = document.getElementById('empty-state');
+// ============================================================
+// ЗАГОЛОВОК ТАБЛИЦЫ (thead)
+// ============================================================
+function renderTableHeader(columns, hasAnyRowAction) {
   const table = document.getElementById('pipettes-table');
+  if (!table) return;
   const thead = table.querySelector('thead tr');
   if (!thead) return;
-
-  const columns = getActiveTableColumns()
-    .filter(col => !!findColumn(col));
-
-  const hasAnyRowAction =
-    canViewHistory() || canEditPipette() || canDeletePipette() || canQuickCal();
 
   thead.innerHTML = `
     <th class="col-checkbox">
@@ -104,25 +125,34 @@ function render() {
     }).join('')}
     <th id="actions-header" ${!hasAnyRowAction ? 'style="display:none"' : ''}>Действия</th>
   `;
+}
+
+// ============================================================
+// ТЕЛО ТАБЛИЦЫ (tbody)
+// ============================================================
+function renderTableBody(items, columns, hasAnyRowAction) {
+  const tbody = document.getElementById('pipettes-body');
+  const empty = document.getElementById('empty-state');
+  const table = document.getElementById('pipettes-table');
+  if (!tbody || !table) return;
 
   if (items.length === 0) {
     tbody.innerHTML = '';
     table.style.display = 'none';
-    empty.style.display = 'block';
-    if (total > 0) empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
-    else if (total === 0 && !document.getElementById('search')?.value && Object.keys(filterState || {}).length === 0) {
-      empty.querySelector('p').textContent = 'Оборудования пока нет. Нажмите «Добавить оборудование», чтобы начать.';
-    } else {
-      empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+    if (empty) {
+      empty.style.display = 'block';
+      if (pagedState.total > 0) {
+        empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+      } else if (pagedState.total === 0 && !document.getElementById('search')?.value && Object.keys(filterState || {}).length === 0) {
+        empty.querySelector('p').textContent = 'Оборудования пока нет. Нажмите «Добавить оборудование», чтобы начать.';
+      } else {
+        empty.querySelector('p').textContent = 'Ничего не найдено по фильтру.';
+      }
     }
-    updateSortArrows();
-    updateSelectAllCheckbox();
-    updateBulkCalButton();
-    fitTableWrapperHeight();
     return;
   }
   table.style.display = '';
-  empty.style.display = 'none';
+  if (empty) empty.style.display = 'none';
 
   tbody.innerHTML = items.map(p => {
     const status = calcStatus(p);
@@ -132,7 +162,6 @@ function render() {
       status === 'fail' ? ' (брак)' :
       status === 'danger' ? ` (просрочка ${Math.abs(dl)} дн.)` :
       ` (${dl} дн.)`;
-    const histCount = p.history_count || 0;
     const isChecked = selectedPipettes.has(p.id) ? 'checked' : '';
 
     const _canEdit     = canEditPipette();
@@ -227,16 +256,7 @@ function render() {
       <td ${!hasAnyAction ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
   }).join('');
-
-  updateSortArrows();
-  updateSelectAllCheckbox();
-  updateBulkCalButton();
-  fitTableWrapperHeight();
-  requestAnimationFrame(() => {
-    requestAnimationFrame(fitTableWrapperHeight);
-  });
 }
-
 // ============================================================
 // ДИНАМИЧЕСКАЯ ВЫСОТА ОБЁРТКИ ТАБЛИЦЫ
 // ============================================================
