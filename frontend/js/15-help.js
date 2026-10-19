@@ -136,17 +136,40 @@ function renderMarkdown(md) {
 }
 
 function inlineMd(text) {
-  let s = String(text || '');
+  // 🆕 XSS-защита: экранируем HTML ДО markdown-замен.
+  // esc() уже есть в 02-utils.js (подключён раньше 15-help.js).
+  let raw = String(text || '');
+
+  // 1) FA-иконки {icon: fa-xxx} → плейсхолдеры, чтобы esc() их не тронул
+  const icons = [];
+  raw = raw.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/g, (_, name) => {
+    icons.push(name);
+    return `\u0000ICON${icons.length - 1}\u0000`;
+  });
+
+  // 2) Экранируем весь остальной текст
+  let s = esc(raw);
+
+  // 3) Возвращаем иконки как безопасный HTML
+  s = s.replace(/\u0000ICON(\d+)\u0000/g, (_, i) =>
+    `<i class="fa-solid ${esc(icons[+i])} help-icon"></i>`
+  );
+
+  // 4) Markdown-замены — уже по экранированному тексту
   s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
   s = s.replace(/\*(.+?)\*/g, '<i>$1</i>');
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-  
-  // 🆕 Рендер FA-иконок в справке
-  s = s.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/g, '<i class="fa-solid $1 help-icon"></i>');
-  
-  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,
-    '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;">');
-  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+  // 5) Картинки и ссылки — с проверкой протокола
+  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => {
+    const safe = /^(https?:|\/|data:image\/)/i.test(url) ? url : '#';
+    return `<img src="${safe}" alt="${alt}" style="max-width:100%;border-radius:8px;margin:8px 0;">`;
+  });
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    const safe = /^(https?:|\/|#|mailto:)/i.test(url) ? url : '#';
+    return `<a href="${safe}" target="_blank" rel="noopener">${label}</a>`;
+  });
+
   return s;
 }
 
