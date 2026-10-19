@@ -531,6 +531,3 @@ function getActiveFormFields(allFields) {
   return enabled.filter(f => visible.has(f.id));
 }
 
-function getFilteredPipettes() {
-  return pipettes;
-}
