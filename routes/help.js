@@ -30,22 +30,49 @@ const upload = multer({
   },
 });
 
+// 🆕 Кэш списка разделов справки (60 сек)
+let _helpCache = null;
+let _helpCacheTime = 0;
+const HELP_CACHE_TTL = 60_000;
+
+async function getHelpDocsCached() {
+  const now = Date.now();
+  if (_helpCache && now - _helpCacheTime < HELP_CACHE_TTL) return _helpCache;
+  const [rows] = await db.query(
+    'SELECT id, slug, title, content, required_permissions, sort_order, enabled FROM help_docs ORDER BY sort_order ASC, id ASC'
+  );
+  for (const r of rows) {
+    let rp = [];
+    try { rp = JSON.parse(r.required_permissions || '[]'); } catch (e) { rp = []; }
+    if (!Array.isArray(rp)) rp = [];
+    r._requiredPerms = rp;
+  }
+  _helpCache = rows;
+  _helpCacheTime = now;
+  return rows;
+}
+
+function invalidateHelpCache() {
+  _helpCache = null;
+  _helpCacheTime = 0;
+}
+
 function canSeeSection(user, row) {
   if (user.role === 'admin') return true;
   let req = [];
   try { req = JSON.parse(row.required_permissions || '[]'); } catch (e) {}
   if (!Array.isArray(req) || req.length === 0) return true;
-  const perms = db.safeParse(user.extra_permissions, []);
+  const perms = user._perms || [];
   return req.some(p => perms.includes(p));
 }
 
 // GET /api/help/visible
 router.get('/visible', authenticate, async (req, res) => {
   try {
-    const [rows] = await db.query(
-      'SELECT id, slug, title, content, required_permissions, sort_order FROM help_docs WHERE enabled = 1 ORDER BY sort_order ASC, id ASC'
-    );
-    const visible = rows.filter(r => canSeeSection(req.user, r));
+    const rows = await getHelpDocsCached();
+    const visible = rows
+      .filter(r => r.enabled)
+      .filter(r => canSeeSection(req.user, r));
     res.json(visible.map(r => ({ id: r.id, slug: r.slug, title: r.title, content: r.content })));
   } catch (e) {
     console.error('GET /help/visible:', e);
@@ -129,6 +156,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
     );
 
    await logAction(req, 'Создание раздела справки', slug);
+    invalidateHelpCache();
     res.status(201).json({ message: 'Создан' });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -153,6 +181,7 @@ router.put('/:slug', authenticate, requireRole(['admin']), async (req, res) => {
     );
 
     await logAction(req, 'Редактирование справки', req.params.slug);
+    invalidateHelpCache();
     res.json({ message: 'Обновлён' });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -164,6 +193,7 @@ router.delete('/:slug', authenticate, requireRole(['admin']), async (req, res) =
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
     await db.query('DELETE FROM help_docs WHERE slug = ?', [req.params.slug]);
     await logAction(req, 'Удаление раздела справки', ex[0].title);
+    invalidateHelpCache();
     res.json({ message: 'Удалён' });
    } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
  });
@@ -176,6 +206,7 @@ router.post('/reorder', authenticate, requireRole(['admin']), async (req, res) =
     for (let i = 0; i < order.length; i++) {
       await db.query('UPDATE help_docs SET sort_order = ? WHERE slug = ?', [i, order[i]]);
     }
+    invalidateHelpCache();
     res.json({ message: 'Порядок обновлён' });
   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -204,7 +235,7 @@ router.post('/import', authenticate, requireRole(['admin']), async (req, res) =>
         );
       }
     });
-
+    invalidateHelpCache();
     res.json({ message: `Загружено: ${sections.length}` });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
 });
