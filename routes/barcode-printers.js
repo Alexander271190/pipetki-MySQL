@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { logAction } = require('../utils/audit');
 
 const router = express.Router();
 
@@ -102,10 +103,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
       );
     }
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Добавление принтера', `${name} (${mode})`]
-    );
+    await logAction(req, 'Добавление принтера', `${name} (${mode})`);
 
     res.status(201).json({ id: result.insertId, message: 'Принтер добавлен' });
   } catch (e) {
@@ -176,10 +174,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
 
     await db.query('DELETE FROM barcode_printers WHERE id = ?', [id]);
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Удаление принтера', exist[0].name]
-    );
+    await logAction(req, 'Удаление принтера', exist[0].name);
 
     res.json({ message: 'Принтер удалён' });
   } catch (e) {
