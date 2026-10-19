@@ -396,7 +396,14 @@ router.get('/all', authenticate, async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM pipettes WHERE id = ?', [req.params.id]);
+    const warnDays = await getWarnDays();
+    const statusExpr = sqlComputedStatus(warnDays);
+
+    const [rows] = await db.query(
+      `SELECT *, (${statusExpr}) AS computed_status
+       FROM pipettes WHERE id = ?`,
+      [req.params.id]
+    );
     if (!rows.length) return res.status(404).json({ error: 'Оборудование не найдено' });
     const p = rows[0];
 
