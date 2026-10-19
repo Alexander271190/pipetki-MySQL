@@ -142,7 +142,10 @@ async function findPipetteOrFail(executor, id, user, { forUpdate = false } = {})
 
 // Вычисляет статус на SQL (совместимо с calcStatus() на фронте)
 function sqlComputedStatus(warnDays) {
-  const wd = Number.isFinite(warnDays) && warnDays > 0 ? warnDays : 30;
+  // 🆕 Принудительный каст в число — защита от инъекции, если warnDays
+  // когда-нибудь придёт из небезопасного источника (query/body).
+  const n = Number(warnDays);
+  const wd = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
   return `
     CASE
       WHEN sent_for_calibration IS NOT NULL THEN 'sent'
@@ -159,7 +162,9 @@ function sqlComputedStatus(warnDays) {
 
 // Числовой порядок статусов (для ORDER BY)
 function sqlStatusOrder(warnDays) {
-  const wd = Number.isFinite(warnDays) && warnDays > 0 ? warnDays : 30;
+  // 🆕 Тот же каст, что в sqlComputedStatus
+  const n = Number(warnDays);
+  const wd = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
   return `
     CASE
       WHEN sent_for_calibration IS NOT NULL THEN 5
