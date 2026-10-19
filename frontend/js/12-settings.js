@@ -467,9 +467,7 @@ async function saveDepartmentsFull() {
       await loadDepartments();
       await loadFilterConfig();
       syncFilterState();
-      currentPage = 1;
-      await loadPaged();
-      render();
+      await refreshAfterSettingsChange();
     });
   } catch (e) {}
 }
@@ -597,9 +595,7 @@ async function saveFilters() {
         renderFilterFields();
       }
       syncFilterState();
-      currentPage = 1;
-      await loadPaged();
-      render();
+      await refreshAfterSettingsChange();
     });
   } catch (e) {}
 }
@@ -718,8 +714,7 @@ async function saveSystemSetting() {
     }, async () => {
       await apiRequest('/settings/system', 'PUT', { warn_days: String(wd) });
       settings.warnDays = parseInt(wd) || 30;
-      await loadPaged();
-      render();
+      await refreshAfterSettingsChange();
     });
   } catch (e) {}
 }
@@ -960,9 +955,7 @@ async function saveEquipmentTypes() {
       _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
       await loadFilterConfig();
       syncFilterState();
-      currentPage = 1;
-      await loadPaged();
-      render();
+      await refreshAfterSettingsChange();
     });
   } catch (e) {}
 }
