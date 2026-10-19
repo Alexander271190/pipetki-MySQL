@@ -575,4 +575,23 @@ body.can-manage .senior-only { display: inline-flex; }
 .warning-block small,
 .success-block small,
 .danger-block small { color: inherit; opacity: 0.85; }
+/* Синий label-чекбокс (например, «Одно свидетельство на всех») */
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 10px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  width: 100%;
+  font-weight: 600;
+  color: #0369a1;
+  box-sizing: border-box;
+}
+.info-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
 
