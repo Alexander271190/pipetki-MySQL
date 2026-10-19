@@ -9,6 +9,8 @@ const {
   STANDARD_FIELDS, FORBIDDEN_CUSTOM_KEYS,
   computeBarcodeValue, canAccessDepartment,
 } = require('./_helpers');
+const { withTransaction } = require('../../utils/db-helper');
+const { logAction } = require('../../utils/audit');
 
 // ═══════════════════════════════════════════════════════════
 // POST /bulk-create — пакетное создание
@@ -99,71 +101,66 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     return res.status(400).json({ error: 'Валидация не пройдена:\n' + errors.join('\n'), details: errors });
   }
 
-  const conn = await db.getConnection();
   const createdIds = [];
   try {
-    await conn.beginTransaction();
-
-    const prefixCache = {};
-    const fallback = { pipette: 'P', analyzer: 'A', thermometer: 'T', scales: 'S', photometer: 'F', microscope: 'M' };
-    for (const n of normalized) {
-      if (prefixCache[n.equipmentType] !== undefined) continue;
-      const td = typesCache.find(x => x.value === n.equipmentType);
-      let p = td && td.prefix ? String(td.prefix).trim().toUpperCase() : null;
-      if (!p) p = fallback[n.equipmentType] || 'EQ';
-      prefixCache[n.equipmentType] = p;
-    }
-
-    for (const n of normalized) {
-      const id = await db.generatePipetteId(prefixCache[n.equipmentType], conn);
-      const computed = computeBarcodeValue({ id, serial: n.serial, custom_data: n.custom_data });
-
-      await conn.query(
-        `INSERT INTO pipettes
-          (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
-           last_calibration, cert, last_result, active, responsible, location, notes,
-           custom_data, barcode, barcode_source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id, n.serial, n.manufacturer, n.model, n.equipmentType, n.volume,
-          n.department, n.interval, n.lastCalibration, n.cert, n.result, n.active,
-          n.responsible, n.location, n.notes,
-          Object.keys(n.custom_data).length ? JSON.stringify(n.custom_data) : null,
-          computed.value, computed.source,
-        ]
-      );
-
-      if (n.lastCalibration) {
-        await conn.query(
-          `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
-           VALUES (?, ?, ?, ?, ?)`,
-          [id, n.lastCalibration, n.cert, n.result, 'Первичная поверка (партия)']
-        );
+    await withTransaction(async (conn) => {
+      const prefixCache = {};
+      const fallback = { pipette: 'P', analyzer: 'A', thermometer: 'T', scales: 'S', photometer: 'F', microscope: 'M' };
+      for (const n of normalized) {
+        if (prefixCache[n.equipmentType] !== undefined) continue;
+        const td = typesCache.find(x => x.value === n.equipmentType);
+        let p = td && td.prefix ? String(td.prefix).trim().toUpperCase() : null;
+        if (!p) p = fallback[n.equipmentType] || 'EQ';
+        prefixCache[n.equipmentType] = p;
       }
-      createdIds.push(id);
+
+      for (const n of normalized) {
+        const id = await db.generatePipetteId(prefixCache[n.equipmentType], conn);
+        const computed = computeBarcodeValue({ id, serial: n.serial, custom_data: n.custom_data });
+
+        await conn.query(
+          `INSERT INTO pipettes
+            (id, serial, manufacturer, model, equipment_type, volume, department, \`interval\`,
+             last_calibration, cert, last_result, active, responsible, location, notes,
+             custom_data, barcode, barcode_source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id, n.serial, n.manufacturer, n.model, n.equipmentType, n.volume,
+            n.department, n.interval, n.lastCalibration, n.cert, n.result, n.active,
+            n.responsible, n.location, n.notes,
+            Object.keys(n.custom_data).length ? JSON.stringify(n.custom_data) : null,
+            computed.value, computed.source,
+          ]
+        );
+
+        if (n.lastCalibration) {
+          await conn.query(
+            `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, note)
+             VALUES (?, ?, ?, ?, ?)`,
+            [id, n.lastCalibration, n.cert, n.result, 'Первичная поверка (партия)']
+          );
+        }
+        createdIds.push(id);
+      }
+    });
+
+    // Аудит — после коммита
+    if (createdIds.length > 0) {
+      const first = createdIds[0];
+      const last = createdIds[createdIds.length - 1];
+      await logAction(req, 'Пакетное добавление',
+        `${createdIds.length} шт. (${createdIds.length > 1 ? first + ' … ' + last : first})`);
     }
 
-    const first = createdIds[0];
-    const last = createdIds[createdIds.length - 1];
-    await conn.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Пакетное добавление',
-       `${createdIds.length} шт. (${createdIds.length > 1 ? first + ' … ' + last : first})`]
-    );
-
-    await conn.commit();
     res.status(201).json({
       message: `Создано ${createdIds.length} единиц`,
       count: createdIds.length,
       ids: createdIds,
     });
   } catch (e) {
-    await conn.rollback();
     console.error('Bulk-create error:', e);
     if (e.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Конфликт ID, попробуйте ещё раз' });
     res.status(500).json({ error: 'Ошибка пакетного добавления: ' + e.message });
-  } finally {
-    conn.release();
   }
 });
 
@@ -190,91 +187,86 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
     usedReplacements.add(replId);
   }
 
-  const conn = await db.getConnection();
+  const successful = [];
+  const skipped = [];
+  const notFound = [];
+  const skippedReplacements = [];
+
   try {
-    await conn.beginTransaction();
+    await withTransaction(async (conn) => {
+      const typesCache = await equipmentTypes.getEquipmentTypes();
+      const isExternalType = (t) => {
+        const found = typesCache.find(x => x.value === t);
+        if (!found) return true;
+        return (found.calibrationPlace || 'internal') === 'external';
+      };
 
-    const successful = [];
-    const skipped = [];
-    const notFound = [];
-    let skippedReplacements = [];
-
-    const typesCache = await equipmentTypes.getEquipmentTypes();
-    const isExternalType = (t) => {
-      const found = typesCache.find(x => x.value === t);
-      if (!found) return true;
-      return (found.calibrationPlace || 'internal') === 'external';
-    };
-
-    for (const id of ids) {
-      const [rows] = await conn.query(
-        'SELECT id, model, sent_for_calibration, equipment_type, department FROM pipettes WHERE id = ? FOR UPDATE',
-        [id]
-      );
-      if (!rows.length) { notFound.push(id); continue; }
-      if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
-      if (!isExternalType(rows[0].equipment_type)) { skipped.push(id); continue; }
-      if (rows[0].sent_for_calibration) { skipped.push(id); continue; }
-
-      await conn.query(
-        `UPDATE pipettes SET sent_for_calibration = ?, sent_note = ?, active = 0,
-           updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [sentDate, note || null, id]
-      );
-
-      const replacementId = replacements[id];
-      if (replacementId) {
-        const [repRows] = await conn.query(
-          `SELECT id, location, department, equipment_type, active, sent_for_calibration, replacing
-           FROM pipettes WHERE id = ?`, [replacementId]
+      for (const id of ids) {
+        const [rows] = await conn.query(
+          'SELECT id, model, sent_for_calibration, equipment_type, department FROM pipettes WHERE id = ? FOR UPDATE',
+          [id]
         );
-        if (repRows.length === 0) {
-          skippedReplacements.push({ id, replacementId, reason: 'замена не найдена' });
-          successful.push(id);
-        } else {
-          const rep = repRows[0];
-          let reason = null;
-          if (rep.equipment_type !== rows[0].equipment_type) reason = 'тип не совпадает';
-          else if (rep.active) reason = 'замена уже активна';
-          else if (rep.sent_for_calibration) reason = 'замена уже отправлена на поверку';
-          else if (rep.replacing) reason = 'замена уже кого-то заменяет';
+        if (!rows.length) { notFound.push(id); continue; }
+        if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
+        if (!isExternalType(rows[0].equipment_type)) { skipped.push(id); continue; }
+        if (rows[0].sent_for_calibration) { skipped.push(id); continue; }
 
-          if (reason) {
-            skippedReplacements.push({ id, replacementId, reason });
+        await conn.query(
+          `UPDATE pipettes SET sent_for_calibration = ?, sent_note = ?, active = 0,
+             updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [sentDate, note || null, id]
+        );
+
+        const replacementId = replacements[id];
+        if (replacementId) {
+          const [repRows] = await conn.query(
+            `SELECT id, location, department, equipment_type, active, sent_for_calibration, replacing
+             FROM pipettes WHERE id = ?`, [replacementId]
+          );
+          if (repRows.length === 0) {
+            skippedReplacements.push({ id, replacementId, reason: 'замена не найдена' });
             successful.push(id);
           } else {
-            const [origRows] = await conn.query(
-              'SELECT location, department FROM pipettes WHERE id = ?', [id]
-            );
-            const origLocation = origRows[0].location || 'Склад';
-            const origDepartment = origRows[0].department || rep.department;
+            const rep = repRows[0];
+            let reason = null;
+            if (rep.equipment_type !== rows[0].equipment_type) reason = 'тип не совпадает';
+            else if (rep.active) reason = 'замена уже активна';
+            else if (rep.sent_for_calibration) reason = 'замена уже отправлена на поверку';
+            else if (rep.replacing) reason = 'замена уже кого-то заменяет';
 
-            await conn.query(
-              `UPDATE pipettes SET active = 1, location = ?, department = COALESCE(?, department),
-                 replacing = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-              [origLocation, origDepartment, id, replacementId]
-            );
-            await conn.query(
-              `UPDATE pipettes SET replaced_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-              [replacementId, id]
-            );
-            successful.push(`${id} (замена: ${replacementId})`);
+            if (reason) {
+              skippedReplacements.push({ id, replacementId, reason });
+              successful.push(id);
+            } else {
+              const [origRows] = await conn.query(
+                'SELECT location, department FROM pipettes WHERE id = ?', [id]
+              );
+              const origLocation = origRows[0].location || 'Склад';
+              const origDepartment = origRows[0].department || rep.department;
+
+              await conn.query(
+                `UPDATE pipettes SET active = 1, location = ?, department = COALESCE(?, department),
+                   replacing = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [origLocation, origDepartment, id, replacementId]
+              );
+              await conn.query(
+                `UPDATE pipettes SET replaced_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [replacementId, id]
+              );
+              successful.push(`${id} (замена: ${replacementId})`);
+            }
           }
+        } else {
+          successful.push(id);
         }
-      } else {
-        successful.push(id);
       }
-    }
+    });
 
     if (successful.length > 0) {
-      await conn.query(
-        'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-        [req.user.id, req.user.full_name, 'Отправка на поверку',
-         `${successful.length} шт. (${successful.join(', ')}) — ${sentDate}`]
-      );
+      await logAction(req, 'Отправка на поверку',
+        `${successful.length} шт. (${successful.join(', ')}) — ${sentDate}`);
     }
 
-    await conn.commit();
     res.status(201).json({
       message: `Отправлено на поверку: ${successful.length}`,
       successful: successful.length,
@@ -285,11 +277,8 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
       skippedReplacements: skippedReplacements
     });
   } catch (e) {
-    await conn.rollback();
     console.error('Bulk send error:', e);
     res.status(500).json({ error: 'Ошибка отправки на поверку', details: e.message });
-  } finally {
-    conn.release();
   }
 });
 
@@ -309,82 +298,77 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
   if (!returnDateCheck.ok) return res.status(400).json({ error: returnDateCheck.error });
   if (items.length > 100) return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 100)' });
 
-  const conn = await db.getConnection();
+  const successful = [];
+  const skipped = [];
+  const missingReplacements = [];
+
   try {
-    await conn.beginTransaction();
+    await withTransaction(async (conn) => {
+      const typesCache = await equipmentTypes.getEquipmentTypes();
+      const isExternalType = (t) => {
+        const found = typesCache.find(x => x.value === t);
+        if (!found) return true;
+        return (found.calibrationPlace || 'internal') === 'external';
+      };
 
-    const successful = [];
-    const skipped = [];
-    let missingReplacements = [];
+      for (const item of items) {
+        if (!item.id) { skipped.push('?'); continue; }
 
-    const typesCache = await equipmentTypes.getEquipmentTypes();
-    const isExternalType = (t) => {
-      const found = typesCache.find(x => x.value === t);
-      if (!found) return true;
-      return (found.calibrationPlace || 'internal') === 'external';
-    };
+        const [rows] = await conn.query(
+          'SELECT id, equipment_type, department, sent_for_calibration, replaced_by FROM pipettes WHERE id = ? FOR UPDATE',
+          [item.id]
+        );
+        if (!rows.length) { skipped.push(item.id); continue; }
+        if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
+        if (!isExternalType(rows[0].equipment_type)) { skipped.push(item.id); continue; }
+        if (!rows[0].sent_for_calibration) { skipped.push(item.id); continue; }
 
-    for (const item of items) {
-      if (!item.id) { skipped.push('?'); continue; }
+        const ALLOWED = ['pass', 'fail', 'wip'];
+        const itemResult = ALLOWED.includes(item.result) ? item.result : 'pass';
+        const itemCert = item.cert || null;
 
-      const [rows] = await conn.query(
-        'SELECT id, equipment_type, department, sent_for_calibration, replaced_by FROM pipettes WHERE id = ? FOR UPDATE',
-        [item.id]
-      );
-      if (!rows.length) { skipped.push(item.id); continue; }
-      if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
-      if (!isExternalType(rows[0].equipment_type)) { skipped.push(item.id); continue; }
-      if (!rows[0].sent_for_calibration) { skipped.push(item.id); continue; }
+        await conn.query(
+          `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [item.id, date, itemCert, itemResult, org || null, note || null]
+        );
 
-      const ALLOWED = ['pass', 'fail', 'wip'];
-      const itemResult = ALLOWED.includes(item.result) ? item.result : 'pass';
-      const itemCert = item.cert || null;
+        await conn.query(
+          `UPDATE pipettes SET last_calibration = ?, cert = ?, last_result = ?,
+             sent_for_calibration = NULL, sent_note = NULL, active = 1,
+             updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [date, itemCert, itemResult, item.id]
+        );
 
-      await conn.query(
-        `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [item.id, date, itemCert, itemResult, org || null, note || null]
-      );
+        const returnRepl = returnReplacements.includes(item.id);
+        const replId = rows[0].replaced_by;
 
-      await conn.query(
-        `UPDATE pipettes SET last_calibration = ?, cert = ?, last_result = ?,
-           sent_for_calibration = NULL, sent_note = NULL, active = 1,
-           updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [date, itemCert, itemResult, item.id]
-      );
-
-      const returnRepl = returnReplacements.includes(item.id);
-      const replId = rows[0].replaced_by;
-
-      if (replId) {
-        const [replExists] = await conn.query('SELECT id FROM pipettes WHERE id = ? FOR UPDATE', [replId]);
-        if (replExists.length === 0) {
-          await conn.query(`UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [item.id]);
-          missingReplacements.push({ id: item.id, replacementId: replId });
-        } else if (returnRepl) {
-          await conn.query(
-            `UPDATE pipettes SET active = 0, location = 'Склад', replacing = NULL,
-               updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [replId]
-          );
-          await conn.query(`UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [item.id]);
-        } else {
-          await conn.query(`UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [item.id]);
-          await conn.query(`UPDATE pipettes SET replacing = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [replId]);
+        if (replId) {
+          const [replExists] = await conn.query('SELECT id FROM pipettes WHERE id = ? FOR UPDATE', [replId]);
+          if (replExists.length === 0) {
+            await conn.query(`UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [item.id]);
+            missingReplacements.push({ id: item.id, replacementId: replId });
+          } else if (returnRepl) {
+            await conn.query(
+              `UPDATE pipettes SET active = 0, location = 'Склад', replacing = NULL,
+                 updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [replId]
+            );
+            await conn.query(`UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [item.id]);
+          } else {
+            await conn.query(`UPDATE pipettes SET replaced_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [item.id]);
+            await conn.query(`UPDATE pipettes SET replacing = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [replId]);
+          }
         }
-      }
 
-      successful.push(item.id);
-    }
+        successful.push(item.id);
+      }
+    });
 
     if (successful.length > 0) {
-      await conn.query(
-        'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-        [req.user.id, req.user.full_name, 'Возврат с поверки',
-         `${successful.length} шт. (${successful.join(', ')}) — ${date}`]
-      );
+      await logAction(req, 'Возврат с поверки',
+        `${successful.length} шт. (${successful.join(', ')}) — ${date}`);
     }
 
-    await conn.commit();
     res.status(201).json({
       message: `Возврат оформлен для ${successful.length} единиц`,
       successful: successful.length,
@@ -393,11 +377,8 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
       missingReplacements: missingReplacements
     });
   } catch (e) {
-    await conn.rollback();
     console.error('Bulk return error:', e);
     res.status(500).json({ error: 'Ошибка возврата', details: e.message });
-  } finally {
-    conn.release();
   }
 });
 
@@ -415,36 +396,31 @@ router.post('/bulk-change-responsible', authenticate, requireAnyPermission(['bul
   if (ids.length > 500) return res.status(400).json({ error: 'Слишком много единиц за раз (максимум 500)' });
 
   const resp = String(newResponsible).trim();
-  const conn = await db.getConnection();
+  const successful = [];
+  const skipped = [];
+
   try {
-    await conn.beginTransaction();
+    await withTransaction(async (conn) => {
+      for (const id of ids) {
+        const [rows] = await conn.query(
+          'SELECT id, department, responsible FROM pipettes WHERE id = ? FOR UPDATE', [id]
+        );
+        if (!rows.length) { skipped.push(id); continue; }
+        if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
+        if (rows[0].responsible === resp) { skipped.push(id); continue; }
 
-    const successful = [];
-    const skipped = [];
-
-    for (const id of ids) {
-      const [rows] = await conn.query(
-        'SELECT id, department, responsible FROM pipettes WHERE id = ? FOR UPDATE', [id]
-      );
-      if (!rows.length) { skipped.push(id); continue; }
-      if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
-      if (rows[0].responsible === resp) { skipped.push(id); continue; }
-
-      await conn.query(
-        `UPDATE pipettes SET responsible = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [resp, id]
-      );
-      successful.push(id);
-    }
+        await conn.query(
+          `UPDATE pipettes SET responsible = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [resp, id]
+        );
+        successful.push(id);
+      }
+    });
 
     if (successful.length > 0) {
-      await conn.query(
-        'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-        [req.user.id, req.user.full_name, 'Массовая смена ответственного', `${successful.length} шт. → «${resp}»`]
-      );
+      await logAction(req, 'Массовая смена ответственного', `${successful.length} шт. → «${resp}»`);
     }
 
-    await conn.commit();
     res.status(201).json({
       message: `Ответственный изменён у ${successful.length} единиц`,
       successful: successful.length,
@@ -452,11 +428,8 @@ router.post('/bulk-change-responsible', authenticate, requireAnyPermission(['bul
       skippedIds: skipped,
     });
   } catch (e) {
-    await conn.rollback();
     console.error('bulk-change-responsible error:', e);
     res.status(500).json({ error: 'Ошибка массовой смены ответственного' });
-  } finally {
-    conn.release();
   }
 });
 
