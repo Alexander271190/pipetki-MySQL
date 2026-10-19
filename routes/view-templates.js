@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { logAction } = require('../utils/audit');
 
 const router = express.Router();
 
@@ -104,10 +105,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
     await db.query('UPDATE users SET view_template_id = NULL WHERE view_template_id = ?', [id]);
     await db.query('DELETE FROM view_templates WHERE id = ?', [id]);
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Удаление шаблона вида', ex[0].name]
-    );
+    await logAction(req, 'Удаление шаблона вида', ex[0].name);
 
     res.json({ message: 'Шаблон удалён' });
   } catch (e) {
