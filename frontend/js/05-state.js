@@ -34,6 +34,7 @@ let statsState = {
 async function loadPipetteData() {
   if (!isAuthenticated()) return;
   try {
+    // ── 1) prefs (нужны до синхронизации с fields) ──
     if (!myPrefs._loaded) {
       try {
         myPrefs = await apiRequest('/settings/my-preferences/effective') || {};
@@ -48,37 +49,55 @@ async function loadPipetteData() {
       }
     }
 
-    // 🆕 Настройки (warn_days и т.п.)
-    const settingsData = await apiRequest('/settings/system');
-    settings = { warnDays: parseInt(settingsData.warn_days) || 30 };
+    // ── 2) Параллельно: settings, types, export, fields, responsibles, departments ──
+    const needsResponsibles =
+      currentUser.role === 'admin' ||
+      isSeniorLab() ||
+      canTransferPipette() ||
+      canBulkChangeResponsible();
 
-    try {
-      _equipmentTypes = await apiRequest('/settings/equipment-types');
-    } catch (e) {
+    const [
+      settingsData,
+      typesResult,
+      exportResult,
+      fieldsResult,
+      responsiblesResult,
+      departmentsResult,
+    ] = await Promise.all([
+      apiRequest('/settings/system').catch(() => null),
+      apiRequest('/settings/equipment-types').catch(() => null),
+      apiRequest('/settings/export').catch(() => null),
+      apiRequest('/settings/fields').catch(() => []),
+      needsResponsibles
+        ? apiRequest('/users/responsibles').catch((e) => {
+            console.warn('Не удалось загрузить список ответственных:', e.message);
+            return [];
+          })
+        : Promise.resolve([]),
+      apiRequest('/settings/departments').catch(() => []),
+    ]);
+
+    settings = { warnDays: parseInt(settingsData?.warn_days) || 30 };
+
+    if (Array.isArray(typesResult) && typesResult.length > 0) {
+      _equipmentTypes = typesResult;
+    } else {
       _equipmentTypes = [
         { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
         { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
         { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
         { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
         { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
-        { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 }
+        { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 },
       ];
     }
 
-    try {
-      exportFields = await apiRequest('/settings/export');
-    } catch (e) {
-      exportFields = null;
-    }
+    exportFields = exportResult;
+    _cachedFields = Array.isArray(fieldsResult) ? fieldsResult : [];
+    _responsibles = Array.isArray(responsiblesResult) ? responsiblesResult : [];
+    departmentsList = Array.isArray(departmentsResult) ? departmentsResult : [];
 
-    // 🆕 Кэш полей — иначе кастомные колонки/экспорт не подхватятся
-    try {
-      _cachedFields = await apiRequest('/settings/fields');
-    } catch (e) {
-      _cachedFields = _cachedFields || [];
-    }
-
-    // 🆕 СИНХРОНИЗАЦИЯ visibleFields с активными полями field_config
+    // ── 3) Синхронизация visibleFields с активными полями field_config ──
     if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
       const activeFieldIds = _cachedFields
         .filter(f => f.enabled)
@@ -105,28 +124,11 @@ async function loadPipetteData() {
       }
     }
 
-    // 🛡️ Список ответственных
-    const needsResponsibles =
-      currentUser.role === 'admin' ||
-      isSeniorLab() ||
-      canTransferPipette() ||
-      canBulkChangeResponsible();
-
-    if (needsResponsibles) {
-      try {
-        _responsibles = await apiRequest('/users/responsibles');
-      } catch (e) {
-        _responsibles = [];
-        console.warn('Не удалось загрузить список ответственных:', e.message);
-      }
-    } else {
-      _responsibles = [];
-    }
-
-    await loadDepartments();
+    // ── 4) filters (зависит от departments и types) ──
     await loadFilterConfig();
-    await loadPaged();           // 🆕 вместо GET /pipettes
-    await loadStats();           // 🆕 напоминания с сервера
+
+    // ── 5) Параллельно: paged + stats ──
+    await Promise.all([loadPaged(), loadStats()]);
 
     render();
     checkReminder();
