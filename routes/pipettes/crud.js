@@ -41,14 +41,7 @@ router.get('/paged', authenticate, async (req, res) => {
       return res.json({ items: [], total: 0, page: 1, limit, totalPages: 0,
         counters: { ok: 0, warn: 0, danger: 0, total: 0 } });
     }
-    } else if (onlyOwn) {
-      if (!userDept) {
-        return res.json({ items: [], total: 0, page: 1, limit, totalPages: 0,
-          counters: { ok: 0, warn: 0, danger: 0, total: 0 } });
-      }
-      baseWhere.push('department = ?'); baseParams.push(userDept);
-    }
-
+         
     const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
     let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
     whereSql += filterSql;
@@ -195,14 +188,7 @@ router.get('/stats', authenticate, async (req, res) => {
       return res.json({ counters: { ok: 0, warn: 0, danger: 0, total: 0 },
         reminders: { danger: [], warn: [] } });
     }
-    } else if (onlyOwn) {
-      if (!userDept) {
-        return res.json({ counters: { ok: 0, warn: 0, danger: 0, total: 0 },
-          reminders: { danger: [], warn: [] } });
-      }
-      baseWhere.push('department = ?'); baseParams.push(userDept);
-    }
-
+        
     const whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : '';
 
     const [counterRows] = await db.query(
