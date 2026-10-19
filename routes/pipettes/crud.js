@@ -423,11 +423,23 @@ router.get('/all', authenticate, async (req, res) => {
     const finalParams = [...allParams, ...statusFilterParams];
 
     const orderSql = sqlOrderBy(sort, dir, warnDays);
+
+    // 🆕 Защита от OOM: не более 50000 строк. Если больше — обрезаем.
+    const ALL_HARD_LIMIT = 50000;
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) AS c FROM pipettes${finalWhere}`,
+      finalParams
+    );
+    const totalCount = Number(countRows[0].c) || 0;
+    const truncated = totalCount > ALL_HARD_LIMIT;
+
     const [rows] = await db.query(
       `SELECT *, (${statusExpr}) AS computed_status
        FROM pipettes${finalWhere}
-       ORDER BY ${orderSql}, id`,
-      finalParams
+       ORDER BY ${orderSql}, id
+       LIMIT ?`,
+      [...finalParams, ALL_HARD_LIMIT]
     );
 
     if (rows.length > 0) {
@@ -463,7 +475,12 @@ router.get('/all', authenticate, async (req, res) => {
       mergeCustomList(rows);
     }
 
-    res.json({ items: rows });
+   res.json({
+      items: rows,
+      total: totalCount,
+      truncated,
+      limit: ALL_HARD_LIMIT,
+    });
   } catch (e) {
     console.error('GET /pipettes/all:', e);
     res.status(500).json({ error: 'Ошибка загрузки' });
