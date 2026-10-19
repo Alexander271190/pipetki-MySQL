@@ -519,6 +519,12 @@ function getActiveTableColumns() {
   return cols;
 }
 
+async function refreshAfterSettingsChange() {
+  currentPage = 1;
+  await loadPaged();
+  render();
+}
+
 function getActiveFormFields(allFields) {
   const enabled = allFields.filter(f => f.enabled);
   if (!myPrefs.visibleFields || !Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
