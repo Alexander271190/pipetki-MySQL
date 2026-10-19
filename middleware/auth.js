@@ -62,6 +62,8 @@ const authenticate = async (req, res, next) => {
         user.acting_department = null;
       }
     }
+    user._perms = db.safeParse(user.extra_permissions, []);
+
     req.impersonatedBy     = decoded.impersonatedBy     || null;
     req.impersonatedByName = decoded.impersonatedByName || null;
     req.user = user;
@@ -79,8 +81,8 @@ const requireRole = (roles) => (req, res, next) => {
 
 const requirePermission = (perm) => (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Требуется авторизация' });
-  if (req.user.role === 'admin') return next();   // админ всегда может всё
-  const perms = db.safeParse(req.user.extra_permissions, []);
+  if (req.user.role === 'admin') return next();
+  const perms = req.user._perms || [];
   if (!perms.includes(perm)) return res.status(403).json({ error: 'Недостаточно прав' });
   next();
 };
@@ -88,7 +90,7 @@ const requirePermission = (perm) => (req, res, next) => {
 const requireAnyPermission = (perms) => (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Требуется авторизация' });
   if (req.user.role === 'admin') return next();
-  const userPerms = db.safeParse(req.user.extra_permissions, []);
+  const userPerms = req.user._perms || [];
   if (perms.some(p => userPerms.includes(p))) return next();
   return res.status(403).json({ error: 'Недостаточно прав' });
 };
