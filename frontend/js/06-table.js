@@ -309,6 +309,7 @@ async function sortBy(field) {
   if (sortField === field) sortDir *= -1;
   else { sortField = field; sortDir = 1; }
   currentPage = 1;
+  clearSelection();   
   await loadPaged();
   render();
 }
@@ -320,6 +321,7 @@ async function changePage(delta) {
   const newPage = currentPage + delta;
   if (newPage < 1 || newPage > pagedState.totalPages) return;
   currentPage = newPage;
+  clearSelection();   
   await loadPaged();
   render();
 }
