@@ -227,9 +227,9 @@ function updateBarcodePrintScopeCounts() {
   const el2 = document.getElementById('bc-scope-page-count');
   if (el2) el2.textContent = pageIds.length;
 
-  const filtered = getFilteredPipettes();
+  // 🆕 «Весь фильтр» — общее число с сервера, а не длина текущей страницы
   const el3 = document.getElementById('bc-scope-filtered-count');
-  if (el3) el3.textContent = filtered.length;
+  if (el3) el3.textContent = (pagedState && pagedState.total) ? pagedState.total : 0;
 }
 
 async function getBarcodePrintIds() {
