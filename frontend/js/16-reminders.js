@@ -34,20 +34,20 @@ function showReminder(dangerList, warnList) {
   const body = document.getElementById('reminder-body');
 
     if (dangerList.length > 0) {
-    icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+    icon.innerHTML = UI.icon('warning');
     title.textContent = 'Просрочены поверки!';
-    title.style.color = '#dc2626';
+    title.style.color = COLORS.danger;
     subtitle.textContent = `${dangerList.length} ${dangerList.length === 1 ? 'пипетка требует' : 'пипеток требуют'} срочной поверки`;
   } else {
-    icon.innerHTML = '<i class="fa-solid fa-bell"></i>';
+    icon.innerHTML = UI.icon('bell');
     title.textContent = 'Приближаются сроки поверки';
-    title.style.color = '#eab308';
+    title.style.color = COLORS.warning;
     subtitle.textContent = `${warnList.length} ${warnList.length === 1 ? 'пипетка подходит' : 'пипеток подходят'} к сроку поверки в течение ${settings.warnDays} дн.`;
   }
 
   let html = '';
   if (dangerList.length > 0) {
-    html += `<div class="reminder-section"><div class="reminder-section-title danger"><i class="fa-solid fa-triangle-exclamation"></i> Просрочены (${dangerList.length})</div><ul class="reminder-list">`;
+    html += `<div class="reminder-section"><div class="reminder-section-title danger">${UI.icon('warning')} Просрочены (${dangerList.length})</div><ul class="reminder-list">`;
     dangerList.sort((a, b) => daysLeft(a) - daysLeft(b)).forEach(p => {
   const dl = daysLeft(p);
   const isFail = calcStatus(p) === 'fail';
@@ -60,7 +60,7 @@ function showReminder(dangerList, warnList) {
     html += '</ul></div>';
   }
   if (warnList.length > 0) {
-    html += `<div class="reminder-section"><div class="reminder-section-title warn"><i class="fa-solid fa-triangle-exclamation"></i> Скоро поверка (${warnList.length})</div><ul class="reminder-list">`;
+    html += `<div class="reminder-section"><div class="reminder-section-title warn">${UI.icon('warning')} Скоро поверка (${warnList.length})</div><ul class="reminder-list">`;
     warnList.sort((a, b) => daysLeft(a) - daysLeft(b)).forEach(p => {
       const dl = daysLeft(p);
       html += `<li class="warn">
