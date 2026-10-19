@@ -468,6 +468,7 @@ async function saveDepartmentsFull() {
       await loadFilterConfig();
       syncFilterState();
       currentPage = 1;
+      await loadPaged();
       render();
     });
   } catch (e) {}
@@ -597,6 +598,7 @@ async function saveFilters() {
       }
       syncFilterState();
       currentPage = 1;
+      await loadPaged();
       render();
     });
   } catch (e) {}
@@ -716,6 +718,7 @@ async function saveSystemSetting() {
     }, async () => {
       await apiRequest('/settings/system', 'PUT', { warn_days: String(wd) });
       settings.warnDays = parseInt(wd) || 30;
+      await loadPaged();
       render();
     });
   } catch (e) {}
@@ -958,6 +961,7 @@ async function saveEquipmentTypes() {
       await loadFilterConfig();
       syncFilterState();
       currentPage = 1;
+      await loadPaged();
       render();
     });
   } catch (e) {}
