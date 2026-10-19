@@ -391,8 +391,14 @@ const SYSTEM_FIELD_IDS_IN_CONFIG = new Set([
   'volume', 'department', 'interval', 'lastCalibration', 'cert',
   'result', 'active', 'responsible', 'location', 'notes'
 ]);
-
+let _allColumnsCache = null;
+let _allColumnsCacheFor = null;
 function getAllTableColumns() {
+  // 🆕 Возврат из кэша, если _cachedFields не переприсваивался
+  if (_allColumnsCache && _allColumnsCacheFor === _cachedFields) {
+    return _allColumnsCache;
+  }
+
   const result = [];
   const added = new Set();
 
@@ -428,6 +434,10 @@ function getAllTableColumns() {
       added.add(sys.id);
     }
   }
+
+  // 🆕 Сохранить в кэш
+  _allColumnsCache = result;
+  _allColumnsCacheFor = _cachedFields;
 
   return result;
 }
