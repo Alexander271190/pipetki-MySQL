@@ -7,8 +7,11 @@ let _rowActionsMenu = null;
 
 async function openUserActions(ev, userId) {
   ev.stopPropagation();
+  
+  
+  const anchorEl = ev.currentTarget;
+  
   await UI.guard({ role: 'admin', errorMsg: 'Только для администратора' }, async () => {
-    const anchorEl = ev.currentTarget;
     const curId = currentUser.id;
     const isSelf = userId === curId;
 
@@ -33,16 +36,17 @@ async function openUserActions(ev, userId) {
       items.push({ label: '<i class="fa-solid fa-trash"></i> Удалить пользователя', class: 'item-danger', action: () => deleteUserSetting(userId, u.fullName || '') });
     }
 
-    renderUserActionsMenu(anchorEl, items);
+    renderUserActionsMenu(anchorEl, items); 
   });
 }
-
 function renderUserActionsMenu(anchorEl, items) {
   renderRowActionsMenu(anchorEl, items);
 }
 
 async function openRowActions(ev, id) {
   ev.stopPropagation();
+  const anchorEl = ev.currentTarget; 
+  
   await UI.guard({}, async () => {
     const p = pipettes.find(x => x.id === id);
     if (!p) return;
@@ -84,11 +88,9 @@ async function openRowActions(ev, id) {
       items.push({ divider: true });
       items.push({ label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: () => deletePipette(id) });
     }
-
-    renderRowActionsMenu(ev.currentTarget, items);
+    renderRowActionsMenu(anchorEl, items); 
   });
 }
-
 function renderRowActionsMenu(anchorEl, items) {
   closeRowActionsMenu();
 
