@@ -376,6 +376,102 @@ router.get('/stats', authenticate, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// GET /all — все записи по фильтру (для экспорта / генерации PDF)
+// ═══════════════════════════════════════════════════════════
+router.get('/all', authenticate, async (req, res) => {
+  try {
+    const search = req.query.search || '';
+    const sort = req.query.sort || 'id';
+    const dir = req.query.dir || 'asc';
+
+    let filters = {};
+    if (req.query.filters) {
+      try { filters = JSON.parse(req.query.filters); }
+      catch (e) { return res.status(400).json({ error: 'Некорректный filters' }); }
+    }
+
+    const warnDays = await getWarnDays();
+    const statusExpr = sqlComputedStatus(warnDays);
+
+    const baseWhere = [];
+    const baseParams = [];
+    const isActing = !!req.user.is_acting;
+    const actingDept = req.user.acting_department || null;
+    const onlyOwn = !isActing && req.user.role !== 'admin' && req.user.only_own_department;
+    const userDept = req.user.department || null;
+
+    if (isActing) {
+      if (!actingDept) return res.json({ items: [] });
+      baseWhere.push('department = ?'); baseParams.push(actingDept);
+    } else if (onlyOwn) {
+      if (!userDept) return res.json({ items: [] });
+      baseWhere.push('department = ?'); baseParams.push(userDept);
+    }
+
+    const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
+    let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
+    whereSql += filterSql;
+    const allParams = [...baseParams, ...filterParams];
+
+    let statusFilterSql = '';
+    const statusFilterParams = [];
+    if (filters && typeof filters === 'object' && filters.status) {
+      statusFilterSql = ` AND (${statusExpr}) = ?`;
+      statusFilterParams.push(String(filters.status));
+    }
+
+    const finalWhere = whereSql + statusFilterSql;
+    const finalParams = [...allParams, ...statusFilterParams];
+
+    const orderSql = sqlOrderBy(sort, dir, warnDays);
+    const [rows] = await db.query(
+      `SELECT *, (${statusExpr}) AS computed_status
+       FROM pipettes${finalWhere}
+       ORDER BY ${orderSql}, id`,
+      finalParams
+    );
+
+    if (rows.length > 0) {
+      const ids = rows.map(r => r.id);
+      const ph = ids.map(() => '?').join(',');
+      const [counts] = await db.query(
+        `SELECT pipette_id, COUNT(*) AS cnt FROM calibration_history
+         WHERE pipette_id IN (${ph}) GROUP BY pipette_id`,
+        ids
+      );
+      const byId = {};
+      for (const c of counts) byId[c.pipette_id] = c.cnt;
+      for (const r of rows) {
+        r.active = !!r.active;
+        r.history_count = byId[r.id] || 0;
+      }
+
+      const replIds = rows.flatMap(r => [r.replaced_by, r.replacing]).filter(Boolean);
+      if (replIds.length > 0) {
+        const uniq = [...new Set(replIds)];
+        const ph2 = uniq.map(() => '?').join(',');
+        const [replRows] = await db.query(
+          `SELECT id, model, manufacturer, location, active, department
+           FROM pipettes WHERE id IN (${ph2})`, uniq);
+        const replById = {};
+        for (const r of replRows) replById[r.id] = r;
+        for (const r of rows) {
+          if (r.replaced_by && replById[r.replaced_by]) r.replacement = replById[r.replaced_by];
+          if (r.replacing && replById[r.replacing]) r.replacedFor = replById[r.replacing];
+        }
+      }
+
+      mergeCustomList(rows);
+    }
+
+    res.json({ items: rows });
+  } catch (e) {
+    console.error('GET /pipettes/all:', e);
+    res.status(500).json({ error: 'Ошибка загрузки' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // GET /:id — одна пипетка (read-only)
 // ═══════════════════════════════════════════════════════════
 router.get('/:id', authenticate, async (req, res) => {
