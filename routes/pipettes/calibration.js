@@ -3,7 +3,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db');
 const { authenticate, requireAnyPermission } = require('../../middleware/auth');
-const { validateISODate, todayLocalStr, canAccessDepartment } = require('./_helpers');
+const { validateISODate, todayLocalStr, canAccessDepartment, findPipetteOrFail } = require('./_helpers');
+const { withTransaction } = require('../../utils/db-helper');
+const { logAction } = require('../../utils/audit');
 
 // ═══════════════════════════════════════════════════════════
 // POST /:id/calibration — добавить запись о поверке
@@ -21,70 +23,62 @@ router.post('/:id/calibration', authenticate, requireAnyPermission(['quick_calib
     return res.status(400).json({ error: 'Дата поверки не может быть в будущем' });
   }
 
-  const conn = await db.getConnection();
+  const ALLOWED = ['pass', 'fail', 'wip'];
+  const safeResult = ALLOWED.includes(result) ? result : 'pass';
+
+  let wasSent = false;
+  let replId = null;
+
   try {
-    await conn.beginTransaction();
+    await withTransaction(async (conn) => {
+      const exist = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
+      wasSent = !!exist.sent_for_calibration;
+      replId = exist.replaced_by;
 
-    const [exist] = await conn.query(
-      `SELECT id, department, sent_for_calibration, replaced_by FROM pipettes WHERE id = ? FOR UPDATE`,
-      [req.params.id]
-    );
-    if (!exist.length) { await conn.rollback(); return res.status(404).json({ error: 'Не найдена' }); }
-
-    if (!canAccessDepartment(req.user, exist[0].department)) {
-      await conn.rollback();
-      return res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
-    }
-
-    const wasSent = !!exist[0].sent_for_calibration;
-    const replId = exist[0].replaced_by;
-    const ALLOWED = ['pass', 'fail', 'wip'];
-    const safeResult = ALLOWED.includes(result) ? result : 'pass';
-
-    await conn.query(
-      `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [req.params.id, date, cert, safeResult, org, note]
-    );
-
-    await conn.query(
-      `UPDATE pipettes
-       SET last_calibration = ?, cert = ?, last_result = ?,
-           sent_for_calibration = NULL, sent_note = NULL,
-           active = CASE WHEN ? = 1 THEN 1 ELSE active END,
-           replaced_by = CASE WHEN ? = 1 THEN NULL ELSE replaced_by END,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [date, cert, safeResult, wasSent ? 1 : 0, wasSent ? 1 : 0, req.params.id]
-    );
-
-    if (wasSent && replId) {
-      const [replExists] = await conn.query(
-        'SELECT id FROM pipettes WHERE id = ? FOR UPDATE', [replId]
+      await conn.query(
+        `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [req.params.id, date, cert, safeResult, org, note]
       );
-      if (replExists.length) {
-        await conn.query(
-          `UPDATE pipettes SET active = 0, location = 'Склад', replacing = NULL,
-             updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-          [replId]
+
+      await conn.query(
+        `UPDATE pipettes
+         SET last_calibration = ?, cert = ?, last_result = ?,
+             sent_for_calibration = NULL, sent_note = NULL,
+             active = CASE WHEN ? = 1 THEN 1 ELSE active END,
+             replaced_by = CASE WHEN ? = 1 THEN NULL ELSE replaced_by END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [date, cert, safeResult, wasSent ? 1 : 0, wasSent ? 1 : 0, req.params.id]
+      );
+
+      if (wasSent && replId) {
+        const [replExists] = await conn.query(
+          'SELECT id FROM pipettes WHERE id = ? FOR UPDATE', [replId]
         );
+        if (replExists.length) {
+          await conn.query(
+            `UPDATE pipettes SET active = 0, location = 'Склад', replacing = NULL,
+               updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [replId]
+          );
+        }
       }
-    }
+    });
 
-    await conn.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Добавление поверки',
-       `${req.params.id} — ${date}${wasSent ? ' (возврат с поверки)' : ''}`]
-    );
+    await logAction(req, 'Добавление поверки',
+      `${req.params.id} — ${date}${wasSent ? ' (возврат с поверки)' : ''}`);
 
-    await conn.commit();
-    res.status(201).json({ message: 'Поверка добавлена', wasReturn: wasSent, replacementReturned: wasSent && !!replId });
+    res.status(201).json({
+      message: 'Поверка добавлена',
+      wasReturn: wasSent,
+      replacementReturned: wasSent && !!replId
+    });
   } catch (e) {
-    await conn.rollback();
+    if (e.status === 404) return res.status(404).json({ error: e.message });
+    if (e.status === 403) return res.status(403).json({ error: e.message });
     console.error(e);
     res.status(500).json({ error: 'Ошибка добавления поверки' });
-  } finally {
-    conn.release();
   }
 });
 
