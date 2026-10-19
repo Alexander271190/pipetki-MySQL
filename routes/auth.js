@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticate } = require('../middleware/auth');
 const { validatePassword } = require('../middleware/passwordPolicy');
+const { logAction } = require('../utils/audit');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
 
@@ -81,10 +82,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign({ id: u.id, login: u.login, role: u.role }, JWT_SECRET, { expiresIn: '24h' });
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action) VALUES (?, ?, ?)',
-      [u.id, u.full_name, 'Вход в систему']
-    );
+   await logAction({ user: { id: u.id, full_name: u.full_name } }, 'Вход в систему');
 
     res.json({ token, user: userPublic(u) });
   } catch (e) {
@@ -129,11 +127,8 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
       { expiresIn: '24h' }
     );
     
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Вход под пользователем', target.full_name]
-    );
-
+       await logAction(req, 'Вход под пользователем', target.full_name);
+    
         if (target.is_acting && target.acting_for_id) {
       const [actingRows] = await db.query(
         'SELECT full_name, department FROM users WHERE id = ? LIMIT 1',
@@ -173,31 +168,17 @@ router.post('/stop-impersonate', authenticate, async (req, res) => {
     );
 
     if (!adminRows.length) {
-      // Админ был удалён — логируем хотя бы факт возврата
-      await db.query(
-        'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-        [
-          adminId,
-          req.impersonatedByName || 'admin (удалён)',
-          'Возврат к своей учётной записи',
-          `Работал под: ${req.user.full_name} (${req.user.login}); сам админ удалён`
-        ]
-      );
+            // Админ был удалён — логируем хотя бы факт возврата
+      const deletedAdminReq = { user: { id: adminId, full_name: req.impersonatedByName || 'admin (удалён)' } };
+      await logAction(deletedAdminReq, 'Возврат к своей учётной записи', `Работал под: ${req.user.full_name} (${req.user.login}); сам админ удалён`);
       return res.json({ message: 'Возврат залогирован (админ удалён)' });
     }
 
     const admin = adminRows[0];
 
-    // 🆕 Логируем возврат от имени админа
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [
-        admin.id,
-        admin.full_name,
-        'Возврат к своей учётной записи',
-        `Работал под: ${req.user.full_name} (${req.user.login})`
-      ]
-    );
+        // 🆕 Логируем возврат от имени админа (создаём временный req)
+    const adminReq = { user: { id: admin.id, full_name: admin.full_name } };
+    await logAction(adminReq, 'Возврат к своей учётной записи', `Работал под: ${req.user.full_name} (${req.user.login})`);
 
     res.json({ message: 'Возврат залогирован' });
   } catch (e) {
@@ -258,10 +239,7 @@ router.post('/change-password', allowWhenPasswordMustChange, authenticate, async
     [hash, new Date(), req.user.id]
   );
 
-    await db.query(
-    'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-    [req.user.id, req.user.full_name, 'Смена пароля', 'Пользователь сменил свой пароль']
-  );
+  await logAction(req, 'Смена пароля', 'Пользователь сменил свой пароль');
 
   // Перевыпускаем токен: password_changed_at стал новее старого iat,
   // иначе следующий же запрос словит 401 в middleware/auth.js
@@ -318,11 +296,7 @@ router.post('/setup-password', allowWhenPasswordMustChange, authenticate, async 
     [hash, new Date(), req.user.id]
   );
 
-  await db.query(
-    'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-    [req.user.id, req.user.full_name, 'Установка пароля администратора', 'Первый вход']
-  );
-
+  await logAction(req, 'Установка пароля администратора', 'Первый вход');
   const freshToken = jwt.sign(
     { id: req.user.id, login: req.user.login, role: req.user.role },
     JWT_SECRET,
