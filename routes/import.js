@@ -439,8 +439,31 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
           idGenQueue.set(prefix, (idGenQueue.get(prefix) || 0) + 1);
         }
 
-        const lastCal = parseDate(obj.lastCalibration);
+                const lastCal = parseDate(obj.lastCalibration);
         const result = normalizeResult(obj.result);
+
+        // 🆕 Валидация длины строковых полей — до батча, чтобы одна
+        // слишком длинная строка не роняла весь batch (ER_DATA_TOO_LONG)
+        // и не уводила его в медленный fallback.
+        const MAX_STR = 255;
+        const TOO_LONG = [];
+        const _strFields = ['serial', 'manufacturer', 'volume', 'department',
+                            'cert', 'responsible', 'location', 'notes'];
+        if (String(model).length > MAX_STR) TOO_LONG.push(`model=${String(model).length}`);
+        for (const k of _strFields) {
+          if (obj[k] && String(obj[k]).length > MAX_STR) {
+            TOO_LONG.push(`${k}=${String(obj[k]).length}`);
+          }
+        }
+        for (const [ck, cv] of Object.entries(customObj)) {
+          if (cv && String(cv).length > MAX_STR) {
+            TOO_LONG.push(`custom.${ck}=${String(cv).length}`);
+          }
+        }
+        if (TOO_LONG.length > 0) {
+          skipped.push(`Строка ${originalIdx + 2}: превышена длина (${TOO_LONG.join(', ')}, макс ${MAX_STR})`);
+          continue;
+        }
 
         parsed.push({ id, prefix, model, obj, customObj, lastCal, result, eqType, originalIdx });
       }
