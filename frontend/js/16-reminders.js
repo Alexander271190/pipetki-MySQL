@@ -19,10 +19,14 @@ function checkReminder() {
   const today = todayStr();
   if (lastShown === today) return;
 
-  const dangerList = pipettes.filter(p => ['danger', 'fail'].includes(calcStatus(p)));
-  const warnList = pipettes.filter(p => calcStatus(p) === 'warn');
+  // 🆕 Источник — statsState.reminders (сервер вернул ВСЁ, не только страницу)
+  const dangerList = (statsState.reminders && Array.isArray(statsState.reminders.danger))
+    ? statsState.reminders.danger.slice()
+    : [];
+  const warnList = (statsState.reminders && Array.isArray(statsState.reminders.warn))
+    ? statsState.reminders.warn.slice()
+    : [];
   if (dangerList.length === 0 && warnList.length === 0) return;
-
   _reminderScheduled = true;
   setTimeout(() => showReminder(dangerList, warnList), 600);
 }
