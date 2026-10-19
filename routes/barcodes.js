@@ -10,6 +10,7 @@ const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
 const db = require('../db');
 const { authenticate, requireRole, requirePermission } = require('../middleware/auth');
+const { logAction } = require('../utils/audit');
 
 // 🆕 Реестр шрифтов с кириллицей.
 // Файлы лежат в frontend/fonts/. Ключ хранится в system_settings.barcode_font.
@@ -350,10 +351,7 @@ router.post('/manual', authenticate, requireRole(['admin']), async (req, res) =>
       [value, id]
     );
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Установка штрихкода вручную', `${id} → ${value}`]
-    );
+    await logAction(req, 'Установка штрихкода вручную', `${id} → ${value}`);
 
     res.json({ message: 'Штрихкод установлен', barcode: value, source: 'manual' });
   } catch (e) {
@@ -378,10 +376,7 @@ router.post('/reset', authenticate, requireRole(['admin']), async (req, res) => 
       [id]
     );
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Сброс штрихкода', id]
-    );
+    await logAction(req, 'Сброс штрихкода', id);
 
     res.json({ message: 'Штрихкод сброшен' });
   } catch (e) {
@@ -649,11 +644,8 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
         }
         await sendZplToPrinter(zplParts.join('\n'), printer.ip, printer.port || 9100);
 
-        await db.query(
-          'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-          [req.user.id, req.user.full_name, 'Печать Zebra IP',
-           `${pipettes.length} × ${copies} → ${printer.name} (${printer.ip}:${printer.port})`]
-        );
+         await logAction(req, 'Печать Zebra IP',
+           `${pipettes.length} × ${copies} → ${printer.name} (${printer.ip}:${printer.port})`);
 
         return res.json({
           mode: 'zebra-ip',
