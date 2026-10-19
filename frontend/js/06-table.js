@@ -179,17 +179,6 @@ if (totalEl) {
   table.style.display = '';
   empty.style.display = 'none';
 
-const labels = {
-  ok:       '<i class="fa-solid fa-circle-check"></i> В норме',
-  warn:     '<i class="fa-solid fa-clock"></i> Скоро поверка',
-  danger:   '<i class="fa-solid fa-triangle-exclamation"></i> Просрочена',
-  inactive: '<i class="fa-solid fa-circle-pause"></i> Неактивна',
-  sent:     '<i class="fa-solid fa-box"></i> На поверке',
-  fail:     '<i class="fa-solid fa-xmark"></i> Брак',
-  wip:      '<i class="fa-solid fa-hourglass-half"></i> В процессе',
-  unknown:  '<i class="fa-solid fa-circle-question"></i> Не задано'
-};
-
   tbody.innerHTML = pageItems.map(p => {
     const status = calcStatus(p);
     const next = getNextDate(p);
@@ -215,31 +204,17 @@ const labels = {
 
     const cellsHtml = columns.map(colId => {
       switch (colId) {
-        case 'id': {
-  const dotMap = {
-    ok:        { color: '#16a34a', title: 'В норме' },
-    danger:    { color: '#dc2626', title: 'Просрочена' },
-    fail:      { color: '#dc2626', title: 'Брак' },
-    warn:      { color: '#eab308', title: 'Скоро поверка' },
-    sent:      { color: '#0ea5e9', title: 'На поверке' },
-    wip:       { color: '#eab308', title: 'В процессе поверки' },
-    inactive:  { color: '#94a3b8', title: 'Неактивна' },
-    unknown:   { color: '#94a3b8', title: 'Дата не задана' },
-  };
-
-  const d = dotMap[status];
-  const statusDot = d
-    ? `<span class="status-dot-inline" style="background:${d.color};" title="${d.title}"></span>`
-    : '';
+      case 'id': {
+  const statusDot = UI.renderStatusDot(status);
 
   let replLine = '';
   if (p.replaced_by && p.replacement) {
-    replLine = `<br><small style="color:#0ea5e9;">↔ замена: ${esc(p.replaced_by)}</small>`;
+    replLine = `<br><small style="color:${COLORS.info};">↔ замена: ${esc(p.replaced_by)}</small>`;
   } else if (p.replaced_by) {
-    replLine = `<br><small style="color:#dc2626;">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
+    replLine = `<br><small style="color:${COLORS.danger};">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
   }
   if (p.replacing && p.replacedFor) {
-    replLine = `<br><small style="color:#f59e0b;">↔ заменяет: ${esc(p.replacing)}</small>`;
+    replLine = `<br><small style="color:${COLORS.warning};">↔ заменяет: ${esc(p.replacing)}</small>`;
   }
 
   return `<td><span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}</td>`;
@@ -261,12 +236,12 @@ const labels = {
           return `<td>${formatDate(p.last_calibration)}</td>`;
        case 'nextCalibration':
           return `<td>${status === 'sent'
-            ? `<small style="color:#0ea5e9;font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
+            ? `<small style="color:${COLORS.info};font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
             : status === 'wip'
-            ? `<small style="color:#ca8a04;font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
+            ? `<small style="color:${COLORS.warning};font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
             : status === 'unknown'
-            ? `<small style="color:#94a3b8;">Дата не задана</small>`
-            : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? '#dc2626' : status === 'warn' ? '#eab308' : '#16a34a'}">${daysText}</small>` : ''}`}</td>`;
+            ? `<small style="color:${COLORS.faint};">Дата не задана</small>`
+            : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? COLORS.danger : status === 'warn' ? COLORS.warning : COLORS.success}">${daysText}</small>` : ''}`}</td>`;
         case 'responsible':
           return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
         case 'location':
@@ -277,16 +252,14 @@ const labels = {
           return `<td>${esc(p.serial || '—')}</td>`;
         case 'cert':
           return `<td>${esc(p.cert || '—')}</td>`;
-                case 'status':
-          return `<td><span class="status-badge status-${status}"><span class="status-dot"></span>${labels[status]}</span></td>`;
+        case 'status':
+          return `<td>${UI.renderStatusBadge(status)}</td>`;
         case 'interval':
           return `<td>${p.interval != null ? esc(p.interval) + ' мес.' : '—'}</td>`;
         case 'notes':
           return `<td>${esc(p.notes || '—')}</td>`;
-        case 'result': {
-          const R = { pass: 'Годен', fail: 'Брак', wip: 'В процессе' };
-          return `<td>${esc(R[p.last_result] || p.last_result || '—')}</td>`;
-        }
+        case 'result':
+          return `<td>${esc(RESULT_LABELS[p.last_result] || p.last_result || '—')}</td>`;
         case 'active':
           return `<td>${p.active ? 'В работе' : 'Не используется'}</td>`;
         default: {
