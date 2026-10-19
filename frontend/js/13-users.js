@@ -28,16 +28,16 @@ async function renderUsersSettings() {
       const perms = u.extraPermissions || [];
       const isAdm = u.role === 'admin';
       const permText = isAdm
-        ? '<span style="color:#dc2626;font-weight:700;">все</span>'
+        ? `<span style="color:${COLORS.danger};font-weight:700;">все</span>`
         : (perms.length === 0
-            ? '<span style="color:#94a3b8;">нет</span>'
-            : String(perms.length));
+          ? `<span style="color:${COLORS.faint};">нет</span>`
+          : String(perms.length));
 
       html += `<tr>
         <td>${esc(u.login)}</td>
         <td>${esc(u.fullName)}</td>
         <td>${esc(u.position)}${u.isActing
-          ? ` <span style="color:#eab308;font-weight:600;">(и.о.${u.actingForName ? ' за ' + esc(u.actingForName) : ''})</span>`
+          ? ` <span style="color:${COLORS.warning};font-weight:600;">(и.о.${u.actingForName ? ' за ' + esc(u.actingForName) : ''})</span>`
           : ''}</td>
         <td>${esc(u.department || '—')}</td>
         <td>${roleLabels[u.role] || u.role}</td>
@@ -342,17 +342,20 @@ async function saveUserSetting() {
 
   const payload = { login, fullName, position, department, role, onlyOwnDepartment, extraPermissions, isActing, actingForId };
 
+  let userId = id;
   try {
-    let userId = id;
-    if (id) {
-      await apiRequest('/users/' + id, 'PUT', payload);
-      showToast('Пользователь обновлён', 'success');
-    } else {
-      const res = await apiRequest('/users', 'POST', payload);
-      userId = res.id;
-      showToast('Пользователь создан', 'success');
-      setTimeout(() => showTempPasswordModal(res.login, fullName, res.tempPassword), 300);
-    }
+    await UI.saveAction({
+      successMsg: id ? 'Пользователь обновлён' : 'Пользователь создан',
+      reload: false
+    }, async () => {
+      if (id) {
+        await apiRequest('/users/' + id, 'PUT', payload);
+      } else {
+        const res = await apiRequest('/users', 'POST', payload);
+        userId = res.id;
+        setTimeout(() => showTempPasswordModal(res.login, fullName, res.tempPassword), 300);
+      }
+    });
 
     if (userId) {
       let existing = {};
@@ -381,7 +384,7 @@ async function saveUserSetting() {
 
     resetUserSettingForm();
     renderUsersSettings();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) {}
 }
 
 function resetUserSettingForm() {
@@ -481,13 +484,13 @@ async function openUserViewModal(userId, userName) {
   }
 
   renderUserViewContent();
-  document.getElementById('user-view-modal').classList.add('active');
+  UI.modal.open('user-view-modal');
 
   loadCopyViewUserList(userId);
 }
 
 function closeUserViewModal() {
-  document.getElementById('user-view-modal').classList.remove('active');
+  UI.modal.close('user-view-modal');
   _userViewUserId = null;
   _userViewVisibleFields = [];
 }
@@ -735,10 +738,6 @@ async function resetUserView() {
   }
 }
 
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'user-view-modal') closeUserViewModal();
-});
-
 // ============================================================
 // СМЕНА ПАРОЛЯ (своя + чужая)
 // ============================================================
@@ -788,14 +787,13 @@ function openChangePasswordModal(force, mode = 'change') {
     // 🆕 Если мы под другим пользователем — кнопка всегда называется «Позже»
     cancelBtn.textContent = isImpersonatingNow ? 'Позже' : 'Отмена';
   }
-  if (modal) modal.classList.add('active');
+  UI.modal.open('change-password-modal');
   const focusTarget = isSetup ? newInput : currentInput;
   if (focusTarget) setTimeout(() => focusTarget.focus(), 100);
 }
 
 function closeChangePasswordModal() {
-  const modal = document.getElementById('change-password-modal');
-  if (modal) modal.classList.remove('active');
+  UI.modal.close('change-password-modal');
 }
 
 async function submitChangePassword(e) {
@@ -911,11 +909,11 @@ function showTempPasswordModal(login, fullName, tempPassword) {
   document.getElementById('tp-fullname').value = fullName || '';
   document.getElementById('tp-password').value = tempPassword || '';
 
-  document.getElementById('temp-password-modal').classList.add('active');
+  UI.modal.open('temp-password-modal');
 }
 
 function closeTempPasswordModal() {
-  document.getElementById('temp-password-modal').classList.remove('active');
+  UI.modal.close('temp-password-modal');
   _tempPasswordValue = '';
 }
 
