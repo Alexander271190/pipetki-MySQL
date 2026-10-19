@@ -118,20 +118,20 @@ function canAccessDepartment(user, department) {
 
 // ============================================================
 // Поиск прибора с проверкой доступа (для роутов)
-// Возвращает объект или null. Если null — res уже отправлен.
+// Бросает err со status = 404 / 403 — чтобы использовать внутри withTransaction.
 // ============================================================
-async function findPipetteOrFail(executor, id, user, res) {
-  const [rows] = await executor.query(
-    'SELECT * FROM pipettes WHERE id = ?',
-    [id]
-  );
+async function findPipetteOrFail(executor, id, user, { forUpdate = false } = {}) {
+  const sql = `SELECT * FROM pipettes WHERE id = ?${forUpdate ? ' FOR UPDATE' : ''}`;
+  const [rows] = await executor.query(sql, [id]);
   if (!rows.length) {
-    res.status(404).json({ error: 'Оборудование не найдено' });
-    return null;
+    const err = new Error('Оборудование не найдено');
+    err.status = 404;
+    throw err;
   }
   if (!canAccessDepartment(user, rows[0].department)) {
-    res.status(403).json({ error: 'Нет доступа к этому оборудованию' });
-    return null;
+    const err = new Error('Нет доступа к этому оборудованию');
+    err.status = 403;
+    throw err;
   }
   return rows[0];
 }
