@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { logAction } = require('../utils/audit');
 
 const router = express.Router();
 
@@ -42,10 +43,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
       [String(name).trim(), JSON.stringify(data), req.user.id]
     );
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Создание шаблона единицы', String(name).trim()]
-    );
+    await logAction(req, 'Создание шаблона единицы', String(name).trim());
 
     res.status(201).json({ id: result.insertId, message: 'Шаблон создан' });
   } catch (e) {
@@ -63,10 +61,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
 
     await db.query('DELETE FROM equipment_templates WHERE id = ?', [id]);
 
-    await db.query(
-      'INSERT INTO audit_log (user_id, user_full_name, action, details) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.user.full_name, 'Удаление шаблона единицы', ex[0].name]
-    );
+    await logAction(req, 'Удаление шаблона единицы', ex[0].name);
 
     res.json({ message: 'Шаблон удалён' });
   } catch (e) {
