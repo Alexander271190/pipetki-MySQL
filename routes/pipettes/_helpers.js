@@ -136,6 +136,182 @@ async function findPipetteOrFail(executor, id, user, { forUpdate = false } = {})
   return rows[0];
 }
 
+// ============================================================
+// SQL — ВЫЧИСЛЯЕМЫЕ ПОЛЯ, ФИЛЬТРЫ, СОРТИРОВКА
+// ============================================================
+
+// Вычисляет статус на SQL (совместимо с calcStatus() на фронте)
+function sqlComputedStatus(warnDays) {
+  const wd = Number.isFinite(warnDays) && warnDays > 0 ? warnDays : 30;
+  return `
+    CASE
+      WHEN sent_for_calibration IS NOT NULL THEN 'sent'
+      WHEN last_result = 'fail' THEN 'fail'
+      WHEN active = 0 THEN 'inactive'
+      WHEN last_result = 'wip' THEN 'wip'
+      WHEN last_calibration IS NULL OR \`interval\` IS NULL THEN 'unknown'
+      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < CURDATE() THEN 'danger'
+      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 'warn'
+      ELSE 'ok'
+    END
+  `;
+}
+
+// Числовой порядок статусов (для ORDER BY)
+function sqlStatusOrder(warnDays) {
+  const wd = Number.isFinite(warnDays) && warnDays > 0 ? warnDays : 30;
+  return `
+    CASE
+      WHEN sent_for_calibration IS NOT NULL THEN 5
+      WHEN last_result = 'fail' THEN 2
+      WHEN active = 0 THEN 7
+      WHEN last_result = 'wip' THEN 3
+      WHEN last_calibration IS NULL OR \`interval\` IS NULL THEN 8
+      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < CURDATE() THEN 1
+      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 4
+      ELSE 6
+    END
+  `;
+}
+
+// Строит WHERE-условия по filters (объект) + search.
+// Возвращает { sql, params }. НЕ включает фильтр по status — он вычисляемый,
+// добавляется отдельно в crud.js.
+function buildFiltersWhere(filters, search) {
+  const parts = [];
+  const params = [];
+
+  // Поиск по 6 колонкам
+  if (search && String(search).trim()) {
+    const q = `%${String(search).trim()}%`;
+    parts.push(`(
+      id LIKE ? OR model LIKE ? OR serial LIKE ? OR manufacturer LIKE ?
+      OR department LIKE ? OR responsible LIKE ?
+    )`);
+    params.push(q, q, q, q, q, q);
+  }
+
+  if (filters && typeof filters === 'object' && !Array.isArray(filters)) {
+    for (const [fieldId, value] of Object.entries(filters)) {
+      if (value === undefined || value === null || value === '') continue;
+
+      if (fieldId === 'status') continue; // вычисляемый, отдельно
+
+      if (fieldId === 'equipmentType') {
+        parts.push('equipment_type = ?');
+        params.push(String(value));
+        continue;
+      }
+      if (fieldId === 'department') {
+        parts.push('department = ?');
+        params.push(String(value));
+        continue;
+      }
+      if (fieldId === 'active') {
+        parts.push('active = ?');
+        params.push(value === 'true' || value === true ? 1 : 0);
+        continue;
+      }
+      if (fieldId === 'responsible') {
+        parts.push('responsible LIKE ?');
+        params.push(`%${String(value).trim()}%`);
+        continue;
+      }
+      if (fieldId === 'model') {
+        parts.push('model LIKE ?');
+        params.push(`%${String(value).trim()}%`);
+        continue;
+      }
+      if (fieldId === 'manufacturer') {
+        parts.push('manufacturer LIKE ?');
+        params.push(`%${String(value).trim()}%`);
+        continue;
+      }
+
+      // date-period: объект { type, period, from, to }
+      if (value && typeof value === 'object' && value.period) {
+        const isUpdated = value.type === 'updated_at';
+        const colExpr = isUpdated
+          ? 'DATE(updated_at)'
+          : "STR_TO_DATE(last_calibration, '%Y-%m-%d')";
+
+        if (value.period === 'today') {
+          parts.push(`${colExpr} = CURDATE()`);
+        } else if (value.period === 'yesterday') {
+          parts.push(`${colExpr} = DATE_SUB(CURDATE(), INTERVAL 1 DAY)`);
+        } else if (value.period === 'week') {
+          parts.push(`${colExpr} >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)`);
+          parts.push(`${colExpr} <= CURDATE()`);
+        } else if (value.period === 'month') {
+          parts.push(`${colExpr} >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`);
+          parts.push(`${colExpr} <= CURDATE()`);
+        } else if (value.period === 'custom') {
+          if (value.from) { parts.push(`${colExpr} >= ?`); params.push(value.from); }
+          if (value.to)   { parts.push(`${colExpr} <= ?`); params.push(value.to); }
+        }
+        continue;
+      }
+
+      // Кастомное поле — LIKE по JSON_EXTRACT
+      if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(fieldId)) {
+        parts.push(`JSON_UNQUOTE(JSON_EXTRACT(custom_data, ?)) LIKE ?`);
+        params.push(`$.${fieldId}`, `%${String(value).trim()}%`);
+      }
+    }
+  }
+
+  return {
+    sql: parts.length ? ' AND ' + parts.join(' AND ') : '',
+    params,
+  };
+}
+
+// SQL для ORDER BY
+function sqlOrderBy(sort, dir, warnDays) {
+  const d = String(dir).toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+  switch (sort) {
+    case 'id':              return `id ${d}`;
+    case 'equipmentType':   return `equipment_type ${d}`;
+    case 'model':           return `model ${d}`;
+    case 'volume':          return `CAST(NULLIF(volume, '') AS UNSIGNED) ${d}`;
+    case 'department':      return `department ${d}`;
+    case 'lastCalibration': return `last_calibration ${d}`;
+    case 'nextCalibration': return `DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) ${d}`;
+    case 'responsible':     return `responsible ${d}`;
+    case 'status':          return `(${sqlStatusOrder(warnDays)}) ${d}`;
+    default:                return `id ${d}`;
+  }
+}
+
+// Кэш warn_days (60 сек)
+let _warnDaysCache = null;
+let _warnDaysCacheTime = 0;
+const WARN_DAYS_CACHE_TTL = 60_000;
+
+async function getWarnDays(executor) {
+  const now = Date.now();
+  if (_warnDaysCache != null && now - _warnDaysCacheTime < WARN_DAYS_CACHE_TTL) {
+    return _warnDaysCache;
+  }
+  try {
+    const ex = executor || require('../../db');
+    const [rows] = await ex.query(
+      "SELECT setting_value FROM system_settings WHERE setting_key = 'warn_days'"
+    );
+    const wd = rows.length ? parseInt(rows[0].setting_value, 10) : 30;
+    _warnDaysCache = Number.isFinite(wd) && wd > 0 ? wd : 30;
+    _warnDaysCacheTime = now;
+    return _warnDaysCache;
+  } catch (e) {
+    return 30;
+  }
+}
+
+function invalidateWarnDaysCache() {
+  _warnDaysCache = null;
+  _warnDaysCacheTime = 0;
+}
+
 module.exports = {
   validateISODate,
   normalizeInterval,
@@ -151,5 +327,11 @@ module.exports = {
   applyIdChange,
   canAccessDepartment,
   findPipetteOrFail,
+  sqlComputedStatus,
+  sqlStatusOrder,
+  buildFiltersWhere,
+  sqlOrderBy,
+  getWarnDays,
+  invalidateWarnDaysCache,
 };
 
