@@ -5,22 +5,24 @@
 // ============================================================
 let _barcodeScanList = [];
 
-function openBarcodeScannerModal() {
-  if (!requirePasswordChange()) return;
-  _barcodeScanList = [];
-  renderBarcodeScanList();
-  const modal = document.getElementById('barcode-scanner-modal');
-  const input = document.getElementById('barcode-input');
-  const errEl = document.getElementById('barcode-scan-error');
-  if (errEl) errEl.textContent = '';
-  if (input) input.value = '';
-  if (modal) modal.classList.add('active');
-  if (input) setTimeout(() => input.focus(), 100);
+async function openBarcodeScannerModal() {
+  await UI.guard(
+    { permission: 'scan_barcode', errorMsg: 'Нет прав на сканирование' },
+    async () => {
+      _barcodeScanList = [];
+      renderBarcodeScanList();
+      const input = document.getElementById('barcode-input');
+      const errEl = document.getElementById('barcode-scan-error');
+      if (errEl) errEl.textContent = '';
+      if (input) input.value = '';
+      UI.modal.open('barcode-scanner-modal');
+      if (input) setTimeout(() => input.focus(), 100);
+    }
+  );
 }
 
 function closeBarcodeScannerModal() {
-  const modal = document.getElementById('barcode-scanner-modal');
-  if (modal) modal.classList.remove('active');
+  UI.modal.close('barcode-scanner-modal');
 }
 
 async function handleBarcodeScan(raw) {
@@ -53,7 +55,7 @@ function renderBarcodeScanList() {
   const btnReturn = document.getElementById('btn-scan-return');
   if (counter) counter.textContent = _barcodeScanList.length;
   if (!_barcodeScanList.length) {
-    if (list) list.innerHTML = '<div style="color:#94a3b8;">Список пуст. Сканируйте штрихкоды.</div>';
+    if (list) list.innerHTML = `<div style="color:${COLORS.faint};">Список пуст. Сканируйте штрихкоды.</div>`;
     if (btnSend) btnSend.disabled = true;
     if (btnReturn) btnReturn.disabled = true;
     return;
@@ -138,28 +140,32 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 // ПЕЧАТЬ ЭТИКЕТОК
 // ============================================================
-function openBarcodePrintModal() {
-  if (!requirePasswordChange()) return;
-  updateBarcodePrintScopeCounts();
-  const hasSelected = selectedPipettes.size > 0;
-  const selRadio = document.getElementById('bc-scope-selected');
-  const filtRadio = document.getElementById('bc-scope-filtered');
-  if (hasSelected && selRadio) selRadio.checked = true;
-  else if (filtRadio) filtRadio.checked = true;
+async function openBarcodePrintModal() {
+  await UI.guard(
+    { permission: 'print_labels', errorMsg: 'Нет прав на печать' },
+    async () => {
+      updateBarcodePrintScopeCounts();
+      const hasSelected = selectedPipettes.size > 0;
+      const selRadio = document.getElementById('bc-scope-selected');
+      const filtRadio = document.getElementById('bc-scope-filtered');
+      if (hasSelected && selRadio) selRadio.checked = true;
+      else if (filtRadio) filtRadio.checked = true;
 
-  apiRequest('/settings/system').then(s => {
-    const copiesEl = document.getElementById('barcode-print-copies');
-    if (copiesEl && s.barcode_default_copies) copiesEl.value = s.barcode_default_copies;
-  }).catch(() => {});
+      apiRequest('/settings/system').then(s => {
+        const copiesEl = document.getElementById('barcode-print-copies');
+        if (copiesEl && s.barcode_default_copies) copiesEl.value = s.barcode_default_copies;
+      }).catch(() => {});
 
-  loadPrintersForBarcodePrint();
-  const errEl = document.getElementById('barcode-print-error');
-  if (errEl) errEl.textContent = '';
-  document.getElementById('barcode-print-modal').classList.add('active');
+      loadPrintersForBarcodePrint();
+      const errEl = document.getElementById('barcode-print-error');
+      if (errEl) errEl.textContent = '';
+      UI.modal.open('barcode-print-modal');
+    }
+  );
 }
 
 function closeBarcodePrintModal() {
-  document.getElementById('barcode-print-modal').classList.remove('active');
+  UI.modal.close('barcode-print-modal');
 }
 
 async function loadPrintersForBarcodePrint() {
@@ -410,19 +416,19 @@ async function renderBarcodePrintersList() {
               <option value="100x50" ${p.labelSize === '100x50' ? 'selected' : ''}>100×50</option>
             </select>
           </td>
-          <td style="text-align:center;"><input type="checkbox" class="bc-chk" ${p.enabled ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'enabled', this.checked)"></td>
-          <td style="text-align:center;"><input type="checkbox" class="bc-chk" ${p.isDefault ? 'checked' : ''} onchange="updateBarcodePrinterField(${p.id}, 'isDefault', this.checked)"></td>
+          <td style="text-align:center;">${UI.checkbox(`updateBarcodePrinterField(${p.id}, 'enabled', this.checked)`, p.enabled, 'bc-chk')}</td>
+          <td style="text-align:center;">${UI.checkbox(`updateBarcodePrinterField(${p.id}, 'isDefault', this.checked)`, p.isDefault, 'bc-chk')}</td>
           <td class="bc-printer-actions">
-            <button class="btn btn-info btn-sm bc-icon-btn" onclick="checkPrinterById(${p.id})" title="Проверить связь"><i class="fa-solid fa-plug"></i></button>
-            <button class="btn btn-success btn-sm bc-icon-btn" onclick="saveBarcodePrinter(${p.id})" title="Сохранить"><i class="fa-solid fa-floppy-disk"></i></button>
-            <button class="btn btn-danger btn-sm bc-icon-btn" onclick="deleteBarcodePrinter(${p.id})" title="Удалить"><i class="fa-solid fa-trash"></i></button>
+            ${UI.iconBtn('plug',        `checkPrinterById(${p.id})`,   'Проверить связь', 'btn-info')}
+            ${UI.iconBtn('save',        `saveBarcodePrinter(${p.id})`, 'Сохранить',       'btn-success')}
+            ${UI.iconBtn('trash',       `deleteBarcodePrinter(${p.id})`, 'Удалить',      'btn-danger')}
           </td>
         </tr>`;
     }
     html += `</tbody></table>`;
     container.innerHTML = html;
   } catch (e) {
-    container.innerHTML = `<div style="color:#dc2626;padding:10px;">Ошибка: ${esc(e.message)}</div>`;
+    container.innerHTML = `<div style="color:${COLORS.danger};padding:10px;">Ошибка: ${esc(e.message)}</div>`;
   }
 }
 
@@ -435,7 +441,10 @@ async function saveBarcodePrinter(id) {
   const p = _cachedBarcodePrinters.find(x => x.id === id);
   if (!p) return;
   try {
-    await apiRequest('/barcode-printers/' + id, 'PUT', {
+    await UI.saveAction({
+      successMsg: `Принтер «${p.name}» сохранён`,
+      reload: false
+    }, () => apiRequest('/barcode-printers/' + id, 'PUT', {
       name: p.name,
       department: p.department || '',
       mode: p.mode,
@@ -445,11 +454,8 @@ async function saveBarcodePrinter(id) {
       enabled: !!p.enabled,
       isDefault: !!p.isDefault,
       sortOrder: p.sortOrder || 0,
-    });
-    showToast(`Принтер «${p.name}» сохранён`, 'success');
-  } catch (e) {
-    showToast(e.message || 'Ошибка', 'error');
-  }
+    }));
+  } catch (e) {}
 }
 
 async function deleteBarcodePrinter(id) {
@@ -664,9 +670,9 @@ async function saveBarcodeSettings() {
     barcode_font: fontEl && fontEl.value ? fontEl.value : 'dejavu',
   };
   try {
-    await apiRequest('/settings/system', 'PUT', payload);
-    showToast('Настройки печати сохранены', 'success');
-  } catch (e) {
-    showToast(e.message, 'error');
-  }
+    await UI.saveAction({
+      successMsg: 'Настройки печати сохранены',
+      reload: false
+    }, () => apiRequest('/settings/system', 'PUT', payload));
+  } catch (e) {}
 }
