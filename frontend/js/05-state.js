@@ -343,22 +343,7 @@ function syncFilterState() {
 // СТАТУСЫ (клиентский fallback)
 // ============================================================
 function calcStatus(p) {
-  // 🆕 Если сервер прислал computed_status — доверяем ему
-  if (p.computed_status) return p.computed_status;
-
-  if (p.sent_for_calibration) return 'sent';
-  if (p.last_result === 'fail') return 'fail';
-  if (!p.active) return 'inactive';
-  if (p.last_result === 'wip') return 'wip';
-  if (!p.last_calibration || !p.interval) return 'unknown';
-  const last = parseLocalDate(p.last_calibration);
-  if (!last) return 'unknown';
-  const next = addMonths(last, p.interval);
-  const now = new Date(); now.setHours(0, 0, 0, 0);
-  const daysLeft = Math.ceil((next - now) / 86400000);
-  if (daysLeft < 0) return 'danger';
-  if (daysLeft <= settings.warnDays) return 'warn';
-  return 'ok';
+  return (p && p.computed_status) || 'unknown';
 }
 
 function getNextDate(p) {
