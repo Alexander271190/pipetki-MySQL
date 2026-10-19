@@ -32,16 +32,13 @@ const SYSTEM_EXPORT_FIELD_MAP = {
   },
   responsible: { label: 'Ответственный', get: p => p.responsible || '' },
   location: { label: 'Место', get: p => p.location || '' },
-  status: {
+   status: {
     label: 'Статус', get: p => {
-      const L = {
-        ok: 'В норме', warn: 'Скоро поверка', danger: 'Просрочена',
-        inactive: 'Неактивна', sent: 'На поверке', fail: 'Брак',
-        wip: 'В процессе', unknown: 'Не задано'
-      };
-      return L[calcStatus(p)] || calcStatus(p);
+      const st = calcStatus(p);
+      return STATUS_LABELS[st] || st;
     }
   },
+  
   cert: { label: 'Свидетельство', get: p => p.cert || '' },
   notes: { label: 'Примечание', get: p => p.notes || '' }
 };
@@ -67,12 +64,11 @@ function getActiveExportFields() {
 }
 
 async function exportToXlsx() {
-  await refreshCurrentUser();
-  if (!canExport()) { showToast('Нет прав на экспорт', 'error'); return; }
-  if (!requirePasswordChange()) return;
-
-  const data = getFilteredPipettes();
-  if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
+  await UI.guard(
+    { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
+    async () => {
+      const data = getFilteredPipettes();
+      if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
   
  const fields = getActiveExportFields();
   const headers = fields.map(f => {
@@ -134,7 +130,8 @@ async function exportToXlsx() {
     showToast(`Экспортировано: ${data.length} записей`, 'success');
   } catch (e) {
     showToast(e.message || 'Ошибка экспорта', 'error');
-  }
+   }
+  );
 }
 
 async function exportToPDF() {
