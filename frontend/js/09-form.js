@@ -105,6 +105,16 @@ let _bulkFields = [];
 const BULK_MAX_ROWS = 100;
 
 async function openModal(id) {
+  // 🆕 Защита: если типы ещё не загрузились — подгружаем
+  if (!Array.isArray(_equipmentTypes) || _equipmentTypes.length === 0) {
+    try {
+      const types = await apiRequest('/settings/equipment-types');
+      if (Array.isArray(types) && types.length > 0) _equipmentTypes = types;
+    } catch (e) {
+      console.warn('Не удалось загрузить типы оборудования:', e.message);
+    }
+  }
+
   const isEdit = !!id;
   await UI.guard(
     {
