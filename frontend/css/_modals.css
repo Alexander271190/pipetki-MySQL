@@ -315,21 +315,48 @@
   background: #f1f5f9; color: #475569;
   font-size: .72rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: .4px;
-  padding: 7px 6px; text-align: left;
+  padding: 8px 6px; text-align: left;
   border-bottom: 1px solid var(--border); white-space: nowrap;
+  vertical-align: middle; /* Выравниваем заголовок по центру */
 }
-.bc-printers-table td { padding: 5px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
+
+.bc-printers-table td { 
+  padding: 6px; 
+  border-bottom: 1px solid var(--border); 
+  vertical-align: middle; /* Выравниваем содержимое ячеек по центру */
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+
 .bc-printers-table input[type="text"],
 .bc-printers-table input[type="number"],
 .bc-printers-table select {
   width: 100%; max-width: 100%; min-width: 0;
-  padding: 5px 7px; border: 1px solid var(--border-hard); border-radius: 5px;
+  height: 32px; /* Делаем все поля ввода одной высоты */
+  padding: 0 8px;
+  border: 1px solid var(--border-hard); border-radius: 5px;
   font-size: .82rem; font-family: inherit;
   background: var(--card); box-sizing: border-box; outline: none;
+  vertical-align: middle;
 }
-.bc-printers-table input:focus, .bc-printers-table select:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
-.bc-printers-table .bc-chk { width: 16px; height: 16px; cursor: pointer; accent-color: #4f46e5; margin: 0; }
-.bc-printer-actions { display: flex; gap: 3px; justify-content: flex-end; }
+
+.bc-printers-table input:focus, .bc-printers-table select:focus { 
+  border-color: #6366f1; 
+  box-shadow: 0 0 0 2px rgba(99,102,241,.15); 
+}
+
+.bc-printers-table .bc-chk { 
+  width: 16px; height: 16px; cursor: pointer; accent-color: #4f46e5; 
+  margin: 0; 
+  vertical-align: middle;
+}
+
+.bc-printer-actions { 
+  display: flex; 
+  gap: 3px; 
+  justify-content: center; /* Центрируем кнопку "три точки" */
+}
+
 .bc-icon-btn { padding: 4px 6px !important; font-size: .72rem !important; border-radius: 5px !important; min-width: 0 !important; }
 
 .bc-settings-block { margin-top: 18px; padding: 12px 14px; background: #f0fdf4; border-left: 3px solid #16a34a; border-radius: 8px; }
