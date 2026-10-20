@@ -116,12 +116,12 @@ async function renderFieldsSettings(skipFetch = false) {
       <p style="color:#64748b;margin-bottom:12px;">Включите/отключите поля, измените порядок, сделайте обязательными.</p>
       <table class="field-settings-table">
         <thead><tr>
-          <th style="width:90px;">Порядок</th>
-          <th>Название</th>
-          <th style="width:120px;">Тип</th>
-          <th style="width:90px; text-align:center;">Обяз.</th>
+          <th style="width:100px; text-align:center;">Порядок</th>
+          <th style="text-align:center;">Название</th>
+          <th style="width:120px; text-align:center;">Тип</th>
+          <th style="width:100px; text-align:center;">Обяз-но</th>
           <th style="width:110px; text-align:center;">Активно</th>
-          <th>Список значений</th>
+          <th style="text-align:center;">Список значений</th>
           <th style="width:60px;"></th>
         </tr></thead><tbody>`;
 
@@ -359,8 +359,8 @@ async function renderDepartmentsSettings(skipFetch = false) {
       <table class="field-settings-table">
         <thead><tr>
           <th style="width:110px; text-align:center;">Активно</th>
-          <th>Название</th>
-          <th style="width:100px;">Действия</th>
+          <th style="text-align:center;">Название</th>
+          <th style="width:100px; text-align:center;">Действия</th>
         </tr></thead><tbody>`;
 
     _cachedDepartmentsFull.forEach((d, i) => {
@@ -510,11 +510,11 @@ async function renderFiltersSettings(skipFetch = false) {
       </p>
       <table class="field-settings-table">
         <thead><tr>
-          <th style="width:90px;">Порядок</th>
+          <th style="width:100px; text-align:center;">Порядок</th>
           <th style="width:110px; text-align:center;">Активно</th>
-          <th>Название</th>
-          <th style="width:130px;">Тип</th>
-          <th style="width:140px;">Источник</th>
+          <th style="text-align:center;">Название</th>
+          <th style="width:130px; text-align:center;">Тип</th>
+          <th style="width:140px; text-align:center;">Источник</th>
           <th style="width:60px;"></th>
         </tr></thead><tbody>`;
 
@@ -755,14 +755,14 @@ async function renderEquipmentSettings() {
       </p>
 
       <table class="field-settings-table" id="equip-types-table">
-        <thead>
+       <thead>
           <tr>
-            <th style="width:90px;">Порядок</th>
-            <th style="width:140px;">value</th>
-            <th>label</th>
-            <th style="width:80px;">prefix</th>
-            <th style="width:100px;">МПИ (мес.)</th>
-            <th style="width:200px;">Место поверки</th>
+            <th style="width:100px; text-align:center;">Порядок</th>
+            <th style="width:140px; text-align:center;">value</th>
+            <th style="text-align:center;">label</th>
+            <th style="width:80px; text-align:center;">prefix</th>
+            <th style="width:100px; text-align:center;">МПИ (мес.)</th>
+            <th style="width:200px; text-align:center;">Место поверки</th>
             <th style="width:60px;"></th>
           </tr>
         </thead>
