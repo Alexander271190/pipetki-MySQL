@@ -313,6 +313,7 @@
   overflow: visible !important; 
   height: auto !important;      
   max-height: none !important;  
+  flex-shrink: 0;
 }
 @media (max-width: 768px) {
   .table-wrapper {
