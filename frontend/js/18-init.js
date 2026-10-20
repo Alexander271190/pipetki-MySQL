@@ -172,6 +172,8 @@ function toggleHeaderCollapse() {
     }
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
+    // Пересчитываем позиции при сворачивании шапки
+  setTimeout(updateStickyOffsets, 300);
 }
 
 (function initHeaderCollapse() {
@@ -532,5 +534,35 @@ document.addEventListener('keydown', (e) => {
       openBarcodePrintModal();
     }
     return;
+  }
+});
+
+// ============================================================
+// 🆕 ДИНАМИЧЕСКИЙ РАСЧЕТ ВЫСОТЫ ДЛЯ STICKY-ЭЛЕМЕНТОВ
+// ============================================================
+function updateStickyOffsets() {
+  const header = document.getElementById('main-header');
+  const banner = document.getElementById('alert-banner');
+  if (!header) return;
+
+  // Записываем высоту шапки в CSS-переменную
+  document.documentElement.style.setProperty('--header-height', header.offsetHeight + 'px');
+
+  // Записываем высоту баннера, если он виден
+  if (banner && banner.style.display !== 'none' && banner.classList.contains('show')) {
+    document.documentElement.style.setProperty('--banner-height', banner.offsetHeight + 'px');
+  } else {
+    document.documentElement.style.setProperty('--banner-height', '0px');
+  }
+}
+
+window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
+window.addEventListener('resize', updateStickyOffsets);
+
+document.addEventListener('DOMContentLoaded', () => {
+  const banner = document.getElementById('alert-banner');
+  if (banner) {
+    const observer = new MutationObserver(updateStickyOffsets);
+    observer.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
   }
 });
