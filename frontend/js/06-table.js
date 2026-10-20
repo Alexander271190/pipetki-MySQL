@@ -295,6 +295,17 @@ function renderTableBody(items, columns, hasAnyRowAction) {
 function fitTableWrapperHeight() { }
 
 // ============================================================
+// 🆕 ОБНОВЛЕНИЕ СТРЕЛОЧЕК СОРТИРОВКИ
+// ============================================================
+function updateSortArrows() {
+  document.querySelectorAll('th .sort-arrow').forEach(el => {
+    const f = el.dataset.field;
+    if (f === sortField) el.textContent = sortDir > 0 ? '▲' : '▼';
+    else el.textContent = '';
+  });
+}
+
+// ============================================================
 // 🆕 СОРТИРОВКА — на сервер
 // ============================================================
 async function sortBy(field) {
