@@ -119,26 +119,26 @@ async function renderFieldsSettings(skipFetch = false) {
           <th style="width:90px;">Порядок</th>
           <th>Название</th>
           <th style="width:120px;">Тип</th>
-          <th style="width:80px;">Обяз.</th>
-          <th style="width:80px;">Активно</th>
+          <th style="width:90px; text-align:center;">Обяз.</th>
+          <th style="width:110px; text-align:center;">Активно</th>
           <th>Список значений</th>
           <th style="width:60px;"></th>
         </tr></thead><tbody>`;
 
-        _cachedFields.forEach((f, i) => {
-  html += `<tr>
-    <td>${UI.moveBtns(i, _cachedFields.length, 'moveFieldSetting')}</td>
-    <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
+    _cachedFields.forEach((f, i) => {
+      html += `<tr>
+        <td>${UI.moveBtns(i, _cachedFields.length, 'moveFieldSetting')}</td>
+        <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
         <td>${renderFieldTypeSelect(i, f)}</td>
         <td style="text-align:center;">${UI.checkbox(`_cachedFields[${i}].required=this.checked`, f.required)}</td>
         <td style="text-align:center;">${UI.checkbox(`onFieldEnabledChange(${i}, this.checked)`, f.enabled)}</td>
-       <td>${renderFieldOptionsCell(i, f.type)}</td>
+        <td>${renderFieldOptionsCell(i, f.type)}</td>
         <td>${UI.iconBtn('trash', `deleteFieldSetting(${i})`, 'Удалить поле', 'btn-danger')}</td>
       </tr>`;
     });
-   html += `</tbody></table>
-  <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> Добавить поле</button>
-  <button class="btn btn-success" onclick="saveFieldsSettings()" style="margin-top:12px;margin-left:10px;"><i class="fa-solid fa-floppy-disk"></i> Сохранить изменения</button>`;
+    html += `</tbody></table>
+      <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> Добавить поле</button>
+      <button class="btn btn-success" onclick="saveFieldsSettings()" style="margin-top:12px;margin-left:10px;"><i class="fa-solid fa-floppy-disk"></i> Сохранить изменения</button>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
@@ -348,8 +348,8 @@ async function renderDepartmentsSettings(skipFetch = false) {
   try {
     if (!skipFetch) {
       _cachedDepartmentsFull = await apiRequest('/settings/departments-full');
-     _cachedDepartmentsFull.forEach(d => { d._originalName = d.name; });
-     }
+      _cachedDepartmentsFull.forEach(d => { d._originalName = d.name; });
+    }
 
     let html = `
       <h3>Управление отделами</h3>
@@ -358,7 +358,7 @@ async function renderDepartmentsSettings(skipFetch = false) {
       </p>
       <table class="field-settings-table">
         <thead><tr>
-          <th style="width:60px;">Активно</th>
+          <th style="width:110px; text-align:center;">Активно</th>
           <th>Название</th>
           <th style="width:100px;">Действия</th>
         </tr></thead><tbody>`;
@@ -511,37 +511,37 @@ async function renderFiltersSettings(skipFetch = false) {
       <table class="field-settings-table">
         <thead><tr>
           <th style="width:90px;">Порядок</th>
-          <th style="width:90px;">Активно</th>
+          <th style="width:110px; text-align:center;">Активно</th>
           <th>Название</th>
           <th style="width:130px;">Тип</th>
           <th style="width:140px;">Источник</th>
           <th style="width:60px;"></th>
         </tr></thead><tbody>`;
 
-       _cachedFilters.forEach((f, i) => {
-  html += `<tr>
-    <td>${UI.moveBtns(i, _cachedFilters.length, 'moveFilter')}</td>
-    <td style="text-align:center;">${UI.checkbox(`_cachedFilters[${i}].enabled=this.checked`, f.enabled)}</td>
-    <td><input type="text" value="${esc(f.label)}" 
-               oninput="_cachedFilters[${i}].label=this.value"></td>
-    <td><select onchange="_cachedFilters[${i}].type=this.value">
-        <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
-        <option value="select" ${f.type === 'select' ? 'selected' : ''}>Список</option>
-        <option value="date-period" ${f.type === 'date-period' ? 'selected' : ''}>Период дат</option>
-      </select>
-    </td>
-    <td>
-      <select onchange="_cachedFilters[${i}].optionsSource=this.value">
-        <option value="" ${!f.optionsSource ? 'selected' : ''}>—</option>
-        <option value="departments" ${f.optionsSource === 'departments' ? 'selected' : ''}>Отделы</option>
-        <option value="status_list" ${f.optionsSource === 'status_list' ? 'selected' : ''}>Статусы</option>
-        <option value="active_list" ${f.optionsSource === 'active_list' ? 'selected' : ''}>Активность</option>
-        <option value="equipment_type_list" ${f.optionsSource === 'equipment_type_list' ? 'selected' : ''}>Типы оборудования</option>
-      </select>
-    </td>
-    <td>${UI.iconBtn('trash', `deleteFilter(${i})`, 'Удалить фильтр', 'btn-danger')}</td>
-  </tr>`;
-});
+    _cachedFilters.forEach((f, i) => {
+      html += `<tr>
+        <td>${UI.moveBtns(i, _cachedFilters.length, 'moveFilter')}</td>
+        <td style="text-align:center;">${UI.checkbox(`_cachedFilters[${i}].enabled=this.checked`, f.enabled)}</td>
+        <td><input type="text" value="${esc(f.label)}" 
+                   oninput="_cachedFilters[${i}].label=this.value"></td>
+        <td><select onchange="_cachedFilters[${i}].type=this.value">
+            <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
+            <option value="select" ${f.type === 'select' ? 'selected' : ''}>Список</option>
+            <option value="date-period" ${f.type === 'date-period' ? 'selected' : ''}>Период дат</option>
+          </select>
+        </td>
+        <td>
+          <select onchange="_cachedFilters[${i}].optionsSource=this.value">
+            <option value="" ${!f.optionsSource ? 'selected' : ''}>—</option>
+            <option value="departments" ${f.optionsSource === 'departments' ? 'selected' : ''}>Отделы</option>
+            <option value="status_list" ${f.optionsSource === 'status_list' ? 'selected' : ''}>Статусы</option>
+            <option value="active_list" ${f.optionsSource === 'active_list' ? 'selected' : ''}>Активность</option>
+            <option value="equipment_type_list" ${f.optionsSource === 'equipment_type_list' ? 'selected' : ''}>Типы оборудования</option>
+          </select>
+        </td>
+        <td>${UI.iconBtn('trash', `deleteFilter(${i})`, 'Удалить фильтр', 'btn-danger')}</td>
+      </tr>`;
+    });
     
     html += `</tbody></table>
       <button class="btn btn-primary" onclick="addFilter()" style="margin-top:12px;">
@@ -555,7 +555,6 @@ async function renderFiltersSettings(skipFetch = false) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
 }
-
 function moveFilter(idx, dir) {
   const to = idx + dir;
   if (to < 0 || to >= _cachedFilters.length) return;
