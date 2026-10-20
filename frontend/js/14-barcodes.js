@@ -492,10 +492,26 @@ async function checkPrinterById(id) {
     } catch (e) {
       showToast(e.message, 'error');
     }
-  } else if (p.mode === 'zebra-agent') {
-    showToast('Проверка агента выполняется на компе пользователя', 'warn');
+    } else if (p.mode === 'zebra-agent') {
+    try {
+      const port = p.port || 9200;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`http://localhost:${port}/status`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        showToast(`Агент отвечает на порту ${port}`, 'success');
+      } else {
+        showToast(`Агент ответил ${res.status}`, 'warn');
+      }
+    } catch (e) {
+      showToast('Агент не отвечает. Проверьте, запущен ли он на этом компьютере.', 'error');
+    }
   } else {
-    showToast('Для этого режима проверка связи не требуется', 'warn');
+      showToast('Для этого режима проверка связи не требуется', 'warn');
   }
 }
 
