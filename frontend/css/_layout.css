@@ -1,7 +1,6 @@
 /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
 .main-content { display: none; }
 .main-content.visible { display: block; }
-}
 .auth-container.hidden { display: none; }
 
 /* ============================================================
