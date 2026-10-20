@@ -133,7 +133,11 @@ async function renderFieldsSettings(skipFetch = false) {
         <td style="text-align:center;">${UI.checkbox(`_cachedFields[${i}].required=this.checked`, f.required)}</td>
         <td style="text-align:center;">${UI.checkbox(`onFieldEnabledChange(${i}, this.checked)`, f.enabled)}</td>
         <td>${renderFieldOptionsCell(i, f.type)}</td>
-        <td>${UI.iconBtn('trash', `deleteFieldSetting(${i})`, 'Удалить поле', 'btn-danger')}</td>
+        <td style="text-align: center;">
+          <button class="row-actions-btn" onclick="openFieldActions(event, ${i})" title="Действия">
+             <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
+        </td>
       </tr>`;
     });
     html += `</tbody></table>
@@ -368,7 +372,11 @@ async function renderDepartmentsSettings(skipFetch = false) {
         <td style="text-align:center;">${UI.checkbox(`_cachedDepartmentsFull[${i}].enabled=this.checked`, d.enabled)}</td>
         <td><input type="text" value="${esc(d.name)}" 
                    oninput="onDepartmentNameChange(${i}, this.value)"></td>
-        <td>${UI.iconBtn('trash', `deleteDepartmentItem(${i})`, 'Удалить отдел', 'btn-danger')}</td>
+        <td style="text-align: center;">
+           <button class="row-actions-btn" onclick="openDeptActions(event, ${i})" title="Действия">
+             <i class="fa-solid fa-ellipsis-vertical"></i>
+           </button>
+        </td>
       </tr>`;
     });
     html += `</tbody></table>
@@ -539,7 +547,11 @@ async function renderFiltersSettings(skipFetch = false) {
             <option value="equipment_type_list" ${f.optionsSource === 'equipment_type_list' ? 'selected' : ''}>Типы оборудования</option>
           </select>
         </td>
-        <td>${UI.iconBtn('trash', `deleteFilter(${i})`, 'Удалить фильтр', 'btn-danger')}</td>
+        <td style="text-align: center;">
+         <button class="row-actions-btn" onclick="openFilterActions(event, ${i})" title="Действия">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
+       </td>
       </tr>`;
     });
     
@@ -829,7 +841,11 @@ function renderEquipmentTypesTable() {
         <option value="internal" ${(!t.calibrationPlace || t.calibrationPlace === 'internal') ? 'selected' : ''}>🏠 На месте</option>
       </select>
     </td>
-    <td>${UI.iconBtn('trash', `deleteEquipmentType(${i})`, 'Удалить тип', 'btn-danger')}</td>
+    <td style="text-align: center;">
+       <button class="row-actions-btn" onclick="openEquipTypeActions(event, ${i})" title="Действия">
+         <i class="fa-solid fa-ellipsis-vertical"></i>
+       </button>
+    </td>
   </tr>
 `).join('');
 
@@ -1148,3 +1164,38 @@ async function resetAllDataSetting() {
   }
 }
 
+// ============================================================
+// МЕНЮ ДЕЙСТВИЙ ДЛЯ НАСТРОЕК (три точки)
+// ============================================================
+
+function openFieldActions(ev, idx) {
+  ev.stopPropagation();
+  const items = [
+    { label: '<i class="fa-solid fa-trash"></i> Удалить поле', class: 'item-danger', action: () => deleteFieldSetting(idx) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
+}
+
+function openDeptActions(ev, idx) {
+  ev.stopPropagation();
+  const items = [
+    { label: '<i class="fa-solid fa-trash"></i> Удалить отдел', class: 'item-danger', action: () => deleteDepartmentItem(idx) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
+}
+
+function openFilterActions(ev, idx) {
+  ev.stopPropagation();
+  const items = [
+    { label: '<i class="fa-solid fa-trash"></i> Удалить фильтр', class: 'item-danger', action: () => deleteFilter(idx) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
+}
+
+function openEquipTypeActions(ev, idx) {
+  ev.stopPropagation();
+  const items = [
+    { label: '<i class="fa-solid fa-trash"></i> Удалить тип', class: 'item-danger', action: () => deleteEquipmentType(idx) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
+}
