@@ -486,7 +486,6 @@ function updateBulkToolbar() {
 
     const showTip = () => {
       clearTimeout(hideTimer);
-
       if (!tip.innerHTML.trim()) return;
 
       const rect = card.getBoundingClientRect();
@@ -518,16 +517,10 @@ function updateBulkToolbar() {
       }, 80);
     };
 
-    // mouseover/mouseout всплывают, поэтому работают и при наведении на дочерние элементы
-    card.addEventListener('mouseover', (e) => {
-      if (card.contains(e.relatedTarget)) return;
-      showTip();
-    });
-
-    card.addEventListener('mouseout', (e) => {
-      if (card.contains(e.relatedTarget)) return;
-      hideTip();
-    });
+    // mouseenter не всплывает — сработает ТОЛЬКО при входе на сам card,
+    // а не на дочерние элементы. Значит, relatedTarget не нужен.
+    card.addEventListener('mouseenter', showTip);
+    card.addEventListener('mouseleave', hideTip);
 
     window.addEventListener('scroll', hideTip, { passive: true });
   }
