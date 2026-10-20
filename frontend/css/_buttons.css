@@ -182,9 +182,9 @@
 /* Статус-бейджи — цвет статуса */
 .status-badge i { color: inherit !important; }
 
-/* Права пользователя — приглушённые */
+/* Права пользователя — черные (в тёмной теме — светлые) */
 .usr-perm-cb + span i,
-.help-perm-item i { color: var(--icon-muted) !important; opacity: 0.85; }
+.help-perm-item i { color: var(--icon-default) !important; opacity: 1; }
 
 /* Нейтральные иконки */
 .modal h2 i,
