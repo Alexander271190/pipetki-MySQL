@@ -8,12 +8,13 @@ body {
   font-family: 'Segoe UI', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  overflow-x: clip; 
-  min-height: 100vh; 
+  overflow-x: auto;
+  overflow-y: auto; 
+  min-height: 100vh;
 }
 
 html {
-  overflow-x: clip;
+  overflow-x: auto; 
   min-height: 100vh;
   background: var(--bg);
 }
