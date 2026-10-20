@@ -260,9 +260,10 @@ async function renderHelpSettings() {
       <td>${esc(s.title)}</td>
       <td style="text-align:center;">${permsText}</td>
       <td style="text-align:center;">${s.enabled ? '✅' : '❌'}</td>
-        <td class="help-admin-actions">
-        ${UI.iconBtn('edit',  `openHelpEditor('edit', '${esc(s.slug)}')`, 'Изменить', 'btn-primary')}
-        ${UI.iconBtn('trash', `deleteHelpSection('${esc(s.slug)}')`, 'Удалить', 'btn-danger')}
+      <td class="help-admin-actions" style="text-align: center; padding: 5px;">
+        <button class="row-actions-btn" onclick="openHelpActions(event, '${esc(s.slug)}')" title="Действия">
+          <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
       </td>
     </tr>`;
   });
@@ -581,10 +582,10 @@ async function renderViewTemplatesSettings() {
         <td><strong>${esc(t.name)}</strong></td>
         <td>${t.visibleFields.length}</td>
         <td>${t.isDefault ? '✅' : '—'}</td>
-        <td class="help-admin-actions">
-          ${UI.iconBtn('edit',  `openViewTemplateEditor(${t.id})`, 'Изменить', 'btn-primary')}
-          ${UI.iconBtn('users', `openApplyTemplateModal(${t.id})`, 'Назначить', 'btn-secondary')}
-          ${UI.iconBtn('trash', `deleteViewTemplate(${t.id})`,    'Удалить',  'btn-danger')}
+        <td class="help-admin-actions" style="text-align: center; padding: 5px;">
+          <button class="row-actions-btn" onclick="openViewTemplateActions(event, ${t.id})" title="Действия">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
         </td>
       </tr>`;
     });
@@ -797,4 +798,28 @@ function printHelpSection() {
     </html>
   `);
   printWindow.document.close();
+}
+
+// ============================================================
+// МЕНЮ ДЕЙСТВИЙ (три точки)
+// ============================================================
+
+function openHelpActions(ev, slug) {
+  ev.stopPropagation();
+  const items = [
+    { label: '<i class="fa-solid fa-pen"></i> Изменить', action: () => openHelpEditor('edit', slug) },
+    { label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: () => deleteHelpSection(slug) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
+}
+
+function openViewTemplateActions(ev, id) {
+  ev.stopPropagation();
+  const items = [
+    { label: '<i class="fa-solid fa-pen"></i> Изменить', action: () => openViewTemplateEditor(id) },
+    { label: '<i class="fa-solid fa-users"></i> Назначить', action: () => openApplyTemplateModal(id) },
+    { divider: true },
+    { label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: () => deleteViewTemplate(id) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
 }
