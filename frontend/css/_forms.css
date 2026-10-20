@@ -2,8 +2,8 @@
    ФОРМЫ
    ============================================================ */
 .form-group { margin-bottom: 14px; }
-.form-group label { display: block; margin-bottom: 6px; font-size: .85rem; font-weight: 600; color: #475569; }
-.form-group input,
+.form-group > label { display: block; margin-bottom: 6px; font-size: .85rem; font-weight: 600; color: var(--text-strong); }
+.form-group input:not([type="checkbox"]):not([type="radio"]),
 .form-group select,
 .form-group textarea {
   width: 100%; padding: 9px 12px;
@@ -11,7 +11,7 @@
   font-size: .9rem; outline: none; transition: border .2s;
   font-family: inherit;
 }
-.form-group input:focus,
+.form-group input:not([type="checkbox"]):not([type="radio"]):focus,
 .form-group select:focus,
 .form-group textarea:focus {
   border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15);
@@ -26,8 +26,8 @@
 }
 @media (max-width: 375px) {
   .form-group { margin-bottom: 10px; }
-  .form-group label { font-size: .8rem; margin-bottom: 4px; }
-  .form-group input,
+  .form-group > label { font-size: .8rem; margin-bottom: 4px; }
+  .form-group input:not([type="checkbox"]):not([type="radio"]),
   .form-group select,
   .form-group textarea { padding: 8px 10px; font-size: .85rem; }
   .form-actions { gap: 6px; }
@@ -178,10 +178,9 @@
 
 .filter-panel .filter-row .form-group { min-width: 0; margin-bottom: 0; }
 
-.filter-panel .form-group label { font-size: .75rem; margin-bottom: 3px; font-weight: 600; color: #475569; }
-.filter-panel .form-group input,
+.filter-panel .form-group > label { font-size: .75rem; margin-bottom: 3px; font-weight: 600; color: #475569; }
+.filter-panel .form-group input:not([type="checkbox"]):not([type="radio"]),
 .filter-panel .form-group select { padding: 6px 9px; font-size: .82rem; border-radius: 6px; }
-
 .filter-panel .filter-row[id$="-custom"] {
   display: none;
   grid-column: 1 / -1;
@@ -211,7 +210,7 @@
   }
   .filter-panel #filter-fields-container { grid-template-columns: 1fr; }
   .filter-panel .filter-row[id$="-custom"] { grid-template-columns: 1fr; }
-  .filter-panel .form-group input,
+  .filter-panel .form-group input:not([type="checkbox"]):not([type="radio"]),
   .filter-panel .form-group select { font-size: .8rem; }
 }
 
