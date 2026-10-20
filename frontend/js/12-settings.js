@@ -116,7 +116,7 @@ async function renderFieldsSettings(skipFetch = false) {
       <p style="color:#64748b;margin-bottom:12px;">Включите/отключите поля, измените порядок, сделайте обязательными.</p>
       <table class="field-settings-table">
         <thead><tr>
-          <th style="width:60px;">Порядок</th>
+          <th style="width:90px;">Порядок</th>
           <th>Название</th>
           <th style="width:120px;">Тип</th>
           <th style="width:80px;">Обяз.</th>
@@ -510,8 +510,8 @@ async function renderFiltersSettings(skipFetch = false) {
       </p>
       <table class="field-settings-table">
         <thead><tr>
-          <th style="width:60px;">Порядок</th>
-          <th style="width:60px;">Активно</th>
+          <th style="width:90px;">Порядок</th>
+          <th style="width:90px;">Активно</th>
           <th>Название</th>
           <th style="width:130px;">Тип</th>
           <th style="width:140px;">Источник</th>
@@ -758,7 +758,7 @@ async function renderEquipmentSettings() {
       <table class="field-settings-table" id="equip-types-table">
         <thead>
           <tr>
-            <th style="width:60px;">Порядок</th>
+            <th style="width:90px;">Порядок</th>
             <th style="width:140px;">value</th>
             <th>label</th>
             <th style="width:80px;">prefix</th>
