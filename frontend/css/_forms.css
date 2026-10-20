@@ -92,7 +92,8 @@
 #settings-section-content .field-settings-table td.actions .btn { padding: 5px 8px; font-size: .78rem; min-width: 32px; margin: 0 1px; }
 #settings-section-content .field-settings-table td.perm-cell { text-align: center; white-space: nowrap; width: 1%; }
 #settings-section-content .field-settings-table td { word-break: break-word; overflow-wrap: anywhere; }
-#settings-section-content .field-settings-table { min-width: 0; }
+#settings-section-content .field-settings-table,
+#settings-section-content .bc-printers-table { min-width: 0; }
 
 @media (max-width: 900px) {
   #settings-section-content { overflow-x: auto; }
