@@ -543,6 +543,8 @@ async function saveBulkReturn(e) {
 
     if (calFilter && date) {
       showToast(`Таблица отфильтрована по дате ${date}. Сбросьте фильтр, чтобы увидеть всё.`, 'warn');
+    } else if (date) {
+      showToast(`Возврат оформлен на ${date}. Если не видите приборы — проверьте фильтры.`, 'success');
     }
 
     applyFilterStateToPanel();
