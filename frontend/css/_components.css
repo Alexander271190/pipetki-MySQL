@@ -599,10 +599,8 @@ body.can-manage .senior-only { display: inline-flex; }
 }
 
 .stat-tooltip {
-  position: absolute;
-  top: 100%; /* появляется под карточкой */
-  right: 0;
-  margin-top: 12px;
+  position: fixed;
+  z-index: 10000;
   background: var(--card);
   border: 1px solid var(--border-hard);
   border-radius: 10px;
@@ -612,25 +610,20 @@ body.can-manage .senior-only { display: inline-flex; }
   max-width: 320px;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-5px); /* лёгкое появление сверху вниз */
+  transform: translateY(-5px);
   transition: all 0.2s ease;
-  z-index: 100;
   text-align: left;
   color: var(--text-strong);
   font-size: 0.85rem;
   line-height: 1.5;
+  pointer-events: none; /* чтобы не мешал кликам */
 }
 
-#stat-total-card:hover .stat-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
+/* Стрелочка (сверху, указывает на карточку) */
 .stat-tooltip::after {
   content: '';
   position: absolute;
-  bottom: 100%; /* стрелочка сверху, указывает на карточку */
+  bottom: 100%;
   right: 20px;
   border: 6px solid transparent;
   border-bottom-color: var(--border-hard);
