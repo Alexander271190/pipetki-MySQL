@@ -423,3 +423,22 @@ td small { display: block; font-size: .7rem; color: #6b7280; line-height: 1.25; 
   .pagination-btn { padding: 6px 14px; font-size: .82rem; }
   .pagination-info { font-size: .8rem; }
 }
+
+/* ============================================================
+   ЖЕСТКИЙ ФИКС ДЛЯ ГЛАВНОЙ ТАБЛИЦЫ (чтобы строки не сплющивало)
+   ============================================================ */
+#pipettes-table tbody tr {
+  height: auto !important;
+  min-height: 40px;
+}
+
+#pipettes-table tbody td {
+  height: auto !important;
+  min-height: 40px;
+  line-height: 1.35 !important;
+  padding: 7px 10px !important;
+}
+
+#pipettes-table tbody td * {
+  line-height: inherit !important;
+}
