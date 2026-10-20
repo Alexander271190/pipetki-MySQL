@@ -1,7 +1,7 @@
 /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
 .main-content { display: none; }
 .main-content.visible { display: block; }
-.auth-container.hidden { display: none; }
+.auth-container.hidden { display: none !important; }
 
 /* ============================================================
    ШАПКА
