@@ -57,7 +57,7 @@ router.get('/paged', authenticate, async (req, res) => {
     const finalWhere = whereSql + statusFilterSql;
     const finalParams = [...allParams, ...statusFilterParams];
 
-        const [counterRows] = await db.query(
+    const [counterRows] = await db.query(
       `SELECT
          COUNT(*) AS total,
          SUM(CASE WHEN (${statusExpr}) = 'ok' THEN 1 ELSE 0 END) AS ok,
@@ -65,8 +65,9 @@ router.get('/paged', authenticate, async (req, res) => {
          SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger,
          SUM(CASE WHEN sent_for_calibration IS NOT NULL THEN 1 ELSE 0 END) AS sent,
          SUM(CASE WHEN last_result = 'wip' THEN 1 ELSE 0 END) AS wip,
+         SUM(CASE WHEN last_result = 'fail' THEN 1 ELSE 0 END) AS fail,
          SUM(CASE WHEN (last_calibration IS NULL OR \`interval\` IS NULL) AND sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 1 THEN 1 ELSE 0 END) AS unknown_date,
-         SUM(CASE WHEN active = 0 AND sent_for_calibration IS NULL THEN 1 ELSE 0 END) AS inactive
+         SUM(CASE WHEN active = 0 AND sent_for_calibration IS NULL AND last_result != 'fail' THEN 1 ELSE 0 END) AS inactive
        FROM pipettes${whereSql}`,
       allParams
     );
@@ -78,6 +79,7 @@ router.get('/paged', authenticate, async (req, res) => {
       danger: Number(counterRows[0].danger) || 0,
       sent: Number(counterRows[0].sent) || 0,
       wip: Number(counterRows[0].wip) || 0,
+      fail: Number(counterRows[0].fail) || 0,
       unknownDate: Number(counterRows[0].unknown_date) || 0,
       inactive: Number(counterRows[0].inactive) || 0,
     };
@@ -200,7 +202,7 @@ router.get('/stats', authenticate, async (req, res) => {
         
     const whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : '';
 
-     const [counterRows] = await db.query(
+    const [counterRows] = await db.query(
       `SELECT
          COUNT(*) AS total,
          SUM(CASE WHEN (${statusExpr}) = 'ok' THEN 1 ELSE 0 END) AS ok,
@@ -208,8 +210,9 @@ router.get('/stats', authenticate, async (req, res) => {
          SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger,
          SUM(CASE WHEN sent_for_calibration IS NOT NULL THEN 1 ELSE 0 END) AS sent,
          SUM(CASE WHEN last_result = 'wip' THEN 1 ELSE 0 END) AS wip,
+         SUM(CASE WHEN last_result = 'fail' THEN 1 ELSE 0 END) AS fail,
          SUM(CASE WHEN (last_calibration IS NULL OR \`interval\` IS NULL) AND sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 1 THEN 1 ELSE 0 END) AS unknown_date,
-         SUM(CASE WHEN active = 0 AND sent_for_calibration IS NULL THEN 1 ELSE 0 END) AS inactive
+         SUM(CASE WHEN active = 0 AND sent_for_calibration IS NULL AND last_result != 'fail' THEN 1 ELSE 0 END) AS inactive
        FROM pipettes${whereSql}`,
       baseParams
     );
@@ -221,6 +224,7 @@ router.get('/stats', authenticate, async (req, res) => {
       danger: Number(counterRows[0].danger) || 0,
       sent: Number(counterRows[0].sent) || 0,
       wip: Number(counterRows[0].wip) || 0,
+      fail: Number(counterRows[0].fail) || 0,
       unknownDate: Number(counterRows[0].unknown_date) || 0,
       inactive: Number(counterRows[0].inactive) || 0,
     };
