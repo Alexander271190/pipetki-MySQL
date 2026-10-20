@@ -301,54 +301,20 @@ function fitTableWrapperHeight() {
   if (!wrapper) return;
 
   const wrapperTop = wrapper.getBoundingClientRect().top;
-
   const pagination = document.getElementById('pagination');
-  let bottomGap = 0;
+
+  // Отступ снизу для контейнера (чтобы не прилипало к краю экрана)
+  let bottomGap = 24; 
+
+  // Добавляем высоту пагинации, если она видима
   if (pagination && pagination.style.display !== 'none') {
-    bottomGap += pagination.offsetHeight + 16;
+    bottomGap += pagination.offsetHeight + 16; 
   }
 
+  // Вычисляем свободное место и ставим таблице эту высоту (минимум 200px)
   let available = window.innerHeight - wrapperTop - bottomGap;
-  let h = Math.max(200, Math.floor(available));
-  wrapper.style.height = h + 'px';
-
-  const gap = Math.round(window.innerHeight - wrapper.getBoundingClientRect().bottom);
-  if (gap > 0) {
-    wrapper.style.height = (h + gap) + 'px';
-  }
+  wrapper.style.height = Math.max(200, Math.floor(available)) + 'px';
 }
-
-let _resizeTimer = null;
-window.addEventListener('resize', () => {
-  clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(fitTableWrapperHeight, 100);
-});
-window.addEventListener('load', () => {
-  setTimeout(fitTableWrapperHeight, 100);
-  setTimeout(fitTableWrapperHeight, 400);
-});
-
-let _roScheduled = false;
-if (window.ResizeObserver) {
-  const _ro = new ResizeObserver(() => {
-    if (_roScheduled) return;
-    _roScheduled = true;
-    requestAnimationFrame(() => {
-      _roScheduled = false;
-      fitTableWrapperHeight();
-    });
-  });
-  _ro.observe(document.documentElement);
-}
-
-const _origToggleHeader = window.toggleHeaderCollapse;
-if (typeof _origToggleHeader === 'function') {
-  window.toggleHeaderCollapse = function() {
-    _origToggleHeader.apply(this, arguments);
-    setTimeout(fitTableWrapperHeight, 100);
-  };
-}
-
 
 function updateSortArrows() {
   document.querySelectorAll('th .sort-arrow').forEach(el => {
