@@ -131,7 +131,7 @@ async function renderFieldsSettings(skipFetch = false) {
     <td><input type="text" value="${esc(f.label)}" oninput="_cachedFields[${i}].label=this.value"></td>
         <td>${renderFieldTypeSelect(i, f)}</td>
         <td style="text-align:center;">${UI.checkbox(`_cachedFields[${i}].required=this.checked`, f.required)}</td>
-        <td style="text-align:center;">${UI.checkbox(`_cachedFields[${i}].enabled=this.checked`, f.enabled)}</td>
+        <td style="text-align:center;">${UI.checkbox(`onFieldEnabledChange(${i}, this.checked)`, f.enabled)}</td>
        <td>${renderFieldOptionsCell(i, f.type)}</td>
         <td>${UI.iconBtn('trash', `deleteFieldSetting(${i})`, 'Удалить поле', 'btn-danger')}</td>
       </tr>`;
@@ -143,6 +143,24 @@ async function renderFieldsSettings(skipFetch = false) {
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
+}
+
+async function onFieldEnabledChange(idx, checked) {
+  const f = _cachedFields[idx];
+  if (!checked && f.required) {
+    const ok = await showConfirm(
+      `Поле «${f.label}» обязательно. Если скрыть его, при создании оборудования будет подставляться значение «Не указана» (или значение по умолчанию). Продолжить?`,
+      { icon: '⚠️', title: 'Скрытие обязательного поля', okText: 'Скрыть', okClass: 'btn-warning' }
+    );
+    if (!ok) {
+      // Откатить чекбокс
+      const cb = document.querySelectorAll('.field-settings-table tbody tr')[idx]
+        ?.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = false;
+      return;
+    }
+  }
+  _cachedFields[idx].enabled = checked;
 }
 
 function renderFieldOptionsCell(idx, type) {
