@@ -68,8 +68,7 @@
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   overflow: hidden;
-  text-align: center;
-}
+ }
 
 .field-settings-table input[type="text"],
 .field-settings-table input[type="number"],
@@ -354,6 +353,7 @@ td {
   font-size: .82rem;
   line-height: 1.35;
   vertical-align: middle;
+  text-align: center;
   color: #1f2937;
   border: 1px solid var(--border-soft);
   background: var(--card);
