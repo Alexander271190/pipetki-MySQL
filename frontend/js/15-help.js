@@ -44,6 +44,12 @@ function switchDocsSection(slug) {
   renderDocsContent();
   const c = document.getElementById('docs-content');
   if (c) c.scrollTop = 0;
+  // 🆕 Прокрутить модалку к началу
+  const modal = document.getElementById('hotkeys-modal');
+  if (modal) {
+    const modalBody = modal.querySelector('.modal');
+    if (modalBody) modalBody.scrollTop = 0;
+  }
 }
 
 function renderDocsSidebar() {
