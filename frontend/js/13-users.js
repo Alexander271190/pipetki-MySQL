@@ -6,7 +6,7 @@
 async function renderUsersSettings() {
   const c = document.getElementById('settings-section-content');
   try {
-    const users = await apiRequest('/users');
+    const users = await getCachedUsers(true);
     
     let html = '<h3>Управление пользователями</h3>';
     html += `<table class="field-settings-table users-table-fix" style="margin-bottom:20px;">
