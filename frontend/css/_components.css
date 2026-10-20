@@ -431,6 +431,7 @@ body.compact-mode .row-checkbox { width: 14px !important; height: 14px !importan
 .help-perms-items { display: flex; flex-direction: column; gap: 4px; }
 .help-perm-item { 
   display: flex; 
+  align-items: center;
   align-items: flex-start; 
   gap: 6px; 
   font-size: .82rem; 
