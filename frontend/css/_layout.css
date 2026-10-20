@@ -20,13 +20,14 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  width: 100%;            
-  box-sizing: border-box;
+  width: 100vw;            
+  box-sizing: border-box;  
   overflow: visible; 
-  position: sticky; /* Прилипает при скролле вниз */
+  position: sticky; 
   top: 0;           
-  z-index: 50; 
-  flex-shrink: 0; /* Не сжимается */
+  left: 0;                 
+  z-index: 50;
+  flex-shrink: 0; 
 }
 
 .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
@@ -67,8 +68,11 @@
   gap: 10px; 
   font-size: .9rem; 
   color: #92400e; 
-  position: sticky; /* Прилипает под шапкой */
+  position: sticky; 
   top: var(--header-height, 60px);
+  left: 0;                 
+  width: 100vw;           
+  box-sizing: border-box;  
   z-index: 45; 
   flex-shrink: 0;
 }
@@ -89,8 +93,11 @@
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0,0,0,.06);
   margin-bottom: 18px;
-  position: sticky; /* Прилипает под баннером */
+  position: sticky; 
   top: calc(var(--header-height, 60px) + var(--banner-height, 0px)); 
+  left: 0;               
+  width: 100vw;      
+  box-sizing: border-box;  
   z-index: 40; 
   flex-shrink: 0;
 }
