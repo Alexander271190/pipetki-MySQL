@@ -154,9 +154,12 @@ async function onFieldEnabledChange(idx, checked) {
     );
     if (!ok) {
       // Откатить чекбокс
-      const cb = document.querySelectorAll('.field-settings-table tbody tr')[idx]
-        ?.querySelector('input[type="checkbox"]');
-      if (cb) cb.checked = false;
+       const row = document.querySelectorAll('.field-settings-table tbody tr')[idx];
+      if (row) {
+        // В строке два чекбокса: [0] — «Обяз.», [1] — «Активно»
+        const cbs = row.querySelectorAll('input[type="checkbox"]');
+        if (cbs[1]) cbs[1].checked = true;
+      }
       return;
     }
   }
