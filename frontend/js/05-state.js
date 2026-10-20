@@ -3,6 +3,7 @@
 // ============================================================
 // СОСТОЯНИЕ
 // ============================================================
+let _loadPipettePromise = null;
 let pipettes = [];          
 let settings = { warnDays: 30 };
 let sortField = 'nextCalibration';
@@ -33,112 +34,121 @@ let statsState = {
 // ============================================================
 async function loadPipetteData() {
   if (!isAuthenticated()) return;
-  try {
-    // ── 1) prefs (нужны до синхронизации с fields) ──
-    if (!myPrefs._loaded) {
-      try {
-        myPrefs = await apiRequest('/settings/my-preferences/effective') || {};
-        myPrefs._loaded = true;
-      } catch (e) {
+
+  // 🆕 Если уже идёт загрузка — возвращаем тот же Promise
+  if (_loadPipettePromise) return _loadPipettePromise;
+
+  _loadPipettePromise = (async () => {
+    try {
+      // ── 1) prefs (нужны до синхронизации с fields) ──
+      if (!myPrefs._loaded) {
         try {
-          myPrefs = await apiRequest('/settings/my-preferences') || {};
+          myPrefs = await apiRequest('/settings/my-preferences/effective') || {};
           myPrefs._loaded = true;
-        } catch (e2) {
-          myPrefs = { _loaded: true };
-        }
-      }
-    }
-
-    // ── 2) Параллельно: settings, types, export, fields, responsibles, departments ──
-    const needsResponsibles =
-      currentUser.role === 'admin' ||
-      isSeniorLab() ||
-      canTransferPipette() ||
-      canBulkChangeResponsible();
-
-    const [
-      settingsData,
-      typesResult,
-      exportResult,
-      fieldsResult,
-      responsiblesResult,
-      departmentsResult,
-    ] = await Promise.all([
-      apiRequest('/settings/system').catch(() => null),
-      apiRequest('/settings/equipment-types').catch(() => null),
-      apiRequest('/settings/export').catch(() => null),
-      apiRequest('/settings/fields').catch(() => []),
-      needsResponsibles
-        ? apiRequest('/users/responsibles').catch((e) => {
-            console.warn('Не удалось загрузить список ответственных:', e.message);
-            return [];
-          })
-        : Promise.resolve([]),
-      apiRequest('/settings/departments').catch(() => []),
-    ]);
-
-    settings = { warnDays: parseInt(settingsData?.warn_days) || 30 };
-
-    if (Array.isArray(typesResult) && typesResult.length > 0) {
-      _equipmentTypes = typesResult;
-    } else {
-      _equipmentTypes = [
-        { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
-        { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
-        { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
-        { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
-        { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
-        { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 },
-      ];
-    }
-
-    exportFields = exportResult;
-    _cachedFields = Array.isArray(fieldsResult) ? fieldsResult : [];
-    _responsibles = Array.isArray(responsiblesResult) ? responsiblesResult : [];
-    departmentsList = Array.isArray(departmentsResult) ? departmentsResult : [];
-
-    // ── 3) Синхронизация visibleFields с активными полями field_config ──
-    if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
-      const activeFieldIds = _cachedFields
-        .filter(f => f.enabled)
-        .map(f => f.id);
-
-      const VIRTUAL_IDS = ['status', 'nextCalibration'];
-      const hasUserSettings =
-        Array.isArray(myPrefs.visibleFields) &&
-        myPrefs.visibleFields.length > 0;
-
-      if (!hasUserSettings) {
-        myPrefs.visibleFields = [...activeFieldIds, ...VIRTUAL_IDS];
-      } else {
-        const allowedSet = new Set([...activeFieldIds, ...VIRTUAL_IDS]);
-        const visibleSet = new Set(myPrefs.visibleFields);
-
-        if (!myPrefs._virtualsInitialized) {
-          for (const vid of VIRTUAL_IDS) {
-            if (!visibleSet.has(vid)) visibleSet.add(vid);
+        } catch (e) {
+          try {
+            myPrefs = await apiRequest('/settings/my-preferences') || {};
+            myPrefs._loaded = true;
+          } catch (e2) {
+            myPrefs = { _loaded: true };
           }
         }
-
-        myPrefs.visibleFields = [...visibleSet].filter(id => allowedSet.has(id));
       }
+
+      // ── 2) Параллельно: settings, types, export, fields, responsibles, departments ──
+      const needsResponsibles =
+        currentUser.role === 'admin' ||
+        isSeniorLab() ||
+        canTransferPipette() ||
+        canBulkChangeResponsible();
+
+      const [
+        settingsData,
+        typesResult,
+        exportResult,
+        fieldsResult,
+        responsiblesResult,
+        departmentsResult,
+      ] = await Promise.all([
+        apiRequest('/settings/system').catch(() => null),
+        apiRequest('/settings/equipment-types').catch(() => null),
+        apiRequest('/settings/export').catch(() => null),
+        apiRequest('/settings/fields').catch(() => []),
+        needsResponsibles
+          ? apiRequest('/users/responsibles').catch((e) => {
+              console.warn('Не удалось загрузить список ответственных:', e.message);
+              return [];
+            })
+          : Promise.resolve([]),
+        apiRequest('/settings/departments').catch(() => []),
+      ]);
+
+      settings = { warnDays: parseInt(settingsData?.warn_days) || 30 };
+
+      if (Array.isArray(typesResult) && typesResult.length > 0) {
+        _equipmentTypes = typesResult;
+      } else {
+        _equipmentTypes = [
+          { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
+          { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
+          { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
+          { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
+          { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
+          { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 },
+        ];
+      }
+
+      exportFields = exportResult;
+      _cachedFields = Array.isArray(fieldsResult) ? fieldsResult : [];
+      _responsibles = Array.isArray(responsiblesResult) ? responsiblesResult : [];
+      departmentsList = Array.isArray(departmentsResult) ? departmentsResult : [];
+
+      // ── 3) Синхронизация visibleFields с активными полями field_config ──
+      if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
+        const activeFieldIds = _cachedFields
+          .filter(f => f.enabled)
+          .map(f => f.id);
+
+        const VIRTUAL_IDS = ['status', 'nextCalibration'];
+        const hasUserSettings =
+          Array.isArray(myPrefs.visibleFields) &&
+          myPrefs.visibleFields.length > 0;
+
+        if (!hasUserSettings) {
+          myPrefs.visibleFields = [...activeFieldIds, ...VIRTUAL_IDS];
+        } else {
+          const allowedSet = new Set([...activeFieldIds, ...VIRTUAL_IDS]);
+          const visibleSet = new Set(myPrefs.visibleFields);
+
+          if (!myPrefs._virtualsInitialized) {
+            for (const vid of VIRTUAL_IDS) {
+              if (!visibleSet.has(vid)) visibleSet.add(vid);
+            }
+          }
+
+          myPrefs.visibleFields = [...visibleSet].filter(id => allowedSet.has(id));
+        }
+      }
+
+      // ── 4) filters (зависит от departments и types) ──
+      await loadFilterConfig();
+
+      // ── 5) Параллельно: paged + stats ──
+      await Promise.all([loadPaged(), loadStats()]);
+
+      render();
+      checkReminder();
+    } catch (error) {
+      console.error('Error loading data:', error);
+      if (error.message === 'Неавторизован') return;
+      showToast('Ошибка загрузки данных', 'error');
+    } finally {
+      _loadPipettePromise = null;
     }
+  })();
 
-    // ── 4) filters (зависит от departments и types) ──
-    await loadFilterConfig();
-
-    // ── 5) Параллельно: paged + stats ──
-    await Promise.all([loadPaged(), loadStats()]);
-
-    render();
-    checkReminder();
-  } catch (error) {
-    console.error('Error loading data:', error);
-    if (error.message === 'Неавторизован') return;
-    showToast('Ошибка загрузки данных', 'error');
-  }
+  return _loadPipettePromise;
 }
-
 // ============================================================
 // 🆕 СЕРВЕРНАЯ ПАГИНАЦИЯ — загрузка одной страницы
 // ============================================================
