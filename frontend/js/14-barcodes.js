@@ -425,10 +425,10 @@ async function renderBarcodePrintersList() {
           </td>
           <td style="text-align:center;">${UI.checkbox(`updateBarcodePrinterField(${p.id}, 'enabled', this.checked)`, p.enabled, 'bc-chk')}</td>
           <td style="text-align:center;">${UI.checkbox(`updateBarcodePrinterField(${p.id}, 'isDefault', this.checked)`, p.isDefault, 'bc-chk')}</td>
-          <td class="bc-printer-actions">
-            ${UI.iconBtn('plug',        `checkPrinterById(${p.id})`,   'Проверить связь', 'btn-info')}
-            ${UI.iconBtn('save',        `saveBarcodePrinter(${p.id})`, 'Сохранить',       'btn-success')}
-            ${UI.iconBtn('trash',       `deleteBarcodePrinter(${p.id})`, 'Удалить',      'btn-danger')}
+          <td class="bc-printer-actions" style="text-align: center; padding: 5px;">
+            <button class="row-actions-btn" onclick="openPrinterActions(event, ${p.id})" title="Действия">
+              <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
           </td>
         </tr>`;
     }
@@ -437,6 +437,20 @@ async function renderBarcodePrintersList() {
   } catch (e) {
     container.innerHTML = `<div style="color:${COLORS.danger};padding:10px;">Ошибка: ${esc(e.message)}</div>`;
   }
+}
+
+function openPrinterActions(ev, id) {
+  ev.stopPropagation();
+  const p = _cachedBarcodePrinters.find(x => x.id === id);
+  if (!p) return;
+
+  const items = [
+    { label: '<i class="fa-solid fa-plug"></i> Проверить связь', action: () => checkPrinterById(id) },
+    { label: '<i class="fa-solid fa-floppy-disk"></i> Сохранить', action: () => saveBarcodePrinter(id) },
+    { divider: true },
+    { label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: () => deleteBarcodePrinter(id) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
 }
 
 function updateBarcodePrinterField(id, field, value) {
