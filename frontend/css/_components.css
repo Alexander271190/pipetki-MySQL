@@ -600,9 +600,9 @@ body.can-manage .senior-only { display: inline-flex; }
 
 .stat-tooltip {
   position: absolute;
-  bottom: 100%;
+  top: 100%; /* появляется под карточкой */
   right: 0;
-  margin-bottom: 12px;
+  margin-top: 12px;
   background: var(--card);
   border: 1px solid var(--border-hard);
   border-radius: 10px;
@@ -612,7 +612,7 @@ body.can-manage .senior-only { display: inline-flex; }
   max-width: 320px;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(5px);
+  transform: translateY(-5px); /* лёгкое появление сверху вниз */
   transition: all 0.2s ease;
   z-index: 100;
   text-align: left;
@@ -630,29 +630,8 @@ body.can-manage .senior-only { display: inline-flex; }
 .stat-tooltip::after {
   content: '';
   position: absolute;
-  top: 100%;
+  bottom: 100%; /* стрелочка сверху, указывает на карточку */
   right: 20px;
   border: 6px solid transparent;
-  border-top-color: var(--border-hard);
+  border-bottom-color: var(--border-hard);
 }
-
-.stat-tooltip .tooltip-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-.stat-tooltip .tooltip-row:last-child { margin-bottom: 0; }
-.stat-tooltip .tooltip-total {
-  font-weight: 700;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 6px;
-  margin-bottom: 8px;
-}
-.stat-tooltip .tooltip-outside {
-  color: var(--warn);
-  font-size: 0.8rem;
-  margin-top: 8px;
-  border-top: 1px dashed var(--border);
-  padding-top: 6px;
-}
-
