@@ -21,11 +21,7 @@ function render() {
   updateSortArrows();
   updateSelectAllCheckbox();
   updateBulkCalButton();
-  fitTableWrapperHeight();
-  requestAnimationFrame(() => {
-    requestAnimationFrame(fitTableWrapperHeight);
-  });
-}
+ }
 
 // ============================================================
 // ПАГИНАЦИЯ
@@ -296,33 +292,7 @@ function renderTableBody(items, columns, hasAnyRowAction) {
 // ============================================================
 // ДИНАМИЧЕСКАЯ ВЫСОТА ОБЁРТКИ ТАБЛИЦЫ
 // ============================================================
-function fitTableWrapperHeight() {
-  const wrapper = document.querySelector('.table-wrapper');
-  if (!wrapper) return;
-
-  const wrapperTop = wrapper.getBoundingClientRect().top;
-  const pagination = document.getElementById('pagination');
-  
-  // Базовый отступ снизу (в CSS у контейнера мы задали padding-bottom: 24px)
-  let bottomGap = 24; 
-
-  // Если пагинация видима, добавляем её высоту и небольшой отступ
-  if (pagination && pagination.style.display !== 'none') {
-    bottomGap += pagination.offsetHeight + 16; 
-  }
-
-  // Вычисляем свободное место и ставим таблице эту высоту (минимум 200px)
-  let available = window.innerHeight - wrapperTop - bottomGap;
-  wrapper.style.height = Math.max(200, Math.floor(available)) + 'px';
-}
-
-function updateSortArrows() {
-  document.querySelectorAll('th .sort-arrow').forEach(el => {
-    const f = el.dataset.field;
-    if (f === sortField) el.textContent = sortDir > 0 ? '▲' : '▼';
-    else el.textContent = '';
-  });
-}
+function fitTableWrapperHeight() { }
 
 // ============================================================
 // 🆕 СОРТИРОВКА — на сервер
