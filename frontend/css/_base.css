@@ -1,20 +1,15 @@
-/* ============================================================
-   БАЗА: reset, body, html
-   ============================================================ */
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  height: 100vh;
+  overflow: hidden; /* Запрещаем скролл у самого браузера */
+  background: var(--bg);
+}
 
 body {
   font-family: 'Segoe UI', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  overflow-x: auto;
-  overflow-y: auto; 
-  min-height: 100vh;
-}
-
-html {
-  overflow-x: auto; 
-  min-height: 100vh;
-  background: var(--bg);
+  height: 100vh;
+  overflow: hidden; /* Скроллить будет только main-content */
 }
