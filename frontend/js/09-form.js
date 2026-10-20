@@ -29,8 +29,8 @@ async function generateFormFields(data = null) {
       label.textContent = f.label + (f.required ? ' *' : '');
       div.appendChild(label);
 
-      const val = (data && data[f.id] !== undefined && data[f.id] !== null) 
-        ? data[f.id] 
+      const val = (data && data[f.id] !== undefined && data[f.id] !== null)
+        ? data[f.id]
         : (f.default || '');
 
       const wrapper = document.createElement('div');
@@ -64,7 +64,7 @@ async function generateFormFields(data = null) {
       div.appendChild(input);
       container.appendChild(div);
     }
-    
+
     const eqSelect = document.getElementById('p-equipmentType');
     const ivInput  = document.getElementById('p-interval');
     if (eqSelect && ivInput) {
@@ -107,15 +107,15 @@ const BULK_MAX_ROWS = 100;
 async function openModal(id) {
   const isEdit = !!id;
   await UI.guard(
-    { 
-      permission: isEdit 
-        ? ['edit_pipette', 'manage_pipettes'] 
-        : ['add_pipette', 'manage_pipettes'], 
+    {
+      permission: isEdit
+        ? ['edit_pipette', 'manage_pipettes']
+        : ['add_pipette', 'manage_pipettes'],
       errorMsg: isEdit ? 'Нет прав на редактирование' : 'Нет прав на добавление'
     },
     async () => {
       const tabsEl = document.getElementById('add-tabs');
-     
+
       if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
 
       _addTab = 'single';
@@ -451,13 +451,13 @@ async function saveBulkRows(e) {
 
    const bulkFieldIds = new Set(_bulkFields.map(f => f.id));
   const errors = [];
-  
+
   _bulkRows.forEach((r, i) => {
     const n = i + 1;
     if (bulkFieldIds.has('model') && !String(r.model || '').trim()) errors.push(`Строка ${n}: модель`);
     if (bulkFieldIds.has('lastCalibration') && !String(r.lastCalibration || '').trim()) errors.push(`Строка ${n}: дата`);
     if (bulkFieldIds.has('responsible') && !String(r.responsible || '').trim()) errors.push(`Строка ${n}: ответственный`);
-    
+
     // Проверяем остальные обязательные поля (если админ поставил им галку "Обязательно")
     const SYSTEM_REQUIRED = new Set(['model', 'lastCalibration', 'responsible']);
     _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id) && bulkFieldIds.has(f.id)).forEach(f => {
@@ -475,7 +475,7 @@ async function saveBulkRows(e) {
   const defaultResp = currentUser.isActing && currentUser.actingForName
     ? currentUser.actingForName
     : currentUser.fullName;
-    
+
   _bulkRows.forEach(r => {
     if (!bulkFieldIds.has('model')) r.model = 'Не указана';
     if (!bulkFieldIds.has('lastCalibration')) r.lastCalibration = todayStr();
@@ -516,7 +516,7 @@ async function savePipette(e) {
 
     const payload = {};
   const fieldElements = {};
-  
+
   document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
     const key = el.dataset.fieldId;
     fieldElements[key] = el; // Запоминаем, какие поля реально есть в форме
@@ -529,17 +529,24 @@ async function savePipette(e) {
   if (fieldElements.model && !String(payload.model || '').trim()) errors.push('Модель');
   if (fieldElements.lastCalibration && !String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
   if (fieldElements.responsible && !String(payload.responsible || '').trim()) errors.push('Ответственный');
-  
+
   // Проверяем остальные обязательные поля (если админ поставил им галку "Обязательно")
   const SYSTEM_REQUIRED = new Set(['model', 'lastCalibration', 'responsible']);
   _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id)).forEach(f => {
     if (fieldElements[f.id] && !String(payload[f.id] || '').trim()) errors.push(f.label);
   });
 
-  // Автоподстановка для скрытых обязательных полей
-  if (!fieldElements.model) payload.model = 'Не указана';
-  if (!fieldElements.lastCalibration) payload.lastCalibration = todayStr();
-  if (!fieldElements.responsible) {
+   // Автоподстановка для скрытых обязательных полей
+  // При редактировании не перезаписываем, если поле уже есть в объекте
+  const editingPipette = isEdit ? pipettes.find(p => p.id === editId) : null;
+
+  if (!fieldElements.model && (!isEdit || !editingPipette?.model)) {
+    payload.model = 'Не указана';
+  }
+  if (!fieldElements.lastCalibration && (!isEdit || !editingPipette?.last_calibration)) {
+    payload.lastCalibration = todayStr();
+  }
+  if (!fieldElements.responsible && (!isEdit || !editingPipette?.responsible)) {
     payload.responsible = currentUser.isActing && currentUser.actingForName
       ? currentUser.actingForName
       : currentUser.fullName;
@@ -570,10 +577,10 @@ async function savePipette(e) {
 async function deletePipette(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
-  const ok = await showConfirm(     
-    `Удалить оборудование «${id}» вместе со всей историей поверок? Действие необратимо.`,    
-    { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }   
-  );   
+  const ok = await showConfirm(
+    `Удалить оборудование «${id}» вместе со всей историей поверок? Действие необратимо.`,
+    { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }
+  );
   if (!ok) return;
     try {
     await apiRequest(`/pipettes/${id}`, 'DELETE');
