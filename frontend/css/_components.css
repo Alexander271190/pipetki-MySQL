@@ -599,8 +599,10 @@ body.can-manage .senior-only { display: inline-flex; }
 }
 
 .stat-tooltip {
-  position: fixed;
-  z-index: 10000;
+  position: absolute;
+  top: 100%; /* Появляется под карточкой */
+  right: 0;
+  margin-top: 12px;
   background: var(--card);
   border: 1px solid var(--border-hard);
   border-radius: 10px;
@@ -612,19 +614,46 @@ body.can-manage .senior-only { display: inline-flex; }
   visibility: hidden;
   transform: translateY(-5px);
   transition: all 0.2s ease;
+  z-index: 100;
   text-align: left;
   color: var(--text-strong);
   font-size: 0.85rem;
   line-height: 1.5;
-  pointer-events: none; /* чтобы не мешал кликам */
+  pointer-events: none; /* Чтобы не мешал кликам */
 }
 
-/* Стрелочка (сверху, указывает на карточку) */
+/* Показываем при наведении на карточку (чистый CSS, без JS) */
+#stat-total-card:hover .stat-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
 .stat-tooltip::after {
   content: '';
   position: absolute;
-  bottom: 100%;
+  bottom: 100%; /* Стрелочка сверху, указывает на карточку */
   right: 20px;
   border: 6px solid transparent;
   border-bottom-color: var(--border-hard);
+}
+
+.stat-tooltip .tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.stat-tooltip .tooltip-row:last-child { margin-bottom: 0; }
+.stat-tooltip .tooltip-total {
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+.stat-tooltip .tooltip-outside {
+  color: var(--warn);
+  font-size: 0.8rem;
+  margin-top: 8px;
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
 }
