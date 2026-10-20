@@ -301,21 +301,19 @@ function fitTableWrapperHeight() {
   if (!wrapper) return;
 
   const wrapperTop = wrapper.getBoundingClientRect().top;
-
   const pagination = document.getElementById('pagination');
-  let bottomGap = 0;
+  
+  // Базовый отступ снизу (в CSS у контейнера мы задали padding-bottom: 24px)
+  let bottomGap = 24; 
+
+  // Если пагинация видима, добавляем её высоту и небольшой отступ
   if (pagination && pagination.style.display !== 'none') {
-    bottomGap += pagination.offsetHeight + 16;
+    bottomGap += pagination.offsetHeight + 16; 
   }
 
+  // Вычисляем свободное место и ставим таблице эту высоту (минимум 200px)
   let available = window.innerHeight - wrapperTop - bottomGap;
-  let h = Math.max(200, Math.floor(available));
-  wrapper.style.height = h + 'px';
-
-  const gap = Math.round(window.innerHeight - wrapper.getBoundingClientRect().bottom);
-  if (gap > 0) {
-    wrapper.style.height = (h + gap) + 'px';
-  }
+  wrapper.style.height = Math.max(200, Math.floor(available)) + 'px';
 }
 
 function updateSortArrows() {
