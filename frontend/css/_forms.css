@@ -327,7 +327,7 @@ table { border-collapse: collapse; border-spacing: 0; width: 100%; font-variant-
 
 .table-wrapper > table:not(#pipettes-table) { width: auto; margin: 0 auto; min-width: 0; }
 
-thead { background: #f3f4f6; position: sticky; top: 0; z-index: 5; }
+thead { background: #f3f4f6; position: sticky; top: 0; z-index: 1; }
 
 th {
   padding: 8px 10px;
