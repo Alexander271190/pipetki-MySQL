@@ -480,20 +480,14 @@ function updateBulkToolbar() {
   function setup() {
     const card = document.getElementById('stat-total-card');
     const tip  = document.getElementById('stat-tooltip');
-    if (!card || !tip) {
-      console.warn('⚠️ Тултип: не найдены #stat-total-card или #stat-tooltip');
-      return;
-    }
+    if (!card || !tip) return;
 
     let hideTimer = null;
 
     const showTip = () => {
       clearTimeout(hideTimer);
 
-      if (!tip.innerHTML.trim()) {
-        console.log('⚠️ Тултип пуст — не показываю');
-        return;
-      }
+      if (!tip.innerHTML.trim()) return;
 
       const rect = card.getBoundingClientRect();
 
@@ -524,11 +518,18 @@ function updateBulkToolbar() {
       }, 80);
     };
 
-    card.addEventListener('mouseenter', showTip);
-    card.addEventListener('mouseleave', hideTip);
-    window.addEventListener('scroll', hideTip, { passive: true });
+    // mouseover/mouseout всплывают, поэтому работают и при наведении на дочерние элементы
+    card.addEventListener('mouseover', (e) => {
+      if (card.contains(e.relatedTarget)) return;
+      showTip();
+    });
 
-    console.log('✅ Тултип: обработчики навешены на #stat-total-card');
+    card.addEventListener('mouseout', (e) => {
+      if (card.contains(e.relatedTarget)) return;
+      hideTip();
+    });
+
+    window.addEventListener('scroll', hideTip, { passive: true });
   }
 
   if (document.readyState === 'loading') {
