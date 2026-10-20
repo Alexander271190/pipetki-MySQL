@@ -358,6 +358,38 @@ router.get('/all', authenticate, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// GET /next-id — предварительный просмотр следующего ID
+// ВАЖНО: должно быть до /:id, иначе Express перехватит как :id
+// ═══════════════════════════════════════════════════════════
+router.get('/next-id', authenticate, async (req, res) => {
+  try {
+    const type = req.query.type || 'pipette';
+    let prefix = await equipmentTypes.getPrefix(type);
+    if (!prefix) {
+      const fallback = {
+        pipette: 'P', analyzer: 'A', thermometer: 'T',
+        scales: 'S', photometer: 'F', microscope: 'M',
+      };
+      prefix = fallback[type] || 'EQ';
+    }
+    const safePrefix = String(prefix).replace(/[%_\\]/g, '\\$&');
+    const [rows] = await db.query(
+      'SELECT id FROM pipettes WHERE id LIKE ? ORDER BY id',
+      [`${safePrefix}-%`]
+    );
+    let maxNum = 0;
+    for (const row of rows) {
+      const m = String(row.id).match(/(\d+)$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    }
+    res.json({ nextId: `${prefix}-${String(maxNum + 1).padStart(3, '0')}` });
+  } catch (e) {
+    console.error('GET /pipettes/next-id:', e);
+    res.status(500).json({ error: 'Ошибка генерации ID' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // GET /:id — одна пипетка (read-only)
 // ═══════════════════════════════════════════════════════════
 router.get('/:id', authenticate, async (req, res) => {
