@@ -68,6 +68,7 @@
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   overflow: hidden;
+  text-align: center;
 }
 
 .field-settings-table input[type="text"],
