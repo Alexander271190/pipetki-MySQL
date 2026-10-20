@@ -20,13 +20,13 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  width: 100vw;            
-  box-sizing: border-box;  
+  width: 100%;            
+  box-sizing: border-box;
   overflow: visible; 
-  position: sticky; 
+  position: fixed; /* 🆕 Намертво прибиваем к экрану */
   top: 0;           
-  left: 0;                 
-  z-index: 50;
+  left: 0;               
+  z-index: 50; 
   flex-shrink: 0; 
 }
 
@@ -46,11 +46,13 @@
 .container {
   display: flex;
   flex-direction: column;
-  min-width: max-content; /* Растягивает контейнер под ширину таблицы, заставляя страницу ехать вбок */
+  min-width: max-content; 
   width: 100%;
   flex: 1;
   padding: 0 8px;
-  margin: 8px auto 0;
+  /* 🆕 Отступаем сверху, чтобы контент не прятался под шапкой */
+  padding-top: calc(var(--header-height, 60px) + var(--banner-height, 0px) + var(--toolbar-height, 70px) + 10px);
+  margin: 0 auto;
   box-sizing: border-box;
 }
 
@@ -68,11 +70,11 @@
   gap: 10px; 
   font-size: .9rem; 
   color: #92400e; 
-  position: sticky; 
+  position: fixed; /* 🆕 Прибиваем */
   top: var(--header-height, 60px);
-  left: 0;                 
-  width: 100vw;           
-  box-sizing: border-box;  
+  left: 0;               
+  width: 100%;           
+  box-sizing: border-box; 
   z-index: 45; 
   flex-shrink: 0;
 }
@@ -93,11 +95,11 @@
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0,0,0,.06);
   margin-bottom: 18px;
-  position: sticky; 
+  position: fixed; /* 🆕 Прибиваем */
   top: calc(var(--header-height, 60px) + var(--banner-height, 0px)); 
   left: 0;               
-  width: 100vw;      
-  box-sizing: border-box;  
+  width: 100%;           
+  box-sizing: border-box; 
   z-index: 40; 
   flex-shrink: 0;
 }
