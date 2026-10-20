@@ -74,7 +74,7 @@ function renderCounters() {
     const tipEl = document.getElementById('stat-tooltip');
     
     if (tipEl) {
-           let html = `
+      let html = `
         <div class="tooltip-row tooltip-total">
           <span>Всего:</span> <strong>${c.total}</strong>
         </div>
@@ -84,13 +84,19 @@ function renderCounters() {
       `;
       
       if (outside > 0) {
+        let lines = [];
+        if (c.sent > 0)        lines.push(`📦 На поверке: <b>${c.sent}</b>`);
+        if (c.wip > 0)         lines.push(`⏳ В процессе: <b>${c.wip}</b>`);
+        if (c.unknownDate > 0) lines.push(`❓ Без даты поверки: <b>${c.unknownDate}</b>`);
+        if (c.inactive > 0)    lines.push(`⛔ Неактивные: <b>${c.inactive}</b>`);
+        
+        if (lines.length === 0) lines.push('— (нет данных)');
+        
         html += `
           <div class="tooltip-outside">
             <div style="font-weight:600; margin-bottom: 4px;">Вне индикаторов: ${outside}</div>
-            <div style="font-size:0.78rem; line-height: 1.3;">
-              — На поверке / в процессе<br>
-              — Без даты поверки<br>
-              — Неактивные (списанные)
+            <div style="font-size:0.78rem; line-height: 1.5;">
+              ${lines.join('<br>')}
             </div>
           </div>
         `;
