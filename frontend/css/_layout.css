@@ -46,7 +46,6 @@
 .container {
   display: flex;
   flex-direction: column;
-  min-width: max-content; 
   width: 100%;
   flex: 1;
   padding: 0 8px;
@@ -54,6 +53,8 @@
   padding-top: calc(var(--header-height, 60px) + var(--banner-height, 0px) + var(--toolbar-height, 70px) + 10px);
   margin: 0 auto;
   box-sizing: border-box;
+  overflow: hidden; 
+  min-height: 0; 
 }
 
 /* ============================================================
