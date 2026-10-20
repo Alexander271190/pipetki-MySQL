@@ -18,6 +18,9 @@
   width: 100%;
   box-sizing: border-box;
   overflow: visible; 
+  position: relative; 
+  z-index: 50; 
+}
 .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
 .header .logo { font-size: 1.6rem; }
 .header-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
