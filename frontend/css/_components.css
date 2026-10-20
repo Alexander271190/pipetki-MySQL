@@ -182,12 +182,10 @@
   width: 28px; height: 28px;
   padding: 0;
   border: 1px solid var(--border-hard); border-radius: 6px;
-  background: var(--card); color: #475569;
+  background: var(--card); color: var(--text-strong);
   cursor: pointer; transition: all .15s; font-size: .8rem;
 }
-.row-actions-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
-.row-actions-btn:active { background: #bfdbfe; }
-
+.row-actions-btn:hover { background: var(--card-hover); border-color: var(--text-muted); color: var(--text-strong); }
 /* ============================================================
    ТОЧКА-ИНДИКАТОР СТАТУСА РЯДОМ С ID
    ============================================================ */
