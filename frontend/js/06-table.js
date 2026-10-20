@@ -301,19 +301,21 @@ function fitTableWrapperHeight() {
   if (!wrapper) return;
 
   const wrapperTop = wrapper.getBoundingClientRect().top;
+
   const pagination = document.getElementById('pagination');
-
-  // Отступ снизу для контейнера (чтобы не прилипало к краю экрана)
-  let bottomGap = 24; 
-
-  // Добавляем высоту пагинации, если она видима
+  let bottomGap = 0;
   if (pagination && pagination.style.display !== 'none') {
-    bottomGap += pagination.offsetHeight + 16; 
+    bottomGap += pagination.offsetHeight + 16;
   }
 
-  // Вычисляем свободное место и ставим таблице эту высоту (минимум 200px)
   let available = window.innerHeight - wrapperTop - bottomGap;
-  wrapper.style.height = Math.max(200, Math.floor(available)) + 'px';
+  let h = Math.max(200, Math.floor(available));
+  wrapper.style.height = h + 'px';
+
+  const gap = Math.round(window.innerHeight - wrapper.getBoundingClientRect().bottom);
+  if (gap > 0) {
+    wrapper.style.height = (h + gap) + 'px';
+  }
 }
 
 function updateSortArrows() {
