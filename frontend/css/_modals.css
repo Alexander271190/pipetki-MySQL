@@ -62,8 +62,7 @@
   .modal-lg { max-width: 98vw; width: 98vw; }
   .modal-xl { max-width: 98vw !important; width: 98vw !important; }
   #settings-section-content { overflow-x: auto; }
-  #settings-section-content .field-settings-table,
-  #settings-section-content .bc-printers-table { min-width: 560px; }
+  #settings-section-content .field-settings-table { min-width: 560px; }
 }
 
 /* ============================================================
