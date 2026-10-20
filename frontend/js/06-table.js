@@ -482,6 +482,10 @@ function updateBulkToolbar() {
     const tip  = document.getElementById('stat-tooltip');
     if (!card || !tip) return;
 
+    // Защита от повторного навешивания
+    if (card.dataset.tooltipBound === '1') return;
+    card.dataset.tooltipBound = '1';
+
     let hideTimer = null;
 
     const showTip = () => {
@@ -517,12 +521,17 @@ function updateBulkToolbar() {
       }, 80);
     };
 
-    // mouseenter не всплывает — сработает ТОЛЬКО при входе на сам card,
-    // а не на дочерние элементы. Значит, relatedTarget не нужен.
-    card.addEventListener('mouseenter', showTip);
-    card.addEventListener('mouseleave', hideTip);
+    // pointerenter/pointerleave — надёжнее mouseenter/mouseleave
+    card.addEventListener('pointerenter', showTip);
+    card.addEventListener('pointerleave', (e) => {
+      if (card.contains(e.relatedTarget)) return;
+      hideTip();
+    });
 
-    window.addEventListener('scroll', hideTip, { passive: true });
+    // Скрываем при скролле, только если был показан
+    window.addEventListener('scroll', () => {
+      if (tip.style.opacity === '1') hideTip();
+    }, { passive: true });
   }
 
   if (document.readyState === 'loading') {
@@ -530,4 +539,6 @@ function updateBulkToolbar() {
   } else {
     setup();
   }
+  setTimeout(setup, 100);
+  setTimeout(setup, 500);
 })();
