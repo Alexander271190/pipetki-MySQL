@@ -543,16 +543,19 @@ document.addEventListener('keydown', (e) => {
 function updateStickyOffsets() {
   const header = document.getElementById('main-header');
   const banner = document.getElementById('alert-banner');
+  const toolbar = document.getElementById('toolbar');
   if (!header) return;
 
-  // Записываем высоту шапки в CSS-переменную
   document.documentElement.style.setProperty('--header-height', header.offsetHeight + 'px');
 
-  // Записываем высоту баннера, если он виден
   if (banner && banner.style.display !== 'none' && banner.classList.contains('show')) {
     document.documentElement.style.setProperty('--banner-height', banner.offsetHeight + 'px');
   } else {
     document.documentElement.style.setProperty('--banner-height', '0px');
+  }
+
+  if (toolbar) {
+    document.documentElement.style.setProperty('--toolbar-height', toolbar.offsetHeight + 'px');
   }
 }
 
