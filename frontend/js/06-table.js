@@ -67,24 +67,28 @@ function renderCounters() {
   if (statDangerEl) statDangerEl.textContent = c.danger;
   if (statTotalEl)  statTotalEl.textContent = c.total;
 
-  // Тултип на «Всего» — из серверных counters
+    // Тултип на «Всего»
   if (statTotalEl) {
     const sumIn = (c.ok || 0) + (c.warn || 0) + (c.danger || 0);
     const outside = (c.total || 0) - sumIn;
-    const lines = [];
-    lines.push(`Всего: ${c.total}`);
-    lines.push('');
-    lines.push('В индикаторах:');
-    lines.push(`  🟢 В норме:                ${c.ok}`);
-    lines.push(`  🟡 Скоро поверка:          ${c.warn}`);
-    lines.push(`  🔴 Просрочены:             ${c.danger}`);
-    lines.push(`  ─────────────────────────────`);
-    lines.push(`  Сумма:                     ${sumIn}`);
-    if (outside > 0) {
-      lines.push('');
-      lines.push(`Вне индикаторов (на поверке, в процессе, без даты, неактивные): ${outside}`);
+    const tipEl = document.getElementById('stat-tooltip');
+    
+    if (tipEl) {
+      let html = `
+        <div class="tooltip-row tooltip-total">
+          <span>Всего:</span> <strong>${c.total}</strong>
+        </div>
+        <div class="tooltip-row"><span>🟢 В норме:</span> <span>${c.ok}</span></div>
+        <div class="tooltip-row"><span>🟡 Скоро поверка:</span> <span>${c.warn}</span></div>
+        <div class="tooltip-row"><span>🔴 Просрочены:</span> <span>${c.danger}</span></div>
+      `;
+      
+      if (outside > 0) {
+        html += `<div class="tooltip-outside">Вне индикаторов (на поверке, в процессе, без даты, неактивные): <strong>${outside}</strong></div>`;
+      }
+      
+      tipEl.innerHTML = html;
     }
-    statTotalEl.title = lines.join('\n');
   }
 
   // Баннер просрочек
