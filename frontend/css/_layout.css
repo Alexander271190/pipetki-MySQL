@@ -17,10 +17,10 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  width: 100%;
+  width: 100%;            
   box-sizing: border-box;
   overflow: visible; 
-  position: sticky; 
+  position: sticky;    
   top: 0;           
   z-index: 50; 
 }
@@ -48,7 +48,70 @@
 /* ============================================================
    БАННЕР
    ============================================================ */
-.alert-banner { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; display: none; align-items: center; gap: 10px; font-size: .9rem; color: #92400e; }
+.main-content.visible {
+  display: block; /* 🆕 Убрали flex, чтобы страница росла вниз */
+}
+
+.container {
+  max-width: 100%;
+  margin: 8px auto 0;
+  padding: 0 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.header {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;            /* 🆕 Не фиксируем ширину, чтобы ездила вбок */
+  box-sizing: border-box;
+  overflow: visible; 
+  position: sticky;       /* 🆕 Прилипает только сверху */
+  top: 0;           
+  z-index: 50; 
+}
+
+.alert-banner {
+  background: #fef3c7; 
+  border: 1px solid #fcd34d; 
+  border-radius: 10px; 
+  padding: 14px 18px; 
+  margin-bottom: 18px; 
+  display: none; 
+  align-items: center; 
+  gap: 10px; 
+  font-size: .9rem; 
+  color: #92400e; 
+  position: sticky; 
+  top: var(--header-height, 60px);
+  z-index: 45; 
+}
+
+.alert-banner.show { 
+  display: flex; 
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  margin-bottom: 18px;
+  position: sticky; 
+  top: calc(var(--header-height, 60px) + var(--banner-height, 0px)); 
+  z-index: 40; 
+}
 .alert-banner.show { display: flex; }
 .alert-banner .icon { font-size: 1.3rem; }
 
