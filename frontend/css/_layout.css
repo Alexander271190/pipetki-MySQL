@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: auto; /* Включаем скролл ВНУТРИ страницы (и вбок, и вниз) */
+  overflow: hidden; 
 }
 .auth-container.hidden { display: none !important; }
 
