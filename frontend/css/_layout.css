@@ -1,7 +1,10 @@
 /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
 .main-content { display: none; }
 .main-content.visible {
-  display: block; 
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: auto; /* Включаем скролл ВНУТРИ страницы (и вбок, и вниз) */
 }
 .auth-container.hidden { display: none !important; }
 
@@ -20,9 +23,10 @@
   width: 100%;            
   box-sizing: border-box;
   overflow: visible; 
-  position: sticky;    
+  position: sticky; /* Прилипает при скролле вниз */
   top: 0;           
   z-index: 50; 
+  flex-shrink: 0; /* Не сжимается */
 }
 
 .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
@@ -39,45 +43,20 @@
    КОНТЕЙНЕР
    ============================================================ */
 .container {
-  max-width: 100%;
-  margin: 8px auto 0;
-  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: max-content; /* Растягивает контейнер под ширину таблицы, заставляя страницу ехать вбок */
   width: 100%;
+  flex: 1;
+  padding: 0 8px;
+  margin: 8px auto 0;
   box-sizing: border-box;
 }
+
 /* ============================================================
    БАННЕР
    ============================================================ */
-.main-content.visible {
-  display: block; /* 🆕 Убрали flex, чтобы страница росла вниз */
-}
-
-.container {
-  max-width: 100%;
-  margin: 8px auto 0;
-  padding: 0 8px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.header {
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  color: #fff;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  width: 100%;            /* 🆕 Не фиксируем ширину, чтобы ездила вбок */
-  box-sizing: border-box;
-  overflow: visible; 
-  position: sticky;       /* 🆕 Прилипает только сверху */
-  top: 0;           
-  z-index: 50; 
-}
-
-.alert-banner {
+.alert-banner { 
   background: #fef3c7; 
   border: 1px solid #fcd34d; 
   border-radius: 10px; 
@@ -88,48 +67,13 @@
   gap: 10px; 
   font-size: .9rem; 
   color: #92400e; 
-  position: sticky; 
+  position: sticky; /* Прилипает под шапкой */
   top: var(--header-height, 60px);
   z-index: 45; 
-}
-
-.alert-banner.show { 
-  display: flex; 
-}
-
-.toolbar {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  background: var(--card);
-  padding: 12px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
-  margin-bottom: 18px;
-  position: sticky; 
-  top: calc(var(--header-height, 60px) + var(--banner-height, 0px)); 
-  z-index: 40; 
+  flex-shrink: 0;
 }
 .alert-banner.show { display: flex; }
 .alert-banner .icon { font-size: 1.3rem; }
-
-/* ============================================================
-   ДЕЙСТВИЯ И ПУСТЫЕ СОСТОЯНИЯ
-   ============================================================ */
-.action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-.empty-state { text-align: center; padding: 40px 20px; color: var(--text-faint); }
-.empty-state .icon { font-size: 3rem; margin-bottom: 10px; }
-
-/* ============================================================
-   ПОЛЬЗОВАТЕЛЬ В ШАПКЕ
-   ============================================================ */
-.user-info { display: flex; align-items: center; gap: 12px; color: #fff; background: rgba(255,255,255,.1); padding: 6px 14px 6px 18px; border-radius: 30px; backdrop-filter: blur(8px); flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
-.user-info .name { font-weight: 600; font-size: .9rem; }
-.user-info .position { font-size: .7rem; opacity: .7; }
-.user-info .btn { padding: 4px 12px; font-size: .8rem; background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); }
-.user-info .btn:hover { background: rgba(255,255,255,.3); }
 
 /* ============================================================
    ТУЛБАР
@@ -145,6 +89,10 @@
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0,0,0,.06);
   margin-bottom: 18px;
+  position: sticky; /* Прилипает под баннером */
+  top: calc(var(--header-height, 60px) + var(--banner-height, 0px)); 
+  z-index: 40; 
+  flex-shrink: 0;
 }
 
 .toolbar > #search {
@@ -192,6 +140,22 @@ html[data-theme="dark"] #search {
   margin-right: 8px;
   font-weight: 500;
 }
+
+/* ============================================================
+   ДЕЙСТВИЯ И ПУСТЫЕ СОСТОЯНИЯ
+   ============================================================ */
+.action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-faint); }
+.empty-state .icon { font-size: 3rem; margin-bottom: 10px; }
+
+/* ============================================================
+   ПОЛЬЗОВАТЕЛЬ В ШАПКЕ
+   ============================================================ */
+.user-info { display: flex; align-items: center; gap: 12px; color: #fff; background: rgba(255,255,255,.1); padding: 6px 14px 6px 18px; border-radius: 30px; backdrop-filter: blur(8px); flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
+.user-info .name { font-weight: 600; font-size: .9rem; }
+.user-info .position { font-size: .7rem; opacity: .7; }
+.user-info .btn { padding: 4px 12px; font-size: .8rem; background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+.user-info .btn:hover { background: rgba(255,255,255,.3); }
 
 /* ============================================================
    СВОРАЧИВАНИЕ ШАПКИ
@@ -280,6 +244,21 @@ html[data-theme="dark"] #search {
   .header-top { margin-bottom: 10px; }
   .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
   .header-collapse-btn { font-size: .75rem; padding: 5px 10px; }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+  .toolbar > #search,
+  .toolbar > .btn,
+  .toolbar > .dropdown,
+  .toolbar > .dropdown > .btn {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .toolbar-bulk { flex-direction: column; }
+  .toolbar-bulk .btn { width: 100%; }
 }
 @media (max-width: 480px) {
   .header-top h1 { font-size: .95rem; }
@@ -297,85 +276,23 @@ html[data-theme="dark"] #search {
   .header { padding: 10px 12px; }
   .header h1 { font-size: .9rem; line-height: 1.2; }
   .header .logo { font-size: 1.1rem; }
-
   .header-stats { gap: 4px; }
-  .stat-card {
-    flex: 1 1 calc(50% - 4px);
-    min-width: 0;
-    padding: 5px 8px;
-  }
-
+  .stat-card { flex: 1 1 calc(50% - 4px); min-width: 0; padding: 5px 8px; }
   .stat-card .num { font-size: .95rem; }
   .stat-card .label { font-size: .58rem; }
-
   .user-info { padding: 5px 8px; gap: 6px; }
   .user-info .name { font-size: .8rem; }
   .user-info .position { font-size: .62rem; }
   .user-info .btn { padding: 3px 8px; font-size: .72rem; }
-
   .toolbar { padding: 8px; gap: 6px; }
   .btn { padding: 7px 10px; font-size: .8rem; }
   .btn-sm { padding: 4px 7px; font-size: .72rem; }
-
   .container { padding: 0 8px; margin: 10px auto; }
-
   .alert-banner { padding: 10px 12px; font-size: .82rem; }
-
   .header.collapsed { padding: 6px 8px; }
   .header.collapsed h1 { font-size: .82rem; gap: 3px; }
   .header.collapsed h1 .logo { font-size: 1rem; }
   .header.collapsed .header-mini-stats { font-size: .64rem; padding: 2px 6px; }
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
-}
-
-@media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding: 10px;
-  }
-
-  .toolbar > #search {
-    width: 100%;
-    max-width: 100%;
-    flex: 1 1 auto;
-  }
-
-  .toolbar > .btn,
-  .toolbar > .dropdown > .btn {
-    width: auto;
-    max-width: 100%;
-    flex: 0 0 auto;
-  }
-
-  .toolbar > .toolbar-bulk {
-    width: 100%;
-    flex-basis: 100%;
-  }
-}
-
-/* ─── Мобильный адаптив тулбара ─── */
-@media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .toolbar > #search,
-  .toolbar > .btn,
-  .toolbar > .dropdown,
-  .toolbar > .dropdown > .btn {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  .toolbar-bulk {
-    flex-direction: column;
-  }
-  .toolbar-bulk .btn {
-    width: 100%;
-  }
-  .stat-card {
-    flex: 1;
-    min-width: 45%;
-  }
+  .stat-card { flex: 1; min-width: 45%; }
 }
