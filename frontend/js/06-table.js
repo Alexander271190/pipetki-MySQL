@@ -83,20 +83,37 @@ function renderCounters() {
         <div class="tooltip-row"><span>🔴 Просрочены:</span> <span>${c.danger}</span></div>
       `;
       
-      if (outside > 0) {
-        let lines = [];
-        if (c.sent > 0)        lines.push(`📦 На поверке: <b>${c.sent}</b>`);
-        if (c.wip > 0)         lines.push(`⏳ В процессе: <b>${c.wip}</b>`);
-        if (c.unknownDate > 0) lines.push(`❓ Без даты поверки: <b>${c.unknownDate}</b>`);
-        if (c.inactive > 0)    lines.push(`⛔ Неактивные: <b>${c.inactive}</b>`);
+           if (outside > 0) {
+        // 🆕 Все возможные категории «вне индикаторов»
+        const allCategories = [
+          { label: '📦 На поверке',        value: c.sent || 0 },
+          { label: '⏳ В процессе',         value: c.wip || 0 },
+          { label: '❌ Брак',               value: c.fail || 0 },
+          { label: '❓ Без даты поверки',   value: c.unknownDate || 0 },
+          { label: '⛔ Неактивные',         value: c.inactive || 0 },
+        ];
         
-        if (lines.length === 0) lines.push('— (нет данных)');
+        // Показываем только те, где > 0
+        const visibleLines = allCategories
+          .filter(cat => cat.value > 0)
+          .map(cat => `${cat.label}: <b>${cat.value}</b>`);
+        
+        // Сумма всех категорий
+        const sumCategories = allCategories.reduce((sum, cat) => sum + cat.value, 0);
+        
+        // Если сумма не сходится — показываем «Прочее» (чтобы пользователь видел, что есть неучтённое)
+        const diff = outside - sumCategories;
+        if (diff > 0) {
+          visibleLines.push(`<span style="color:#94a3b8;">Прочее: <b>${diff}</b></span>`);
+        }
+        
+        if (visibleLines.length === 0) visibleLines.push('— (нет данных)');
         
         html += `
           <div class="tooltip-outside">
             <div style="font-weight:600; margin-bottom: 4px;">Вне индикаторов: ${outside}</div>
             <div style="font-size:0.78rem; line-height: 1.5;">
-              ${lines.join('<br>')}
+              ${visibleLines.join('<br>')}
             </div>
           </div>
         `;
