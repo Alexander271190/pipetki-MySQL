@@ -47,6 +47,81 @@ router.get('/available-for-replacement', authenticate, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// POST /available-for-replacement-batch — складские для массива
+// ═══════════════════════════════════════════════════════════
+router.post('/available-for-replacement-batch', authenticate, async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Параметр items обязателен (массив)' });
+    }
+    if (items.length > 200) {
+      return res.status(400).json({ error: 'Максимум 200 единиц за раз' });
+    }
+
+    // Группируем по типу + отделу, чтобы сделать минимум запросов
+    const groups = new Map();
+    const result = {};
+
+    for (const item of items) {
+      if (!item.id || !item.type) continue;
+      const key = `${item.type}||${item.department || ''}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          type: item.type,
+          department: item.department || '',
+          ids: [],
+        });
+      }
+      groups.get(key).ids.push(item.id);
+    }
+
+    for (const group of groups.values()) {
+      let sql = `
+        SELECT id, serial, manufacturer, model, equipment_type, volume,
+               department, last_calibration, \`interval\`, last_result,
+               active, responsible, location
+        FROM pipettes
+        WHERE equipment_type = ?
+          AND active = 0
+          AND sent_for_calibration IS NULL
+          AND (replacing IS NULL OR replacing = '')
+      `;
+      const params = [group.type];
+
+      if (group.department) {
+        sql += " AND (department = ? OR department IS NULL OR department = '')";
+        params.push(group.department);
+      }
+
+      if (group.ids.length > 0) {
+        const ph = group.ids.map(() => '?').join(',');
+        sql += ` AND id NOT IN (${ph})`;
+        params.push(...group.ids);
+      }
+
+      sql += ' ORDER BY last_calibration DESC';
+
+      const [rows] = await db.query(sql, params);
+
+      for (const id of group.ids) {
+        result[id] = rows;
+      }
+    }
+
+    // Для приборов, которых нет в result (не попали в группы) — пустые массивы
+    for (const item of items) {
+      if (item.id && !result[item.id]) result[item.id] = [];
+    }
+
+    res.json(result);
+  } catch (e) {
+    console.error('POST /available-for-replacement-batch:', e);
+    res.status(500).json({ error: 'Ошибка поиска замен' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // POST /:id/transfer — передача в другой отдел
 // ═══════════════════════════════════════════════════════════
 router.post('/:id/transfer', authenticate, requireAnyPermission(['transfer_pipette', 'manage_pipettes']), async (req, res) => {
