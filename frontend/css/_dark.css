@@ -335,3 +335,24 @@ html[data-theme="dark"] .modal .usr-perm-cb + span i {
   color: var(--text) !important; /* Светлый цвет для тёмной темы */
 }
 
+/* ============================================================
+   ФИКСЫ ТЁМНОЙ ТЕМЫ
+   ============================================================ */
+
+/* Поля readonly/disabled в тёмной теме */
+html[data-theme="dark"] .modal input[readonly],
+html[data-theme="dark"] .modal input:disabled,
+html[data-theme="dark"] .modal select:disabled,
+html[data-theme="dark"] .modal textarea:disabled {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+  cursor: not-allowed;
+}
+
+/* Иконки в статус-бейджах */
+.status-sent i,
+.status-wip i {
+  color: inherit !important;
+}
+
