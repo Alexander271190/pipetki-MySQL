@@ -309,11 +309,9 @@
   border-bottom: none;
   border-radius: 8px 8px 0 0;
   background: var(--card);
-  min-height: 200px;  
-  overflow: visible !important; 
-  height: auto !important;      
-  max-height: none !important;  
-  flex-shrink: 0;
+  flex: 1;           
+  min-height: 0;         
+  overflow: auto;      
 }
 @media (max-width: 768px) {
   .table-wrapper {
