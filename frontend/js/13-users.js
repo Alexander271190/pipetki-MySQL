@@ -8,8 +8,18 @@ async function renderUsersSettings() {
   try {
     const users = await getCachedUsers(true);
     
-    let html = '<h3>Управление пользователями</h3>';
-    html += `<table class="field-settings-table users-table-fix" style="margin-bottom:20px;">
+       let html = '<h3>Управление пользователями</h3>';
+    html += `
+      <div style="margin-bottom:12px; position:relative;">
+        <input type="text" id="users-search" 
+               placeholder="Поиск по логину, ФИО, должности, отделу…"
+               oninput="filterUsersTable(this.value)"
+               style="width:100%; padding:9px 12px 9px 36px; border:1px solid var(--border-hard); border-radius:8px; font-size:.9rem; box-sizing:border-box;">
+        <i class="fa-solid fa-magnifying-glass" 
+           style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:.85rem; pointer-events:none;"></i>
+      </div>
+    `;
+    html += `<table class="field-settings-table users-table-fix" style="margin-bottom:20px;" id="users-table">
   <colgroup>
     <col style="width:14%;">
     <col style="width:20%;">
@@ -56,6 +66,60 @@ async function renderUsersSettings() {
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
+}
+
+// ============================================================
+// 🆕 Поиск в таблице пользователей (клиентский, без запросов)
+// ============================================================
+let _usersSearchTimer = null;
+
+function filterUsersTable(query) {
+  clearTimeout(_usersSearchTimer);
+  _usersSearchTimer = setTimeout(() => {
+    const table = document.getElementById('users-table');
+    if (!table) return;
+
+    const q = String(query || '').trim().toLowerCase();
+    const rows = table.querySelectorAll('tbody tr');
+
+    let visibleCount = 0;
+    for (const row of rows) {
+      // Если строка — это «пустое состояние» (colspan), не трогаем
+      if (row.querySelector('[colspan]') && !row.querySelector('td:not([colspan])')) continue;
+
+      if (!q) {
+        row.style.display = '';
+        visibleCount++;
+        continue;
+      }
+
+      const text = row.textContent.toLowerCase();
+      if (text.includes(q)) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    }
+
+    // Показать/скрыть сообщение «не найдено»
+    let emptyMsg = document.getElementById('users-search-empty');
+    if (visibleCount === 0 && q) {
+      if (!emptyMsg) {
+        emptyMsg = document.createElement('tr');
+        emptyMsg.id = 'users-search-empty';
+        emptyMsg.innerHTML = `<td colspan="7" style="text-align:center; padding:20px; color:var(--text-faint);">
+          Никого не найдено по запросу «${esc(query)}»
+        </td>`;
+        table.querySelector('tbody').appendChild(emptyMsg);
+      } else {
+        emptyMsg.querySelector('td').innerHTML = `Никого не найдено по запросу «${esc(query)}»`;
+        emptyMsg.style.display = '';
+      }
+    } else if (emptyMsg) {
+      emptyMsg.style.display = 'none';
+    }
+  }, 250);
 }
 
 function renderUserEditForm() {
