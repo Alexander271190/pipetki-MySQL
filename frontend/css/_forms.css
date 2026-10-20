@@ -306,8 +306,8 @@
   overflow-x: auto;
   overflow-y: auto;
   scrollbar-gutter: auto;
-  height: auto;
-  min-height: 200px;
+  flex: 1;          
+  min-height: 250px;
 }
 
 @media (max-width: 768px) {
