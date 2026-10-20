@@ -73,11 +73,29 @@ window.UI = {
     closeAll() {
       document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
     },
-    bindOutsideClick(id, closeFn) {
+        bindOutsideClick(id, closeFn) {
       const el = document.getElementById(id);
       if (!el) return;
+      
+      let isMouseDownOnModal = false;
+      
+      el.addEventListener('mousedown', (e) => {
+        const modal = el.querySelector('.modal');
+        if (modal && modal.contains(e.target)) {
+          isMouseDownOnModal = true;
+        } else {
+          isMouseDownOnModal = false;
+        }
+      });
+
       el.addEventListener('click', e => {
         if (e.target.id === id) {
+          // Если мышь нажата на самой модалке (например, тянем за угол ресайза) — игнорируем
+          if (isMouseDownOnModal) {
+            isMouseDownOnModal = false;
+            return;
+          }
+          
           if (typeof closeFn === 'function') closeFn();
           else UI.modal.close(id);
         }
