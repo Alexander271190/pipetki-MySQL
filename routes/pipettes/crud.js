@@ -64,11 +64,11 @@ router.get('/paged', authenticate, async (req, res) => {
          SUM(CASE WHEN (${statusExpr}) = 'warn' THEN 1 ELSE 0 END) AS warn,
          SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger,
          SUM(CASE WHEN sent_for_calibration IS NOT NULL THEN 1 ELSE 0 END) AS sent,
-         SUM(CASE WHEN last_result = 'wip' THEN 1 ELSE 0 END) AS wip,
-         SUM(CASE WHEN last_result = 'fail' THEN 1 ELSE 0 END) AS fail,
-         SUM(CASE WHEN (last_calibration IS NULL OR \`interval\` IS NULL) AND sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 1 THEN 1 ELSE 0 END) AS unknown_date,
-         SUM(CASE WHEN active = 0 AND sent_for_calibration IS NULL AND last_result != 'fail' THEN 1 ELSE 0 END) AS inactive
-       FROM pipettes${whereSql}`,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result = 'fail' THEN 1 ELSE 0 END) AS fail,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result = 'wip' AND last_result != 'fail' THEN 1 ELSE 0 END) AS wip,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 0 THEN 1 ELSE 0 END) AS inactive,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 1 AND (last_calibration IS NULL OR \`interval\` IS NULL) THEN 1 ELSE 0 END) AS unknown_date
+     FROM pipettes${whereSql}`,
       allParams
     );
     
@@ -209,11 +209,11 @@ router.get('/stats', authenticate, async (req, res) => {
          SUM(CASE WHEN (${statusExpr}) = 'warn' THEN 1 ELSE 0 END) AS warn,
          SUM(CASE WHEN (${statusExpr}) = 'danger' THEN 1 ELSE 0 END) AS danger,
          SUM(CASE WHEN sent_for_calibration IS NOT NULL THEN 1 ELSE 0 END) AS sent,
-         SUM(CASE WHEN last_result = 'wip' THEN 1 ELSE 0 END) AS wip,
-         SUM(CASE WHEN last_result = 'fail' THEN 1 ELSE 0 END) AS fail,
-         SUM(CASE WHEN (last_calibration IS NULL OR \`interval\` IS NULL) AND sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 1 THEN 1 ELSE 0 END) AS unknown_date,
-         SUM(CASE WHEN active = 0 AND sent_for_calibration IS NULL AND last_result != 'fail' THEN 1 ELSE 0 END) AS inactive
-       FROM pipettes${whereSql}`,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result = 'fail' THEN 1 ELSE 0 END) AS fail,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result = 'wip' AND last_result != 'fail' THEN 1 ELSE 0 END) AS wip,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 0 THEN 1 ELSE 0 END) AS inactive,
+         SUM(CASE WHEN sent_for_calibration IS NULL AND last_result NOT IN ('wip','fail') AND active = 1 AND (last_calibration IS NULL OR \`interval\` IS NULL) THEN 1 ELSE 0 END) AS unknown_date
+   FROM pipettes${whereSql}`,
       baseParams
     );
 
