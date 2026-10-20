@@ -3,7 +3,8 @@
 .main-content.visible { 
   display: flex; 
   flex-direction: column; 
-  min-height: 100vh; 
+  height: 100vh; 
+  overflow: hidden; 
 }
 .auth-container.hidden { display: none; }
 
@@ -24,7 +25,9 @@
   overflow: visible; 
   position: relative; 
   z-index: 50; 
+  flex-shrink: 0; 
 }
+
 .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
 .header .logo { font-size: 1.6rem; }
 .header-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
@@ -46,7 +49,8 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1; 
+  overflow: hidden; /* Обрезаем всё лишнее, чтобы скролл был только в таблице */
 }
 /* ============================================================
    БАННЕР
