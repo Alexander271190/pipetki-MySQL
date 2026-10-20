@@ -1,6 +1,29 @@
 'use strict';
 
 // ============================================================
+// КЭШ СПИСКА ПОЛЬЗОВАТЕЛЕЙ (для меню действий)
+// ============================================================
+async function getCachedUsers(forceReload = false) {
+  const now = Date.now();
+  if (!forceReload && _cachedUsersList && now - _cachedUsersTime < USERS_CACHE_TTL) {
+    return _cachedUsersList;
+  }
+  try {
+    _cachedUsersList = await apiRequest('/users');
+    _cachedUsersTime = now;
+  } catch (e) {
+    console.warn('Не удалось загрузить пользователей:', e.message);
+    if (!_cachedUsersList) _cachedUsersList = [];
+  }
+  return _cachedUsersList;
+}
+
+function invalidateUsersCache() {
+  _cachedUsersList = null;
+  _cachedUsersTime = 0;
+}
+
+// ============================================================
 // 🆕 МЕНЮ ДЕЙСТВИЙ В СТРОКЕ (кнопка ⋮)
 // ============================================================
 let _rowActionsMenu = null;
@@ -15,9 +38,9 @@ async function openUserActions(ev, userId) {
     const curId = currentUser.id;
     const isSelf = userId === curId;
 
-    let u = {};
+  let u = {};
     try {
-      const users = await apiRequest('/users');
+      const users = await getCachedUsers();
       u = users.find(x => x.id === userId) || {};
     } catch (e) {
       console.warn('Не удалось подтянуть данные пользователя:', e.message);
