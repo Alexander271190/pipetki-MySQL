@@ -49,50 +49,45 @@ async function loadReplacementOptions(ids) {
 
   container.innerHTML = '<p id="repl-placeholder" style="color:#94a3b8;font-size:.85rem;">Загрузка складских…</p>';
 
-  const tasks = [];
-  for (const id of ids) {
+  // 🆕 Формируем массив для батч-запроса
+  const items = ids.map(id => {
     const p = pipettes.find(x => x.id === id);
-    if (!p) continue;
+    if (!p) return null;
+    return {
+      id: p.id,
+      type: p.equipment_type,
+      department: p.department || '',
+    };
+  }).filter(Boolean);
 
-    tasks.push(async () => {
-      const url = `/pipettes/available-for-replacement?type=${encodeURIComponent(p.equipment_type)}&department=${encodeURIComponent(p.department || '')}&exclude=${encodeURIComponent(id)}`;
-      const options = await apiRequest(url);
-      return { id, p, options };
-    });
+  if (items.length === 0) {
+    container.innerHTML = '<p style="color:#94a3b8;font-size:.85rem;">Нет приборов для загрузки замен.</p>';
+    return;
   }
 
-  const CONCURRENCY = 5;
-  let rendered = 0;
+  try {
+    const batchResult = await apiRequest('/pipettes/available-for-replacement-batch', 'POST', { items });
 
-  for (let i = 0; i < tasks.length; i += CONCURRENCY) {
-    const batch = tasks.slice(i, i + CONCURRENCY);
-    const batchResults = await Promise.all(
-      batch.map(t => t().catch(e => {
-        console.warn('Ошибка загрузки замен:', e.message);
-        return null;
-      }))
-    );
+    let rendered = 0;
+    let html = '';
 
-    const newHtml = batchResults
-      .filter(r => r && r.options && r.options.length > 0)
-      .map(r => buildReplacementBlock(r.id, r.p, r.options))
-      .join('');
-
-    if (newHtml) {
-      if (rendered === 0) {
-        const ph = document.getElementById('repl-placeholder');
-        if (ph) ph.remove();
-      }
-      container.insertAdjacentHTML('beforeend', newHtml);
+    for (const id of ids) {
+      const p = pipettes.find(x => x.id === id);
+      if (!p) continue;
+      const options = batchResult[id] || [];
+      if (options.length === 0) continue;
+      html += buildReplacementBlock(id, p, options);
       rendered++;
     }
-  }
 
-  if (rendered === 0) {
-    container.innerHTML = '<p style="color:#94a3b8;font-size:.85rem;">Нет доступных складских единиц того же типа.</p>';
-  } else {
-    const ph = document.getElementById('repl-placeholder');
-    if (ph) ph.remove();
+    if (rendered === 0) {
+      container.innerHTML = '<p style="color:#94a3b8;font-size:.85rem;">Нет доступных складских единиц того же типа.</p>';
+    } else {
+      container.innerHTML = html;
+    }
+  } catch (e) {
+    console.warn('Ошибка загрузки замен:', e.message);
+    container.innerHTML = '<p style="color:#dc2626;font-size:.85rem;">Ошибка загрузки замен: ' + esc(e.message) + '</p>';
   }
 }
 
