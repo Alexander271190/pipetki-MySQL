@@ -297,11 +297,14 @@ async function initSchema() {
       { name: 'barcode_source',       ddl: 'VARCHAR(50) DEFAULT NULL' },
     ]);
 
-    // 🆕 Догон индексов
+   // 🆕 Догон индексов
     await ensureIndexes(conn, 'pipettes', [
       { name: 'idx_pipettes_department',     ddl: 'CREATE INDEX idx_pipettes_department ON pipettes(department)' },
       { name: 'idx_pipettes_equipment_type', ddl: 'CREATE INDEX idx_pipettes_equipment_type ON pipettes(equipment_type)' },
       { name: 'idx_pipettes_barcode',        ddl: 'CREATE INDEX idx_pipettes_barcode ON pipettes(barcode)' },
+      { name: 'idx_pipettes_last_calibration', ddl: 'CREATE INDEX idx_pipettes_last_calibration ON pipettes(last_calibration)' },
+      { name: 'idx_pipettes_active',          ddl: 'CREATE INDEX idx_pipettes_active ON pipettes(active)' },
+      { name: 'idx_pipettes_sent_for_calibration', ddl: 'CREATE INDEX idx_pipettes_sent_for_calibration ON pipettes(sent_for_calibration)' },
     ]);
 
     await ensureIndexes(conn, 'audit_log', [
