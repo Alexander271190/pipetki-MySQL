@@ -184,7 +184,7 @@ async function loadPaged() {
       page: Number(data.page) || 1,
       limit: Number(data.limit) || pageSize,
       totalPages: Math.max(1, Number(data.totalPages) || 1),
-      counters: data.counters || { ok: 0, warn: 0, danger: 0, total: 0, sent: 0, wip: 0, unknownDate: 0, inactive: 0 },
+      counters: data.counters || { ok: 0, warn: 0, danger: 0, total: 0, sent: 0, wip: 0, fail: 0, unknownDate: 0, inactive: 0 },
     };
 
     // Если сервер вернул другую страницу — синхронизируемся
