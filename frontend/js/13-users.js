@@ -136,7 +136,7 @@ function renderUserEditForm() {
         <div style="font-weight:700;font-size:.82rem;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">
           ${esc(group)}
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:6px 16px;">
           ${items.map(p => `
             <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:5px 8px;border-radius:6px;font-size:.85rem;line-height:1.3;">
               <input type="checkbox" class="usr-perm-cb" value="${esc(p.key)}" style="margin-top:2px;">
