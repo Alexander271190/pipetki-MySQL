@@ -381,6 +381,7 @@ async function saveUserSetting() {
       }
     }
 
+    invalidateUsersCache();
     resetUserSettingForm();
     renderUsersSettings();
   } catch (e) {}
@@ -425,8 +426,9 @@ async function deleteUserSetting(id, displayName) {
     { icon: '👤', title: 'Удаление пользователя', okText: 'Удалить', okClass: 'btn-danger' }
   );
   if (!ok) return;
-  try {
+    try {
     await apiRequest('/users/' + id, 'DELETE');
+    invalidateUsersCache();
     showToast('Удалён', 'success');
     renderUsersSettings();
   } catch (e) { showToast(e.message, 'error'); }
