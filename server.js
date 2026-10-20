@@ -119,7 +119,8 @@ async function waitForDatabase(maxAttempts = 90) {
     }
   }
 
-    app.listen(PORT, () => {
+  // 🆕 Захватываем сервер, чтобы можно было закрыть его graceful
+  const server = app.listen(PORT, () => {
     console.log(`🚀 Server on http://0.0.0.0:${PORT}`);
   });
 
@@ -132,8 +133,9 @@ async function waitForDatabase(maxAttempts = 90) {
   }
 
   // Если БД не поднялась при старте — пытаемся догнать её фоном
+  let reconnectInterval = null;
   if (!connected) {
-    const reconnectInterval = setInterval(async () => {
+    reconnectInterval = setInterval(async () => {
       let conn;
       try {
         conn = await db.pool.getConnection();
@@ -156,6 +158,7 @@ async function waitForDatabase(maxAttempts = 90) {
         }
 
         clearInterval(reconnectInterval);
+        reconnectInterval = null;
       } catch (e) {
         // тихо ждём следующей попытки
       } finally {
@@ -163,4 +166,71 @@ async function waitForDatabase(maxAttempts = 90) {
       }
     }, 5000);
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // 🆕 Graceful shutdown (SIGTERM / SIGINT)
+  // ═══════════════════════════════════════════════════════════
+  let _shuttingDown = false;
+
+  async function gracefulShutdown(signal) {
+    if (_shuttingDown) {
+      console.log(`⚠️ ${signal} получен повторно, уже останавливаемся...`);
+      return;
+    }
+    _shuttingDown = true;
+
+    console.log(`\n⚠️ ${signal} получен. Начинаем graceful shutdown...`);
+
+    // Останавливаем переподключение к БД, если запущено
+    if (reconnectInterval) {
+      clearInterval(reconnectInterval);
+      reconnectInterval = null;
+    }
+
+    // 1) Перестаём принимать новые соединения
+    const serverClosePromise = new Promise((resolve) => {
+      server.close((err) => {
+        if (err) {
+          console.error('❌ Ошибка закрытия HTTP-сервера:', err.message);
+        } else {
+          console.log('✅ HTTP-сервер остановлен');
+        }
+        resolve();
+      });
+    });
+
+    // 2) Ждём не более 10 секунд
+    const timeoutPromise = new Promise((resolve) => {
+      setTimeout(() => {
+        console.warn('⚠️ Таймаут 10с, принудительное закрытие');
+        resolve();
+      }, 10000).unref();
+    });
+
+    await Promise.race([serverClosePromise, timeoutPromise]);
+
+    // 3) Закрываем пул БД
+    try {
+      await db.pool.end();
+      console.log('✅ Пул БД закрыт');
+    } catch (e) {
+      console.error('❌ Ошибка закрытия пула БД:', e.message);
+    }
+
+    console.log('👋 Завершение работы');
+    process.exit(0);
+  }
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+
+  // 🆕 Ловим необработанные ошибки — чтобы не падать молча
+  process.on('uncaughtException', (err) => {
+    console.error('💥 uncaughtException:', err);
+    gracefulShutdown('uncaughtException');
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('💥 unhandledRejection:', reason);
+  });
 })();
