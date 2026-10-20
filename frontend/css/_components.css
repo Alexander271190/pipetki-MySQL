@@ -666,3 +666,7 @@ body.can-manage .senior-only { display: inline-flex; }
   border-top: 1px dashed var(--border);
   padding-top: 6px;
 }
+/* Чтобы иконки в колонке "Следующая" красились в цвет текста (синий/жёлтый) */
+td small i { 
+  color: inherit !important; 
+}
