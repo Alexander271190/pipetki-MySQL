@@ -60,19 +60,19 @@ html[data-theme="dark"] .modal h3 { color: var(--text); }
 html[data-theme="dark"] .modal p { color: var(--text-muted); }
 html[data-theme="dark"] .modal-overlay { background: rgba(0, 0, 0, .7); }
 
-html[data-theme="dark"] .form-group label { color: var(--text-muted); }
-html[data-theme="dark"] .form-group input,
+html[data-theme="dark"] .form-group > label { color: var(--text-muted); }
+html[data-theme="dark"] .form-group input:not([type="checkbox"]):not([type="radio"]),
 html[data-theme="dark"] .form-group select,
 html[data-theme="dark"] .form-group textarea { background: #273449; border-color: #334155; color: var(--text); }
-html[data-theme="dark"] .form-group input:focus,
+html[data-theme="dark"] .form-group input:not([type="checkbox"]):not([type="radio"]):focus,
 html[data-theme="dark"] .form-group select:focus,
 html[data-theme="dark"] .form-group textarea:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129, 140, 248, .2); }
 html[data-theme="dark"] .form-group input::placeholder,
 html[data-theme="dark"] .form-group textarea::placeholder { color: var(--text-muted); }
 
-html[data-theme="dark"] .filter-panel { background: var(--card); border-color: var(--border); color: var(--text); }
-html[data-theme="dark"] .filter-panel .form-group label { color: var(--text-muted); }
-html[data-theme="dark"] .filter-panel .form-group input,
+html[data-theme="dark"] .filter-panel .form-group > label { color: var(--text-muted); }
+html[data-theme="dark"] .filter-panel .form-group input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] .filter-panel .form-group select { background: #273449; border-color: #334155; color: var(--text); }
 html[data-theme="dark"] .filter-panel .form-group select { background: #273449; border-color: #334155; color: var(--text); }
 
 html[data-theme="dark"] .dropdown-menu { background: var(--card); border-color: var(--border); }
