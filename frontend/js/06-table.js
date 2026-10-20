@@ -472,3 +472,58 @@ function updateBulkToolbar() {
   const hasAny = selectedPipettes.size > 0;
   row.style.display = hasAny ? 'flex' : 'none';
 }
+
+// ============================================================
+// 🆕 ТУЛТИП «ВСЕГО» — позиционирование через fixed
+// ============================================================
+(function initStatTooltip() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const card = document.getElementById('stat-total-card');
+    const tip  = document.getElementById('stat-tooltip');
+    if (!card || !tip) return;
+
+    let hideTimer = null;
+
+    const showTip = () => {
+      clearTimeout(hideTimer);
+
+      // Если тултип пуст — не показываем
+      if (!tip.innerHTML.trim()) return;
+
+      const rect = card.getBoundingClientRect();
+
+      // Сначала показываем невидимо, чтобы измерить ширину
+      tip.style.visibility = 'hidden';
+      tip.style.opacity = '0';
+      tip.style.display = 'block';
+
+      const tipWidth = tip.offsetWidth;
+      let left = rect.right - tipWidth;
+      if (left < 8) left = 8;
+      if (left + tipWidth > window.innerWidth - 8) {
+        left = window.innerWidth - tipWidth - 8;
+      }
+
+      tip.style.top  = (rect.bottom + 12) + 'px';
+      tip.style.left = left + 'px';
+
+      tip.style.visibility = 'visible';
+      tip.style.opacity = '1';
+      tip.style.transform = 'translateY(0)';
+    };
+
+    const hideTip = () => {
+      hideTimer = setTimeout(() => {
+        tip.style.opacity = '0';
+        tip.style.visibility = 'hidden';
+        tip.style.transform = 'translateY(-5px)';
+      }, 50);
+    };
+
+    card.addEventListener('mouseenter', showTip);
+    card.addEventListener('mouseleave', hideTip);
+    
+    // 🆕 Скрываем при скролле, чтобы не «висел» в воздухе
+    window.addEventListener('scroll', hideTip, { passive: true });
+  });
+})();
