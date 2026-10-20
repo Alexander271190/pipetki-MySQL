@@ -20,7 +20,7 @@ async function generateFormFields(data = null) {
     }
 
         for (const f of fields) {
-      if (f.id === 'id' && (!data || !data.id)) continue;
+      if (f.id === 'id' && !data) continue;
 
       const div = document.createElement('div');
       div.className = 'form-group';
@@ -47,6 +47,7 @@ async function generateFormFields(data = null) {
         input.readOnly = true;
         input.style.background = '#f1f5f9';
         input.style.cursor = 'not-allowed';
+        input.title = 'Номер присваивается автоматически. Изменить нельзя.';
       }
       if (f.id === 'department' && currentUser.isActing) {
         input.disabled = true;
@@ -77,8 +78,16 @@ async function generateFormFields(data = null) {
         ivInput.value = String(n);
       };
 
-      eqSelect.addEventListener('change', applyIntervalFromType);
-
+      eqSelect.addEventListener('change', async () => {
+  applyIntervalFromType();
+  try {
+    const res = await apiRequest('/pipettes/next-id?type=' + eqSelect.value);
+    const idInput = document.getElementById('p-id');
+    if (idInput) idInput.value = res.nextId;
+  } catch (e) {
+    console.warn('Не удалось обновить ID:', e.message);
+  }
+});
       if (!data || !data.id) {
         applyIntervalFromType();
       }
@@ -166,12 +175,20 @@ async function openModal(id) {
           '<i class="fa-solid fa-plus"></i> Добавить оборудование';
         document.getElementById('edit-id').value = '';
 
-        const defaults = {
-          lastCalibration: todayStr(),
-          interval: 12,
-          result: 'pass',
-          active: 'true'
-        };
+        let nextId = '';
+try {
+  const res = await apiRequest('/pipettes/next-id?type=pipette');
+  nextId = res.nextId;
+} catch (e) {
+  console.warn('Не удалось получить next ID:', e.message);
+}
+const defaults = {
+  id: nextId, // <- ДОБАВИТЬ
+  lastCalibration: todayStr(),
+  interval: 12,
+  result: 'pass',
+  active: 'true'
+};
 
         if (currentUser.role === 'admin') {
           // admin — ничего
