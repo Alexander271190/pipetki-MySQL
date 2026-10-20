@@ -305,9 +305,6 @@ html[data-theme="dark"] .modal [style*="background: #eff6ff"] { background: rgba
 
 html[data-theme="dark"] .modal [style*="background:#fff;"] { background: var(--card) !important; color: var(--text) !important; }
 
-/* Иконки secondary в тёмной теме */
-html[data-theme="dark"] .btn-secondary i { color: #93c5fd !important; }
-
 /* Иконки вне кнопок (нейтральные) */
 html[data-theme="dark"] .modal h2 i,
 html[data-theme="dark"] .modal h3 i,
