@@ -331,7 +331,7 @@ thead { background: #f3f4f6; position: sticky; top: 0; z-index: 1; }
 
 th {
   padding: 8px 10px;
-  text-align: left;
+  text-align: center;
   font-size: .72rem;
   font-weight: 700;
   color: #374151;
