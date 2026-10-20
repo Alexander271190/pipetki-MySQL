@@ -18,6 +18,9 @@ let _responsibles = [];
 let _bulkSendIds = [];    
 let _bulkReturnIds = [];
 let _dataLoadedForUser = null;
+const USERS_CACHE_TTL = 30_000;
+let _cachedUsersList = null;
+let _cachedUsersTime = 0;
 
 // ============================================================
 // 🆕 СТРУКТУРА РАЗДЕЛОВ НАСТРОЕК
