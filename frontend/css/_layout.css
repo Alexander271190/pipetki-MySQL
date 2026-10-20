@@ -1,10 +1,6 @@
 /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
 .main-content { display: none; }
-.main-content.visible { 
-  display: flex; 
-  flex-direction: column; 
-  height: 100vh; 
-  overflow: hidden; 
+.main-content.visible { display: block; }
 }
 .auth-container.hidden { display: none; }
 
@@ -47,11 +43,8 @@
   padding: 0 8px 24px 8px;
   width: 100%;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  flex: 1; 
-  overflow: hidden; /* Обрезаем всё лишнее, чтобы скролл был только в таблице */
 }
+
 /* ============================================================
    БАННЕР
    ============================================================ */
