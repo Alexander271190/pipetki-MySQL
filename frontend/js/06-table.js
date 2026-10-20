@@ -477,22 +477,26 @@ function updateBulkToolbar() {
 // 🆕 ТУЛТИП «ВСЕГО» — позиционирование через fixed
 // ============================================================
 (function initStatTooltip() {
-  document.addEventListener('DOMContentLoaded', () => {
+  function setup() {
     const card = document.getElementById('stat-total-card');
     const tip  = document.getElementById('stat-tooltip');
-    if (!card || !tip) return;
+    if (!card || !tip) {
+      console.warn('⚠️ Тултип: не найдены #stat-total-card или #stat-tooltip');
+      return;
+    }
 
     let hideTimer = null;
 
     const showTip = () => {
       clearTimeout(hideTimer);
 
-      // Если тултип пуст — не показываем
-      if (!tip.innerHTML.trim()) return;
+      if (!tip.innerHTML.trim()) {
+        console.log('⚠️ Тултип пуст — не показываю');
+        return;
+      }
 
       const rect = card.getBoundingClientRect();
 
-      // Сначала показываем невидимо, чтобы измерить ширину
       tip.style.visibility = 'hidden';
       tip.style.opacity = '0';
       tip.style.display = 'block';
@@ -517,13 +521,19 @@ function updateBulkToolbar() {
         tip.style.opacity = '0';
         tip.style.visibility = 'hidden';
         tip.style.transform = 'translateY(-5px)';
-      }, 50);
+      }, 80);
     };
 
     card.addEventListener('mouseenter', showTip);
     card.addEventListener('mouseleave', hideTip);
-    
-    // 🆕 Скрываем при скролле, чтобы не «висел» в воздухе
     window.addEventListener('scroll', hideTip, { passive: true });
-  });
+
+    console.log('✅ Тултип: обработчики навешены на #stat-total-card');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup);
+  } else {
+    setup();
+  }
 })();
