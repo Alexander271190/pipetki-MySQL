@@ -170,9 +170,9 @@
 
 /* Иконки в кнопках наследуют цвет кнопки */
 .btn i                 { color: inherit !important; }
-.btn-secondary i       { color: #1e40af !important; }
-.btn-secondary:hover i { color: #1d4ed8 !important; }
-.btn-outline i         { color: #475569 !important; }
+.btn-secondary i       { color: var(--text-strong) !important; }
+.btn-secondary:hover i { color: var(--text-strong) !important; }
+.btn-outline i         { color: var(--text-strong) !important; }
 
 /* Меню ⋮ — в цвет пункта */
 .row-actions-item.item-success i { color: inherit !important; }
