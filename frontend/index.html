@@ -904,18 +904,16 @@
 
     <div id="user-view-content"></div>
 
-    <div class="form-actions" style="justify-content:space-between;">
-      <button type="button" class="btn btn-secondary" onclick="resetUserView()">
-        <i class="fa-solid fa-rotate-left"></i> Сбросить к стандартным
-      </button>
-      <div style="display:flex;gap:10px;">
-        <button type="button" class="btn btn-secondary" onclick="closeUserViewModal()">Закрыть</button>
-        <button type="button" class="btn btn-success" onclick="saveUserView()">
-          <i class="fa-solid fa-floppy-disk"></i> Сохранить
-        </button>
-      </div>
-    </div>
+    <div class="form-actions" style="justify-content:flex-end;">
+  <button type="button" class="btn btn-secondary btn-sm" onclick="resetUserView()" style="margin-right:auto;">
+    <i class="fa-solid fa-rotate-left"></i> Сбросить
+  </button>
+  <button type="button" class="btn btn-secondary btn-sm" onclick="closeUserViewModal()">Закрыть</button>
+  <button type="button" class="btn btn-success btn-sm" onclick="saveUserView()">
+    <i class="fa-solid fa-floppy-disk"></i> Сохранить
+  </button>
   </div>
+ </div>
 </div>
   
 
