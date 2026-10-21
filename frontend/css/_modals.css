@@ -77,3 +77,71 @@ html[data-theme="dark"] .modal::after {
   color: var(--text-muted);
   opacity: 0.65;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Анимация модалок БЕЗ моргания
+   ═══════════════════════════════════════════════════════════ */
+.modal {
+  opacity: 0;
+  transform: scale(0.96);
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.modal-overlay.active .modal {
+  animation: modalScaleIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.modal-overlay.active {
+  animation: overlayFadeIn 0.18s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .modal-overlay.active .modal,
+  .modal-overlay.active {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Скруглённый угол + якорь ресайза
+   ═══════════════════════════════════════════════════════════ */
+.modal::-webkit-resizer {
+  background: transparent;
+  border: none;
+}
+
+.modal::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(135deg, transparent 0 24%, currentColor 24% 32%, transparent 32% 100%),
+    linear-gradient(135deg, transparent 0 46%, currentColor 46% 54%, transparent 54% 100%),
+    linear-gradient(135deg, transparent 0 68%, currentColor 68% 76%, transparent 76% 100%);
+  color: var(--text-faint);
+  opacity: 0.55;
+}
+
+html[data-theme="dark"] .modal::after {
+  color: var(--text-muted);
+  opacity: 0.65;
+}
