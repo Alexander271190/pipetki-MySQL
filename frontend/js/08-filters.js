@@ -100,13 +100,12 @@ async function applyFilters() {
       filterState[f.id] = el ? el.value.trim() : '';
     }
   }
-    const savedScroll = window.scrollY;
+  
   document.getElementById('filter-panel').classList.remove('show');
   currentPage = 1;
 
   await loadPaged();
   render();
-  window.scrollTo(0, savedScroll);
 }
 
 async function resetFilters() {
