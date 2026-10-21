@@ -1,426 +1,79 @@
-/* ============================================================
-   МОДАЛЬНЫЕ ОКНА
-   ============================================================ */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, .5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 100;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-.modal-overlay.active { display: flex; }
+/* ═══════════════════════════════════════════════════════════
+   ФИКС 1: Анимация модалок БЕЗ моргания
+   ═══════════════════════════════════════════════════════════ */
 
+/* Стартовое состояние: невидимо + чуть уменьшено.
+   Даже если браузер «пропустит» первый кадр анимации —
+   вспышки не будет (дефолт уже opacity: 0). */
 .modal {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 24px;
-  max-width: 640px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,.3);
-  resize: both;
-  min-width: 400px;
-  min-height: 300px;
-  position: relative;   /* 🆕 Чтобы уголок ресайза был виден */
-  border: 1px solid transparent;  /* 🆕 Чтобы уголок имел «якорь» */
+  opacity: 0;
+  transform: scale(0.96);
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
-/* 🆕 Модалка «Добавить оборудование» — фиксированная высота,
-   чтобы поля не дёргали её при подгрузке */
-#modal .modal {
-  /* Минимальная высота, чтобы модалка открылась уже готовой */
-  min-height: 560px;
-  /* Плавное изменение высоты, когда подгружаются поля */
-  transition: height 0.15s ease-out;
-}
-
-@media (max-width: 768px) {
-  #modal .modal {
-    min-height: auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .modal {
-    width: 95vw !important;
-    min-width: 0 !important;
-    max-width: 95vw !important;
-    padding: 16px !important;
-    resize: none !important;
-    border-radius: 12px;
-    clip-path: inset(0 round 12px);
-  }
-}
-
-.modal-lg { max-width: 1100px; width: calc(100% - 40px); }
-.modal-xl { max-width: 1500px; width: calc(100% - 40px); }
-.modal-compact { max-width: 460px !important; padding: 20px !important; }
-.modal-compact h2 { font-size: 1.15rem !important; margin-bottom: 14px !important; }
-
-.modal h2 { margin-bottom: 20px; font-size: 1.3rem; color: var(--text-strong); }
-
-#settings-section-content { max-width: 100%; overflow-x: auto; }
-
-.modal-lg .field-settings-table,
-.modal-lg .bc-printers-table {
-  display: table;
-  width: 100%;
-}
-
-@media (max-width: 900px) {
-  .modal-lg { max-width: 98vw; width: 98vw; }
-  .modal-xl { max-width: 98vw !important; width: 98vw !important; }
-  #settings-section-content { overflow-x: auto; }
-  #settings-section-content .field-settings-table { min-width: 560px; }
-}
-
-/* ============================================================
-   АНИМАЦИЯ МОДАЛКИ (плавное появление без моргания)
-   ============================================================ */
 .modal-overlay.active .modal {
-  animation: modalScaleIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: modalScaleIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 @keyframes modalScaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1);    }
 }
 
-
-/* ============================================================
-   ВКЛАДКИ МОДАЛКИ ДОБАВЛЕНИЯ
-   ============================================================ */
-.add-tabs {
-  display: flex;
-  gap: 6px;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 18px;
+/* Оверлей тоже плавно проявляем — иначе фон «прыгает» */
+.modal-overlay.active {
+  animation: overlayFadeIn 0.18s ease-out;
 }
 
-.add-tab {
-  padding: 10px 18px;
-  border: none;
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Если пользователь отключил анимации в ОС */
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .modal-overlay.active .modal,
+  .modal-overlay.active {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ФИКС 2: Скруглённый угол + якорь ресайза
+   ═══════════════════════════════════════════════════════════ */
+
+/* Прячем дефолтный «уголок» Chrome — он не обрезается
+   border-radius и ломает правый нижний угол */
+.modal::-webkit-resizer {
   background: transparent;
-  font-family: inherit;
-  font-size: .92rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  transition: all .15s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.add-tab:hover { color: var(--text-strong); background: #f8fafc; }
-.add-tab.active { color: #4f46e5; border-bottom-color: #4f46e5; }
-
-.bulk-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-.bulk-counter { margin-left: auto; font-size: .85rem; color: #475569; font-weight: 600; }
-.bulk-counter b { color: #4f46e5; }
-
-.bulk-table-wrap {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: 55vh;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
+  border: none;
 }
 
-.bulk-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .82rem;
-  min-width: 1200px;
-}
-
-.bulk-table thead th {
-  background: #f1f5f9;
-  color: #475569;
-  font-size: .7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  padding: 7px 6px;
-  text-align: left;
-  border-bottom: 2px solid #cbd5e1;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.bulk-table tbody td {
-  padding: 3px 4px;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-}
-.bulk-table tbody tr:hover td { background: #f8fafc; }
-.bulk-num {
-  text-align: center; color: var(--text-faint); font-size: .75rem;
-  font-weight: 600; width: 40px;
-}
-
-.bulk-input {
-  width: 100%;
-  padding: 5px 6px;
-  border: 1px solid var(--border-hard);
-  border-radius: 5px;
-  font-size: .82rem;
-  font-family: inherit;
-  background: var(--card);
-  box-sizing: border-box;
-  outline: none;
-}
-.bulk-input:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99,102,241,.15);
-}
-
-.bulk-del-btn {
-  width: 28px; height: 28px;
-  padding: 0; border: none; background: transparent;
-  color: #dc2626; cursor: pointer; border-radius: 5px;
-  transition: background .15s; font-size: .85rem;
-}
-.bulk-del-btn:hover { background: #fee2e2; }
-
-.bulk-empty {
-  padding: 40px 20px;
-  text-align: center;
+/* Свой индикатор — 3 диагональные полоски.
+   pointer-events: none → не перехватывает мышь;
+   тянуть по-прежнему можно за нативную (невидимую) область. */
+.modal::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  background-image:
+    linear-gradient(135deg, transparent 0 24%, currentColor 24% 32%, transparent 32% 100%),
+    linear-gradient(135deg, transparent 0 46%, currentColor 46% 54%, transparent 54% 100%),
+    linear-gradient(135deg, transparent 0 68%, currentColor 68% 76%, transparent 76% 100%);
   color: var(--text-faint);
-  font-size: .9rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px dashed #cbd5e1;
+  opacity: 0.55;
 }
 
-/* ============================================================
-   МОДАЛКА ПОДТВЕРЖДЕНИЯ
-   ============================================================ */
-.confirm-overlay { z-index: 400; }
-.confirm-modal { max-width: 420px; text-align: center; padding: 28px 24px 20px; }
-.confirm-icon { font-size: 3.2rem; line-height: 1; margin-bottom: 14px; }
-.confirm-modal h3 { font-size: 1.2rem; color: var(--text-strong); margin-bottom: 10px; font-weight: 700; }
-.confirm-message { color: #475569; font-size: .95rem; line-height: 1.55; margin-bottom: 24px; white-space: pre-line; }
-.confirm-actions { justify-content: center !important; margin-top: 0 !important; gap: 12px !important; }
-.confirm-actions .btn { min-width: 110px; padding: 10px 20px; font-size: .92rem; }
-
-/* ============================================================
-   МОДАЛКА PROMPT
-   ============================================================ */
-.prompt-modal { max-width: 480px; padding: 26px 24px 20px; }
-.prompt-icon { font-size: 2.6rem; line-height: 1; margin-bottom: 12px; text-align: center; color: var(--primary); }
-.prompt-modal h3 { font-size: 1.15rem; color: var(--text-strong); margin-bottom: 8px; font-weight: 700; text-align: center; }
-.prompt-message { color: #475569; font-size: .92rem; line-height: 1.5; margin-bottom: 16px; text-align: center; white-space: pre-line; }
-.prompt-modal .form-group { margin-bottom: 8px; }
-.prompt-modal input[type="text"] {
-  width: 100%; padding: 10px 14px;
-  border: 1.5px solid var(--border-hard);
-  border-radius: 10px; font-size: 1rem; font-family: inherit;
-  outline: none; transition: border .2s; box-sizing: border-box;
+html[data-theme="dark"] .modal::after {
+  color: var(--text-muted);
+  opacity: 0.65;
 }
-.prompt-modal input[type="text"]:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
-.prompt-modal input[type="text"].invalid { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.15); }
-.prompt-error { color: #dc2626; font-size: .82rem; padding: 6px 10px; background: #fee2e2; border-radius: 6px; margin-bottom: 12px; line-height: 1.4; }
-
-@media (max-width: 480px) {
-  .prompt-modal { max-width: 94vw; padding: 22px 18px 16px; }
-  .prompt-icon { font-size: 2.2rem; }
-  .prompt-modal h3 { font-size: 1.05rem; }
-  .modal { max-width: 95%; padding: 16px; border-radius: 12px; }
-  .modal-lg { max-width: 98%; }
-  .modal h2 { font-size: 1.1rem; margin-bottom: 14px; }
-}
-
-/* ============================================================
-   МОДАЛКА ГОРЯЧИХ КЛАВИШ
-   ============================================================ */
-.hotkeys-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 16px;
-}
-.hotkeys-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: .9rem;
-  vertical-align: middle;
-}
-.hotkeys-table td:first-child { width: 160px; white-space: nowrap; }
-.hotkeys-table kbd {
-  display: inline-block; padding: 2px 8px;
-  background: #f1f5f9; border: 1px solid var(--border-hard);
-  border-bottom-width: 2px; border-radius: 4px;
-  font-family: ui-monospace, monospace;
-  font-size: .78rem; color: var(--text-strong);
-  min-width: 20px; text-align: center;
-}
-
-#hotkeys-modal .modal-xl {
-  max-width: 1100px;
-  width: calc(100% - 40px);
-}
-
-/* ============================================================
-   ПЕЧАТЬ ЭТИКЕТОК
-   ============================================================ */
-.bc-block { margin-bottom: 14px; }
-.bc-block-title { font-size: .82rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
-
-.bc-radio-item {
-  display: flex !important; align-items: center; gap: 10px;
-  padding: 7px 10px; border-radius: 6px; cursor: pointer;
-  font-size: .88rem; font-weight: 400 !important;
-  color: var(--text-strong) !important;
-  margin: 0 !important; transition: background .15s;
-}
-.bc-radio-item:hover { background: #f1f5f9; }
-.bc-radio-item input[type="radio"] { width: 16px; height: 16px; cursor: pointer; accent-color: #4f46e5; margin: 0; flex-shrink: 0; }
-.bc-radio-item span { flex: 1; }
-.bc-radio-item b { color: #4f46e5; font-weight: 700; margin-left: 2px; }
-
-.bc-printer-list {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 8px; background: #f8fafc; border-radius: 8px;
-  max-height: 220px; overflow-y: auto;
-}
-.bc-printer-empty { color: var(--text-faint); font-size: .85rem; padding: 6px 8px; }
-.bc-printer-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 7px 8px; border-radius: 6px; cursor: pointer;
-  font-size: .88rem; font-weight: 400;
-  color: var(--text-strong); transition: background .15s;
-}
-.bc-printer-item:hover { background: var(--border); }
-.bc-printer-item input[type="radio"] { width: 16px; height: 16px; accent-color: #4f46e5; flex-shrink: 0; margin: 0; }
-.bc-printer-item span { flex: 1; }
-.bc-printer-hint { color: #16a34a; font-size: .72rem; font-weight: 600; margin-left: 4px; white-space: nowrap; }
-
-.bc-row { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
-.bc-row-label { font-size: .82rem !important; font-weight: 600 !important; color: #475569 !important; margin: 0 !important; min-width: 110px; display: block !important; }
-.bc-copies-input {
-  width: 90px; padding: 7px 10px;
-  border: 1px solid var(--border-hard); border-radius: 8px;
-  font-size: .9rem; font-family: inherit;
-  outline: none; transition: border .2s; box-sizing: border-box;
-}
-.bc-copies-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
-
-.bc-empty { padding: 16px; text-align: center; color: var(--text-faint); background: #f8fafc; border-radius: 8px; font-size: .88rem; }
-
-.bc-printers-table { width: 100%; border-collapse: collapse; font-size: .82rem; table-layout: fixed; margin-bottom: 8px; min-width: 0; }
-.bc-printers-table th {
-  background: #f1f5f9; color: #475569;
-  font-size: .72rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .4px;
-  padding: 8px 6px; text-align: left;
-  border-bottom: 1px solid var(--border); white-space: nowrap;
-  vertical-align: middle; /* Выравниваем заголовок по центру */
-}
-
-.bc-printers-table td { 
-  padding: 6px; 
-  border-bottom: 1px solid var(--border); 
-  vertical-align: middle; /* Выравниваем содержимое ячеек по центру */
-  overflow: hidden; 
-  text-overflow: ellipsis; 
-}
-
-.bc-printers-table input[type="text"],
-.bc-printers-table input[type="number"],
-.bc-printers-table select {
-  width: 100%; max-width: 100%; min-width: 0;
-  height: 32px; /* Делаем все поля ввода одной высоты */
-  padding: 0 8px;
-  border: 1px solid var(--border-hard); border-radius: 5px;
-  font-size: .82rem; font-family: inherit;
-  background: var(--card); box-sizing: border-box; outline: none;
-  vertical-align: middle;
-}
-
-.bc-printers-table input:focus, .bc-printers-table select:focus { 
-  border-color: #6366f1; 
-  box-shadow: 0 0 0 2px rgba(99,102,241,.15); 
-}
-
-.bc-printers-table .bc-chk { 
-  width: 16px; height: 16px; cursor: pointer; accent-color: #4f46e5; 
-  margin: 0; 
-  vertical-align: middle;
-}
-
-.bc-printer-actions { 
-  text-align: center; 
-  padding: 0 !important; /* Убираем лишние отступы, чтобы кнопка встала ровно */
-}
-
-.bc-printer-actions .row-actions-btn {
-  vertical-align: middle; /* Выравниваем кнопку по центру ячейки */
-}
-
-.bc-icon-btn { padding: 4px 6px !important; font-size: .72rem !important; border-radius: 5px !important; min-width: 0 !important; }
-
-.bc-settings-block { margin-top: 18px; padding: 12px 14px; background: #f0fdf4; border-left: 3px solid #16a34a; border-radius: 8px; }
-.bc-settings-title { font-weight: 700; font-size: .82rem; color: #166534; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-.bc-settings-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 12px; margin-bottom: 14px; }
-.bc-cell { min-width: 0; }
-.bc-cell > label { display: block; font-size: .74rem; font-weight: 600; color: #475569; margin-bottom: 3px; line-height: 1.15; }
-.bc-cell input[type="number"],
-.bc-cell input[type="text"],
-.bc-cell select {
-  width: 100%; padding: 5px 8px;
-  border: 1px solid var(--border-hard); border-radius: 5px;
-  font-size: .83rem; font-family: inherit;
-  outline: none; background: var(--card); box-sizing: border-box;
-}
-.bc-cell input:focus, .bc-cell select:focus { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,.15); }
-.bc-cell-check { display: flex; align-items: flex-end; }
-.bc-fallback-line {
-  display: flex !important; align-items: center; gap: 7px;
-  padding: 5px 8px; background: var(--card);
-  border: 1px solid var(--border-hard); border-radius: 5px;
-  cursor: pointer; font-size: .82rem; font-weight: 400 !important;
-  color: var(--text-strong) !important; margin: 0 !important;
-  width: 100%; box-sizing: border-box; height: 30px;
-}
-.bc-fallback-line input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: #16a34a; margin: 0; flex-shrink: 0; }
-
-.bc-fields-section { margin-top: 4px; }
-.bc-fields-label { font-size: .76rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
-.bc-fields-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 10px; }
-.bc-fields-grid label {
-  display: flex; align-items: center; gap: 6px;
-  cursor: pointer; font-size: .82rem; font-weight: 400;
-  color: var(--text-strong); padding: 4px 6px;
-  border-radius: 5px; margin: 0; transition: background .15s;
-}
-.bc-fields-grid label:hover { background: #dcfce7; }
-.bc-fields-grid input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: #16a34a; margin: 0; flex-shrink: 0; }
-.bc-fields-hint { color: var(--text-muted); font-size: .74rem; margin-top: 8px; }
-.bc-fields-hint b { color: #166534; }
-
-@media (max-width: 768px) {
-  .bc-settings-grid { grid-template-columns: 1fr 1fr; }
-  .bc-fields-grid { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 480px) {
-  .bc-settings-grid { grid-template-columns: 1fr; }
-  .bc-fields-grid { grid-template-columns: 1fr; }
-}
-
