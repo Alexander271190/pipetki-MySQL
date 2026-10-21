@@ -302,7 +302,8 @@
   background: var(--card);
   flex: 1;           
   min-height: 0;         
-  overflow: auto;      
+  overflow: auto;   
+  overscroll-behavior: contain;
 }
 @media (max-width: 768px) {
   .table-wrapper {
