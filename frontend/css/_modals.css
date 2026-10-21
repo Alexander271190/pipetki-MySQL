@@ -25,13 +25,13 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
-  resize: both;
+  
+  resize: none;      
   min-width: 400px;
   min-height: 300px;
   position: relative;
   border: 1px solid transparent;
 
-  /* 🆕 Стартовое состояние для анимации без моргания */
   opacity: 0;
   transform: scale(0.96);
   will-change: opacity, transform;
@@ -123,25 +123,38 @@
   border: none;
 }
 
+/* Свой ресайзер: полоски + увеличенная зона захвата */
 .modal::after {
   content: '';
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 14px;
-  height: 14px;
-  pointer-events: none;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  /* фон: три диагональные полоски */
   background-image:
-    linear-gradient(135deg, transparent 0 24%, currentColor 24% 32%, transparent 32% 100%),
-    linear-gradient(135deg, transparent 0 46%, currentColor 46% 54%, transparent 54% 100%),
-    linear-gradient(135deg, transparent 0 68%, currentColor 68% 76%, transparent 76% 100%);
+    linear-gradient(135deg, transparent 0 45%, currentColor 45% 55%, transparent 55% 100%),
+    linear-gradient(135deg, transparent 0 65%, currentColor 65% 75%, transparent 75% 100%),
+    linear-gradient(135deg, transparent 0 85%, currentColor 85% 95%, transparent 95% 100%);
+  background-position: bottom right;
+  background-repeat: no-repeat;
   color: var(--text-faint);
   opacity: 0.55;
+  /* обрезаем по скруглению родителя, чтобы не торчало */
+  border-bottom-right-radius: 16px;
+  pointer-events: auto; /* ← захватывает мышь */
+  touch-action: none;
 }
 
 html[data-theme="dark"] .modal::after {
   color: var(--text-muted);
-  opacity: 0.65;
+  opacity: 0.7;
+}
+
+/* На мобильных — не нужен */
+@media (max-width: 768px) {
+  .modal::after { display: none !important; }
 }
 
 /* ============================================================
