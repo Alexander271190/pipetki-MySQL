@@ -44,7 +44,7 @@ function switchDocsSection(slug) {
   renderDocsContent();
   const c = document.getElementById('docs-content');
   if (c) c.scrollTop = 0;
-  // 🆕 Прокрутить модалку к началу
+  // Прокрутить модалку к началу
   const modal = document.getElementById('hotkeys-modal');
   if (modal) {
     const modalBody = modal.querySelector('.modal');
@@ -74,6 +74,9 @@ function renderDocsContent() {
   c.innerHTML = renderMarkdown(sec.content || '');
 }
 
+// ============================================================
+// ПАРСЕР MARKDOWN (ручной, без внешних библиотек)
+// ============================================================
 function renderMarkdown(md) {
   const lines = String(md || '').split('\n');
   const out = [];
@@ -142,8 +145,7 @@ function renderMarkdown(md) {
 }
 
 function inlineMd(text) {
-  // 🆕 XSS-защита: экранируем HTML ДО markdown-замен.
-  // esc() уже есть в 02-utils.js (подключён раньше 15-help.js).
+  // XSS-защита: экранируем HTML ДО markdown-замен.
   let raw = String(text || '');
 
   // 1) FA-иконки {icon: fa-xxx} → плейсхолдеры, чтобы esc() их не тронул
@@ -347,70 +349,6 @@ function updateHelpPreview() {
   const md = el.value || '';
   preview.innerHTML = md.trim() ? renderMarkdown(md) : `<span style="color:${COLORS.faint};">Предпросмотр…</span>`;
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  const contentEl = document.getElementById('he-content');
-  if (contentEl) {
-    let t = null;
-    contentEl.addEventListener('input', () => {
-      clearTimeout(t);
-      t = setTimeout(updateHelpPreview, 250);
-    });
-  }
-
-  const imgInput = document.getElementById('he-image-input');
-  if (imgInput) {
-    imgInput.addEventListener('change', async () => {
-      const file = imgInput.files[0];
-      if (!file) return;
-      const fd = new FormData();
-      fd.append('file', file);
-      try {
-        const res = await fetch('/api/help/images/upload', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + authToken },
-          body: fd,
-        });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).error || 'Ошибка');
-        const data = await res.json();
-        const md = `![${file.name}](${data.url})`;
-        const el = document.getElementById('he-content');
-        const start = el.selectionStart;
-        el.value = el.value.slice(0, start) + md + el.value.slice(start);
-        el.focus();
-        updateHelpPreview();
-        showToast('Картинка загружена', 'success');
-      } catch (e) {
-        showToast('Ошибка: ' + e.message, 'error');
-      }
-    });
-  }
-
-  const importInput = document.getElementById('help-import-input');
-  if (importInput) {
-    importInput.addEventListener('change', async () => {
-      const file = importInput.files[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const sections = JSON.parse(text);
-        if (!Array.isArray(sections)) throw new Error('Ожидается массив');
-
-        const ok = await showConfirm(
-          `Загрузить ${sections.length} разделов?\n\nOK — заменить все. Отмена — добавить/обновить по slug.`,
-          { icon: '📥', title: 'Импорт справки', okText: 'Заменить', okClass: 'btn-warning' }
-        );
-        const mode = ok ? 'replace' : 'merge';
-
-        const res = await apiRequest('/help/import', 'POST', { sections, mode });
-        showToast(res.message || 'Импорт завершён', 'success');
-        renderHelpSettings();
-      } catch (e) {
-        showToast('Ошибка импорта: ' + e.message, 'error');
-      }
-    });
-  }
-});
 
 function heInsert(text) {
   const el = document.getElementById('he-content');
@@ -756,6 +694,7 @@ async function applyTemplateToUsers(templateId) {
     showToast(e.message, 'error');
   }
 }
+
 // ============================================================
 // ПЕЧАТЬ СПРАВКИ
 // ============================================================
@@ -803,7 +742,6 @@ function printHelpSection() {
 // ============================================================
 // МЕНЮ ДЕЙСТВИЙ (три точки)
 // ============================================================
-
 function openHelpActions(ev, slug) {
   ev.stopPropagation();
   const items = [
@@ -823,3 +761,73 @@ function openViewTemplateActions(ev, id) {
   ];
   renderRowActionsMenu(ev.currentTarget, items);
 }
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ (единый блок для всех событий)
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Превью при вводе текста
+  const contentEl = document.getElementById('he-content');
+  if (contentEl) {
+    let t = null;
+    contentEl.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(updateHelpPreview, 250);
+    });
+  }
+
+  // 2. Загрузка картинок
+  const imgInput = document.getElementById('he-image-input');
+  if (imgInput) {
+    imgInput.addEventListener('change', async () => {
+      const file = imgInput.files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append('file', file);
+      try {
+        const res = await fetch('/api/help/images/upload', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + authToken },
+          body: fd,
+        });
+        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).error || 'Ошибка');
+        const data = await res.json();
+        const md = `![${file.name}](${data.url})`;
+        const el = document.getElementById('he-content');
+        const start = el.selectionStart;
+        el.value = el.value.slice(0, start) + md + el.value.slice(start);
+        el.focus();
+        updateHelpPreview();
+        showToast('Картинка загружена', 'success');
+      } catch (e) {
+        showToast('Ошибка: ' + e.message, 'error');
+      }
+    });
+  }
+
+  // 3. Импорт JSON
+  const importInput = document.getElementById('help-import-input');
+  if (importInput) {
+    importInput.addEventListener('change', async () => {
+      const file = importInput.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const sections = JSON.parse(text);
+        if (!Array.isArray(sections)) throw new Error('Ожидается массив');
+
+        const ok = await showConfirm(
+          `Загрузить ${sections.length} разделов?\n\nOK — заменить все. Отмена — добавить/обновить по slug.`,
+          { icon: '📥', title: 'Импорт справки', okText: 'Заменить', okClass: 'btn-warning' }
+        );
+        const mode = ok ? 'replace' : 'merge';
+
+        const res = await apiRequest('/help/import', 'POST', { sections, mode });
+        showToast(res.message || 'Импорт завершён', 'success');
+        renderHelpSettings();
+      } catch (e) {
+        showToast('Ошибка импорта: ' + e.message, 'error');
+      }
+    });
+  }
+});
