@@ -144,9 +144,8 @@ async function renderFieldsSettings(skipFetch = false) {
      html += `</tbody></table>
       <div class="form-actions">
         <button class="btn btn-primary" onclick="addFieldSetting()"><i class="fa-solid fa-plus"></i> Добавить поле</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
         <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
     c.innerHTML = html;
   } catch (e) {
@@ -162,10 +161,8 @@ async function onFieldEnabledChange(idx, checked) {
       { icon: '⚠️', title: 'Скрытие обязательного поля', okText: 'Скрыть', okClass: 'btn-warning' }
     );
     if (!ok) {
-      // Откатить чекбокс
        const row = document.querySelectorAll('.field-settings-table tbody tr')[idx];
       if (row) {
-        // В строке два чекбокса: [0] — «Обяз.», [1] — «Активно»
         const cbs = row.querySelectorAll('input[type="checkbox"]');
         if (cbs[1]) cbs[1].checked = true;
       }
@@ -183,7 +180,6 @@ function renderFieldOptionsCell(idx, type) {
   return '—';
 }
 
-// Системные поля — их тип зафиксирован логикой приложения
 const SYSTEM_FIELD_IDS = ['id', 'department', 'equipmentType', 'result', 'active'];
 
 function renderFieldTypeSelect(idx, f) {
@@ -222,35 +218,22 @@ function moveFieldSetting(idx, dir) {
 }
 
 async function addFieldSetting() {
-  const id = await showPrompt(
-    'ID нового поля (латиница, начинается с буквы)',
-    {
-      icon: 'fa-plus',
-      title: 'Новое поле',
-      okText: 'Добавить',
-      placeholder: 'Например: inventorynumber',
+  const id = await showPrompt('ID нового поля (латиница, начинается с буквы)', {
+      icon: 'fa-plus', title: 'Новое поле', okText: 'Добавить', placeholder: 'Например: inventorynumber',
       validator: (v) => {
         if (!v) return 'Укажите ID поля';
         if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(v)) return 'Только латиница, цифры и _, начиная с буквы';
         if (_cachedFields.some(f => f.id === v)) return 'Поле с таким ID уже существует';
         return null;
       }
-    }
-  );
-  if (!id) return;
-
-  _cachedFields.push({
-    id, label: id, type: 'text', required: false, enabled: true,
-    options: [], default: '', order: _cachedFields.length + 1
   });
+  if (!id) return;
+  _cachedFields.push({ id, label: id, type: 'text', required: false, enabled: true, options: [], default: '', order: _cachedFields.length + 1 });
   renderFieldsSettings(true);
 }
 
 async function deleteFieldSetting(idx) {
-  const ok = await showConfirm(
-    `Удалить поле «${_cachedFields[idx].label}»?`,
-    { icon: '📋', title: 'Удаление поля', okText: 'Удалить', okClass: 'btn-danger' }
-  );
+  const ok = await showConfirm(`Удалить поле «${_cachedFields[idx].label}»?`, { icon: '📋', title: 'Удаление поля', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _cachedFields.splice(idx, 1);
   _cachedFields.forEach((f, i) => f.order = i + 1);
@@ -268,21 +251,15 @@ async function saveFieldsSettings() {
       myPrefs._loaded = true;
     } catch (e) {
       myPrefs = { _loaded: true };
-      console.warn('Не удалось перезагрузить prefs после сохранения полей:', e);
     }
 
-    const activeFieldIds = _cachedFields
-      .filter(f => f.enabled)
-      .map(f => f.id);
-
+    const activeFieldIds = _cachedFields.filter(f => f.enabled).map(f => f.id);
     if (!Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
       myPrefs.visibleFields = [...activeFieldIds];
     } else {
       const visibleSet = new Set(myPrefs.visibleFields);
       for (const id of activeFieldIds) {
-        if (!visibleSet.has(id)) {
-          myPrefs.visibleFields.push(id);
-        }
+        if (!visibleSet.has(id)) myPrefs.visibleFields.push(id);
       }
       const activeSet = new Set(activeFieldIds);
       myPrefs.visibleFields = myPrefs.visibleFields.filter(id => activeSet.has(id));
@@ -295,34 +272,17 @@ async function saveFieldsSettings() {
     if (e.response?.code === 'field_has_data') {
       const affected = e.response.affected || 0;
       const fieldsArr = e.response.fields || [];
-      const plural = fieldsArr.length > 1 ? 'я' : 'е';
       const listText = fieldsArr.map(f => `«${f}»`).join(', ');
       const recordPlural = affected === 1 ? 'и' : 'ей';
 
-      const ok = await showConfirm(
-        `Поле${plural} ${listText} заполнено у ${affected} запис${recordPlural}.\n\n` +
-        `При удалении данные будут безвозвратно стёрты.\n` +
-        `Продолжить?`,
-        {
-          icon: '⚠️',
-          title: 'Поле с данными',
-          okText: 'Удалить и стереть',
-          okClass: 'btn-danger'
-        }
-      );
+      const ok = await showConfirm(`Поле ${listText} заполнено у ${affected} запис${recordPlural}.\n\nДанные будут стёрты. Продолжить?`, { icon: '⚠️', title: 'Поле с данными', okText: 'Удалить', okClass: 'btn-danger' });
       if (!ok) return;
 
       try {
         await apiRequest('/settings/fields?confirmDelete=true', 'PUT', _cachedFields);
         _cachedFields = await apiRequest('/settings/fields');
-
         myPrefs = { visibleFields: null, _loaded: false };
-        try {
-          myPrefs = await apiRequest('/settings/my-preferences') || {};
-          myPrefs._loaded = true;
-        } catch (err) {
-          myPrefs = { _loaded: true };
-        }
+        try { myPrefs = await apiRequest('/settings/my-preferences') || {}; myPrefs._loaded = true; } catch (err) { myPrefs = { _loaded: true }; }
 
         const activeIds = _cachedFields.filter(f => f.enabled).map(f => f.id);
         if (!Array.isArray(myPrefs.visibleFields) || myPrefs.visibleFields.length === 0) {
@@ -330,21 +290,15 @@ async function saveFieldsSettings() {
         } else {
           const activeSet = new Set(activeIds);
           const visibleSet = new Set(myPrefs.visibleFields);
-          for (const id of activeIds) {
-            if (!visibleSet.has(id)) myPrefs.visibleFields.push(id);
-          }
+          for (const id of activeIds) { if (!visibleSet.has(id)) myPrefs.visibleFields.push(id); }
           myPrefs.visibleFields = myPrefs.visibleFields.filter(id => activeSet.has(id));
         }
-
         showToast(`Поле удалено, данные очищены у ${affected} записей`, 'success');
         closeSettingsModal();
         await loadPipetteData();
-      } catch (e2) {
-        showToast(e2.message || 'Ошибка удаления', 'error');
-      }
+      } catch (e2) { showToast(e2.message || 'Ошибка удаления', 'error'); }
       return;
     }
-
     showToast(e.message, 'error');
   }
 }
@@ -362,9 +316,7 @@ async function renderDepartmentsSettings(skipFetch = false) {
 
     let html = `
       <h3>Управление отделами</h3>
-      <p style="color:#64748b;margin-bottom:12px;">
-        Отделы <strong>не могут дублироваться</strong>. При совпадении имён — они объединяются.
-      </p>
+      <p style="color:#64748b;margin-bottom:12px;">Отделы <strong>не могут дублироваться</strong>.</p>
       <table class="field-settings-table">
         <thead><tr>
           <th style="width:110px; text-align:center;">Активно</th>
@@ -375,123 +327,77 @@ async function renderDepartmentsSettings(skipFetch = false) {
     _cachedDepartmentsFull.forEach((d, i) => {
       html += `<tr>
         <td style="text-align:center;">${UI.checkbox(`_cachedDepartmentsFull[${i}].enabled=this.checked`, d.enabled)}</td>
-        <td><input type="text" value="${esc(d.name)}" 
-                   oninput="onDepartmentNameChange(${i}, this.value)"></td>
+        <td><input type="text" value="${esc(d.name)}" oninput="onDepartmentNameChange(${i}, this.value)"></td>
         <td style="text-align: center;">
-           <button class="row-actions-btn" onclick="openDeptActions(event, ${i})" title="Действия">
-             <i class="fa-solid fa-ellipsis-vertical"></i>
-           </button>
+           <button class="row-actions-btn" onclick="openDeptActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>
         </td>
       </tr>`;
     });
-  html += `</tbody></table>
-    <div class="form-actions" style="justify-content:flex-start; margin-top:16px;">
+    html += `</tbody></table>
+    <div class="form-actions" style="margin-top:16px;">
         <input type="text" id="new-dept-name" placeholder="Название нового отдела" style="flex:1; max-width:400px; padding:9px 12px; border:1px solid #d1d5db; border-radius:8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addDepartmentItem();}">
         <button type="button" class="btn btn-success" onclick="addDepartmentItem()"><i class="fa-solid fa-plus"></i> Добавить</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
         <button type="button" class="btn btn-primary" onclick="saveDepartmentsFull()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
      </div>
-     <div id="dept-duplicate-warning" style="margin-top:12px;display:none;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
-     </div>`;
+     <div id="dept-duplicate-warning" style="margin-top:12px;display:none;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;"></div>`;
     c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
-  }
+  } catch (e) { c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>'; }
 }
 
 function onDepartmentNameChange(idx, value) {
   const trimmed = value.trim();
   const d = _cachedDepartmentsFull[idx];
-  if (d._originalName === undefined) {
-    d._originalName = d.name;
-  }
+  if (d._originalName === undefined) d._originalName = d.name;
   d.name = trimmed;
-  
   const lower = trimmed.toLowerCase();
   const duplicates = _cachedDepartmentsFull.filter((d, i) => i !== idx && d.name.trim().toLowerCase() === lower);
-
   const warn = document.getElementById('dept-duplicate-warning');
   if (warn) {
     if (duplicates.length > 0 && trimmed !== '') {
       warn.style.display = 'block';
-      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Отдел «${esc(trimmed)}» уже существует. Дубликат будет удалён при сохранении.`;
-    } else {
-      warn.style.display = 'none';
-    }
+      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Отдел «${esc(trimmed)}» уже существует.`;
+    } else { warn.style.display = 'none'; }
   }
 }
 
 function addDepartmentItem() {
   const input = document.getElementById('new-dept-name');
   const name = (input ? input.value : '').trim();
-
   if (!name) { showToast('Заполните поле «Название отдела»', 'error'); return; }
-
-  if (_cachedDepartmentsFull.some(d => d.name.toLowerCase() === name.toLowerCase())) {
-    showToast('Такой отдел уже есть', 'error');
-    return;
-  }
-
+  if (_cachedDepartmentsFull.some(d => d.name.toLowerCase() === name.toLowerCase())) { showToast('Такой отдел уже есть', 'error'); return; }
   _cachedDepartmentsFull.push({ name, enabled: true, _originalName: null });
   renderDepartmentsSettings(true);
-
-  setTimeout(() => {
-    const inp = document.getElementById('new-dept-name');
-    if (inp) inp.focus();
-  }, 0);
-
-  showToast(`Отдел «${name}» добавлен — не забудьте нажать «Сохранить»`, 'success');
+  setTimeout(() => { const inp = document.getElementById('new-dept-name'); if (inp) inp.focus(); }, 0);
+  showToast(`Отдел «${name}» добавлен`, 'success');
 }
 
 async function deleteDepartmentItem(idx) {
   if (idx < 0 || idx >= _cachedDepartmentsFull.length) return;
   const name = _cachedDepartmentsFull[idx].name;
-  const ok = await showConfirm(
-    `Удалить отдел «${name}»?`,
-    { icon: '🏢', title: 'Удаление отдела', okText: 'Удалить', okClass: 'btn-danger' }
-  );
+  const ok = await showConfirm(`Удалить отдел «${name}»?`, { icon: '🏢', title: 'Удаление отдела', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _cachedDepartmentsFull.splice(idx, 1);
   renderDepartmentsSettings(true);
-  showToast(`Отдел «${name}» удалён — не забудьте «Сохранить»`, 'success');
+  showToast(`Отдел «${name}» удалён`, 'success');
 }
 
 async function saveDepartmentsFull() {
   const cleaned = [];
   const seen = new Set();
-
   for (const d of _cachedDepartmentsFull) {
     const name = (d.name || '').trim();
     if (!name) continue;
-
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-
-   cleaned.push({
-  name,
-  enabled: d.enabled !== false,
-  oldName: (d._originalName && d._originalName !== name) ? d._originalName : null,
-});
+    cleaned.push({ name, enabled: d.enabled !== false, oldName: (d._originalName && d._originalName !== name) ? d._originalName : null });
   }
+  if (cleaned.length === 0) { showToast('Добавьте хотя бы один отдел', 'error'); return; }
 
-  if (cleaned.length === 0) {
-    showToast('Добавьте хотя бы один отдел', 'error');
-    return;
-  }
-
-  if (cleaned.length !== _cachedDepartmentsFull.length) {
-    showToast(`Удалены дубликаты: было ${_cachedDepartmentsFull.length}, стало ${cleaned.length}`, 'success');
-  }
-
-      try {
-    await UI.saveAction({
-      successMsg: `Отделы сохранены (${cleaned.length})`,
-      closeFn: closeSettingsModal,
-      reload: false
-    }, async () => {
-     await apiRequest('/settings/departments', 'PUT', cleaned);
+  try {
+    await UI.saveAction({ successMsg: `Отделы сохранены (${cleaned.length})`, closeFn: closeSettingsModal, reload: false }, async () => {
+      await apiRequest('/settings/departments', 'PUT', cleaned);
       _cachedDepartmentsFull = cleaned;
       await loadDepartments();
       await loadFilterConfig();
@@ -507,15 +413,11 @@ async function saveDepartmentsFull() {
 async function renderFiltersSettings(skipFetch = false) {
   const c = document.getElementById('settings-section-content');
   try {
-    if (!skipFetch) {
-      _cachedFilters = await apiRequest('/settings/filters');
-    }
+    if (!skipFetch) _cachedFilters = await apiRequest('/settings/filters');
 
     let html = `
       <h3>Управление фильтрами</h3>
-      <p style="color:#64748b;margin-bottom:12px;">
-        Включайте / отключайте фильтры и добавляйте новые.
-      </p>
+      <p style="color:#64748b;margin-bottom:12px;">Включайте / отключайте фильтры.</p>
       <table class="field-settings-table">
         <thead><tr>
           <th style="width:100px; text-align:center;">Порядок</th>
@@ -530,8 +432,7 @@ async function renderFiltersSettings(skipFetch = false) {
       html += `<tr>
         <td>${UI.moveBtns(i, _cachedFilters.length, 'moveFilter')}</td>
         <td style="text-align:center;">${UI.checkbox(`_cachedFilters[${i}].enabled=this.checked`, f.enabled)}</td>
-        <td><input type="text" value="${esc(f.label)}" 
-                   oninput="_cachedFilters[${i}].label=this.value"></td>
+        <td><input type="text" value="${esc(f.label)}" oninput="_cachedFilters[${i}].label=this.value"></td>
         <td><select onchange="_cachedFilters[${i}].type=this.value">
             <option value="text" ${f.type === 'text' ? 'selected' : ''}>Текст</option>
             <option value="select" ${f.type === 'select' ? 'selected' : ''}>Список</option>
@@ -548,9 +449,7 @@ async function renderFiltersSettings(skipFetch = false) {
           </select>
         </td>
         <td style="text-align: center;">
-         <button class="row-actions-btn" onclick="openFilterActions(event, ${i})" title="Действия">
-            <i class="fa-solid fa-ellipsis-vertical"></i>
-          </button>
+         <button class="row-actions-btn" onclick="openFilterActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>
        </td>
       </tr>`;
     });
@@ -558,15 +457,13 @@ async function renderFiltersSettings(skipFetch = false) {
     html += `</tbody></table>
       <div class="form-actions">
         <button class="btn btn-primary" onclick="addFilter()"><i class="fa-solid fa-plus"></i> Добавить фильтр</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
         <button class="btn btn-success" onclick="saveFilters()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
     c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
-  }
+  } catch (e) { c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>'; }
 }
+
 function moveFilter(idx, dir) {
   const to = idx + dir;
   if (to < 0 || to >= _cachedFilters.length) return;
@@ -576,35 +473,22 @@ function moveFilter(idx, dir) {
 }
 
 async function addFilter() {
-  const id = await showPrompt(
-    'ID нового фильтра (латиница, начинается с буквы)',
-    {
-      icon: 'fa-filter',
-      title: 'Новый фильтр',
-      okText: 'Добавить',
-      placeholder: 'Например: responsible',
+  const id = await showPrompt('ID нового фильтра', {
+      icon: 'fa-filter', title: 'Новый фильтр', okText: 'Добавить', placeholder: 'Например: responsible',
       validator: (v) => {
         if (!v) return 'Укажите ID фильтра';
         if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(v)) return 'Только латиница, цифры и _';
         if (_cachedFilters.some(f => f.id === v)) return 'Такой фильтр уже есть';
         return null;
       }
-    }
-  );
-  if (!id) return;
-
-  _cachedFilters.push({
-    id, label: id, type: 'text', fieldId: '',
-    enabled: true, optionsSource: '', order: _cachedFilters.length + 1
   });
+  if (!id) return;
+  _cachedFilters.push({ id, label: id, type: 'text', fieldId: '', enabled: true, optionsSource: '', order: _cachedFilters.length + 1 });
   renderFiltersSettings(true);
 }
 
 async function deleteFilter(idx) {
-  const ok = await showConfirm(
-    `Удалить фильтр «${_cachedFilters[idx].label}»?`,
-    { icon: '🔍', title: 'Удаление фильтра', okText: 'Удалить', okClass: 'btn-danger' }
-  );
+  const ok = await showConfirm(`Удалить фильтр «${_cachedFilters[idx].label}»?`, { icon: '🔍', title: 'Удаление фильтра', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _cachedFilters.splice(idx, 1);
   _cachedFilters.forEach((f, i) => f.order = i + 1);
@@ -613,63 +497,42 @@ async function deleteFilter(idx) {
 
 async function saveFilters() {
   try {
-    await UI.saveAction({
-      successMsg: 'Фильтры сохранены',
-      closeFn: closeSettingsModal,
-      reload: false
-    }, async () => {
+    await UI.saveAction({ successMsg: 'Фильтры сохранены', closeFn: closeSettingsModal, reload: false }, async () => {
       await apiRequest('/settings/filters', 'PUT', _cachedFilters);
       await loadFilterConfig();
       _filterRendered = false;
-
       const panel = document.getElementById('filter-panel');
-      if (panel && panel.classList.contains('show')) {
-        renderFilterFields();
-      }
+      if (panel && panel.classList.contains('show')) renderFilterFields();
       syncFilterState();
       await refreshAfterSettingsChange();
     });
   } catch (e) {}
 }
+
 // ============================================================
 // ВКЛАДКА: ЭКСПОРТ
 // ============================================================
 const SYSTEM_EXPORT_FIELDS = [
-  { id: 'id', label: 'Внутренний номер' },
-  { id: 'serial', label: 'Серийный номер' },
-  { id: 'manufacturer', label: 'Производитель' },
-  { id: 'model', label: 'Модель' },
-  { id: 'equipmentType', label: 'Тип оборудования' },
-  { id: 'volume', label: 'Объём (мкл)' },
-  { id: 'department', label: 'Отдел' },
-  { id: 'lastCalibration', label: 'Дата поверки' },
-  { id: 'nextCalibration', label: 'Следующая поверка' },
-  { id: 'interval', label: 'МПИ (мес.)' },
-  { id: 'daysLeft', label: 'Дней до поверки' },
-  { id: 'responsible', label: 'Ответственный' },
-  { id: 'location', label: 'Место хранения' },
-  { id: 'status', label: 'Статус' },
-  { id: 'cert', label: 'Свидетельство' },
-  { id: 'notes', label: 'Примечание' }
+  { id: 'id', label: 'Внутренний номер' }, { id: 'serial', label: 'Серийный номер' },
+  { id: 'manufacturer', label: 'Производитель' }, { id: 'model', label: 'Модель' },
+  { id: 'equipmentType', label: 'Тип оборудования' }, { id: 'volume', label: 'Объём (мкл)' },
+  { id: 'department', label: 'Отдел' }, { id: 'lastCalibration', label: 'Дата поверки' },
+  { id: 'nextCalibration', label: 'Следующая поверка' }, { id: 'interval', label: 'МПИ (мес.)' },
+  { id: 'daysLeft', label: 'Дней до поверки' }, { id: 'responsible', label: 'Ответственный' },
+  { id: 'location', label: 'Место хранения' }, { id: 'status', label: 'Статус' },
+  { id: 'cert', label: 'Свидетельство' }, { id: 'notes', label: 'Примечание' }
 ];
 
 function getExportFields() {
   const list = [...SYSTEM_EXPORT_FIELDS];
-  const custom = (_cachedFields || []).filter(f =>
-    f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id)
-  );
-  for (const f of custom) {
-    list.push({ id: f.id, label: f.label });
-  }
+  const custom = (_cachedFields || []).filter(f => f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id));
+  for (const f of custom) list.push({ id: f.id, label: f.label });
   return list;
 }
-
-const EXPORT_FIELDS = SYSTEM_EXPORT_FIELDS;
 
 async function renderExportSettings() {
   const c = document.getElementById('settings-section-content');
   try {
-    
     _cachedFields = await apiRequest('/settings/fields');
     const selected = await apiRequest('/settings/export');
     let html = `<h3>Настройки экспорта</h3>
@@ -681,24 +544,17 @@ async function renderExportSettings() {
     
     html += `</div>
       <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
         <button class="btn btn-success" onclick="saveExportSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
     c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
-  }
+  } catch (e) { c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>'; }
 }
 
 async function saveExportSettings() {
   const selected = Array.from(document.querySelectorAll('.exp-field-cb:checked')).map(cb => cb.value);
   try {
-    await UI.saveAction({
-      successMsg: 'Настройки экспорта сохранены',
-      closeFn: closeSettingsModal,
-      reload: false
-    }, async () => {
+    await UI.saveAction({ successMsg: 'Настройки экспорта сохранены', closeFn: closeSettingsModal, reload: false }, async () => {
       await apiRequest('/settings/export', 'PUT', selected);
       exportFields = selected;
     });
@@ -719,41 +575,28 @@ async function renderGeneralSettings() {
           <label>Порог предупреждения о поверке (дней)</label>
           <input type="number" id="sys-warn-days" value="${esc(s.warn_days || '30')}" min="1" max="365" style="max-width:150px;">
         </div>
-        <button class="btn btn-success btn-sm" onclick="saveSystemSetting()">
-          <i class="fa-solid fa-floppy-disk"></i> Сохранить
-        </button>
+        <button class="btn btn-success btn-sm" onclick="saveSystemSetting()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
 
       <div class="settings-form" style="margin-top:24px;border-left:3px solid #dc2626;">
         <h4 style="color:#991b1b;">Опасная зона</h4>
         <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
-          Удаление <strong>всех данных</strong> об оборудовании и истории поверок.
-          Пользователи, отделы, поля и настройки останутся.
-          <strong>Действие необратимо.</strong>
+          Удаление <strong>всех данных</strong> об оборудовании и истории поверок. <strong>Действие необратимо.</strong>
         </p>
-        <button class="btn btn-danger btn-sm" onclick="resetAllDataSetting()">
-          <i class="fa-solid fa-trash"></i> Сбросить все данные
-        </button>
+        <button class="btn btn-danger btn-sm" onclick="resetAllDataSetting()"><i class="fa-solid fa-trash"></i> Сбросить все данные</button>
       </div>
 
       <div class="form-actions" style="margin-top: 24px;">
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
       </div>
     `;
-  } catch (e) {
-    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
-  }
+  } catch (e) { c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`; }
 }
 
 async function saveSystemSetting() {
   const wd = document.getElementById('sys-warn-days').value;
   try {
-    await UI.saveAction({
-      successMsg: 'Настройки сохранены',
-      closeFn: closeSettingsModal,
-      reload: false
-    }, async () => {
+    await UI.saveAction({ successMsg: 'Настройки сохранены', closeFn: closeSettingsModal, reload: false }, async () => {
       await apiRequest('/settings/system', 'PUT', { warn_days: String(wd) });
       settings.warnDays = parseInt(wd) || 30;
       await refreshAfterSettingsChange();
@@ -771,11 +614,7 @@ async function renderEquipmentSettings() {
     _cachedEquipmentTypes = JSON.parse(JSON.stringify(types));
 
     c.innerHTML = `
-      <p style="color:#64748b;font-size:.88rem;margin:0 0 12px;">
-        Управление списком типов. <strong>value</strong> — служебный ключ,
-        <strong>label</strong> — название, <strong>prefix</strong> — префикс для авто-ID.
-      </p>
-
+      <p style="color:#64748b;font-size:.88rem;margin:0 0 12px;">Управление списком типов.</p>
       <table class="field-settings-table" id="equip-types-table">
        <thead>
           <tr>
@@ -793,173 +632,97 @@ async function renderEquipmentSettings() {
 
       <div class="form-actions">
         <button class="btn btn-primary btn-sm" onclick="addEquipmentType()"><i class="fa-solid fa-plus"></i> Добавить тип</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
         <button class="btn btn-success btn-sm" onclick="saveEquipmentTypes()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
       </div>
-
-      <div id="equip-types-warning"
-           style="display:none;margin-top:12px;padding:10px 12px;background:#fee2e2;
-                  border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
-      </div>
+      <div id="equip-types-warning" style="display:none;margin-top:12px;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;"></div>
     `;
-
     renderEquipmentTypesTable();
-  } catch (e) {
-    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
-  }
+  } catch (e) { c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`; }
 }
 
 function renderEquipmentTypesTable() {
   const tbody = document.getElementById('equip-types-body');
   if (!tbody) return;
-
   if (_cachedEquipmentTypes.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
-
-     tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
+  tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
   <tr>
     <td>${UI.moveBtns(i, _cachedEquipmentTypes.length, 'moveEquipmentType')}</td>
-    <td>
-      <input type="text" value="${esc(t.value)}" readonly
-             style="background:#f1f5f9;cursor:not-allowed;"
-             title="value менять нельзя — это служебный ключ">
-    </td>
-    <td>
-      <input type="text" value="${esc(t.label)}"
-             oninput="updateEquipmentType(${i}, 'label', this.value)">
-    </td>
-    <td>
-      <input type="text" value="${esc(t.prefix || '')}" maxlength="4"
-             style="text-align:center;text-transform:uppercase;"
-             oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())">
-    </td>
-    <td>
-      <input type="number"
-        value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}"
-        min="1" max="120"
-        style="text-align:center;"
-        oninput="updateEquipmentType(${i}, 'interval', this.value)">
-    </td>
+    <td><input type="text" value="${esc(t.value)}" readonly style="background:#f1f5f9;cursor:not-allowed;" title="value менять нельзя"></td>
+    <td><input type="text" value="${esc(t.label)}" oninput="updateEquipmentType(${i}, 'label', this.value)"></td>
+    <td><input type="text" value="${esc(t.prefix || '')}" maxlength="4" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())"></td>
+    <td><input type="number" value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}" min="1" max="120" style="text-align:center;" oninput="updateEquipmentType(${i}, 'interval', this.value)"></td>
     <td>
       <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
-        <option value="external" ${t.calibrationPlace === 'external' ? 'selected' : ''}>📦 Внешняя (с отправкой)</option>
+        <option value="external" ${t.calibrationPlace === 'external' ? 'selected' : ''}>📦 Внешняя</option>
         <option value="internal" ${(!t.calibrationPlace || t.calibrationPlace === 'internal') ? 'selected' : ''}>🏠 На месте</option>
       </select>
     </td>
-    <td style="text-align: center;">
-       <button class="row-actions-btn" onclick="openEquipTypeActions(event, ${i})" title="Действия">
-         <i class="fa-solid fa-ellipsis-vertical"></i>
-       </button>
-    </td>
-  </tr>
-`).join('');
-
+    <td style="text-align: center;"><button class="row-actions-btn" onclick="openEquipTypeActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button></td>
+  </tr>`).join('');
   updateEquipmentTypesWarning();
 }
 
 function updateEquipmentType(idx, field, value) {
   if (idx < 0 || idx >= _cachedEquipmentTypes.length) return;
-
   if (field === 'interval') {
     const n = parseInt(value, 10);
-    _cachedEquipmentTypes[idx][field] =
-      (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
+    _cachedEquipmentTypes[idx][field] = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
   } else {
     _cachedEquipmentTypes[idx][field] = String(value).trim();
   }
-
   updateEquipmentTypesWarning();
 }
 
 function moveEquipmentType(idx, dir) {
   const to = idx + dir;
   if (to < 0 || to >= _cachedEquipmentTypes.length) return;
-  [_cachedEquipmentTypes[idx], _cachedEquipmentTypes[to]] =
-  [_cachedEquipmentTypes[to], _cachedEquipmentTypes[idx]];
+  [_cachedEquipmentTypes[idx], _cachedEquipmentTypes[to]] = [_cachedEquipmentTypes[to], _cachedEquipmentTypes[idx]];
   renderEquipmentTypesTable();
 }
 
 async function addEquipmentType() {
-  const value = await showPrompt(
-    'Ключ типа (латиница, без пробелов)',
-    {
-      icon: 'fa-screwdriver-wrench',
-      title: 'Новый тип оборудования',
-      okText: 'Добавить',
-      placeholder: 'Например: ph_meter',
+  const value = await showPrompt('Ключ типа', {
+      icon: 'fa-screwdriver-wrench', title: 'Новый тип', okText: 'Добавить', placeholder: 'Например: ph_meter',
       validator: (v) => {
         if (!v) return 'Укажите ключ';
         const t = v.trim().toLowerCase();
-        if (!/^[a-z][a-z0-9_]*$/.test(t)) return 'Только латиница, цифры и _, начиная с буквы';
+        if (!/^[a-z][a-z0-9_]*$/.test(t)) return 'Только латиница, цифры и _';
         if (_cachedEquipmentTypes.some(x => x.value === t)) return 'Тип с таким ключом уже есть';
         return null;
       }
-    }
-  );
-  if (!value) return;
-
-  const trimmed = value.trim().toLowerCase();
-  _cachedEquipmentTypes.push({
-    value: trimmed, label: trimmed, prefix: 'EQ',
-    calibrationPlace: 'internal', interval: 12
   });
+  if (!value) return;
+  const trimmed = value.trim().toLowerCase();
+  _cachedEquipmentTypes.push({ value: trimmed, label: trimmed, prefix: 'EQ', calibrationPlace: 'internal', interval: 12 });
   renderEquipmentTypesTable();
-  showToast('Тип добавлен. Не забудьте нажать «Сохранить типы».', 'success');
+  showToast('Тип добавлен', 'success');
 }
 
 async function deleteEquipmentType(idx) {
   if (idx < 0 || idx >= _cachedEquipmentTypes.length) return;
   const t = _cachedEquipmentTypes[idx];
-
-  const ok = await showConfirm(
-    `Удалить тип «${t.label}» (${t.value})?\n\nЕсли тип используется у существующего оборудования — удаление будет отклонено.`,
-    { icon: '🔧', title: 'Удаление типа', okText: 'Удалить', okClass: 'btn-danger' }
-  );
+  const ok = await showConfirm(`Удалить тип «${t.label}»?`, { icon: '🔧', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
-
   _cachedEquipmentTypes.splice(idx, 1);
   renderEquipmentTypesTable();
-  showToast('Тип удалён. Не забудьте нажать «Сохранить типы».', 'success');
+  showToast('Тип удалён', 'success');
 }
 
 function updateEquipmentTypesWarning() {
   const warn = document.getElementById('equip-types-warning');
   if (!warn) return;
-
   const problems = [];
-
   const values = _cachedEquipmentTypes.map(t => t.value);
-  const dupValues = values.filter((v, i) => values.indexOf(v) !== i);
-  if (dupValues.length > 0) problems.push(`Дубли value: ${[...new Set(dupValues)].join(', ')}`);
-
-  const emptyLabels = _cachedEquipmentTypes.filter(t => !t.label || !t.label.trim());
-  if (emptyLabels.length > 0) problems.push(`Пустой label у: ${emptyLabels.map(t => t.value).join(', ')}`);
-
-  const emptyPrefixes = _cachedEquipmentTypes.filter(t => !t.prefix || !t.prefix.trim());
-  if (emptyPrefixes.length > 0) problems.push(`Пустой prefix у: ${emptyPrefixes.map(t => t.value).join(', ')}`);
-
-  const prefixes = _cachedEquipmentTypes.map(t => t.prefix).filter(Boolean);
-  const dupPrefixes = prefixes.filter((v, i) => prefixes.indexOf(v) !== i);
-  if (dupPrefixes.length > 0) problems.push(`Дубли prefix: ${[...new Set(dupPrefixes)].join(', ')}`);
-  const noPlace = _cachedEquipmentTypes.filter(t => !t.calibrationPlace);
-  if (noPlace.length > 0) {
-    problems.push(`Не указано место поверки у: ${noPlace.map(t => t.value).join(', ')}`);
-  }
-
-  const badInterval = _cachedEquipmentTypes.filter(t => {
-    const n = parseInt(t.interval, 10);
-    return !Number.isFinite(n) || n < 1 || n > 120;
-  });
-  if (badInterval.length > 0) {
-    problems.push(`Некорректный МПИ у: ${badInterval.map(t => t.value).join(', ')} (будет 12)`);
-  }
-
+  if (values.filter((v, i) => values.indexOf(v) !== i).length > 0) problems.push('Дубли value');
+  if (_cachedEquipmentTypes.some(t => !t.label || !t.label.trim())) problems.push('Пустой label');
+  
   if (problems.length > 0) {
     warn.style.display = 'block';
-    warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + problems.join('<br><i class="fa-solid fa-triangle-exclamation"></i> ');
+    warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + problems.join(', ');
   } else {
     warn.style.display = 'none';
   }
@@ -967,34 +730,17 @@ function updateEquipmentTypesWarning() {
 
 async function saveEquipmentTypes() {
   const values = _cachedEquipmentTypes.map(t => t.value);
-  const dupValues = values.filter((v, i) => values.indexOf(v) !== i);
-  if (dupValues.length > 0) {
-    showToast('Есть дубли value: ' + [...new Set(dupValues)].join(', '), 'error');
-    return;
-  }
-  if (_cachedEquipmentTypes.some(t => !t.label || !t.label.trim())) {
-    showToast('У всех типов должен быть label', 'error');
-    return;
-  }
-
-  if (_cachedEquipmentTypes.some(t => !t.prefix || !t.prefix.trim())) {
-    const ok = await showConfirm(
-      'У некоторых типов не указан prefix. ID будет генерироваться с префиксом EQ. Продолжить?',
-      { icon: '⚠️', title: 'Пустой prefix', okText: 'Продолжить', okClass: 'btn-warning' }
-    );
-    if (!ok) return;
-  }
-    _cachedEquipmentTypes.forEach(t => {
+  if (values.filter((v, i) => values.indexOf(v) !== i).length > 0) { showToast('Есть дубли value', 'error'); return; }
+  if (_cachedEquipmentTypes.some(t => !t.label || !t.label.trim())) { showToast('Заполните label', 'error'); return; }
+  
+  _cachedEquipmentTypes.forEach(t => {
     if (!t.calibrationPlace) t.calibrationPlace = 'internal';
     const n = parseInt(t.interval, 10);
     t.interval = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
   });
 
-      try {
-    await UI.saveAction({
-      successMsg: 'Типы оборудования сохранены',
-      reload: false
-    }, async () => {
+  try {
+    await UI.saveAction({ successMsg: 'Типы сохранены', reload: false }, async () => {
       await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
       _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
       await loadFilterConfig();
@@ -1011,23 +757,15 @@ async function renderPrintersSettings() {
   const c = document.getElementById('settings-section-content');
   try {
     c.innerHTML = `
-      <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">
-        Список принтеров, доступных пользователям. Каждый может быть привязан к отделу.
-      </p>
-
+      <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">Список принтеров.</p>
       <div id="barcode-printers-list"></div>
-
       <div class="form-actions" style="margin-top:16px;">
         <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()"><i class="fa-solid fa-plus"></i> Добавить принтер</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
       </div>
     `;
-
     await renderBarcodePrintersList();
-  } catch (e) {
-    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
-  }
+  } catch (e) { c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`; }
 }
 
 // ============================================================
@@ -1037,75 +775,31 @@ async function renderBarcodesSettings() {
   const c = document.getElementById('settings-section-content');
   try {
     c.innerHTML = `
-      <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">
-        Параметры генерации и печати штрихкодов на этикетках.
-      </p>
-
+      <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">Параметры печати штрихкодов.</p>
       <div class="bc-settings-block" style="margin-top:0;">
         <div class="bc-settings-title">Что печатать</div>
-
         <div class="bc-settings-grid">
-          <div class="bc-cell">
-            <label>Размер</label>
-            <select id="bc-label-size">
-              <option value="58x40">58 × 40 мм</option>
-              <option value="40x25">40 × 25 мм</option>
-              <option value="100x50">100 × 50 мм</option>
-            </select>
-          </div>
-          <div class="bc-cell">
-            <label>Тип ШК</label>
-            <select id="bc-type">
-              <option value="code128">Code-128</option>
-              <option value="qr">QR-код</option>
-            </select>
-          </div>
-          <div class="bc-cell">
-            <label>Шрифт этикеток</label>
-            <select id="bc-font">
-              <option value="">— загрузка —</option>
-            </select>
-          </div>
-          <div class="bc-cell">
-            <label>Копий</label>
-            <input type="number" id="bc-default-copies" value="1" min="1" max="50">
-          </div>
-          <div class="bc-cell">
-            <label>Порт агента</label>
-            <input type="number" id="bc-agent-port" value="9200">
-          </div>
-          <div class="bc-cell">
-            <label>Макс. длина</label>
-            <input type="number" id="bc-max-length" value="255" min="8" max="255">
-          </div>
-          <div class="bc-cell bc-cell-check">
-            <label class="bc-fallback-line">
-              <input type="checkbox" id="bc-fallback-to-pdf">
-              <span>Fallback на PDF</span>
-            </label>
-          </div>
+          <div class="bc-cell"><label>Размер</label><select id="bc-label-size"><option value="58x40">58 × 40 мм</option><option value="40x25">40 × 25 мм</option><option value="100x50">100 × 50 мм</option></select></div>
+          <div class="bc-cell"><label>Тип ШК</label><select id="bc-type"><option value="code128">Code-128</option><option value="qr">QR-код</option></select></div>
+          <div class="bc-cell"><label>Шрифт</label><select id="bc-font"><option value="">— загрузка —</option></select></div>
+          <div class="bc-cell"><label>Копий</label><input type="number" id="bc-default-copies" value="1" min="1" max="50"></div>
+          <div class="bc-cell"><label>Порт агента</label><input type="number" id="bc-agent-port" value="9200"></div>
+          <div class="bc-cell"><label>Макс. длина</label><input type="number" id="bc-max-length" value="255" min="8" max="255"></div>
+          <div class="bc-cell bc-cell-check"><label class="bc-fallback-line"><input type="checkbox" id="bc-fallback-to-pdf"><span>Fallback на PDF</span></label></div>
         </div>
-
         <div class="bc-fields-section">
           <div class="bc-fields-label">Поля на этикетке:</div>
           <div id="bc-label-fields" class="bc-fields-grid"></div>
-          <div class="bc-fields-hint">
-             <i class="fa-solid fa-circle-info"></i> На этикетке 58×40 мм влезает <b>3–4 поля</b>
-          </div>
+          <div class="bc-fields-hint"><i class="fa-solid fa-circle-info"></i> Влезает <b>3–4 поля</b></div>
         </div>
       </div>
-
       <div class="form-actions" style="margin-top:16px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
         <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
       </div>
     `;
-
     await loadBarcodeSettings();
-  } catch (e) {
-    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
-  }
+  } catch (e) { c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`; }
 }
 
 // ============================================================
@@ -1125,30 +819,19 @@ async function renderLogSettings() {
       html += '<tr><td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">Пусто</td></tr>';
     } else {
       for (const l of logs) {
-        html += `<tr>
-          <td class="timestamp">${new Date(l.timestamp).toLocaleString('ru-RU')}</td>
-          <td class="user">${esc(l.user_full_name)}</td>
-          <td class="action">${esc(l.action)}</td>
-          <td>${esc(l.details || '')}</td>
-        </tr>`;
+        html += `<tr><td class="timestamp">${new Date(l.timestamp).toLocaleString('ru-RU')}</td><td class="user">${esc(l.user_full_name)}</td><td class="action">${esc(l.action)}</td><td>${esc(l.details || '')}</td></tr>`;
       }
     }
     html += '</tbody></table></div>';
     html += `<div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
       </div>`;
     c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
-  }
+  } catch (e) { c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>'; }
 }
 
 async function clearLogSetting() {
-  const ok = await showConfirm(
-    'Очистить журнал действий? Все записи будут удалены.',
-    { icon: '🗒️', title: 'Очистка журнала', okText: 'Очистить', okClass: 'btn-danger' }
-  );
+  const ok = await showConfirm('Очистить журнал действий?', { icon: '🗒️', title: 'Очистка', okText: 'Очистить', okClass: 'btn-danger' });
   if (!ok) return;
   await apiRequest('/log', 'DELETE');
   showToast('Журнал очищен', 'success');
@@ -1157,61 +840,23 @@ async function clearLogSetting() {
 
 async function resetAllDataSetting() {
   if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
-
-  const ok1 = await showConfirm(
-    'ВНИМАНИЕ! Всё оборудование, история поверок и журнал действий будут удалены безвозвратно.\n\nПользователи, отделы и настройки — останутся.',
-    { icon: '⚠️', title: 'Сброс всех данных', okText: 'Продолжить', okClass: 'btn-danger' }
-  );
+  const ok1 = await showConfirm('ВНИМАНИЕ! Всё оборудование будет удалено безвозвратно.', { icon: '⚠️', title: 'Сброс', okText: 'Продолжить', okClass: 'btn-danger' });
   if (!ok1) return;
-
-  const ok2 = await showConfirm(
-    'Вы точно уверены? Отменить это действие будет невозможно.\n\nРекомендуем сначала сделать экспорт важных данных в Excel.',
-    { icon: '🚨', title: 'Последнее предупреждение', okText: 'Удалить всё', okClass: 'btn-danger' }
-  );
+  const ok2 = await showConfirm('Вы точно уверены?', { icon: '🚨', title: 'Последнее предупреждение', okText: 'Удалить всё', okClass: 'btn-danger' });
   if (!ok2) return;
-
   try {
     await apiRequest('/settings/reset-data', 'POST', {});
     showToast('Данные удалены', 'success');
     await loadPipetteData();
     closeSettingsModal();
-  } catch (e) {
-    showToast(e.message || 'Ошибка сброса данных', 'error');
-  }
+  } catch (e) { showToast(e.message || 'Ошибка сброса данных', 'error'); }
 }
 
 // ============================================================
-// МЕНЮ ДЕЙСТВИЙ ДЛЯ НАСТРОЕК (три точки)
+// МЕНЮ ДЕЙСТВИЙ ДЛЯ НАСТРОЕК
 // ============================================================
+function openFieldActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить поле', class: 'item-danger', action: () => deleteFieldSetting(idx) }]); }
+function openDeptActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить отдел', class: 'item-danger', action: () => deleteDepartmentItem(idx) }]); }
+function openFilterActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить фильтр', class: 'item-danger', action: () => deleteFilter(idx) }]); }
+function openEquipTypeActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить тип', class: 'item-danger', action: () => deleteEquipmentType(idx) }]); }
 
-function openFieldActions(ev, idx) {
-  ev.stopPropagation();
-  const items = [
-    { label: '<i class="fa-solid fa-trash"></i> Удалить поле', class: 'item-danger', action: () => deleteFieldSetting(idx) }
-  ];
-  renderRowActionsMenu(ev.currentTarget, items);
-}
-
-function openDeptActions(ev, idx) {
-  ev.stopPropagation();
-  const items = [
-    { label: '<i class="fa-solid fa-trash"></i> Удалить отдел', class: 'item-danger', action: () => deleteDepartmentItem(idx) }
-  ];
-  renderRowActionsMenu(ev.currentTarget, items);
-}
-
-function openFilterActions(ev, idx) {
-  ev.stopPropagation();
-  const items = [
-    { label: '<i class="fa-solid fa-trash"></i> Удалить фильтр', class: 'item-danger', action: () => deleteFilter(idx) }
-  ];
-  renderRowActionsMenu(ev.currentTarget, items);
-}
-
-function openEquipTypeActions(ev, idx) {
-  ev.stopPropagation();
-  const items = [
-    { label: '<i class="fa-solid fa-trash"></i> Удалить тип', class: 'item-danger', action: () => deleteEquipmentType(idx) }
-  ];
-  renderRowActionsMenu(ev.currentTarget, items);
-}
