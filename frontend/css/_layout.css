@@ -8,65 +8,6 @@
 }
 .auth-container.hidden { display: none !important; }
 
-/* Шапка */
-.header {
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  color: #fff;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  width: 100%;            
-  box-sizing: border-box;
-  flex-shrink: 0; /* 🆕 Не сжимается */
-}
-
-/* Контейнер */
-.container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  flex: 1; /* Занимает оставшееся место */
-  padding: 0 8px;
-  margin: 8px auto 0;
-  box-sizing: border-box;
-  overflow: hidden; 
-  min-height: 0; 
-}
-
-/* Баннер */
-.alert-banner { 
-  background: #fef3c7; 
-  border: 1px solid #fcd34d; 
-  border-radius: 10px; 
-  padding: 14px 18px; 
-  margin-bottom: 18px; 
-  display: none; 
-  align-items: center; 
-  gap: 10px; 
-  font-size: .9rem; 
-  color: #92400e; 
-  flex-shrink: 0; /* 🆕 Не сжимается */
-}
-.alert-banner.show { display: flex; }
-
-/* Тулбар */
-.toolbar {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  background: var(--card);
-  padding: 12px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
-  margin-bottom: 18px;
-  flex-shrink: 0; /* 🆕 Не сжимается */
-}
-
 /* ============================================================
    ШАПКА
    ============================================================ */
@@ -81,11 +22,6 @@
   gap: 12px;
   width: 100%;            
   box-sizing: border-box;
-  overflow: visible; 
-  position: fixed; /* 🆕 Намертво прибиваем к экрану */
-  top: 0;           
-  left: 0;               
-  z-index: 50; 
   flex-shrink: 0; 
 }
 
@@ -108,9 +44,7 @@
   width: 100%;
   flex: 1;
   padding: 0 8px;
-  /* 🆕 Отступаем сверху, чтобы контент не прятался под шапкой */
-  padding-top: calc(var(--header-height, 60px) + var(--banner-height, 0px) + var(--toolbar-height, 70px) + 10px);
-  margin: 0 auto;
+  margin: 8px auto 0;
   box-sizing: border-box;
   overflow: hidden; 
   min-height: 0; 
@@ -130,12 +64,6 @@
   gap: 10px; 
   font-size: .9rem; 
   color: #92400e; 
-  position: fixed; /* 🆕 Прибиваем */
-  top: var(--header-height, 60px);
-  left: 0;               
-  width: 100%;           
-  box-sizing: border-box; 
-  z-index: 45; 
   flex-shrink: 0;
 }
 .alert-banner.show { display: flex; }
@@ -155,12 +83,6 @@
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0,0,0,.06);
   margin-bottom: 18px;
-  position: fixed; /* 🆕 Прибиваем */
-  top: calc(var(--header-height, 60px) + var(--banner-height, 0px)); 
-  left: 0;               
-  width: 100%;           
-  box-sizing: border-box; 
-  z-index: 40; 
   flex-shrink: 0;
 }
 
@@ -305,43 +227,47 @@ html[data-theme="dark"] #search {
   min-width: 0;
 }
 
+/* ============================================================
+   АДАПТИВНОСТЬ (объединенная)
+   ============================================================ */
 @media (min-width: 1025px) {
   .header-collapse-btn { display: none; }
 }
 
-@media (max-width: 768px) {
-  /* 🆕 Выравниваем шапку по левому краю в колонку */
+/* На экранах до 1300px перестраиваем шапку в колонку */
+@media (max-width: 1300px) {
   .header-body {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
   }
 
   .header-stats {
-    justify-content: flex-start;
-    width: 100%;
+    justify-content: flex-start !important;
+    width: 100% !important;
   }
 
   .header-body .user-info {
-    margin-left: 0; /* Убираем прижатие вправо */
-    width: 100%;
-    justify-content: flex-start;
+    margin-left: 0 !important; 
+    width: 100% !important;
+    justify-content: flex-start !important;
   }
+}
 
-  /* 🆕 Чиним тулбар (панель поиска) */
+/* На мобилках (до 768px) */
+@media (max-width: 768px) {
   .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding: 10px;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 10px !important;
   }
 
-  /* 🆕 Запрещаем поиску растягиваться в высоту! */
   .toolbar > #search {
-    flex: 0 0 auto !important; /* Убиваем flex-basis: 340px */
+    flex: 0 0 auto !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-height: 40px;
+    min-height: 40px !important;
   }
 
   .toolbar > .btn,
@@ -352,10 +278,10 @@ html[data-theme="dark"] #search {
   }
 
   .toolbar-bulk {
-    flex-direction: column;
+    flex-direction: column !important;
   }
   .toolbar-bulk .btn {
-    width: 100%;
+    width: 100% !important;
   }
 }
 
@@ -363,6 +289,7 @@ html[data-theme="dark"] #search {
   .header-top h1 { font-size: .95rem; }
   .header-mini-stats { font-size: .72rem; padding: 3px 8px; }
 }
+
 @media (max-width: 420px) {
   .header.collapsed { padding: 8px 10px; }
   .header.collapsed h1 { font-size: .9rem; gap: 4px; }
@@ -394,131 +321,4 @@ html[data-theme="dark"] #search {
   .header.collapsed .header-mini-stats { font-size: .64rem; padding: 2px 6px; }
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
   .stat-card { flex: 1; min-width: 45%; }
-}
-
-@media (max-width: 768px) {
-  .header-body {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 12px !important;
-  }
-
-  .header-stats {
-    justify-content: flex-start !important;
-    width: 100% !important;
-  }
-
-  /* Жестко прибиваем блок пользователя влево */
-  .header-body .user-info {
-    margin-left: 0 !important; 
-    width: 100% !important;
-    justify-content: flex-start !important;
-    display: flex !important;
-    flex-wrap: wrap !important;
-  }
-}
-
-/* ============================================================
-   АДАПТИВНОСТЬ ШАПКИ (для ПК и мобилок)
-   ============================================================ */
-
-/* Как только экран становится уже 1300px — перестраиваем шапку */
-@media (max-width: 1300px) {
-  /* 🆕 Делаем шапку колонкой и прижимаем всё влево */
-  .header-body {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 16px !important;
-  }
-
-  .header-stats {
-    justify-content: flex-start !important;
-    width: 100% !important;
-  }
-
-  /* 🆕 Блок администратора встает под счетчиками и прижимается влево */
-  .header-body .user-info {
-    margin-left: 0 !important; 
-    width: 100% !important;
-    justify-content: flex-start !important;
-  }
-}
-
-/* На мобилках (до 768px) оставляем то же самое, плюс чиним поиск */
-@media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
-    padding: 10px !important;
-  }
-
-  /* Поиск на всю ширину, но без огромной высоты */
-  .toolbar > #search {
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 40px !important;
-  }
-
-  .toolbar > .btn,
-  .toolbar > .dropdown,
-  .toolbar > .dropdown > .btn {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  .toolbar-bulk {
-    flex-direction: column !important;
-  }
-  .toolbar-bulk .btn {
-    width: 100% !important;
-  }
-}
-
-@media (max-width: 1300px) {
-  .header-body {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 16px !important;
-  }
-
-  .header-stats {
-    justify-content: flex-start !important;
-    width: 100% !important;
-  }
-
-  /* 🆕 Жестко прибиваем блок админа к левому краю */
-  .header-body .user-info {
-    margin-left: 0 !important; 
-    width: 100% !important;
-    justify-content: flex-start !important;
-    position: relative !important;
-    z-index: 1 !important; /* Опускаем ниже тултипа */
-  }
-}
-
-/* ============================================================
-   ФИНАЛЬНЫЙ ФИКС АДАПТИВНОСТИ ШАПКИ
-   ============================================================ */
-
-/* На экранах до 1300px перестраиваем шапку в колонку */
-@media (max-width: 1300px) {
-  .header .header-body {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 16px !important;
-  }
-
-  .header .header-stats {
-    justify-content: flex-start !important;
-    width: 100% !important;
-  }
-
-  /* 🆕 Убиваем margin-left: auto самой высокой специфичностью */
-  .header .header-body .user-info {
-    margin-left: 0 !important; 
-    width: 100% !important;
-    justify-content: flex-start !important;
-  }
 }
