@@ -66,19 +66,17 @@
 }
 
 /* ============================================================
-   АНИМАЦИЯ МОДАЛКИ
+   АНИМАЦИЯ МОДАЛКИ (плавное появление без моргания)
    ============================================================ */
 .modal-overlay.active .modal {
-  animation: modalFadeIn .22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  will-change: transform, opacity;
+  animation: modalScaleIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
-@keyframes modalFadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
-.modal-overlay { transition: opacity 0.2s; }
 
 /* ============================================================
    ВКЛАДКИ МОДАЛКИ ДОБАВЛЕНИЯ
