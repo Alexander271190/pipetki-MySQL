@@ -79,6 +79,7 @@ async function openSettingsSection(id) {
   document.getElementById('settings-section').style.display = '';
   document.getElementById('settings-back-btn').style.display = 'inline-flex';
   document.getElementById('settings-header-text').textContent = sectionDef.label;
+  document.getElementById('settings-footer').style.display = 'none';
 
   const c = document.getElementById('settings-section-content');
   c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
@@ -140,10 +141,12 @@ async function renderFieldsSettings(skipFetch = false) {
         </td>
       </tr>`;
     });
-        html += `</tbody></table>
+     html += `</tbody></table>
       <div class="form-actions">
         <button class="btn btn-primary" onclick="addFieldSetting()"><i class="fa-solid fa-plus"></i> Добавить поле</button>
-        <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить изменения</button>
+        <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
     c.innerHTML = html;
   } catch (e) {
@@ -381,11 +384,13 @@ async function renderDepartmentsSettings(skipFetch = false) {
         </td>
       </tr>`;
     });
-    html += `</tbody></table>
+  html += `</tbody></table>
     <div class="form-actions" style="justify-content:flex-start; margin-top:16px;">
         <input type="text" id="new-dept-name" placeholder="Название нового отдела" style="flex:1; max-width:400px; padding:9px 12px; border:1px solid #d1d5db; border-radius:8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addDepartmentItem();}">
         <button type="button" class="btn btn-success" onclick="addDepartmentItem()"><i class="fa-solid fa-plus"></i> Добавить</button>
         <button type="button" class="btn btn-primary" onclick="saveDepartmentsFull()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
      </div>
      <div id="dept-duplicate-warning" style="margin-top:12px;display:none;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
      </div>`;
@@ -552,12 +557,10 @@ async function renderFiltersSettings(skipFetch = false) {
     
     html += `</tbody></table>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addFilter()">
-           <i class="fa-solid fa-plus"></i> Добавить фильтр
-        </button>
-        <button class="btn btn-success" onclick="saveFilters()">
-          <i class="fa-solid fa-floppy-disk"></i> Сохранить
-        </button>
+        <button class="btn btn-primary" onclick="addFilter()"><i class="fa-solid fa-plus"></i> Добавить фильтр</button>
+        <button class="btn btn-success" onclick="saveFilters()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
     c.innerHTML = html;
   } catch (e) {
@@ -676,7 +679,12 @@ async function renderExportSettings() {
       html += `<label><input type="checkbox" value="${esc(f.id)}" ${selected.includes(f.id) ? 'checked' : ''} class="exp-field-cb"> ${esc(f.label)}</label>`;
     });
     
-    html += `</div><button class="btn btn-success" onclick="saveExportSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>`;
+    html += `</div>
+      <div class="form-actions">
+        <button class="btn btn-success" onclick="saveExportSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+      </div>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
@@ -726,6 +734,11 @@ async function renderGeneralSettings() {
         <button class="btn btn-danger btn-sm" onclick="resetAllDataSetting()">
           <i class="fa-solid fa-trash"></i> Сбросить все данные
         </button>
+      </div>
+
+      <div class="form-actions" style="margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>
     `;
   } catch (e) {
@@ -779,12 +792,10 @@ async function renderEquipmentSettings() {
       </table>
 
       <div class="form-actions">
-        <button class="btn btn-primary btn-sm" onclick="addEquipmentType()">
-          <i class="fa-solid fa-plus"></i> Добавить тип
-        </button>
-        <button class="btn btn-success btn-sm" onclick="saveEquipmentTypes()">
-          <i class="fa-solid fa-floppy-disk"></i> Сохранить типы
-        </button>
+        <button class="btn btn-primary btn-sm" onclick="addEquipmentType()"><i class="fa-solid fa-plus"></i> Добавить тип</button>
+        <button class="btn btn-success btn-sm" onclick="saveEquipmentTypes()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
       </div>
 
       <div id="equip-types-warning"
@@ -1006,9 +1017,11 @@ async function renderPrintersSettings() {
 
       <div id="barcode-printers-list"></div>
 
-      <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()" style="margin-top:10px;">
-        <i class="fa-solid fa-plus"></i> Добавить принтер
-      </button>
+      <div class="form-actions" style="margin-top:16px;">
+        <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()"><i class="fa-solid fa-plus"></i> Добавить принтер</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
+      </div>
     `;
 
     await renderBarcodePrintersList();
@@ -1082,9 +1095,11 @@ async function renderBarcodesSettings() {
         </div>
       </div>
 
-      <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()" style="margin-top:16px;">
-        <i class="fa-solid fa-floppy-disk"></i> Сохранить настройки штрихкодов
-      </button>
+      <div class="form-actions" style="margin-top:16px;">
+        <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
+      </div>
     `;
 
     await loadBarcodeSettings();
@@ -1119,6 +1134,10 @@ async function renderLogSettings() {
       }
     }
     html += '</tbody></table></div>';
+    html += `<div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsSection()" style="margin-left:auto;">Назад</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+      </div>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
