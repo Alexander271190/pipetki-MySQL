@@ -569,3 +569,20 @@ document.addEventListener('DOMContentLoaded', () => {
     observer.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
   }
 });
+
+window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
+window.addEventListener('resize', updateStickyOffsets);
+
+// 🆕 Следим за изменением высоты элементов (поворот экрана, перенос текста и т.д.)
+if (window.ResizeObserver) {
+  const observer = new ResizeObserver(() => {
+    updateStickyOffsets();
+  });
+  const header = document.getElementById('main-header');
+  const banner = document.getElementById('alert-banner');
+  const toolbar = document.getElementById('toolbar');
+  
+  if (header) observer.observe(header);
+  if (banner) observer.observe(banner);
+  if (toolbar) observer.observe(toolbar);
+}
