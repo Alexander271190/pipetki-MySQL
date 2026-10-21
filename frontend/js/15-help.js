@@ -260,7 +260,7 @@ async function renderHelpSettings() {
       <td>${esc(s.title)}</td>
       <td style="text-align:center;">${permsText}</td>
       <td style="text-align:center;">${s.enabled ? '✅' : '❌'}</td>
-      <td class="help-admin-actions" style="text-align: center; padding: 5px;">
+      <td class="help-admin-actions">
         <button class="row-actions-btn" onclick="openHelpActions(event, '${esc(s.slug)}')" title="Действия">
           <i class="fa-solid fa-ellipsis-vertical"></i>
         </button>
@@ -582,7 +582,7 @@ async function renderViewTemplatesSettings() {
         <td><strong>${esc(t.name)}</strong></td>
         <td>${t.visibleFields.length}</td>
         <td>${t.isDefault ? '✅' : '—'}</td>
-        <td class="help-admin-actions" style="text-align: center; padding: 5px;">
+        <td class="help-admin-actions">
           <button class="row-actions-btn" onclick="openViewTemplateActions(event, ${t.id})" title="Действия">
             <i class="fa-solid fa-ellipsis-vertical"></i>
           </button>
