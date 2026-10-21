@@ -230,9 +230,8 @@ html[data-theme="dark"] #search {
 /* ============================================================
    АДАПТИВНОСТЬ (объединенная)
    ============================================================ */
-@media (min-width: 1025px) {
-  .header-collapse-btn { display: none; }
-}
+@media (min-width: 769px) {
+  .header-collapse-btn { display: none !important; }
 
 /* На экранах до 1300px перестраиваем шапку в колонку */
 @media (max-width: 1300px) {
