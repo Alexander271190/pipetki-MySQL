@@ -1,14 +1,14 @@
 'use strict';
 
 // ============================================================
-// 🆕 ПОЛЬЗОВАТЕЛИ — новая форма с правами
+// ПОЛЬЗОВАТЕЛИ — СПИСОК И ФОРМА
 // ============================================================
 async function renderUsersSettings() {
   const c = document.getElementById('settings-section-content');
   try {
     const users = await getCachedUsers(true);
     
-       let html = '<h3>Управление пользователями</h3>';
+    let html = '<h3>Управление пользователями</h3>';
     html += `
       <div style="margin-bottom:12px; position:relative;">
         <input type="text" id="users-search" 
@@ -19,19 +19,20 @@ async function renderUsersSettings() {
            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:.85rem; pointer-events:none;"></i>
       </div>
     `;
+    
     html += `<table class="field-settings-table users-table-fix" style="margin-bottom:20px;" id="users-table">
-  <colgroup>
-    <col style="width:14%;">
-    <col style="width:20%;">
-    <col style="width:16%;">
-    <col style="width:14%;">
-    <col style="width:12%;">
-    <col style="width:8%;">
-    <col style="width:1%;">
-  </colgroup>
-  <thead><tr>
-    <th>Логин</th><th>ФИО</th><th>Должность</th><th>Отдел</th><th>Роль</th><th>Права</th><th>Действия</th>
-  </tr></thead><tbody>`;
+      <colgroup>
+        <col style="width:14%;">
+        <col style="width:20%;">
+        <col style="width:16%;">
+        <col style="width:14%;">
+        <col style="width:12%;">
+        <col style="width:8%;">
+        <col style="width:1%;">
+      </colgroup>
+      <thead><tr>
+        <th>Логин</th><th>ФИО</th><th>Должность</th><th>Отдел</th><th>Роль</th><th>Права</th><th>Действия</th>
+      </tr></thead><tbody>`;
 
     users.forEach(u => {
       const perms = u.extraPermissions || [];
@@ -51,7 +52,7 @@ async function renderUsersSettings() {
         <td>${esc(u.department || '—')}</td>
         <td>${ROLE_LABELS[u.role] || u.role}</td>
         <td class="perm-cell">${permText}</td>
-                <td class="actions">
+        <td class="actions">
           <button class="row-actions-btn"
                   onclick="openUserActions(event, '${u.id}')"
                   title="Действия">
@@ -60,6 +61,7 @@ async function renderUsersSettings() {
         </td>
       </tr>`;
     });
+    
     html += `</tbody></table>`;
     html += renderUserEditForm();
     c.innerHTML = html;
@@ -69,7 +71,7 @@ async function renderUsersSettings() {
 }
 
 // ============================================================
-// 🆕 Поиск в таблице пользователей (клиентский, без запросов)
+// КЛИЕНТСКИЙ ПОИСК ПО ТАБЛИЦЕ ПОЛЬЗОВАТЕЛЕЙ
 // ============================================================
 let _usersSearchTimer = null;
 
@@ -81,10 +83,10 @@ function filterUsersTable(query) {
 
     const q = String(query || '').trim().toLowerCase();
     const rows = table.querySelectorAll('tbody tr');
-
     let visibleCount = 0;
+
     for (const row of rows) {
-      // Если строка — это «пустое состояние» (colspan), не трогаем
+      // Пропускаем строку «Ничего не найдено» (colspan)
       if (row.querySelector('[colspan]') && !row.querySelector('td:not([colspan])')) continue;
 
       if (!q) {
@@ -122,6 +124,9 @@ function filterUsersTable(query) {
   }, 250);
 }
 
+// ============================================================
+// ФОРМА РЕДАКТИРОВАНИЯ / СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
 function renderUserEditForm() {
   const groups = {};
   for (const p of ALL_PERMISSIONS) {
@@ -136,9 +141,9 @@ function renderUserEditForm() {
         <div style="font-weight:700;font-size:.82rem;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">
           ${esc(group)}
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:6px 16px;">
+        <div class="help-perms-grid" style="padding: 8px 0; background: transparent; max-height: none;">
           ${items.map(p => `
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:5px 8px;border-radius:6px;font-size:.85rem;line-height:1.3;">
+            <label class="help-perm-item" style="padding:5px 8px;">
               <input type="checkbox" class="usr-perm-cb" value="${esc(p.key)}" style="margin-top:2px;">
               <span>${p.label}</span>
             </label>
@@ -157,6 +162,7 @@ function renderUserEditForm() {
         <div class="form-group"><label>Логин *</label><input id="usr-login"></div>
         <div class="form-group"><label>ФИО *</label><input id="usr-fullname"></div>
       </div>
+      
       <div class="form-row">
         <div class="form-group"><label>Должность *</label><input id="usr-position"></div>
         <div class="form-group"><label>Отдел</label>
@@ -166,6 +172,7 @@ function renderUserEditForm() {
           </select>
         </div>
       </div>
+      
       <div class="form-row">
         <div class="form-group"><label>Роль</label>
           <select id="usr-role" onchange="onUserRoleChange(this.value)">
@@ -183,6 +190,7 @@ function renderUserEditForm() {
           </select>
         </div>
       </div>
+      
       <small style="color:#64748b;display:block;margin-bottom:12px;font-size:.8rem;">
         Пароль генерируется автоматически. Пользователь обязан сменить его при первом входе.
       </small>
@@ -258,11 +266,14 @@ function renderUserEditForm() {
   `;
 }
 
+// ============================================================
+// ПРЕСЕТЫ ПРАВ И ЛОГИКА ФОРМЫ
+// ============================================================
 function applyPermPreset(preset) {
   const presets = {
     none: [],
     user: ['view_history', 'print_labels', 'export_data'],
-     senior: [
+    senior: [
       'add_pipette', 'edit_pipette', 'quick_calibration', 'transfer_pipette',
       'bulk_change_responsible',
       'bulk_send', 'bulk_return',
@@ -302,8 +313,10 @@ async function onActingChange(checked) {
   const wrap = document.getElementById('usr-acting-for-wrap');
   const sel  = document.getElementById('usr-acting-for');
   if (!wrap || !sel) return;
+  
   wrap.style.display = checked ? 'block' : 'none';
   if (!checked) { sel.value = ''; return; }
+  
   if (sel.dataset.loaded !== '1') {
     try {
       const users = await apiRequest('/users/acting-targets');
@@ -316,6 +329,9 @@ async function onActingChange(checked) {
   }
 }
 
+// ============================================================
+// СОХРАНЕНИЕ И РЕДАКТИРОВАНИЕ
+// ============================================================
 async function editUserSetting(id) {
   try {
     const users = await apiRequest('/users');
@@ -330,6 +346,7 @@ async function editUserSetting(id) {
     const deptSel = document.getElementById('usr-department');
     Array.from(deptSel.options).forEach(o => { if (o.dataset.broken === '1') o.remove(); });
     deptSel.value = u.department || '';
+    
     if (u.department && deptSel.value !== u.department) {
       const opt = document.createElement('option');
       opt.value = u.department;
@@ -350,6 +367,7 @@ async function editUserSetting(id) {
       perms.push('add_pipette', 'edit_pipette', 'delete_pipette', 'quick_calibration', 'bulk_send', 'bulk_return');
       perms = [...new Set(perms)];
     }
+    
     document.querySelectorAll('.usr-perm-cb').forEach(cb => {
       cb.checked = perms.includes(cb.value);
       cb.disabled = (u.role === 'admin');
@@ -369,7 +387,9 @@ async function editUserSetting(id) {
     if (psEl) psEl.value = String(prefs.defaultPageSize || 100);
 
     document.getElementById('user-form-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { 
+    showToast(e.message, 'error'); 
+  }
 }
 
 async function saveUserSetting() {
@@ -384,6 +404,7 @@ async function saveUserSetting() {
   if (!login) missing.push('Логин');
   if (!fullName) missing.push('ФИО');
   if (!position) missing.push('Должность');
+  
   if (missing.length > 0) {
     const msg = missing.length === 1
       ? `Заполните поле «${missing[0]}»`
@@ -396,7 +417,10 @@ async function saveUserSetting() {
   const isActing = document.getElementById('usr-is-acting').checked;
   const actingForId = isActing ? document.getElementById('usr-acting-for').value.trim() : null;
 
-  if (isActing && !actingForId) { showToast('Для и.о. нужно указать, за кого он исполняет', 'error'); return; }
+  if (isActing && !actingForId) { 
+    showToast('Для и.о. нужно указать, за кого он исполняет', 'error'); 
+    return; 
+  }
 
   const extraPermissions = [];
   if (role !== 'admin') {
@@ -404,8 +428,8 @@ async function saveUserSetting() {
   }
 
   const payload = { login, fullName, position, department, role, onlyOwnDepartment, extraPermissions, isActing, actingForId };
-
   let userId = id;
+
   try {
     await UI.saveAction({
       successMsg: id ? 'Пользователь обновлён' : 'Пользователь создан',
@@ -456,20 +480,27 @@ function resetUserSettingForm() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  
   const deptSel = document.getElementById('usr-department');
   if (deptSel) {
     Array.from(deptSel.options).forEach(o => { if (o.dataset.broken === '1') o.remove(); });
     deptSel.value = '';
   }
+  
   const roleSel = document.getElementById('usr-role');
   if (roleSel) roleSel.value = 'user';
+  
   const titleEl = document.getElementById('user-form-title');
   if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-plus"></i> Добавить пользователя';
+  
   const onlyOwnCb = document.getElementById('usr-only-own-dept');
   if (onlyOwnCb) onlyOwnCb.checked = false;
+  
   const isActingCb = document.getElementById('usr-is-acting');
   if (isActingCb) { isActingCb.checked = false; onActingChange(false); }
+  
   document.querySelectorAll('.usr-perm-cb').forEach(cb => { cb.checked = false; cb.disabled = false; });
+  
   const psEl = document.getElementById('usr-page-size');
   if (psEl) psEl.value = '100';
 }
@@ -490,16 +521,19 @@ async function deleteUserSetting(id, displayName) {
     { icon: '👤', title: 'Удаление пользователя', okText: 'Удалить', okClass: 'btn-danger' }
   );
   if (!ok) return;
-    try {
+  
+  try {
     await apiRequest('/users/' + id, 'DELETE');
     invalidateUsersCache();
     showToast('Удалён', 'success');
     renderUsersSettings();
-  } catch (e) { showToast(e.message, 'error'); }
+  } catch (e) { 
+    showToast(e.message, 'error'); 
+  }
 }
 
 // ============================================================
-// МОДАЛКА «Поля формы пользователя»
+// МОДАЛКА «ПОЛЯ ФОРМЫ ПОЛЬЗОВАТЕЛЯ»
 // ============================================================
 let _userViewUserId = null;
 let _userViewVisibleFields = [];
@@ -528,7 +562,6 @@ async function openUserViewModal(userId, userName) {
   }
 
   const VIRTUAL_IDS = ['status', 'nextCalibration'];
-
   const allEnabled = _cachedFields.filter(f => f.enabled).map(f => f.id);
   const allAvailable = [...allEnabled, ...VIRTUAL_IDS];
 
@@ -550,7 +583,6 @@ async function openUserViewModal(userId, userName) {
 
   renderUserViewContent();
   UI.modal.open('user-view-modal');
-
   loadCopyViewUserList(userId);
 }
 
@@ -574,7 +606,6 @@ function renderUserViewContent() {
   ];
 
   const visibleSet = new Set(_userViewVisibleFields);
-
   let html = '<div class="prefs-list">';
 
   if (allFields.length > 0) {
@@ -585,7 +616,6 @@ function renderUserViewContent() {
       </label>
     `).join('');
   }
-
   html += '</div>';
 
   html += `
@@ -649,7 +679,6 @@ async function loadCopyViewUserList(excludeUserId) {
     }
 
     others.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'ru'));
-
     sel.innerHTML = '<option value="">— выберите пользователя —</option>' +
       others.map(u => `<option value="${esc(u.id)}">${esc(u.fullName)} — ${esc(u.position || '')}</option>`).join('');
   } catch (e) {
@@ -670,7 +699,6 @@ async function copyViewFromUser() {
 
   try {
     showToast('Загрузка вида…', 'success');
-
     const res = await apiRequest(`/settings/user-preferences/${sourceId}/effective`);
 
     if (!res.visibleFields || res.visibleFields.length === 0) {
@@ -678,14 +706,10 @@ async function copyViewFromUser() {
       return;
     }
 
-    const activeFieldIds = new Set(
-      _cachedFields.filter(f => f.enabled).map(f => f.id)
-    );
+    const activeFieldIds = new Set(_cachedFields.filter(f => f.enabled).map(f => f.id));
     const VIRTUAL_IDS = new Set(['status', 'nextCalibration']);
 
-    const filtered = res.visibleFields.filter(id =>
-      activeFieldIds.has(id) || VIRTUAL_IDS.has(id)
-    );
+    const filtered = res.visibleFields.filter(id => activeFieldIds.has(id) || VIRTUAL_IDS.has(id));
 
     if (filtered.length === 0) {
       showToast('Все поля недоступны', 'error');
@@ -726,8 +750,7 @@ async function applyFieldsToAll(mode) {
     : 'ВСЕМ пользователям (добавить отмеченные поля, остальные сохранить)';
 
   const ok = await showConfirm(
-    `Применить ${selected.length} полей ${modeLabel}?\n\n` +
-    `Действие затронет всех пользователей.`,
+    `Применить ${selected.length} полей ${modeLabel}?\n\nДействие затронет всех пользователей.`,
     { icon: '⚠️', title: 'Массовое применение', okText: 'Применить', okClass: 'btn-warning' }
   );
   if (!ok) return;
@@ -819,6 +842,7 @@ function openChangePasswordModal(force, mode = 'change') {
   if (currentInput) currentInput.value = '';
   if (newInput) newInput.value = '';
   if (confirmInput) confirmInput.value = '';
+  
   const unameField = document.getElementById('cp-username');
   if (unameField) unameField.value = (currentUser && (currentUser.login || currentUser.fullName)) || '';
 
@@ -832,6 +856,7 @@ function openChangePasswordModal(force, mode = 'change') {
       ? '<i class="fa-solid fa-key"></i> Установка пароля администратора'
       : '<i class="fa-solid fa-lock"></i> Смена пароля';
   }
+  
   if (notice) {
     notice.style.display = force ? 'block' : 'none';
     notice.innerHTML = isSetup
@@ -841,17 +866,17 @@ function openChangePasswordModal(force, mode = 'change') {
 
   if (modal) modal.dataset.mode = mode;
 
-   const isImpersonatingNow = isImpersonating();
+  const isImpersonatingNow = isImpersonating();
   
-  // 🆕 Если мы в режиме имперсонации (админ зашел под юзером), ВСЕГДА показываем кнопку «Позже»,
+  // Если мы в режиме имперсонации, ВСЕГДА показываем кнопку «Позже»,
   // чтобы админ не застрял. Иначе — скрываем, если смена принудительная.
   const reallyForce = !isImpersonatingNow && (force || (currentUser && (currentUser.mustSetPassword || currentUser.mustChangePassword)));
 
   if (cancelBtn) {
     cancelBtn.style.display = reallyForce ? 'none' : 'inline-flex';
-    // 🆕 Если мы под другим пользователем — кнопка всегда называется «Позже»
     cancelBtn.textContent = isImpersonatingNow ? 'Позже' : 'Отмена';
   }
+  
   UI.modal.open('change-password-modal');
   const focusTarget = isSetup ? newInput : currentInput;
   if (focusTarget) setTimeout(() => focusTarget.focus(), 100);
@@ -889,6 +914,7 @@ async function submitChangePassword(e) {
   if (!isSetup && !currentPwd) missing.push('Текущий пароль');
   if (!newPwd)     missing.push('Новый пароль');
   if (!confirmPwd) missing.push('Подтверждение пароля');
+  
   if (missing.length > 0) {
     errEl.textContent = missing.length === 1
       ? `Заполните поле «${missing[0]}»`
@@ -953,7 +979,6 @@ async function resetUserPassword(userId, login) {
     `Будет сгенерирован разовый пароль. Пользователь обязан сменить его при следующем входе.`,
     { icon: '🔑', title: 'Сброс пароля', okText: 'Сбросить', okClass: 'btn-warning' }
   );
-  
   if (!ok) return;
 
   try {
@@ -965,6 +990,9 @@ async function resetUserPassword(userId, login) {
   }
 }
 
+// ============================================================
+// РАЗОВЫЙ ПАРОЛЬ (МОДАЛКА)
+// ============================================================
 let _tempPasswordValue = '';
 
 function showTempPasswordModal(login, fullName, tempPassword) {
