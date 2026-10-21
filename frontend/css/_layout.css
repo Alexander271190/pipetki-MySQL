@@ -6,10 +6,9 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden; /* Запрещаем скролл всей странице, скроллить будет только таблица */
+  overflow: hidden; 
 }
 .auth-container.hidden { display: none !important; }
-
 /* ============================================================
    ШАПКА
    ============================================================ */
@@ -24,16 +23,10 @@
   gap: 12px;
   width: 100%;            
   box-sizing: border-box;
-  overflow: visible; 
-  
-  /* 🆕 Шапка прибита к верху. Высота вычисляется в 18-init.js и передается в --header-height */
-  position: fixed; 
-  top: 0;           
-  left: 0;               
-  z-index: 100; /* Высокий z-index, чтобы тултипы из шапки были поверх таблицы */
-  flex-shrink: 0; 
+  position: relative;    
+  z-index: 100;
+  flex-shrink: 0;        
 }
-
 .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
 .header .logo { font-size: 1.6rem; }
 .header-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; position: relative; z-index: 2; }
@@ -51,16 +44,12 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  flex: 1;
+  flex: 1;               
   padding: 0 8px;
-  
-  /* 🆕 Отступаем сверху на высоту прибитых элементов (шапка + баннер + тулбар) */
-  padding-top: calc(var(--header-height, 60px) + var(--banner-height, 0px) + var(--toolbar-height, 70px) + 10px);
-  
-  margin: 0 auto;
+  margin: 8px auto 0;
   box-sizing: border-box;
   overflow: hidden; 
-  min-height: 0; /* Обязательно для работы внутреннего скролла таблицы */
+  min-height: 0;         
 }
 
 /* ============================================================
@@ -77,15 +66,7 @@
   gap: 10px; 
   font-size: .9rem; 
   color: #92400e; 
-  
-  /* 🆕 Прибит под шапкой */
-  position: fixed; 
-  top: var(--header-height, 60px);
-  left: 0;               
-  width: 100%;           
-  box-sizing: border-box; 
-  z-index: 45; 
-  flex-shrink: 0;
+  flex-shrink: 0;        
 }
 .alert-banner.show { display: flex; }
 .alert-banner .icon { font-size: 1.3rem; }
@@ -104,15 +85,7 @@
   border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0,0,0,.06);
   margin-bottom: 18px;
-  
-  /* 🆕 Прибит под шапкой и баннером */
-  position: fixed; 
-  top: calc(var(--header-height, 60px) + var(--banner-height, 0px)); 
-  left: 0;               
-  width: 100%;           
-  box-sizing: border-box; 
-  z-index: 40; 
-  flex-shrink: 0;
+  flex-shrink: 0;        
 }
 
 .toolbar > #search {
