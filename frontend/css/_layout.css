@@ -358,3 +358,61 @@ html[data-theme="dark"] #search {
     flex-wrap: wrap !important;
   }
 }
+
+/* ============================================================
+   АДАПТИВНОСТЬ ШАПКИ (для ПК и мобилок)
+   ============================================================ */
+
+/* Как только экран становится уже 1300px — перестраиваем шапку */
+@media (max-width: 1300px) {
+  /* 🆕 Делаем шапку колонкой и прижимаем всё влево */
+  .header-body {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+
+  .header-stats {
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+
+  /* 🆕 Блок администратора встает под счетчиками и прижимается влево */
+  .header-body .user-info {
+    margin-left: 0 !important; 
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+}
+
+/* На мобилках (до 768px) оставляем то же самое, плюс чиним поиск */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+
+  /* Поиск на всю ширину, но без огромной высоты */
+  .toolbar > #search {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 40px !important;
+  }
+
+  .toolbar > .btn,
+  .toolbar > .dropdown,
+  .toolbar > .dropdown > .btn {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .toolbar-bulk {
+    flex-direction: column !important;
+  }
+  .toolbar-bulk .btn {
+    width: 100% !important;
+  }
+}
