@@ -23,6 +23,8 @@
   width: 100%;            
   box-sizing: border-box;
   flex-shrink: 0; 
+  position: relative; 
+  z-index: 100;  
 }
 
 .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
