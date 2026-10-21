@@ -172,10 +172,8 @@ function toggleHeaderCollapse() {
     }
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
-    // Пересчитываем позиции при сворачивании шапки
-    debouncedUpdateSticky();
 }
-
+   
 (function initHeaderCollapse() {
   try {
     const saved = localStorage.getItem('pipette_header_collapsed');
@@ -532,58 +530,3 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ============================================================
-// 🆕 ДИНАМИЧЕСКИЙ РАСЧЕТ ВЫСОТЫ ДЛЯ STICKY-ЭЛЕМЕНТОВ
-// ============================================================
-function updateStickyOffsets() {
-  const header = document.getElementById('main-header');
-  const banner = document.getElementById('alert-banner');
-  const toolbar = document.getElementById('toolbar');
-  if (!header) return;
-
-  document.documentElement.style.setProperty('--header-height', header.offsetHeight + 'px');
-
-  if (banner && banner.style.display !== 'none' && banner.classList.contains('show')) {
-    document.documentElement.style.setProperty('--banner-height', banner.offsetHeight + 'px');
-  } else {
-    document.documentElement.style.setProperty('--banner-height', '0px');
-  }
-
-  if (toolbar) {
-    document.documentElement.style.setProperty('--toolbar-height', toolbar.offsetHeight + 'px');
-  }
-}
-
-// 🆕 Оборачиваем все вызовы в requestAnimationFrame, чтобы избежать reflow
-const debouncedUpdateSticky = () => {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(updateStickyOffsets);
-  });
-};
-
-window.addEventListener('load', () => setTimeout(debouncedUpdateSticky, 100));
-window.addEventListener('resize', debouncedUpdateSticky);
-
-document.addEventListener('DOMContentLoaded', () => {
-  const banner = document.getElementById('alert-banner');
-  if (banner) {
-    const observer = new MutationObserver(() => {
-      debouncedUpdateSticky();
-    });
-    observer.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
-  }
-});
-
-// 🆕 Следим за изменением высоты элементов (поворот экрана, перенос текста и т.д.)
-if (window.ResizeObserver) {
-  const observer = new ResizeObserver(() => {
-    debouncedUpdateSticky();
-  });
-  const header = document.getElementById('main-header');
-  const banner = document.getElementById('alert-banner');
-  const toolbar = document.getElementById('toolbar');
-  
-  if (header) observer.observe(header);
-  if (banner) observer.observe(banner);
-  if (toolbar) observer.observe(toolbar);
-}
