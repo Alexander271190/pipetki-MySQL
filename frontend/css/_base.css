@@ -1,3 +1,7 @@
+/* ============================================================
+   БАЗА: reset, body, html
+   ============================================================ */
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html {
@@ -12,4 +16,9 @@ body {
   color: var(--text);
   height: 100vh;
   overflow: hidden; /* Скроллить будет только main-content */
+  
+  /* 🆕 Сглаживание шрифтов (для Windows, чтобы не было размытости на зуме) */
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
 }
