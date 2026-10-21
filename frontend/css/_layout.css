@@ -336,3 +336,25 @@ html[data-theme="dark"] #search {
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
   .stat-card { flex: 1; min-width: 45%; }
 }
+
+@media (max-width: 768px) {
+  .header-body {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .header-stats {
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+
+  /* Жестко прибиваем блок пользователя влево */
+  .header-body .user-info {
+    margin-left: 0 !important; 
+    width: 100% !important;
+    justify-content: flex-start !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+  }
+}
