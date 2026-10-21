@@ -623,7 +623,7 @@ document.addEventListener('keydown', (e) => {
 // КАСТОМНЫЙ РЕСАЙЗ МОДАЛОК (сохраняет скруглённый угол)
 // ============================================================
 (function initModalResize() {
-  if (window.innerWidth < 768) return;
+  if (window.innerWidth < 768) return; // на мобильных не нужно
 
   let activeModal = null;
   let startX = 0, startY = 0;
@@ -631,7 +631,7 @@ document.addEventListener('keydown', (e) => {
   let minW = 0, minH = 0;
 
   function onPointerDown(e) {
-    // Защита: e.target может быть document / window / текстом
+    // 🆕 Защита: e.target может быть document / window / текстом
     const t = e.target;
     if (!t || typeof t.closest !== 'function') return;
 
@@ -642,7 +642,7 @@ document.addEventListener('keydown', (e) => {
     const dx = rect.right - e.clientX;
     const dy = rect.bottom - e.clientY;
 
-    // Зона захвата 40×40 — покрывает padding: 24px
+    // 🆕 Зона захвата 40×40 — покрывает padding: 24px
     if (dx < 0 || dy < 0) return;
     if (dx > 40 || dy > 40) return;
 
@@ -656,9 +656,6 @@ document.addEventListener('keydown', (e) => {
     const cs = getComputedStyle(modal);
     minW = parseInt(cs.minWidth, 10) || 400;
     minH = parseInt(cs.minHeight, 10) || 300;
-
-    modal.style.animation = 'none';
-    modal.style.transition = 'none';
 
     document.addEventListener('pointermove', onPointerMove);
     document.addEventListener('pointerup', onPointerUp);
@@ -679,8 +676,6 @@ document.addEventListener('keydown', (e) => {
 
   function onPointerUp() {
     if (!activeModal) return;
-    activeModal.style.animation = '';
-    activeModal.style.transition = '';
     activeModal = null;
     document.removeEventListener('pointermove', onPointerMove);
     document.removeEventListener('pointerup', onPointerUp);
