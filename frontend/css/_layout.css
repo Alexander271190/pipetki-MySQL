@@ -251,25 +251,55 @@ html[data-theme="dark"] #search {
 }
 
 @media (max-width: 768px) {
-  .header-top { margin-bottom: 10px; }
-  .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
-  .header-collapse-btn { font-size: .75rem; padding: 5px 10px; }
+  /* 🆕 Выравниваем шапку по левому краю в колонку */
+  .header-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-stats {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .header-body .user-info {
+    margin-left: 0; /* Убираем прижатие вправо */
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* 🆕 Чиним тулбар (панель поиска) */
   .toolbar {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
     padding: 10px;
   }
-  .toolbar > #search,
+
+  /* 🆕 Запрещаем поиску растягиваться в высоту! */
+  .toolbar > #search {
+    flex: 0 0 auto !important; /* Убиваем flex-basis: 340px */
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 40px;
+  }
+
   .toolbar > .btn,
   .toolbar > .dropdown,
   .toolbar > .dropdown > .btn {
     width: 100% !important;
     max-width: 100% !important;
   }
-  .toolbar-bulk { flex-direction: column; }
-  .toolbar-bulk .btn { width: 100%; }
+
+  .toolbar-bulk {
+    flex-direction: column;
+  }
+  .toolbar-bulk .btn {
+    width: 100%;
+  }
 }
+
 @media (max-width: 480px) {
   .header-top h1 { font-size: .95rem; }
   .header-mini-stats { font-size: .72rem; padding: 3px 8px; }
