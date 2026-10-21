@@ -299,7 +299,13 @@ body.compact-mode .col-checkbox input[type="checkbox"], body.compact-mode .row-c
 .help-admin-table tr:hover td { background: #f8fafc; }
 .help-order-cell { width: 50px; text-align: center; }
 .help-order-cell .btn { padding: 3px 6px !important; font-size: .7rem !important; }
-.help-admin-actions { display: flex; gap: 4px; justify-content: flex-end; }
+.help-admin-actions { 
+  text-align: center; 
+  padding: 6px 10px; 
+ }
+.help-admin-actions .row-actions-btn {
+  vertical-align: middle; 
+}
 .help-admin-actions .bc-icon-btn { padding: 5px 7px !important; font-size: .78rem !important; }
 
 .help-perms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px 20px; padding: 12px; background: #f8fafc; border-radius: 8px; max-height: 260px; overflow-y: auto; }
