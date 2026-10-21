@@ -99,7 +99,7 @@ window.UI = {
       
       let isMouseDownOnModal = false;
       
-      el.addEventListener('mousedown', (e) => {
+      el.addEventListener('pointerdown', (e) => {
         const modal = el.querySelector('.modal');
         if (modal && modal.contains(e.target)) {
           isMouseDownOnModal = true;
