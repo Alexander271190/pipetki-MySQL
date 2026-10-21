@@ -4,9 +4,68 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden; 
+  overflow: hidden; /* Запрещаем скролл всей странице */
 }
 .auth-container.hidden { display: none !important; }
+
+/* Шапка */
+.header {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;            
+  box-sizing: border-box;
+  flex-shrink: 0; /* 🆕 Не сжимается */
+}
+
+/* Контейнер */
+.container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1; /* Занимает оставшееся место */
+  padding: 0 8px;
+  margin: 8px auto 0;
+  box-sizing: border-box;
+  overflow: hidden; 
+  min-height: 0; 
+}
+
+/* Баннер */
+.alert-banner { 
+  background: #fef3c7; 
+  border: 1px solid #fcd34d; 
+  border-radius: 10px; 
+  padding: 14px 18px; 
+  margin-bottom: 18px; 
+  display: none; 
+  align-items: center; 
+  gap: 10px; 
+  font-size: .9rem; 
+  color: #92400e; 
+  flex-shrink: 0; /* 🆕 Не сжимается */
+}
+.alert-banner.show { display: flex; }
+
+/* Тулбар */
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  margin-bottom: 18px;
+  flex-shrink: 0; /* 🆕 Не сжимается */
+}
 
 /* ============================================================
    ШАПКА
