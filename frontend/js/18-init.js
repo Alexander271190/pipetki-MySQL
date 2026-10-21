@@ -605,3 +605,74 @@ document.addEventListener('DOMContentLoaded', () => {
     mo.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
   }
 });
+
+// ============================================================
+// PULL-TO-REFRESH (Свайп вниз для обновления данных)
+// ============================================================
+(function initPullToRefresh() {
+  if (!('ontouchstart' in window)) return; // Только тач-устройства
+
+  const tableWrapper = document.querySelector('.table-wrapper');
+  if (!tableWrapper) return;
+
+  const THRESHOLD = 80;   // Сколько пикселей нужно протянуть
+  const MAX_PULL  = 150;  // Максимальное смещение (ограничитель)
+
+  let startY = 0;
+  let currentPull = 0;
+  let isPulling = false;
+  let isRefreshing = false;
+
+  tableWrapper.addEventListener('touchstart', (e) => {
+    if (isRefreshing) return;
+    if (tableWrapper.scrollTop <= 0) {
+      startY = e.touches[0].clientY;
+      isPulling = true;
+      currentPull = 0;
+    }
+  }, { passive: true });
+
+  tableWrapper.addEventListener('touchmove', (e) => {
+    if (!isPulling || isRefreshing) return;
+    const deltaY = e.touches[0].clientY - startY;
+
+    if (deltaY <= 0) {
+      // Палец пошёл вверх — отменяем
+      isPulling = false;
+      currentPull = 0;
+      return;
+    }
+
+    // Блокируем нативный скролл только когда реально тянем вниз
+    if (deltaY > 10) e.preventDefault();
+
+    currentPull = Math.min(deltaY, MAX_PULL);
+  }, { passive: false });
+
+  const finishPull = async () => {
+    if (!isPulling) return;
+    isPulling = false;
+
+    if (currentPull >= THRESHOLD && !isRefreshing) {
+      isRefreshing = true;
+      try {
+        if (typeof loadPipetteData === 'function') {
+          await loadPipetteData();
+        }
+        if (typeof showToast === 'function') {
+          showToast('Данные обновлены', 'success');
+        }
+      } catch (err) {
+        console.error('Pull-to-refresh:', err);
+      } finally {
+        isRefreshing = false;
+        currentPull = 0;
+      }
+    } else {
+      currentPull = 0;
+    }
+  };
+
+  tableWrapper.addEventListener('touchend', finishPull, { passive: true });
+  tableWrapper.addEventListener('touchcancel', finishPull, { passive: true });
+})();
