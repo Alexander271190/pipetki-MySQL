@@ -161,7 +161,7 @@ html[data-theme="dark"] #search {
 /* ============================================================
    ПОЛЬЗОВАТЕЛЬ В ШАПКЕ
    ============================================================ */
-.user-info { display: flex; align-items: center; gap: 12px; color: #fff; background: rgba(255,255,255,.1); padding: 6px 14px 6px 18px; border-radius: 30px; backdrop-filter: blur(8px); flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
+.user-info { display: flex; align-items: center; gap: 12px; color: #fff; background: rgba(255,255,255,.1); padding: 6px 14px 6px 18px; border-radius: 30px; flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
 .user-info .name { font-weight: 600; font-size: .9rem; }
 .user-info .position { font-size: .7rem; opacity: .7; }
 .user-info .btn { padding: 4px 12px; font-size: .8rem; background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); }
@@ -414,5 +414,52 @@ html[data-theme="dark"] #search {
   }
   .toolbar-bulk .btn {
     width: 100% !important;
+  }
+}
+
+@media (max-width: 1300px) {
+  .header-body {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+
+  .header-stats {
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+
+  /* 🆕 Жестко прибиваем блок админа к левому краю */
+  .header-body .user-info {
+    margin-left: 0 !important; 
+    width: 100% !important;
+    justify-content: flex-start !important;
+    position: relative !important;
+    z-index: 1 !important; /* Опускаем ниже тултипа */
+  }
+}
+
+/* ============================================================
+   ФИНАЛЬНЫЙ ФИКС АДАПТИВНОСТИ ШАПКИ
+   ============================================================ */
+
+/* На экранах до 1300px перестраиваем шапку в колонку */
+@media (max-width: 1300px) {
+  .header .header-body {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+
+  .header .header-stats {
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+
+  /* 🆕 Убиваем margin-left: auto самой высокой специфичностью */
+  .header .header-body .user-info {
+    margin-left: 0 !important; 
+    width: 100% !important;
+    justify-content: flex-start !important;
   }
 }
