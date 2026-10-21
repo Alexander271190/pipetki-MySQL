@@ -30,6 +30,18 @@
   min-height: 300px;
 }
 
+/* 🆕 Модалка «Добавить оборудование» — фиксированная высота,
+   чтобы поля не дёргали её при подгрузке */
+#modal .modal {
+  min-height: 600px;
+}
+
+@media (max-width: 768px) {
+  #modal .modal {
+    min-height: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .modal {
     width: 95vw !important;
