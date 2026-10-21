@@ -129,22 +129,22 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
   cursor: nwse-resize;
-  /* фон: три диагональные полоски */
   background-image:
-    linear-gradient(135deg, transparent 0 45%, currentColor 45% 55%, transparent 55% 100%),
-    linear-gradient(135deg, transparent 0 65%, currentColor 65% 75%, transparent 75% 100%),
-    linear-gradient(135deg, transparent 0 85%, currentColor 85% 95%, transparent 95% 100%);
+    linear-gradient(135deg, transparent 0 50%, currentColor 50% 60%, transparent 60% 100%),
+    linear-gradient(135deg, transparent 0 70%, currentColor 70% 80%, transparent 80% 100%),
+    linear-gradient(135deg, transparent 0 90%, currentColor 90% 100%, transparent 100%);
   background-position: bottom right;
   background-repeat: no-repeat;
+  background-size: 20px 20px;
   color: var(--text-faint);
   opacity: 0.55;
-  /* обрезаем по скруглению родителя, чтобы не торчало */
   border-bottom-right-radius: 16px;
-  pointer-events: auto; /* ← захватывает мышь */
+  pointer-events: auto;
   touch-action: none;
+  z-index: 10;
 }
 
 html[data-theme="dark"] .modal::after {
