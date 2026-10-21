@@ -556,52 +556,62 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// 🆕 РАСЧЕТ ВЫСОТЫ ДЛЯ ПРИБИТЫХ ЭЛЕМЕНТОВ (Fixed)
+// РАСЧЕТ ВЫСОТЫ ДЛЯ ПРИБИТЫХ ЭЛЕМЕНТОВ (Fixed)
+// Используем requestAnimationFrame, чтобы не провоцировать Forced reflow
 // ============================================================
+let _stickyScheduled = false;
+
 function updateStickyOffsets() {
-  // Используем requestAnimationFrame, чтобы не заставлять браузер пересчитывать DOM дважды
+  if (_stickyScheduled) return; // Предотвращаем дубликаты вызовов
+  _stickyScheduled = true;
+
   requestAnimationFrame(() => {
+    _stickyScheduled = false;
+
     const header = document.getElementById('main-header');
     const banner = document.getElementById('alert-banner');
     const toolbar = document.getElementById('toolbar');
     if (!header) return;
 
-    // Читаем размеры
+    // Читаем все размеры один раз
     const hHeight = header.offsetHeight;
     const bHeight = (banner && banner.classList.contains('show')) ? banner.offsetHeight : 0;
     const tHeight = toolbar ? toolbar.offsetHeight : 0;
 
     // Записываем в CSS-переменные
-    document.documentElement.style.setProperty('--header-height', hHeight + 'px');
-    document.documentElement.style.setProperty('--banner-height', bHeight + 'px');
-    document.documentElement.style.setProperty('--toolbar-height', tHeight + 'px');
+    const root = document.documentElement;
+    root.style.setProperty('--header-height', hHeight + 'px');
+    root.style.setProperty('--banner-height', bHeight + 'px');
+    root.style.setProperty('--toolbar-height', tHeight + 'px');
   });
 }
 
 // Вызываем при загрузке
 window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
-// Вызываем при изменении размера окна
-window.addEventListener('resize', updateStickyOffsets);
 
-// ResizeObserver следит за изменениями размера элементов (например, когда текст переносится на новую строку)
+// Вызываем при изменении размера окна (только после остановки ресайза)
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(updateStickyOffsets, 150);
+});
+
+// ResizeObserver — следит за изменением размера элементов
 if (window.ResizeObserver) {
-  const observer = new ResizeObserver(() => {
-    updateStickyOffsets();
-  });
+  const observer = new ResizeObserver(() => updateStickyOffsets());
   const header = document.getElementById('main-header');
   const banner = document.getElementById('alert-banner');
   const toolbar = document.getElementById('toolbar');
-  
   if (header) observer.observe(header);
   if (banner) observer.observe(banner);
   if (toolbar) observer.observe(toolbar);
 }
 
-// MutationObserver следит за появлением/исчезновением желтого баннера
+// MutationObserver — следит за появлением/скрытием баннера
 document.addEventListener('DOMContentLoaded', () => {
   const banner = document.getElementById('alert-banner');
   if (banner) {
-    const mo = new MutationObserver(updateStickyOffsets);
+    const mo = new MutationObserver(() => updateStickyOffsets());
     mo.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
   }
 });
