@@ -3,6 +3,8 @@
    ============================================================ */
 .form-group { margin-bottom: 14px; }
 .form-group > label { display: block; margin-bottom: 6px; font-size: .85rem; font-weight: 600; color: var(--text-strong); }
+
+/* 🆕 Исключаем чекбоксы и радио из общих стилей, чтобы они не растягивались */
 .form-group input:not([type="checkbox"]):not([type="radio"]),
 .form-group select,
 .form-group textarea {
@@ -11,11 +13,13 @@
   font-size: .9rem; outline: none; transition: border .2s;
   font-family: inherit;
 }
+
 .form-group input:not([type="checkbox"]):not([type="radio"]):focus,
 .form-group select:focus,
 .form-group textarea:focus {
   border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15);
 }
+
 .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .form-row .form-group { flex: 1; min-width: 160px; }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
@@ -68,7 +72,7 @@
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   overflow: hidden;
- }
+}
 
 .field-settings-table input[type="text"],
 .field-settings-table input[type="number"],
@@ -101,16 +105,13 @@
 }
 
 /* ============================================================
-   ОТДЕЛЫ
+   ОТДЕЛЫ, ЭКСПОРТ, ЛОГ, ПРАВА
    ============================================================ */
 .dept-list-container { margin: 12px 0; }
 .dept-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
 .dept-item .dept-name { flex: 1; }
 .dept-item .dept-actions { display: flex; gap: 6px; }
 
-/* ============================================================
-   ЭКСПОРТ ПОЛЯ
-   ============================================================ */
 .export-fields-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 16px; margin: 12px 0 20px; max-height: 400px; overflow-y: auto; padding: 4px; }
 .export-fields-grid label { display: flex; align-items: center; gap: 6px; font-weight: 400; cursor: pointer; padding: 4px 6px; border-radius: 4px; transition: background .1s; }
 .export-fields-grid label:hover { background: #f1f5f9; }
@@ -119,9 +120,6 @@
 @media (max-width: 600px) { .export-fields-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 400px) { .export-fields-grid { grid-template-columns: 1fr; } }
 
-/* ============================================================
-   ЛОГ
-   ============================================================ */
 .log-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .log-table th { background: #f1f5f9; color: var(--text-strong); padding: 6px 10px; text-align: left; position: sticky; top: 0; font-size: .8rem; }
 .log-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -132,9 +130,6 @@
 .log-table .empty { text-align: center; padding: 30px; color: var(--text-faint); }
 .log-container { max-height: 60vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
 
-/* ============================================================
-   ПРАВА
-   ============================================================ */
 .permissions-group { display: flex; flex-wrap: wrap; gap: 16px; margin: 10px 0; }
 .permissions-group label { display: flex; align-items: center; gap: 6px; font-weight: 400; cursor: pointer; }
 .permissions-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
@@ -226,9 +221,7 @@
   padding: 20px; 
   background: #ffffff;
 }
-.auth-container.hidden { 
-  display: none !important; 
-}
+.auth-container.hidden { display: none !important; }
 
 .auth-box {
   position: relative;
@@ -297,9 +290,7 @@
   .auth-title-sub { font-size: 1.1rem; }
   .auth-header { flex-direction: column; text-align: center; gap: 8px; }
 }
-#usr-only-own-dept {
-  accent-color: #eab308;
-}
+#usr-only-own-dept { accent-color: #eab308; }
 
 /* ============================================================
    ТАБЛИЦА ГЛАВНАЯ
@@ -441,7 +432,7 @@ td small { display: block; font-size: .7rem; color: #6b7280; line-height: 1.25; 
 .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .pagination-info { 
-  font-size: .82rem;    /* Было .9rem */
+  font-size: .82rem;
   color: #475569; 
 }
 
