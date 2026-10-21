@@ -28,11 +28,10 @@
   resize: both;
   min-width: 400px;
   min-height: 300px;
-  position: relative;   /* 🆕 Чтобы уголок ресайза был виден */
-  border: 1px solid transparent;  /* 🆕 Чтобы уголок имел «якорь» */
+  position: relative;
+  border: 1px solid transparent;
 
-  /* 🆕 Стартовое состояние для анимации: невидимо + чуть уменьшено.
-     Устраняет «вспышку» на полном размере до запуска @keyframes. */
+  /* 🆕 Стартовое состояние для анимации без моргания */
   opacity: 0;
   transform: scale(0.96);
   will-change: opacity, transform;
@@ -40,10 +39,6 @@
   -webkit-backface-visibility: hidden;
 }
 
-/* 🆕 Модалка «Добавить оборудование» — минимальная высота,
-   чтобы поля не дёргали её при подгрузке.
-   ВНИМАНИЕ: transition: height убран — он не работает на auto→auto
-   и создавал «резиновое» залипание при перетаскивании угла ресайза. */
 #modal .modal {
   min-height: 560px;
 }
@@ -64,8 +59,6 @@
     border-radius: 12px;
     clip-path: inset(0 round 12px);
   }
-  /* 🆕 На мобильных ресайза нет — индикатор не нужен.
-     Иначе clip-path его обрежет. */
   .modal::after { display: none !important; }
 }
 
@@ -103,7 +96,6 @@
   to   { opacity: 1; transform: scale(1);   }
 }
 
-/* 🆕 Оверлей тоже плавно проявляем — иначе фон «прыгает» */
 .modal-overlay.active {
   animation: overlayFadeIn 0.18s ease-out;
 }
@@ -113,8 +105,6 @@
   to   { opacity: 1; }
 }
 
-/* 🆕 Если пользователь отключил анимации в ОС —
-   показываем модалку мгновенно, без мерцания */
 @media (prefers-reduced-motion: reduce) {
   .modal,
   .modal-overlay.active .modal,
@@ -128,17 +118,11 @@
 /* ============================================================
    СКРУГЛЁННЫЙ УГОЛ + ЯКОРЬ РЕСАЙЗА
    ============================================================ */
-
-/* 🆕 Прячем нативный «уголок» Chrome — он не обрезается
-   border-radius и ломает правый нижний угол */
 .modal::-webkit-resizer {
   background: transparent;
   border: none;
 }
 
-/* 🆕 Свой индикатор — 3 диагональные полоски.
-   pointer-events: none → не перехватывает мышь;
-   тянуть по-прежнему можно за нативную (невидимую) область. */
 .modal::after {
   content: '';
   position: absolute;
@@ -159,7 +143,6 @@ html[data-theme="dark"] .modal::after {
   color: var(--text-muted);
   opacity: 0.65;
 }
-
 
 /* ============================================================
    ВКЛАДКИ МОДАЛКИ ДОБАВЛЕНИЯ
