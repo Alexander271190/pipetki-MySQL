@@ -140,9 +140,11 @@ async function renderFieldsSettings(skipFetch = false) {
         </td>
       </tr>`;
     });
-    html += `</tbody></table>
-      <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-top:12px;"><i class="fa-solid fa-plus"></i> Добавить поле</button>
-      <button class="btn btn-success" onclick="saveFieldsSettings()" style="margin-top:12px;margin-left:10px;"><i class="fa-solid fa-floppy-disk"></i> Сохранить изменения</button>`;
+        html += `</tbody></table>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="addFieldSetting()"><i class="fa-solid fa-plus"></i> Добавить поле</button>
+        <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить изменения</button>
+      </div>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
@@ -380,20 +382,13 @@ async function renderDepartmentsSettings(skipFetch = false) {
       </tr>`;
     });
     html += `</tbody></table>
-      <div style="margin-top:16px;display:flex;gap:10px;">
-        <input type="text" id="new-dept-name" 
-               placeholder="Название нового отдела" 
-               style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();addDepartmentItem();}">
-        <button type="button" class="btn btn-success" onclick="addDepartmentItem()">
-          <i class="fa-solid fa-plus"></i> Добавить
-        </button>
-        <button type="button" class="btn btn-primary" onclick="saveDepartmentsFull()">
-          <i class="fa-solid fa-floppy-disk"></i> Сохранить
-        </button>
-      </div>
-      <div id="dept-duplicate-warning" style="margin-top:12px;display:none;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
-      </div>`;
+    <div class="form-actions" style="justify-content:flex-start; margin-top:16px;">
+        <input type="text" id="new-dept-name" placeholder="Название нового отдела" style="flex:1; max-width:400px; padding:9px 12px; border:1px solid #d1d5db; border-radius:8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addDepartmentItem();}">
+        <button type="button" class="btn btn-success" onclick="addDepartmentItem()"><i class="fa-solid fa-plus"></i> Добавить</button>
+        <button type="button" class="btn btn-primary" onclick="saveDepartmentsFull()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+     </div>
+     <div id="dept-duplicate-warning" style="margin-top:12px;display:none;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;">
+     </div>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
@@ -556,12 +551,14 @@ async function renderFiltersSettings(skipFetch = false) {
     });
     
     html += `</tbody></table>
-      <button class="btn btn-primary" onclick="addFilter()" style="margin-top:12px;">
-        <i class="fa-solid fa-plus"></i> Добавить фильтр
-      </button>
-      <button class="btn btn-success" onclick="saveFilters()" style="margin-top:12px;margin-left:10px;">
-        <i class="fa-solid fa-floppy-disk"></i> Сохранить
-      </button>`;
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="addFilter()">
+           <i class="fa-solid fa-plus"></i> Добавить фильтр
+        </button>
+        <button class="btn btn-success" onclick="saveFilters()">
+          <i class="fa-solid fa-floppy-disk"></i> Сохранить
+        </button>
+      </div>`;
     c.innerHTML = html;
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
@@ -781,7 +778,7 @@ async function renderEquipmentSettings() {
         <tbody id="equip-types-body"></tbody>
       </table>
 
-      <div style="margin-top:12px;display:flex;gap:10px;">
+      <div class="form-actions">
         <button class="btn btn-primary btn-sm" onclick="addEquipmentType()">
           <i class="fa-solid fa-plus"></i> Добавить тип
         </button>
