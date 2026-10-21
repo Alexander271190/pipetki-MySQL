@@ -25,15 +25,20 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
-  resize: both;          
+  resize: both;
   min-width: 400px;
   min-height: 300px;
+  position: relative;   /* 🆕 Чтобы уголок ресайза был виден */
+  border: 1px solid transparent;  /* 🆕 Чтобы уголок имел «якорь» */
 }
 
 /* 🆕 Модалка «Добавить оборудование» — фиксированная высота,
    чтобы поля не дёргали её при подгрузке */
 #modal .modal {
-  min-height: 600px;
+  /* Минимальная высота, чтобы модалка открылась уже готовой */
+  min-height: 560px;
+  /* Плавное изменение высоты, когда подгружаются поля */
+  transition: height 0.15s ease-out;
 }
 
 @media (max-width: 768px) {
