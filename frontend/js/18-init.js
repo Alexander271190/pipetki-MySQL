@@ -206,7 +206,6 @@ window.addEventListener('resize', () => {
         const label = btn.querySelector('.collapse-label');
         if (label) label.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Свернуть';
       }
-      updateStickyOffsets();
     }
   }
 });
@@ -550,84 +549,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ============================================================
-// РАСЧЕТ ВЫСОТЫ ДЛЯ ПРИБИТЫХ ЭЛЕМЕНТОВ (Fixed)
-// Строгий дебаунс: не более 1 вызова за кадр + кэш последних значений
-// ============================================================
-let _stickyRafId = null;
-const _stickyCache = {
-  header: null,
-  banner: null,
-  toolbar: null,
-  bannerVisible: null,
-  toolbarExists: null,
-};
-
-function updateStickyOffsets() {
-  if (_stickyRafId !== null) return;
-
-  _stickyRafId = requestAnimationFrame(() => {
-    _stickyRafId = null;
-
-    const header = document.getElementById('main-header');
-    const banner = document.getElementById('alert-banner');
-    const toolbar = document.getElementById('toolbar');
-    if (!header) return;
-
-    const bannerVisible = !!(banner && banner.classList.contains('show'));
-    const toolbarExists = !!toolbar;
-
-    const hHeight = header.offsetHeight;
-    const bHeight = bannerVisible ? banner.offsetHeight : 0;
-    const tHeight = toolbarExists ? toolbar.offsetHeight : 0;
-
-    const changed =
-      _stickyCache.header !== hHeight ||
-      _stickyCache.banner !== bHeight ||
-      _stickyCache.toolbar !== tHeight ||
-      _stickyCache.bannerVisible !== bannerVisible ||
-      _stickyCache.toolbarExists !== toolbarExists;
-
-    if (!changed) return;
-
-    _stickyCache.header = hHeight;
-    _stickyCache.banner = bHeight;
-    _stickyCache.toolbar = tHeight;
-    _stickyCache.bannerVisible = bannerVisible;
-    _stickyCache.toolbarExists = toolbarExists;
-
-    const root = document.documentElement;
-    root.style.setProperty('--header-height', hHeight + 'px');
-    root.style.setProperty('--banner-height', bHeight + 'px');
-    root.style.setProperty('--toolbar-height', tHeight + 'px');
-  });
-}
-
-window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
-
-let _resizeTimer = null;
-window.addEventListener('resize', () => {
-  clearTimeout(_resizeTimer);
-  _resizeTimer = setTimeout(updateStickyOffsets, 150);
-});
-
-if (window.ResizeObserver) {
-  const observer = new ResizeObserver(() => updateStickyOffsets());
-  const header = document.getElementById('main-header');
-  const banner = document.getElementById('alert-banner');
-  const toolbar = document.getElementById('toolbar');
-  if (header) observer.observe(header);
-  if (banner) observer.observe(banner);
-  if (toolbar) observer.observe(toolbar);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  const banner = document.getElementById('alert-banner');
-  if (banner) {
-    const mo = new MutationObserver(() => updateStickyOffsets());
-    mo.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
-  }
-});
 
 // ============================================================
 // PULL-TO-REFRESH (Свайп вниз для обновления данных)
