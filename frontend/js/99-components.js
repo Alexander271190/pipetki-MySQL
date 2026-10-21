@@ -68,12 +68,32 @@ window.UI = {
     },
     close(id) {
       const el = document.getElementById(id);
-      if (el) el.classList.remove('active');
+      if (!el) return;
+      el.classList.remove('active');
+
+      // 🆕 Сбрасываем размеры, чтобы при следующем открытии модалка была стандартной
+      const modal = el.querySelector('.modal');
+      if (modal) {
+        modal.style.width = '';
+        modal.style.height = '';
+        modal.style.maxWidth = '';
+        modal.style.maxHeight = '';
+      }
     },
     closeAll() {
-      document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+      document.querySelectorAll('.modal-overlay.active').forEach(el => {
+        el.classList.remove('active');
+        // 🆕 Сбрасываем размеры
+        const modal = el.querySelector('.modal');
+        if (modal) {
+          modal.style.width = '';
+          modal.style.height = '';
+          modal.style.maxWidth = '';
+          modal.style.maxHeight = '';
+        }
+      });
     },
-        bindOutsideClick(id, closeFn) {
+    bindOutsideClick(id, closeFn) {
       const el = document.getElementById(id);
       if (!el) return;
       
