@@ -173,12 +173,32 @@ function toggleHeaderCollapse() {
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
 }
+// 🆕 Автоматически разворачиваем шапку при переходе на ПК-размер
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    const header = document.getElementById('main-header');
+    if (header && header.classList.contains('collapsed')) {
+      header.classList.remove('collapsed');
+      const btn = document.getElementById('header-collapse-btn');
+      if (btn) {
+        const label = btn.querySelector('.collapse-label');
+        if (label) label.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Свернуть';
+      }
+    }
+  }
+});
    
 (function initHeaderCollapse() {
   try {
+    const header = document.getElementById('main-header');
+    // 🆕 Если ширина экрана больше 768px (ПК или ноутбук) — принудительно разворачиваем
+    if (window.innerWidth > 768) {
+      if (header) header.classList.remove('collapsed');
+      return;
+    }
+
     const saved = localStorage.getItem('pipette_header_collapsed');
     if (saved === '1') {
-      const header = document.getElementById('main-header');
       if (header) header.classList.add('collapsed');
       const btn = document.getElementById('header-collapse-btn');
       if (btn) {
