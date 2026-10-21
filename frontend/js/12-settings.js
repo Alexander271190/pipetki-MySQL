@@ -143,8 +143,8 @@ async function renderFieldsSettings(skipFetch = false) {
     });
      html += `</tbody></table>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addFieldSetting()"><i class="fa-solid fa-plus"></i> Добавить поле</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить поле</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
         <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>`;
     c.innerHTML = html;
@@ -456,8 +456,8 @@ async function renderFiltersSettings(skipFetch = false) {
     
     html += `</tbody></table>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addFilter()"><i class="fa-solid fa-plus"></i> Добавить фильтр</button>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button class="btn btn-primary" onclick="addFilter()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить фильтр</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
         <button class="btn btn-success" onclick="saveFilters()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>`;
     c.innerHTML = html;
@@ -544,7 +544,7 @@ async function renderExportSettings() {
     
     html += `</div>
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
         <button class="btn btn-success" onclick="saveExportSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>`;
     c.innerHTML = html;
@@ -587,7 +587,7 @@ async function renderGeneralSettings() {
       </div>
 
       <div class="form-actions" style="margin-top: 24px;">
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>
     `;
   } catch (e) { c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`; }
@@ -631,8 +631,8 @@ async function renderEquipmentSettings() {
       </table>
 
       <div class="form-actions">
-        <button class="btn btn-primary btn-sm" onclick="addEquipmentType()"><i class="fa-solid fa-plus"></i> Добавить тип</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button class="btn btn-primary btn-sm" onclick="addEquipmentType()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить тип</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
         <button class="btn btn-success btn-sm" onclick="saveEquipmentTypes()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
       <div id="equip-types-warning" style="display:none;margin-top:12px;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;"></div>
@@ -760,8 +760,8 @@ async function renderPrintersSettings() {
       <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">Список принтеров.</p>
       <div id="barcode-printers-list"></div>
       <div class="form-actions" style="margin-top:16px;">
-        <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()"><i class="fa-solid fa-plus"></i> Добавить принтер</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить принтер</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
       </div>
     `;
     await renderBarcodePrintersList();
@@ -794,7 +794,7 @@ async function renderBarcodesSettings() {
         </div>
       </div>
       <div class="form-actions" style="margin-top:16px;">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
         <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
     `;
@@ -824,7 +824,7 @@ async function renderLogSettings() {
     }
     html += '</tbody></table></div>';
     html += `<div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
     c.innerHTML = html;
   } catch (e) { c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>'; }
@@ -859,4 +859,3 @@ function openFieldActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(
 function openDeptActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить отдел', class: 'item-danger', action: () => deleteDepartmentItem(idx) }]); }
 function openFilterActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить фильтр', class: 'item-danger', action: () => deleteFilter(idx) }]); }
 function openEquipTypeActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить тип', class: 'item-danger', action: () => deleteEquipmentType(idx) }]); }
-
