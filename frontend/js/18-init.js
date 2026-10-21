@@ -631,15 +631,20 @@ document.addEventListener('keydown', (e) => {
   let minW = 0, minH = 0;
 
   function onPointerDown(e) {
-    // Проверяем: попал ли клик в правый нижний угол модалки (20×20)
-    const modal = e.target.closest('.modal');
+    // 🆕 Безопасная проверка: e.target должен быть Element
+    const t = e.target;
+    if (!t || typeof t.closest !== 'function') return;
+
+    const modal = t.closest('.modal');
     if (!modal) return;
 
     const rect = modal.getBoundingClientRect();
     const dx = rect.right - e.clientX;
     const dy = rect.bottom - e.clientY;
-    // Зона захвата — 24×24 в правом нижнем углу (чуть больше ::after, чтобы удобнее)
-    if (dx > 24 || dy > 24) return;
+
+    // 🆕 Зона захвата 40×40 (больше padding, чтобы попасть в угол)
+    if (dx > 40 || dy > 40) return;
+    if (dx < 0 || dy < 0) return; // клик вообще вне modal
 
     e.preventDefault();
     activeModal = modal;
@@ -652,7 +657,6 @@ document.addEventListener('keydown', (e) => {
     minW = parseInt(cs.minWidth, 10) || 400;
     minH = parseInt(cs.minHeight, 10) || 300;
 
-    // Убираем анимацию/транзишн на время ресайза — иначе дёргается
     modal.style.animation = 'none';
     modal.style.transition = 'none';
 
@@ -669,7 +673,6 @@ document.addEventListener('keydown', (e) => {
     const h = Math.max(minH, startH + (e.clientY - startY));
     activeModal.style.width = w + 'px';
     activeModal.style.height = h + 'px';
-    // Снимаем ограничение max, иначе упрётся в 640px
     activeModal.style.maxWidth = 'none';
     activeModal.style.maxHeight = 'none';
   }
