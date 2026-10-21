@@ -30,23 +30,21 @@
   margin-top: 20px;
   flex-wrap: nowrap;
 }
-.form-actions .btn {
-  white-space: nowrap; 
-}
-@media (max-width: 768px) {
-  .form-row { flex-direction: column; }
-  .form-row .form-group { width: 100%; min-width: auto; }
-}
-@media (max-width: 375px) {
-  .form-group { margin-bottom: 10px; }
-  .form-group > label { font-size: .8rem; margin-bottom: 4px; }
-  .form-group input:not([type="checkbox"]):not([type="radio"]),
-  .form-group select,
-  .form-group textarea { padding: 8px 10px; font-size: .85rem; }
-  .form-actions { gap: 6px; }
-  .form-actions .btn { padding: 8px 12px; font-size: .82rem; }
+
+/* 🆕 Первая кнопка (если их несколько) автоматически уходит влево,
+   остальные прижимаются вправо. Это работает везде! */
+.form-actions > .btn:first-child:not(:only-child) {
+  margin-right: auto;
 }
 
+/* 🆕 Исключение для модалок с двумя кнопками по центру (Да/Нет) */
+.form-actions.confirm-actions > .btn:first-child:not(:only-child) {
+  margin-right: 0;
+}
+
+.form-actions .btn {
+  white-space: nowrap;
+}
 /* ============================================================
    ТАБЛИЦЫ НАСТРОЕК
    ============================================================ */
