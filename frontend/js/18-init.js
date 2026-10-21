@@ -173,7 +173,7 @@ function toggleHeaderCollapse() {
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
     // Пересчитываем позиции при сворачивании шапки
-  setTimeout(updateStickyOffsets, 300);
+    debouncedUpdateSticky();
 }
 
 (function initHeaderCollapse() {
@@ -554,24 +554,30 @@ function updateStickyOffsets() {
   }
 }
 
-window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
-window.addEventListener('resize', updateStickyOffsets);
+// 🆕 Оборачиваем все вызовы в requestAnimationFrame, чтобы избежать reflow
+const debouncedUpdateSticky = () => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(updateStickyOffsets);
+  });
+};
+
+window.addEventListener('load', () => setTimeout(debouncedUpdateSticky, 100));
+window.addEventListener('resize', debouncedUpdateSticky);
 
 document.addEventListener('DOMContentLoaded', () => {
   const banner = document.getElementById('alert-banner');
   if (banner) {
-    const observer = new MutationObserver(updateStickyOffsets);
+    const observer = new MutationObserver(() => {
+      debouncedUpdateSticky();
+    });
     observer.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
   }
 });
 
-window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
-window.addEventListener('resize', updateStickyOffsets);
-
 // 🆕 Следим за изменением высоты элементов (поворот экрана, перенос текста и т.д.)
 if (window.ResizeObserver) {
   const observer = new ResizeObserver(() => {
-    updateStickyOffsets();
+    debouncedUpdateSticky();
   });
   const header = document.getElementById('main-header');
   const banner = document.getElementById('alert-banner');
