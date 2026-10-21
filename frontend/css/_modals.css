@@ -25,18 +25,44 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
-  
-  resize: none;      
+  resize: none;                       /* нативный ресайз отключён */
   min-width: 400px;
   min-height: 300px;
   position: relative;
   border: 1px solid transparent;
 
-  opacity: 0;
-  transform: scale(0.96);
-  will-change: opacity, transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  /* 🆕 Скролл: не торчит за границы */
+  clip-path: inset(0 round 16px);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+
+  /* 🆕 НЕТ opacity/transform/animation — открытие мгновенное,
+     и модалка не может «исчезнуть» при ресайзе */
+}
+
+/* 🆕 Кастомный тонкий скроллбар */
+.modal::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.modal::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+.modal::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, .15);
+  border-radius: 4px;
+}
+.modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, .3);
+}
+
+html[data-theme="dark"] .modal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .2);
+}
+html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, .35);
 }
 
 #modal .modal {
@@ -82,37 +108,6 @@
   .modal-xl { max-width: 98vw !important; width: 98vw !important; }
   #settings-section-content { overflow-x: auto; }
   #settings-section-content .field-settings-table { min-width: 560px; }
-}
-
-/* ============================================================
-   АНИМАЦИЯ МОДАЛКИ (плавное появление без моргания)
-   ============================================================ */
-.modal-overlay.active .modal {
-  animation: modalScaleIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-@keyframes modalScaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1);   }
-}
-
-.modal-overlay.active {
-  animation: overlayFadeIn 0.18s ease-out;
-}
-
-@keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .modal,
-  .modal-overlay.active .modal,
-  .modal-overlay.active {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
 }
 
 /* ============================================================
