@@ -399,14 +399,12 @@ let _searchTimeout = null;
 document.getElementById('search').addEventListener('input', () => {
   clearTimeout(_searchTimeout);
   _searchTimeout = setTimeout(async () => {
-    const savedScroll = window.scrollY;
     document.getElementById('filter-panel').classList.remove('show');
     currentPage = 1;
     await loadPaged();
     render();
     updateSelectAllCheckbox();
     updateBulkCalButton();
-    window.scrollTo(0, savedScroll);
   }, 150);
 });
 
@@ -562,7 +560,7 @@ document.addEventListener('keydown', (e) => {
 let _stickyScheduled = false;
 
 function updateStickyOffsets() {
-  if (_stickyScheduled) return; // Предотвращаем дубликаты вызовов
+  if (_stickyScheduled) return;
   _stickyScheduled = true;
 
   requestAnimationFrame(() => {
@@ -573,19 +571,22 @@ function updateStickyOffsets() {
     const toolbar = document.getElementById('toolbar');
     if (!header) return;
 
-    // Читаем все размеры один раз
-    const hHeight = header.offsetHeight;
-    const bHeight = (banner && banner.classList.contains('show')) ? banner.offsetHeight : 0;
-    const tHeight = toolbar ? toolbar.offsetHeight : 0;
+    // 1. Сначала ВСЕ УСЛОВИЯ (без чтения размеров)
+    const bannerVisible = !!(banner && banner.classList.contains('show'));
+    const toolbarExists = !!toolbar;
 
-    // Записываем в CSS-переменные
+    // 2. Потом ВСЕ РАЗМЕРЫ одним блоком (без записей между ними)
+    const hHeight = header.offsetHeight;
+    const bHeight = bannerVisible ? banner.offsetHeight : 0;
+    const tHeight = toolbarExists ? toolbar.offsetHeight : 0;
+
+    // 3. В конце — ВСЕ ЗАПИСИ в CSS-переменные
     const root = document.documentElement;
     root.style.setProperty('--header-height', hHeight + 'px');
     root.style.setProperty('--banner-height', bHeight + 'px');
     root.style.setProperty('--toolbar-height', tHeight + 'px');
   });
 }
-
 // Вызываем при загрузке
 window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
 
