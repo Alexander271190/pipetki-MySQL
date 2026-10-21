@@ -73,8 +73,9 @@ function renderAuthUI() {
     if (typeof updateMoreMenuVisibility === 'function') {
       setTimeout(updateMoreMenuVisibility, 0);
     }
-    
-    } else {
+    setTimeout(updateStickyOffsets, 100); // Пересчитываем высоты при входе
+
+  } else {
     closeChangePasswordModal();
     authContainer.classList.remove('hidden');
     mainContent.classList.remove('visible');
@@ -172,26 +173,14 @@ function toggleHeaderCollapse() {
     }
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
+  // Пересчитываем высоту после анимации схлопывания
+  setTimeout(updateStickyOffsets, 300); 
 }
-// 🆕 Автоматически разворачиваем шапку при переходе на ПК-размер
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 768) {
-    const header = document.getElementById('main-header');
-    if (header && header.classList.contains('collapsed')) {
-      header.classList.remove('collapsed');
-      const btn = document.getElementById('header-collapse-btn');
-      if (btn) {
-        const label = btn.querySelector('.collapse-label');
-        if (label) label.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Свернуть';
-      }
-    }
-  }
-});
-   
+
 (function initHeaderCollapse() {
   try {
     const header = document.getElementById('main-header');
-    // 🆕 Если ширина экрана больше 768px (ПК или ноутбук) — принудительно разворачиваем
+    // 🆕 На ПК (шире 768px) принудительно разворачиваем шапку
     if (window.innerWidth > 768) {
       if (header) header.classList.remove('collapsed');
       return;
@@ -208,6 +197,22 @@ window.addEventListener('resize', () => {
     }
   } catch (e) {}
 })();
+
+// Автоматически разворачиваем шапку, если окно растянули на ПК
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    const header = document.getElementById('main-header');
+    if (header && header.classList.contains('collapsed')) {
+      header.classList.remove('collapsed');
+      const btn = document.getElementById('header-collapse-btn');
+      if (btn) {
+        const label = btn.querySelector('.collapse-label');
+        if (label) label.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Свернуть';
+      }
+      updateStickyOffsets();
+    }
+  }
+});
 
 (function wrapRenderForMiniStats() {
   if (typeof render !== 'function') return;
@@ -428,7 +433,7 @@ const modalCloseMap = {
 };
 Object.entries(modalCloseMap).forEach(([id, fn]) => UI.modal.bindOutsideClick(id, fn));
 
-// 🆕 change-password-modal — особый случай, НЕ закрывается кликом мимо
+// change-password-modal — НЕ закрывается кликом мимо
 document.getElementById('change-password-modal').addEventListener('click', e => {
   if (e.target.id === 'change-password-modal') {
     return;
@@ -550,3 +555,53 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ============================================================
+// 🆕 РАСЧЕТ ВЫСОТЫ ДЛЯ ПРИБИТЫХ ЭЛЕМЕНТОВ (Fixed)
+// ============================================================
+function updateStickyOffsets() {
+  // Используем requestAnimationFrame, чтобы не заставлять браузер пересчитывать DOM дважды
+  requestAnimationFrame(() => {
+    const header = document.getElementById('main-header');
+    const banner = document.getElementById('alert-banner');
+    const toolbar = document.getElementById('toolbar');
+    if (!header) return;
+
+    // Читаем размеры
+    const hHeight = header.offsetHeight;
+    const bHeight = (banner && banner.classList.contains('show')) ? banner.offsetHeight : 0;
+    const tHeight = toolbar ? toolbar.offsetHeight : 0;
+
+    // Записываем в CSS-переменные
+    document.documentElement.style.setProperty('--header-height', hHeight + 'px');
+    document.documentElement.style.setProperty('--banner-height', bHeight + 'px');
+    document.documentElement.style.setProperty('--toolbar-height', tHeight + 'px');
+  });
+}
+
+// Вызываем при загрузке
+window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
+// Вызываем при изменении размера окна
+window.addEventListener('resize', updateStickyOffsets);
+
+// ResizeObserver следит за изменениями размера элементов (например, когда текст переносится на новую строку)
+if (window.ResizeObserver) {
+  const observer = new ResizeObserver(() => {
+    updateStickyOffsets();
+  });
+  const header = document.getElementById('main-header');
+  const banner = document.getElementById('alert-banner');
+  const toolbar = document.getElementById('toolbar');
+  
+  if (header) observer.observe(header);
+  if (banner) observer.observe(banner);
+  if (toolbar) observer.observe(toolbar);
+}
+
+// MutationObserver следит за появлением/исчезновением желтого баннера
+document.addEventListener('DOMContentLoaded', () => {
+  const banner = document.getElementById('alert-banner');
+  if (banner) {
+    const mo = new MutationObserver(updateStickyOffsets);
+    mo.observe(banner, { attributes: true, attributeFilter: ['class', 'style'] });
+  }
+});
