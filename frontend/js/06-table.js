@@ -21,7 +21,7 @@ function render() {
   updateSortArrows();
   updateSelectAllCheckbox();
   updateBulkCalButton();
- }
+}
 
 // ============================================================
 // ПАГИНАЦИЯ
@@ -63,7 +63,7 @@ function renderCounters() {
   if (statDangerEl) statDangerEl.textContent = c.danger;
   if (statTotalEl)  statTotalEl.textContent = c.total;
 
-    // Тултип на «Всего»
+  // Тултип на «Всего»
   if (statTotalEl) {
     const sumIn = (c.ok || 0) + (c.warn || 0) + (c.danger || 0);
     const outside = (c.total || 0) - sumIn;
@@ -79,8 +79,8 @@ function renderCounters() {
         <div class="tooltip-row"><span>🔴 Просрочены:</span> <span>${c.danger}</span></div>
       `;
       
-           if (outside > 0) {
-        // 🆕 Все возможные категории «вне индикаторов»
+      if (outside > 0) {
+        // Категории «вне индикаторов»
         const allCategories = [
           { label: '📦 На поверке',        value: c.sent || 0 },
           { label: '⏳ В процессе',         value: c.wip || 0 },
@@ -89,15 +89,13 @@ function renderCounters() {
           { label: '⛔ Неактивные',         value: c.inactive || 0 },
         ];
         
-        // Показываем только те, где > 0
         const visibleLines = allCategories
           .filter(cat => cat.value > 0)
           .map(cat => `${cat.label}: <b>${cat.value}</b>`);
         
-        // Сумма всех категорий
         const sumCategories = allCategories.reduce((sum, cat) => sum + cat.value, 0);
         
-        // Если сумма не сходится — показываем «Прочее» (чтобы пользователь видел, что есть неучтённое)
+        // Если сумма не сходится — показываем «Прочее»
         const diff = outside - sumCategories;
         if (diff > 0) {
           visibleLines.push(`<span style="color:#94a3b8;">Прочее: <b>${diff}</b></span>`);
@@ -148,7 +146,7 @@ function renderTableHeader(columns, hasAnyRowAction) {
     <th class="col-checkbox">
       <input type="checkbox" id="select-all-checkbox" onclick="toggleSelectAll(this.checked)" title="Выбрать все">
     </th>
-     ${columns.map(col => {
+    ${columns.map(col => {
       const def = findColumn(col);
       if (def.sortable) {
         return `<th onclick="sortBy('${def.field}')">${esc(def.label)} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
@@ -210,66 +208,66 @@ function renderTableBody(items, columns, hasAnyRowAction) {
 
     const cellsHtml = columns.map(colId => {
       switch (colId) {
-      case 'id': {
-        const statusDot = UI.renderStatusDot(status);
-        let replLine = '';
-        if (p.replaced_by && p.replacement) {
-          replLine = `<br><small style="color:${COLORS.info};">↔ замена: ${esc(p.replaced_by)}</small>`;
-        } else if (p.replaced_by) {
-          replLine = `<br><small style="color:${COLORS.danger};">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
+        case 'id': {
+          const statusDot = UI.renderStatusDot(status);
+          let replLine = '';
+          if (p.replaced_by && p.replacement) {
+            replLine = `<br><small style="color:${COLORS.info};">↔ замена: ${esc(p.replaced_by)}</small>`;
+          } else if (p.replaced_by) {
+            replLine = `<br><small style="color:${COLORS.danger};">⚠ замена удалена: ${esc(p.replaced_by)}</small>`;
+          }
+          if (p.replacing && p.replacedFor) {
+            replLine = `<br><small style="color:${COLORS.warning};">↔ заменяет: ${esc(p.replacing)}</small>`;
+          }
+          return `<td><span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}</td>`;
         }
-        if (p.replacing && p.replacedFor) {
-          replLine = `<br><small style="color:${COLORS.warning};">↔ заменяет: ${esc(p.replacing)}</small>`;
+        case 'type': {
+          const t = _equipmentTypes.find(x => x.value === p.equipment_type);
+          const label = t ? t.label : 'Прочее';
+          const cls   = p.equipment_type === 'pipette' ? 'badge-pipette' : 'badge-other';
+          return `<td><span class="badge-type ${cls}">${esc(label)}</span></td>`;
         }
-        return `<td><span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}</td>`;
-      }
-      case 'type': {
-        const t = _equipmentTypes.find(x => x.value === p.equipment_type);
-        const label = t ? t.label : 'Прочее';
-        const cls   = p.equipment_type === 'pipette' ? 'badge-pipette' : 'badge-other';
-        return `<td><span class="badge-type ${cls}">${esc(label)}</span></td>`;
-      }
-      case 'model':
-        return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
-      case 'volume':
-        return `<td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>`;
-      case 'department':
-        return `<td>${esc(p.department || '—')}</td>`;
-      case 'lastCalibration':
-        return `<td>${formatDate(p.last_calibration)}</td>`;
-      case 'nextCalibration':
-        return `<td>${status === 'sent'
-          ? `<small style="color:${COLORS.info};font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
-          : status === 'wip'
-          ? `<small style="color:${COLORS.warning};font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
-          : status === 'unknown'
-          ? `<small style="color:${COLORS.faint};">Дата не задана</small>`
-          : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? COLORS.danger : status === 'warn' ? COLORS.warning : COLORS.success}">${daysText}</small>` : ''}`}</td>`;
-      case 'responsible':
-        return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
-      case 'location':
-        return `<td>${esc(p.location || '—')}</td>`;
-      case 'manufacturer':
-        return `<td>${esc(p.manufacturer || '—')}</td>`;
-      case 'serial':
-        return `<td>${esc(p.serial || '—')}</td>`;
-      case 'cert':
-        return `<td>${esc(p.cert || '—')}</td>`;
-      case 'status':
-        return `<td>${UI.renderStatusBadge(status)}</td>`;
-      case 'interval':
-        return `<td>${p.interval != null ? esc(p.interval) + ' мес.' : '—'}</td>`;
-      case 'notes':
-        return `<td>${esc(p.notes || '—')}</td>`;
-      case 'result':
-        return `<td>${esc(RESULT_LABELS[p.last_result] || p.last_result || '—')}</td>`;
-      case 'active':
-        return `<td>${p.active ? 'В работе' : 'Не используется'}</td>`;
-      default: {
-        const raw = p[colId];
-        const val = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
-        return `<td>${val}</td>`;
-      }
+        case 'model':
+          return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
+        case 'volume':
+          return `<td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>`;
+        case 'department':
+          return `<td>${esc(p.department || '—')}</td>`;
+        case 'lastCalibration':
+          return `<td>${formatDate(p.last_calibration)}</td>`;
+        case 'nextCalibration':
+          return `<td>${status === 'sent'
+            ? `<small style="color:${COLORS.info};font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
+            : status === 'wip'
+            ? `<small style="color:${COLORS.warning};font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
+            : status === 'unknown'
+            ? `<small style="color:${COLORS.faint};">Дата не задана</small>`
+            : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? COLORS.danger : status === 'warn' ? COLORS.warning : COLORS.success}">${daysText}</small>` : ''}`}</td>`;
+        case 'responsible':
+          return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
+        case 'location':
+          return `<td>${esc(p.location || '—')}</td>`;
+        case 'manufacturer':
+          return `<td>${esc(p.manufacturer || '—')}</td>`;
+        case 'serial':
+          return `<td>${esc(p.serial || '—')}</td>`;
+        case 'cert':
+          return `<td>${esc(p.cert || '—')}</td>`;
+        case 'status':
+          return `<td>${UI.renderStatusBadge(status)}</td>`;
+        case 'interval':
+          return `<td>${p.interval != null ? esc(p.interval) + ' мес.' : '—'}</td>`;
+        case 'notes':
+          return `<td>${esc(p.notes || '—')}</td>`;
+        case 'result':
+          return `<td>${esc(RESULT_LABELS[p.last_result] || p.last_result || '—')}</td>`;
+        case 'active':
+          return `<td>${p.active ? 'В работе' : 'Не используется'}</td>`;
+        default: {
+          const raw = p[colId];
+          const val = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
+          return `<td>${val}</td>`;
+        }
       }
     }).join('');
 
@@ -282,20 +280,16 @@ function renderTableBody(items, columns, hasAnyRowAction) {
     return `<tr class="${rowClass}">
       <td class="col-checkbox">
         <input type="checkbox" class="row-checkbox" data-id="${esc(p.id)}" ${isChecked}
-               onchange="togglePipetteSelection('${esc(p.id)}', this.checked)">
+               onchange="togglePipetteSelection('${esc(p.id)}', ${isChecked})">
       </td>
       ${cellsHtml}
       <td ${!hasAnyAction ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
   }).join('');
 }
-// ============================================================
-// ДИНАМИЧЕСКАЯ ВЫСОТА ОБЁРТКИ ТАБЛИЦЫ
-// ============================================================
-function fitTableWrapperHeight() { }
 
 // ============================================================
-// 🆕 ОБНОВЛЕНИЕ СТРЕЛОЧЕК СОРТИРОВКИ
+// ОБНОВЛЕНИЕ СТРЕЛОЧЕК СОРТИРОВКИ
 // ============================================================
 function updateSortArrows() {
   document.querySelectorAll('th .sort-arrow').forEach(el => {
@@ -306,7 +300,7 @@ function updateSortArrows() {
 }
 
 // ============================================================
-// 🆕 СОРТИРОВКА — на сервер
+// СОРТИРОВКА — на сервер
 // ============================================================
 async function sortBy(field) {
   if (sortField === field) sortDir *= -1;
@@ -318,7 +312,7 @@ async function sortBy(field) {
 }
 
 // ============================================================
-// 🆕 ПАГИНАЦИЯ — на сервер
+// ПАГИНАЦИЯ — на сервер
 // ============================================================
 async function changePage(delta) {
   const newPage = currentPage + delta;
@@ -339,7 +333,6 @@ function togglePipetteSelection(id, checked) {
   updateBulkCalButton();
 }
 
-// 🆕 ID текущей страницы — для выделения
 function getVisiblePageIds() {
   return pipettes.map(p => p.id);
 }
@@ -451,4 +444,3 @@ function updateBulkToolbar() {
   const hasAny = selectedPipettes.size > 0;
   row.style.display = hasAny ? 'flex' : 'none';
 }
-
