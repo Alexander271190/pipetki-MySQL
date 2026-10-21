@@ -69,11 +69,10 @@ function renderAuthUI() {
         loadPipetteData();
       }
     }
-    
+
     if (typeof updateMoreMenuVisibility === 'function') {
       setTimeout(updateMoreMenuVisibility, 0);
     }
-    setTimeout(updateStickyOffsets, 100); // Пересчитываем высоты при входе
 
   } else {
     closeChangePasswordModal();
@@ -173,9 +172,7 @@ function toggleHeaderCollapse() {
     }
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
-  // Пересчитываем высоту после анимации схлопывания
-  setTimeout(updateStickyOffsets, 300); 
-}
+} // 🆕 ВОТ ЭТА СКОБКА БЫЛА ПРОПУЩЕНА
 
 (function initHeaderCollapse() {
   try {
@@ -555,49 +552,65 @@ document.addEventListener('keydown', (e) => {
 
 // ============================================================
 // РАСЧЕТ ВЫСОТЫ ДЛЯ ПРИБИТЫХ ЭЛЕМЕНТОВ (Fixed)
-// Используем requestAnimationFrame, чтобы не провоцировать Forced reflow
+// Строгий дебаунс: не более 1 вызова за кадр + кэш последних значений
 // ============================================================
-let _stickyScheduled = false;
+let _stickyRafId = null;
+const _stickyCache = {
+  header: null,
+  banner: null,
+  toolbar: null,
+  bannerVisible: null,
+  toolbarExists: null,
+};
 
 function updateStickyOffsets() {
-  if (_stickyScheduled) return;
-  _stickyScheduled = true;
+  if (_stickyRafId !== null) return;
 
-  requestAnimationFrame(() => {
-    _stickyScheduled = false;
+  _stickyRafId = requestAnimationFrame(() => {
+    _stickyRafId = null;
 
     const header = document.getElementById('main-header');
     const banner = document.getElementById('alert-banner');
     const toolbar = document.getElementById('toolbar');
     if (!header) return;
 
-    // 1. Сначала ВСЕ УСЛОВИЯ (без чтения размеров)
     const bannerVisible = !!(banner && banner.classList.contains('show'));
     const toolbarExists = !!toolbar;
 
-    // 2. Потом ВСЕ РАЗМЕРЫ одним блоком (без записей между ними)
     const hHeight = header.offsetHeight;
     const bHeight = bannerVisible ? banner.offsetHeight : 0;
     const tHeight = toolbarExists ? toolbar.offsetHeight : 0;
 
-    // 3. В конце — ВСЕ ЗАПИСИ в CSS-переменные
+    const changed =
+      _stickyCache.header !== hHeight ||
+      _stickyCache.banner !== bHeight ||
+      _stickyCache.toolbar !== tHeight ||
+      _stickyCache.bannerVisible !== bannerVisible ||
+      _stickyCache.toolbarExists !== toolbarExists;
+
+    if (!changed) return;
+
+    _stickyCache.header = hHeight;
+    _stickyCache.banner = bHeight;
+    _stickyCache.toolbar = tHeight;
+    _stickyCache.bannerVisible = bannerVisible;
+    _stickyCache.toolbarExists = toolbarExists;
+
     const root = document.documentElement;
     root.style.setProperty('--header-height', hHeight + 'px');
     root.style.setProperty('--banner-height', bHeight + 'px');
     root.style.setProperty('--toolbar-height', tHeight + 'px');
   });
 }
-// Вызываем при загрузке
+
 window.addEventListener('load', () => setTimeout(updateStickyOffsets, 100));
 
-// Вызываем при изменении размера окна (только после остановки ресайза)
 let _resizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(updateStickyOffsets, 150);
 });
 
-// ResizeObserver — следит за изменением размера элементов
 if (window.ResizeObserver) {
   const observer = new ResizeObserver(() => updateStickyOffsets());
   const header = document.getElementById('main-header');
@@ -608,7 +621,6 @@ if (window.ResizeObserver) {
   if (toolbar) observer.observe(toolbar);
 }
 
-// MutationObserver — следит за появлением/скрытием баннера
 document.addEventListener('DOMContentLoaded', () => {
   const banner = document.getElementById('alert-banner');
   if (banner) {
@@ -621,13 +633,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // PULL-TO-REFRESH (Свайп вниз для обновления данных)
 // ============================================================
 (function initPullToRefresh() {
-  if (!('ontouchstart' in window)) return; // Только тач-устройства
+  if (!('ontouchstart' in window)) return;
 
   const tableWrapper = document.querySelector('.table-wrapper');
   if (!tableWrapper) return;
 
-  const THRESHOLD = 80;   // Сколько пикселей нужно протянуть
-  const MAX_PULL  = 150;  // Максимальное смещение (ограничитель)
+  const THRESHOLD = 80;
+  const MAX_PULL  = 150;
 
   let startY = 0;
   let currentPull = 0;
@@ -648,13 +660,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const deltaY = e.touches[0].clientY - startY;
 
     if (deltaY <= 0) {
-      // Палец пошёл вверх — отменяем
       isPulling = false;
       currentPull = 0;
       return;
     }
 
-    // Блокируем нативный скролл только когда реально тянем вниз
     if (deltaY > 10) e.preventDefault();
 
     currentPull = Math.min(deltaY, MAX_PULL);
