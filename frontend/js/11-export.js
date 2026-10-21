@@ -357,7 +357,7 @@ async function getFilteredHistoryForExport() {
 }
 
 async function exportHistoryToXlsx() {
-  const errEl = document.getElementById('he-error');
+  const errEl = document.getElementById('history-export-error');
   errEl.textContent = '';
 
   const p = pipettes.find(x => x.id === currentHistoryId);
@@ -433,7 +433,7 @@ async function exportHistoryToXlsx() {
 }
 
 async function exportHistoryToPDF() {
-  const errEl = document.getElementById('he-error');
+  const errEl = document.getElementById('history-export-error');
   errEl.textContent = '';
 
   const p = pipettes.find(x => x.id === currentHistoryId);
