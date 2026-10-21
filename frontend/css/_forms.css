@@ -22,8 +22,17 @@
 
 .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .form-row .form-group { flex: 1; min-width: 160px; }
-.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 20px;
+  flex-wrap: nowrap;
+}
+.form-actions .btn {
+  white-space: nowrap; 
+}
 @media (max-width: 768px) {
   .form-row { flex-direction: column; }
   .form-row .form-group { width: 100%; min-width: auto; }
