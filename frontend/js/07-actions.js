@@ -114,6 +114,7 @@ async function openRowActions(ev, id) {
     renderRowActionsMenu(anchorEl, items); 
   });
 }
+
 function renderRowActionsMenu(anchorEl, items) {
   closeRowActionsMenu();
 
@@ -135,20 +136,24 @@ function renderRowActionsMenu(anchorEl, items) {
   document.body.appendChild(menu);
   _rowActionsMenu = menu;
 
-  const menuRect = menu.getBoundingClientRect();
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const top = (spaceBelow < menuRect.height + 10)
-    ? rect.top - menuRect.height - 6
-    : rect.bottom + 6;
+  // 🆕 Все замеры и установка позиции — в одном requestAnimationFrame
+  requestAnimationFrame(() => {
+    const menuRect = menu.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
 
-  let left = rect.right - menuRect.width;
-  if (left < 8) left = 8;
-  if (left + menuRect.width > window.innerWidth - 8) {
-    left = window.innerWidth - menuRect.width - 8;
-  }
+    const top = (spaceBelow < menuRect.height + 10)
+      ? rect.top - menuRect.height - 6
+      : rect.bottom + 6;
 
-  menu.style.top = top + 'px';
-  menu.style.left = left + 'px';
+    let left = rect.right - menuRect.width;
+    if (left < 8) left = 8;
+    if (left + menuRect.width > window.innerWidth - 8) {
+      left = window.innerWidth - menuRect.width - 8;
+    }
+
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+  });
 
   const realItems = items.filter(it => !it.divider);
   menu.querySelectorAll('.row-actions-item').forEach((btn, i) => {
