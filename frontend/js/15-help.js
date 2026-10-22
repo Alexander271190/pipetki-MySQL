@@ -19,6 +19,24 @@ function ensureTinyMCE() {
       resolve(false);
       return;
     }
+   
+    const _origAdd = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'touchstart' || type === 'touchmove') {
+        if (typeof options === 'boolean') {
+          options = { capture: options, passive: true };
+        } else if (options && typeof options === 'object') {
+          options = { ...options, passive: true };
+        } else {
+          options = { passive: true };
+        }
+      }
+      return _origAdd.call(this, type, listener, options);
+    };
+   
+    setTimeout(() => {
+      EventTarget.prototype.addEventListener = _origAdd;
+    }, 3000);
 
     tinymce.init({
       selector: '#he-content',
@@ -27,7 +45,6 @@ function ensureTinyMCE() {
       max_height: 700,
       branding: false,
       promotion: false,
-      touch: false,
       plugins: 'lists link image table code fullscreen searchreplace',
       toolbar: [
         'undo redo | styles fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor',
