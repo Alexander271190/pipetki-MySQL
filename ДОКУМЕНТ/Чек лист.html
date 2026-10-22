@@ -168,9 +168,8 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .vp-table thead{background:#1e293b;color:#fff}
 .vp-table th{padding:12px 16px;text-align:left;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;color:#fff}
 .vp-table td{padding:11px 16px;border-top:1px solid #f1f5f9;font-size:.9rem;vertical-align:middle;color:#1a1a2e;background:#fff}
-.vp-badge-type{display:inline-block;padding:3px 10px;border-radius:8px;font-size:.75rem;font-weight:600;white-space:nowrap}
-.vp-badge-pipette{background:#e0f2fe;color:#0369a1}
-.vp-badge-other{background:#f3e8ff;color:#6d28d9}
+/* Блок 47: тип — обычный чёрный текст, без фона и рамки */
+.vp-badge-type{display:inline-block;padding:0;border:none;background:none;color:#1a1a2e;font-size:.85rem;font-weight:400;white-space:nowrap}
 .vp-status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:.8rem;font-weight:600;white-space:nowrap}
 .vp-status-dot{width:8px;height:8px;border-radius:50%}
 .vp-status-ok{background:#dcfce7;color:#166534}.vp-status-ok .vp-status-dot{background:#16a34a}
@@ -210,6 +209,15 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 .vp-mono{font-family:monospace;letter-spacing:1px;background:#f1f5f9;cursor:not-allowed}
 .vp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:12px}
 .vp-swatch{padding:8px 12px;border-radius:8px;font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--card)}
+/* Админ-таблица справки (блок 47) */
+.vp-help-table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.vp-help-table th{background:#f8fafc;color:#475569;padding:10px 14px;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #e2e8f0}
+.vp-help-table th.center{text-align:center}
+.vp-help-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:.88rem;color:#1a1a2e;vertical-align:middle}
+.vp-help-table td.name{text-align:left;font-weight:500}
+.vp-help-table td.center{text-align:center}
+.vp-help-table td.actions{text-align:center;white-space:nowrap}
+.vp-help-table tr:last-child td{border-bottom:none}
 @media print{header{position:static;box-shadow:none}.block-nav,.mini-progress{display:none!important}.controls,.status-group,.meta-btn,.item-meta,footer button,.section-ops,.hint,.tabs,.header-collapse-btn{display:none!important}.section{box-shadow:none;border:1px solid var(--border);break-inside:avoid}.item.hidden{display:none!important}body{background:#fff;padding:0}.tab-content{display:block!important}}
 @media (max-width:600px){body{padding:10px}header{padding:14px}h1{font-size:16px}.stat-value{font-size:18px}.item-text{font-size:13px;min-width:0}.controls input[type=search]{min-width:100%}.item-meta{margin-left:0}.diff-files{grid-template-columns:1fr}.section-ops{margin-right:0}.tab{padding:8px 12px;font-size:13px}.block-nav{max-height:80px}}
 </style>
@@ -307,7 +315,7 @@ footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
 
 <input type="file" id="import-file" accept=".json,application/json" style="display:none">
 <script>
-var DATA = [
+  var DATA = [
   { title: "Блок 1. Запуск и инициализация", tag: "1", items: [
     { g: "1.1 Backend", t: "docker compose up -d — без ошибок" },
     { g: "1.1 Backend", t: "Лог: ✅ MySQL подключён" },
@@ -396,7 +404,7 @@ var DATA = [
   ]},
   { title: "Блок 3. Главная таблица", tag: "3", items: [
     { g: "3.1 Базовый рендер", t: "5 демо-строк: P-001, P-002, P-003, A-001, M-001" },
-    { g: "3.1 Базовый рендер", t: "Тип бейджем (pipette синий, остальные фиолетовый)" },
+    { g: "3.1 Базовый рендер", t: "Тип — обычный чёрный текст, без цветного фона и рамок" },
     { g: "3.1 Базовый рендер", t: "Объём с мкл, у не-пипеток —" },
     { g: "3.1 Базовый рендер", t: "В «Следующая»: дата + (N дн.) / (просрочка N дн.)" },
     { g: "3.1 Базовый рендер", t: "M-001 — Неактивна (серый)" },
@@ -508,6 +516,7 @@ var DATA = [
     { g: "6.1 Просмотр", t: "Свидетельство — синий бейдж" },
     { g: "6.1 Просмотр", t: "Результат цветным бейджем" },
     { g: "6.1 Просмотр", t: "Организация и примечание серым" },
+    { g: "6.1 Просмотр", t: "Контент в HTML: таблицы с рамками, списки, .docs-hint" },
     { g: "6.2 Добавить поверку", t: "Форма появляется ниже" },
     { g: "6.2 Добавить поверку", t: "Заполнить → Записать → тост" },
     { g: "6.2 Добавить поверку", t: "Валидация даты" },
@@ -792,25 +801,37 @@ var DATA = [
     { g: "19.8 Копирование вида", t: "copyViewFromUser заполняет чекбоксы" },
     { g: "19.8 Копирование вида", t: "Недоступные поля пропускаются" }
   ]},
-  { title: "Блок 20. Настройки — Справка", tag: "20", items: [
+  { title: "Блок 20. Настройки — Справка (TinyMCE)", tag: "20", items: [
     { g: "20.1 Просмотр", t: "Shift+? или Ещё ▼ → Справка" },
-    { g: "20.1 Просмотр", t: "Сайдбар с разделами" },
-    { g: "20.1 Просмотр", t: "Markdown рендерится: заголовки, списки, таблицы, цитаты" },
-    { g: "20.1 Просмотр", t: "Эмодзи и кириллица" },
+    { g: "20.1 Просмотр", t: "Сайдбар с 23 разделами" },
+    { g: "20.1 Просмотр", t: "Контент — HTML (не Markdown): заголовки, списки, таблицы" },
+    { g: "20.1 Просмотр", t: "Таблицы с рамками и шапкой" },
+    { g: "20.1 Просмотр", t: "Подсказки .docs-hint — синие блоки" },
+    { g: "20.1 Просмотр", t: "Иконки {icon: fa-xxx} заменены на настоящие FA" },
     { g: "20.1 Просмотр", t: "Раздел скрывается, если нет прав" },
+    { g: "20.1 Просмотр", t: "Переключение разделов работает" },
     { g: "20.2 Админка", t: "Раздел Справка в Настройках" },
-    { g: "20.2 Админка", t: "Список разделов с ▲▼, slug, title, права, показ" },
-    { g: "20.2 Админка", t: "Добавить раздел → редактор" },
-    { g: "20.2 Админка", t: "Slug проверяется regex" },
-    { g: "20.2 Админка", t: "Markdown-редактор с предпросмотром" },
-    { g: "20.2 Админка", t: "Кнопка 🖼 Картинка загружает файл" },
-    { g: "20.2 Админка", t: "Выбор прав (по группам)" },
+    { g: "20.2 Админка", t: "Список разделов: ▲▼, Название, Показ, Действия (без Slug и Права)" },
+    { g: "20.2 Админка", t: "Заголовки столбцов — по центру" },
+    { g: "20.2 Админка", t: "Названия разделов — прижаты к левому краю" },
+    { g: "20.2 Админка", t: "Добавить раздел → модалка с TinyMCE" },
+    { g: "20.2 Админка", t: "Поле «Название раздела» (Slug скрыт, генерируется)" },
+    { g: "20.2 Админка", t: "TinyMCE: панель форматирования, шрифты, цвета, таблицы, списки" },
+    { g: "20.2 Админка", t: "Редактор растягивается от 420 до 700px" },
+    { g: "20.2 Админка", t: "Кнопка «Прикрепить файл» — PDF/DOCX/XLSX/ZIP" },
+    { g: "20.2 Админка", t: "Кнопка «Картинка» в тулбаре TinyMCE" },
+    { g: "20.2 Админка", t: "Ctrl+V скриншот → вставляется" },
+    { g: "20.2 Админка", t: "Drag-and-drop файла в редактор" },
+    { g: "20.2 Админка", t: "Выбор прав по группам" },
+    { g: "20.2 Админка", t: "Иконка в заголовке сохраняется между редактированиями" },
     { g: "20.2 Админка", t: "Сохранить → «Раздел создан/обновлён»" },
     { g: "20.2 Админка", t: "Удалить → подтверждение" },
     { g: "20.2 Админка", t: "Экспорт — JSON" },
     { g: "20.2 Админка", t: "Импорт — replace / merge" },
-    { g: "20.2 Админка", t: "Сбросить к заводской — восстановление" },
-    { g: "20.2 Админка", t: "Сброс создаёт запись в логе" }
+    { g: "20.2 Админка", t: "Сбросить к заводской — 23 раздела HTML" },
+    { g: "20.2 Админка", t: "Сброс создаёт запись в логе" },
+    { g: "20.2 Админка", t: "Печать раздела — новая вкладка A4" },
+    { g: "20.2 Админка", t: "Консоль без [Violation] при открытии редактора" }
   ]},
   { title: "Блок 21. Настройки — Шаблоны вида", tag: "21", items: [
     { g: "", t: "Раздел Шаблоны вида в Настройках" },
@@ -847,7 +868,9 @@ var DATA = [
     { g: "", t: "Кнопки .btn с градиентами" },
     { g: "", t: "Столбец «Действия» скрывается при отсутствии прав" },
     { g: "", t: "row-actions-btn (⋮) — компактная" },
-    { g: "", t: "settings-back-btn — возврат" }
+    { g: "", t: "settings-back-btn — возврат" },
+    { g: "", t: "Pull-to-refresh на странице логина (мобильные, 80px)" },
+    { g: "", t: "Pull-to-refresh в основной таблице (мобильные, 80px)" }
   ]},
   { title: "Блок 24. Безопасность", tag: "24", items: [
     { g: "", t: "JWT в sessionStorage (не localStorage)" },
@@ -1069,10 +1092,44 @@ var DATA = [
     { g: "45.7 Эмодзи в <option>", t: "📦🏠 в селекте места поверки — оставлены (OK)" },
     { g: "45.8 Эмодзи в tooltip", t: "Тултип 'Всего' — эмодзи 🟢🟡🔴 (HTML не работает)" },
     { g: "45.9 Эмодзи в печатных формах", t: "PDF / Excel / Акт — эмодзи оставлены" }
+  ]},
+  { title: "Блок 46. Модалки — фиксы после правок", tag: "46", items: [
+    { g: "46.1 Открытие", t: "Модалки открываются мгновенно, без мерцания" },
+    { g: "46.1 Открытие", t: "Анимация scaleIn убрана" },
+    { g: "46.2 Скролл", t: "Скролл не вылезает за скруглённые углы (clip-path)" },
+    { g: "46.2 Скролл", t: "Скролл не прыгает (overscroll-behavior: contain)" },
+    { g: "46.3 Ресайз", t: "Правый нижний угол — курсор ↘" },
+    { g: "46.3 Ресайз", t: "Угол остаётся скруглённым при ресайзе" },
+    { g: "46.3 Ресайз", t: "Модалка не закрывается при отпускании мыши" },
+    { g: "46.3 Ресайз", t: "Размер сбрасывается при закрытии" },
+    { g: "46.4 Кнопки", t: "Действия слева, Закрыть/Сохранить справа" },
+    { g: "46.4 Кнопки", t: "Все кнопки в один ряд (flex-wrap: nowrap)" },
+    { g: "46.4 Кнопки", t: "Окна подтверждения — по центру" }
+  ]},
+  { title: "Блок 47. Стили таблицы справки", tag: "47", items: [
+    { g: "47.1 Заголовки", t: "Заголовки столбцов — по центру" },
+    { g: "47.2 Названия", t: "Названия разделов — прижаты к левому краю" },
+    { g: "47.3 Бейджи типов", t: "Пипетка/Анализатор — чёрный текст, без фона и рамки" },
+    { g: "47.3 Бейджи типов", t: "Статусы и отделы — не тронуты (цветные)" }
+  ]},
+  { title: "Блок 48. TinyMCE — библиотека", tag: "48", items: [
+    { g: "48.1 Установка", t: "frontend/vendor/tinymce/ содержит tinymce.min.js + папки" },
+    { g: "48.1 Установка", t: "Подключено в <head> до остальных скриптов" },
+    { g: "48.2 Инициализация", t: "tinymce.init вызывается в ensureTinyMCE" },
+    { g: "48.2 Инициализация", t: "touch: false" },
+    { g: "48.2 Инициализация", t: "min_height: 420, max_height: 700" },
+    { g: "48.3 Патч", t: "addEventListener перехвачен для touchstart/touchmove" },
+    { g: "48.3 Патч", t: "Через 3 сек оригинал восстановлен" },
+    { g: "48.4 Консоль", t: "Нет [Violation] при открытии редактора" }
+  ]},
+  { title: "Блок 49. Pull-to-refresh (мобильные)", tag: "49", items: [
+    { g: "49.1 Логин", t: "На странице логина потянуть вниз 80px → перезагрузка" },
+    { g: "49.1 Логин", t: "ПК не затронут (проверка ontouchstart)" },
+    { g: "49.2 Таблица", t: "В основной таблице потянуть вниз → данные обновляются" },
+    { g: "49.2 Таблица", t: "Работает отдельно от pull-to-refresh на логине" }
   ]}
 ];
-
-var SCENARIOS = [
+  var SCENARIOS = [
   { tag: "S1", title: "Администратор: от запуска до аудита", time: "60 мин", priority: "🔴", blocks: "1, 2.1, 3–6, 9, 10, 13–19, 27",
     steps: [
       "docker compose up -d, проверить логи MySQL, БД, сервера, разовый пароль admin",
@@ -1343,28 +1400,22 @@ var SCENARIOS = [
     ],
     expected: "Режим И.О. работает корректно"
   },
-  { tag: "S12", title: "Справка", time: "30 мин", priority: "🟡", blocks: "20",
+  { tag: "S12", title: "Справка — пользовательский просмотр (HTML)", time: "20 мин", priority: "🟡", blocks: "20",
     steps: [
       "Нажать Shift+? — открывается справка",
-      "Сайдбар с разделами",
+      "Сайдбар с 23 разделами (зависит от прав)",
       "Клик на раздел — контент меняется",
-      "Markdown рендерится: заголовки, списки, таблицы, цитаты",
-      "Код в backticks подсвечивается",
-      "Картинки отображаются",
-      "Настройки → Справка — список разделов",
-      "Добавить раздел → редактор",
-      "Slug проверяется regex",
-      "Предпросмотр обновляется",
-      "Вставить картинку через 🖼",
-      "Сохранить → Раздел создан",
-      "Редактировать → Сохранить",
-      "Экспорт → JSON скачался",
-      "Импорт → диалог replace/merge",
-      "Сбросить к заводской → восстановлено",
-      "Раздел с правами — виден только тем, у кого есть",
-      "Раздел без прав — виден всем"
+      "Контент рендерится как HTML: заголовки, списки, таблицы",
+      "Таблицы с рамками и шапкой",
+      "Подсказки .docs-hint — синие блоки",
+      "Иконки {icon: fa-xxx} заменяются на настоящие FA",
+      "Раздел с правами виден только тем, у кого есть",
+      "Раздел без прав — виден всем",
+      "Переключение разделов не перезагружает страницу",
+      "Прокрутка длинного раздела работает",
+      "Печать раздела — открывается вкладка A4"
     ],
-    expected: "Справка работает на фронте и в админке"
+    expected: "Справка корректно отображает HTML-контент для пользователя"
   },
   { tag: "S13", title: "Шаблоны вида и единиц оборудования", time: "25 мин", priority: "🟡", blocks: "21, 22",
     steps: [
@@ -1413,6 +1464,29 @@ var SCENARIOS = [
     ],
     expected: "Все шаги проходят без ошибок"
   },
+  { tag: "S15", title: "Справка с TinyMCE (админка + редактор)", time: "20 мин", priority: "🟡", blocks: "20, 46, 47, 48",
+    steps: [
+      "Открыть Настройки → Справка",
+      "Проверить: список без колонок «Slug» и «Права»",
+      "Заголовки столбцов — по центру",
+      "Названия разделов — прижаты к левому краю",
+      "Добавить раздел → открывается модалка с TinyMCE",
+      "Редактор: панель форматирования сверху (B, I, U, шрифты, цвета, таблицы)",
+      "Написать текст, применить жирный, цвет, таблицу",
+      "Ctrl+V скриншот → картинка вставляется и загружается",
+      "Кнопка «Прикрепить файл» → PDF/DOCX/XLSX → ссылка «📎 Скачать: файл.pdf»",
+      "Drag-and-drop файла из проводника → загружается",
+      "Сохранить → раздел в списке обновился",
+      "Открыть у пользователя (Shift+?) → HTML-контент: заголовки, таблицы, списки",
+      "Проверить на разделе с таблицей (Вход в систему) — рамки, шапка",
+      "Проверить на разделе с подсказками (Что на экране) — .docs-hint",
+      "Переключить тёмную тему → открыть редактор → тулбар тёмный",
+      "Консоль (F12) — никаких [Violation]",
+      "Печать раздела → открывается окно A4",
+      "Сброс к заводской → 23 раздела восстановлены"
+    ],
+    expected: "Справка полностью на TinyMCE, HTML-контент, файлы и картинки, чистая консоль"
+  },
   { tag: "S28", title: "Модалка showPrompt вместо prompt()", time: "10 мин", priority: "🟡", blocks: "44",
     steps: [
       "Открыть Настройки → Поля формы → Добавить поле",
@@ -1456,8 +1530,7 @@ var SCENARIOS = [
     expected: "Весь UI с FA-иконками; эмодзи только там, где HTML не работает"
   }
 ];
-
-var STORAGE_KEY = "kdl_checklist_v51";
+  var STORAGE_KEY = "kdl_checklist_v51";
 var LEGACY_KEYS = ["kdl_checklist_v50","kdl_checklist_v41","kdl_checklist_v40","kdl_checklist_v39"];
 var SNAPSHOTS_KEY = "kdl_checklist_v50_snapshots";
 var MAX_HISTORY = 50;
@@ -1695,8 +1768,9 @@ function makeItemEl(opts){
 }
 function renderVisual(){
   var root=document.getElementById("visual");root.innerHTML="";
-  root.appendChild(makeVpSection({tag:"ТАБЛИЦА",title:"Главная таблица оборудования",desc:"Как выглядит таблица с 5 демо-строками.",body:renderPreviewTable()}));
-  root.appendChild(makeVpSection({tag:"ЛЕГЕНДА",title:"Бейджи типов и статусов",desc:"Все варианты.",body:renderBadgesLegend()}));
+  root.appendChild(makeVpSection({tag:"ТАБЛИЦА",title:"Главная таблица оборудования",desc:"Как выглядит таблица с 5 демо-строками. Тип — обычный чёрный текст (блок 47).",body:renderPreviewTable()}));
+  root.appendChild(makeVpSection({tag:"ЛЕГЕНДА",title:"Бейджи типов и статусов",desc:"Тип — чёрным текстом, статусы — цветные.",body:renderBadgesLegend()}));
+  root.appendChild(makeVpSection({tag:"ТАБЛИЦА СПРАВКИ",title:"Админ-таблица справки (блок 47)",desc:"Заголовки по центру, названия слева, бейджи типов чёрным текстом.",body:renderPreviewHelpAdminTable()}));
   root.appendChild(makeVpSection({tag:"МОДАЛКА 1",title:"Добавить/редактировать",desc:"Форма с динамическими полями.",body:renderPreviewModal_addEdit()}));
   root.appendChild(makeVpSection({tag:"МОДАЛКА 2",title:"Быстрая поверка",desc:"Форма быстрой регистрации.",body:renderPreviewModal_quickCal()}));
   root.appendChild(makeVpSection({tag:"МОДАЛКА 3",title:"Отправить на поверку",desc:"Массовая отправка.",body:renderPreviewModal_bulkSend()}));
@@ -1716,17 +1790,17 @@ function makeVpSection(opts){
 function renderPreviewTable(){
   var wrap=document.createElement("div");wrap.className="vp-table-wrap";
   wrap.innerHTML='<table class="vp-table"><thead><tr><th class="vp-checkbox"><input type="checkbox"></th><th>ID ▲</th><th>Тип</th><th>Модель</th><th>Объём</th><th>Отдел</th><th>Поверка</th><th>Следующая ▼</th><th>Ответственный</th><th>Статус</th><th>Действия</th></tr></thead><tbody>'+
-    rowTable({sel:true,id:"P-001",sn:"EP2024001",typeLabel:"Пипетка",typeCls:"vp-badge-pipette",model:"Research Plus",mfr:"Eppendorf",vol:"1000 мкл",dept:"Гематологический",last:"05.11.2024",next:"05.11.2025",days:"41 дн.",daysColor:"#16a34a",resp:"Иванова М.С.",loc:"Лаб. 201",status:"ok",statusText:"В норме"})+
-    rowTable({id:"P-002",typeLabel:"Пипетка",typeCls:"vp-badge-pipette",model:"Research Plus",mfr:"Eppendorf",vol:"100 мкл",dept:"Биохимический",last:"05.12.2024",next:"05.12.2025",days:"71 дн.",daysColor:"#16a34a",resp:"Петров А.В.",loc:"Лаб. 201",status:"warn",statusText:"Скоро поверка"})+
-    rowTable({id:"P-003",typeLabel:"Пипетка",typeCls:"vp-badge-pipette",model:"Pipetman L",mfr:"Gilson",vol:"5000 мкл",dept:"Коагулогический",last:"05.03.2025",next:"05.09.2025",days:"просрочка 20 дн.",daysColor:"#dc2626",resp:"Иванова М.С.",loc:"Лаб. 105",status:"danger",statusText:"Просрочена"})+
-    rowTable({id:"A-001",typeLabel:"Анализатор",typeCls:"vp-badge-other",model:"BC-5150",mfr:"Mindray",vol:"—",dept:"Гематологический",last:"05.08.2024",next:"05.08.2025",days:"просрочка 52 дн.",daysColor:"#dc2626",resp:"Сидорова Е.К.",loc:"Лаб. 302",status:"fail",statusText:"Брак"})+
-    rowTable({id:"M-001",typeLabel:"Микроскоп",typeCls:"vp-badge-other",model:"CX23",mfr:"Olympus",vol:"—",dept:"Биохимический",last:"05.08.2025",next:"—",days:"",daysColor:"",resp:"Петров А.В.",loc:"Склад",status:"inactive",statusText:"Неактивна"})+
+    rowTable({sel:true,id:"P-001",sn:"EP2024001",typeLabel:"Пипетка",model:"Research Plus",mfr:"Eppendorf",vol:"1000 мкл",dept:"Гематологический",last:"05.11.2024",next:"05.11.2025",days:"41 дн.",daysColor:"#16a34a",resp:"Иванова М.С.",loc:"Лаб. 201",status:"ok",statusText:"В норме"})+
+    rowTable({id:"P-002",typeLabel:"Пипетка",model:"Research Plus",mfr:"Eppendorf",vol:"100 мкл",dept:"Биохимический",last:"05.12.2024",next:"05.12.2025",days:"71 дн.",daysColor:"#16a34a",resp:"Петров А.В.",loc:"Лаб. 201",status:"warn",statusText:"Скоро поверка"})+
+    rowTable({id:"P-003",typeLabel:"Пипетка",model:"Pipetman L",mfr:"Gilson",vol:"5000 мкл",dept:"Коагулогический",last:"05.03.2025",next:"05.09.2025",days:"просрочка 20 дн.",daysColor:"#dc2626",resp:"Иванова М.С.",loc:"Лаб. 105",status:"danger",statusText:"Просрочена"})+
+    rowTable({id:"A-001",typeLabel:"Анализатор",model:"BC-5150",mfr:"Mindray",vol:"—",dept:"Гематологический",last:"05.08.2024",next:"05.08.2025",days:"просрочка 52 дн.",daysColor:"#dc2626",resp:"Сидорова Е.К.",loc:"Лаб. 302",status:"fail",statusText:"Брак"})+
+    rowTable({id:"M-001",typeLabel:"Микроскоп",model:"CX23",mfr:"Olympus",vol:"—",dept:"Биохимический",last:"05.08.2025",next:"—",days:"",daysColor:"",resp:"Петров А.В.",loc:"Склад",status:"inactive",statusText:"Неактивна"})+
     '</tbody></table>';
   return wrap;
 }
 function rowTable(o){
   var cls=o.sel?' class="vp-row-selected"':'';var check='<input type="checkbox" '+(o.sel?'checked':'')+'>';
-  var tb='<span class="vp-badge-type '+o.typeCls+'">'+escapeHtml(o.typeLabel)+'</span>';
+  var tb='<span class="vp-badge-type">'+escapeHtml(o.typeLabel)+'</span>';
   var sn=o.sn?'<br><span class="vp-sn">S/N: '+escapeHtml(o.sn)+'</span>':'';
   var mfr=o.mfr?'<br><span class="vp-sn">'+escapeHtml(o.mfr)+'</span>':'';
   var days=o.days?'<br><small style="color:'+o.daysColor+';font-size:.75rem">'+escapeHtml(o.days)+'</small>':'';
@@ -1736,7 +1810,17 @@ function rowTable(o){
 }
 function renderBadgesLegend(){
   var w=document.createElement("div");
-  w.innerHTML='<div style="margin-bottom:12px;font-weight:700;font-size:13px;color:var(--muted)">Типы</div><div class="vp-swatches"><div class="vp-swatch"><span class="vp-badge-type vp-badge-pipette">Пипетка</span></div><div class="vp-swatch"><span class="vp-badge-type vp-badge-other">Анализатор</span></div></div><div style="margin:20px 0 12px;font-weight:700;font-size:13px;color:var(--muted)">Статусы</div><div class="vp-swatches"><div class="vp-swatch"><span class="vp-status-badge vp-status-ok"><span class="vp-status-dot"></span>В норме</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-warn"><span class="vp-status-dot"></span>Скоро</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-danger"><span class="vp-status-dot"></span>Просрочена</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-inactive"><span class="vp-status-dot"></span>Неактивна</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-sent"><span class="vp-status-dot"></span>На поверке</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-fail"><span class="vp-status-dot"></span>Брак</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-wip"><span class="vp-status-dot"></span>В процессе</span></div></div>';
+  w.innerHTML='<div style="margin-bottom:12px;font-weight:700;font-size:13px;color:var(--muted)">Типы (чёрным текстом, блок 47)</div><div class="vp-swatches"><div class="vp-swatch"><span class="vp-badge-type">Пипетка</span></div><div class="vp-swatch"><span class="vp-badge-type">Анализатор</span></div><div class="vp-swatch"><span class="vp-badge-type">Микроскоп</span></div></div><div style="margin:20px 0 12px;font-weight:700;font-size:13px;color:var(--muted)">Статусы (цветные — не тронуты)</div><div class="vp-swatches"><div class="vp-swatch"><span class="vp-status-badge vp-status-ok"><span class="vp-status-dot"></span>В норме</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-warn"><span class="vp-status-dot"></span>Скоро</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-danger"><span class="vp-status-dot"></span>Просрочена</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-inactive"><span class="vp-status-dot"></span>Неактивна</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-sent"><span class="vp-status-dot"></span>На поверке</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-fail"><span class="vp-status-dot"></span>Брак</span></div><div class="vp-swatch"><span class="vp-status-badge vp-status-wip"><span class="vp-status-dot"></span>В процессе</span></div></div>';
+  return w;
+}
+function renderPreviewHelpAdminTable(){
+  var w=document.createElement("div");
+  w.innerHTML='<table class="vp-help-table"><thead><tr><th class="center" style="width:60px">▲▼</th><th>Название раздела</th><th class="center" style="width:100px">Показ</th><th class="center" style="width:200px">Действия</th></tr></thead><tbody>'+
+    '<tr><td class="center">▲▼</td><td class="name">Начало работы</td><td class="center"><span class="vp-status-badge vp-status-ok"><span class="vp-status-dot"></span>Показ</span></td><td class="actions"><button class="vp-btn vp-btn-secondary" type="button">✏️</button> <button class="vp-btn vp-btn-secondary" type="button">🗑️</button></td></tr>'+
+    '<tr><td class="center">▲▼</td><td class="name">Что на экране</td><td class="center"><span class="vp-status-badge vp-status-ok"><span class="vp-status-dot"></span>Показ</span></td><td class="actions"><button class="vp-btn vp-btn-secondary" type="button">✏️</button> <button class="vp-btn vp-btn-secondary" type="button">🗑️</button></td></tr>'+
+    '<tr><td class="center">▲▼</td><td class="name">Вход в систему</td><td class="center"><span class="vp-status-badge vp-status-ok"><span class="vp-status-dot"></span>Показ</span></td><td class="actions"><button class="vp-btn vp-btn-secondary" type="button">✏️</button> <button class="vp-btn vp-btn-secondary" type="button">🗑️</button></td></tr>'+
+    '<tr><td class="center">▲▼</td><td class="name">Архив</td><td class="center"><span class="vp-status-badge vp-status-inactive"><span class="vp-status-dot"></span>Скрыт</span></td><td class="actions"><button class="vp-btn vp-btn-secondary" type="button">✏️</button> <button class="vp-btn vp-btn-secondary" type="button">🗑️</button></td></tr>'+
+    '</tbody></table>';
   return w;
 }
 function modalStage(html){var s=document.createElement("div");s.className="vp-modal-stage";s.innerHTML=html;return s}
@@ -1990,3 +2074,4 @@ else initBlockNav();
 </script>
 </body>
 </html>
+  
