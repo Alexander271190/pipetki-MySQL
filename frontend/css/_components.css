@@ -471,3 +471,24 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb {
 html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
 }
+
+/* 🆕 Стили для TinyMCE */
+.tox-tinymce {
+  border-radius: 8px !important;
+  border: 1px solid var(--border-hard) !important;
+}
+.tox .tox-toolbar__group { border-color: var(--border) !important; }
+html[data-theme="dark"] .tox .tox-toolbar,
+html[data-theme="dark"] .tox .tox-toolbar__overflow,
+html[data-theme="dark"] .tox .tox-toolbar__primary { background: #1e293b !important; }
+html[data-theme="dark"] .tox-tinymce { border-color: #334155 !important; }
+html[data-theme="dark"] .tox .tox-tbtn { color: #e2e8f0 !important; }
+html[data-theme="dark"] .tox .tox-tbtn:hover { background: #334155 !important; }
+html[data-theme="dark"] .tox .tox-edit-area__iframe { background: #0f172a !important; }
+
+/* 🆕 Подсказки в справке */
+.docs-hint {
+  background: #f0f9ff; border-left: 3px solid #0ea5e9; padding: 10px 14px;
+  border-radius: 6px; color: #0c4a6e; font-size: .88rem; margin: 12px 0;
+}
+html[data-theme="dark"] .docs-hint { background: rgba(14,165,233,.12); color: #93c5fd; }
