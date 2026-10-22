@@ -543,6 +543,10 @@ async function savePipette(e) {
 
   const payload = {};
   const fieldElements = {};
+  const editingPipette = isEdit ? pipettes.find(p => p.id === editId) : null;
+  if (isEdit && editingPipette && editingPipette.updated_at) {
+    payload.updatedAt = editingPipette.updated_at;
+  }
 
  document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
   const key = el.dataset.fieldId;
@@ -566,11 +570,7 @@ async function savePipette(e) {
   _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id)).forEach(f => {
     if (fieldElements[f.id] && !String(payload[f.id] || '').trim()) errors.push(f.label);
   });
-
-   // Автоподстановка для скрытых обязательных полей
-  // При редактировании не перезаписываем, если поле уже есть в объекте
-  const editingPipette = isEdit ? pipettes.find(p => p.id === editId) : null;
-
+   
   if (!fieldElements.model && (!isEdit || !editingPipette?.model)) {
     payload.model = 'Не указана';
   }
@@ -588,23 +588,30 @@ async function savePipette(e) {
     return;
   }
 
+      try {
     await UI.saveAction({
-    btn: '#pipette-form button[type="submit"]',
-    successMsg: isEdit ? 'Оборудование обновлено' : 'Оборудование создано',
-    closeFn: closeModal
-  }, async () => {
-    if (isEdit) {
-      const res = await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
-      if (res.idChanged && res.newId) {
-        showToast(`Сохранено. Новый ID: ${res.newId}`, 'success');
+      btn: '#pipette-form button[type="submit"]',
+      successMsg: isEdit ? 'Оборудование обновлено' : 'Оборудование создано',
+      closeFn: closeModal
+    }, async () => {
+      if (isEdit) {
+        const res = await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
+        if (res.idChanged && res.newId) {
+          showToast(`Сохранено. Новый ID: ${res.newId}`, 'success');
+        }
+      } else {
+        const res = await apiRequest('/pipettes', 'POST', payload);
+        showToast(`Оборудование создано (${res.id})`, 'success');
       }
+    });
+  } catch (e) {
+      if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
+      showToast('Кто-то уже изменил этот прибор. Пожалуйста, закройте форму и откройте заново.', 'error');
     } else {
-      const res = await apiRequest('/pipettes', 'POST', payload);
-      showToast(`Оборудование создано (${res.id})`, 'success');
+      showToast(e.message || 'Ошибка сохранения', 'error');
     }
-  });
+  }
 }
-
 async function deletePipette(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
