@@ -95,8 +95,15 @@ router.get('/paged', authenticate, async (req, res) => {
     let orderParams = [];
     
     if (searchStr) {
-        orderSql = `(id = ?) DESC, ${orderSql}`;
-        orderParams.push(searchStr);
+        
+        orderSql = `
+          (id = ?) DESC, 
+          (model = ?) DESC, 
+          (serial = ?) DESC, 
+          (CAST(custom_data AS CHAR) LIKE ?) DESC,
+          ${orderSql}
+        `;
+      orderParams.push(searchStr, searchStr, searchStr, `%"${searchStr}"%`);
     }
 
     const [rows] = await db.query(
@@ -303,8 +310,15 @@ router.get('/all', authenticate, async (req, res) => {
     let orderParams = [];
     
     if (searchStr) {
-        orderSql = `(id = ?) DESC, ${orderSql}`;
-        orderParams.push(searchStr);
+        
+        orderSql = `
+          (id = ?) DESC, 
+          (model = ?) DESC, 
+          (serial = ?) DESC, 
+          (CAST(custom_data AS CHAR) LIKE ?) DESC,
+          ${orderSql}
+        `;
+    orderParams.push(searchStr, searchStr, searchStr, `%"${searchStr}"%`);
     }
    
     const ALL_HARD_LIMIT = 50000;
