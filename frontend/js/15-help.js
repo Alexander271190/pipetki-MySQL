@@ -27,6 +27,7 @@ function ensureTinyMCE() {
       max_height: 700,
       branding: false,
       promotion: false,
+      touch: false,
       plugins: 'lists link image table code fullscreen searchreplace',
       toolbar: [
         'undo redo | styles fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor',
