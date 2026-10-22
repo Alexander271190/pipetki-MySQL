@@ -374,13 +374,28 @@ function addDepartmentItem() {
 
 async function deleteDepartmentItem(idx) {
   if (idx < 0 || idx >= _cachedDepartmentsFull.length) return;
-  const name = _cachedDepartmentsFull[idx].name;
+  const dept = _cachedDepartmentsFull[idx];
+  const name = dept.name;
+  let usedCount = 0;
+  try {
+    const check = await apiRequest('/pipettes/paged?limit=1&filters=' + encodeURIComponent(JSON.stringify({ department: name })));
+    usedCount = check.total || 0;
+  } catch (e) {
+    console.warn('Ошибка проверки отдела:', e);
+    showToast('Не удалось проверить, используется ли отдел. Попробуйте ещё раз.', 'error');
+    return; 
+  }
+  if (usedCount > 0) {
+      showToast(`Нельзя удалить отдел «${name}»: к нему привязано ${usedCount} единиц оборудования. Сначала переведите их в другой отдел.`, 'error');
+    return;
+  }
   const ok = await showConfirm(`Удалить отдел «${name}»?`, { icon: '🏢', title: 'Удаление отдела', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _cachedDepartmentsFull.splice(idx, 1);
-  renderDepartmentsSettings(true);
-  showToast(`Отдел «${name}» удалён`, 'success');
+  showToast(`Отдел «${name}» удаляется...`, 'success');
+  await saveDepartmentsFull();
 }
+
 
 async function saveDepartmentsFull() {
   const cleaned = [];
