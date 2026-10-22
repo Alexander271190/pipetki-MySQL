@@ -512,3 +512,19 @@ html[data-theme="dark"] .docs-hint { background: rgba(14,165,233,.12); color: #9
 
 /* Иконки */
 .docs-content .fa-solid { color: #4f46e5; margin-right: 4px; vertical-align: middle; }
+
+/* 🆕 Плавное растягивание TinyMCE без плагина autoresize */
+.tox-tinymce {
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  max-height: 700px;
+}
+.tox .tox-edit-area {
+  flex: 1;
+  overflow: hidden;
+}
+.tox .tox-edit-area__iframe {
+  height: 100% !important;
+  min-height: 340px;
+}
