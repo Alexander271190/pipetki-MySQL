@@ -210,6 +210,7 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
         if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
         if (!isExternalType(rows[0].equipment_type)) { skipped.push(id); continue; }
         if (rows[0].sent_for_calibration) { skipped.push(id); continue; }
+        if (rows[0].replacing) { skipped.push(id); continue; }
 
         await conn.query(
           `UPDATE pipettes SET sent_for_calibration = ?, sent_note = ?, active = 0,
