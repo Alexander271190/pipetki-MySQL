@@ -492,3 +492,23 @@ html[data-theme="dark"] .tox .tox-edit-area__iframe { background: #0f172a !impor
   border-radius: 6px; color: #0c4a6e; font-size: .88rem; margin: 12px 0;
 }
 html[data-theme="dark"] .docs-hint { background: rgba(14,165,233,.12); color: #93c5fd; }
+
+
+/* ============================================================
+   🆕 HTML-контент в справке (для пользователей)
+   ============================================================ */
+.docs-content p { margin: 0 0 12px; line-height: 1.6; }
+.docs-content ul, .docs-content ol { padding-left: 24px; margin: 0 0 14px; }
+.docs-content li { margin-bottom: 6px; }
+.docs-content h2 { font-size: 1.15rem; margin-top: 24px; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.docs-content h3 { font-size: 1rem; margin-top: 18px; margin-bottom: 8px; }
+.docs-content b, .docs-content strong { font-weight: 700; color: var(--text-strong); }
+
+/* Таблицы */
+.docs-content table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: .88rem; }
+.docs-content th, .docs-content td { border: 1px solid var(--border-hard); padding: 8px 12px; text-align: left; }
+.docs-content th { background: #f1f5f9; font-weight: 600; }
+.docs-content tr:nth-child(even) td { background: #f8fafc; }
+
+/* Иконки */
+.docs-content .fa-solid { color: #4f46e5; margin-right: 4px; vertical-align: middle; }
