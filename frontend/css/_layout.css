@@ -269,25 +269,38 @@ html[data-theme="dark"] #search {
 /* 3. Мобильные телефоны (до 768px) */
 @media (max-width: 768px) {
   .toolbar {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
     padding: 10px !important;
+    gap: 6px !important;
+    align-items: center;
   }
+  
+  /* Поиск — на всю ширину */
   .toolbar > #search {
-    flex: 0 0 auto !important;
+    flex: 1 1 100% !important;
     width: 100% !important;
-    max-width: 100% !important;
     min-height: 40px !important;
+    margin-bottom: 4px;
   }
+
+  /* Остальные кнопки делим по ширине (2 в ряд) */
   .toolbar > .btn,
   .toolbar > .dropdown,
+  .toolbar > .dropdown > .btn,
+  .toolbar > div[style*="relative"] {
+    flex: 1 1 calc(50% - 6px) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    justify-content: center;
+  }
+
   .toolbar > .dropdown > .btn {
     width: 100% !important;
-    max-width: 100% !important;
   }
-  .toolbar-bulk { flex-direction: column !important; }
-  .toolbar-bulk .btn { width: 100% !important; }
+}
   
   .header-top { margin-bottom: 10px; }
   .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
@@ -332,4 +345,17 @@ html[data-theme="dark"] #search {
   .header.collapsed h1 .logo { font-size: 1rem; }
   .header.collapsed .header-mini-stats { font-size: .64rem; padding: 2px 6px; }
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
+}
+
+@media (max-width: 600px) {
+  .header-stats {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .stat-card {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
 }
