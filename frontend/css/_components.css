@@ -112,19 +112,26 @@
 @media (max-width: 480px) { .status-badge { padding: 4px 8px; font-size: .72rem; } }
 
 /* ============================================================
-   БЕЙДЖ ТИПА
+   БЕЙДЖ ТИПА — теперь просто текст (без цвета и рамок)
    ============================================================ */
 .badge-type {
-  display: inline-block;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: .72rem;
-  font-weight: 600;
+  display: inline;
+  padding: 0;
+  border-radius: 0;
+  font-size: .82rem;
+  font-weight: 400;
   white-space: nowrap;
-  border: 1px solid transparent;
+  border: none;
+  background: transparent;
+  color: var(--text); 
 }
-.badge-pipette { background: #e0f2fe; color: #075985; border-color: #7dd3fc; }
-.badge-other { background: #f3e8ff; color: #581c87; border-color: #c4b5fd; }
+
+.badge-pipette,
+.badge-other {
+  background: transparent;
+  color: var(--text);
+  border-color: transparent;
+}
 
 /* ============================================================
    КНОПКА ⋮ И МЕНЮ ДЕЙСТВИЙ В СТРОКЕ
