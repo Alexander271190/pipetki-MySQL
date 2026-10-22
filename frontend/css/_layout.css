@@ -300,7 +300,6 @@ html[data-theme="dark"] #search {
   .toolbar > .dropdown > .btn {
     width: 100% !important;
   }
-}
   
   .header-top { margin-bottom: 10px; }
   .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
