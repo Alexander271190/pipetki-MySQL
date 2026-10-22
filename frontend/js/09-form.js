@@ -606,7 +606,7 @@ async function savePipette(e) {
     });
   } catch (e) {
       if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
-      showToast('Кто-то уже изменил этот прибор. Пожалуйста, закройте форму и откройте заново.', 'error');
+      showToast('Кто-то уже редактирует этот прибор. Пожалуйста, закройте форму и откройте позже.', 'error');
     } else {
       showToast(e.message || 'Ошибка сохранения', 'error');
     }
