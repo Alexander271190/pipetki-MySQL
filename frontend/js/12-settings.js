@@ -868,6 +868,83 @@ async function resetAllDataSetting() {
 }
 
 // ============================================================
+// РАЗДЕЛ: ШАБЛОНЫ ВИДА
+// ============================================================
+async function renderViewTemplatesSettings() {
+  const c = document.getElementById('settings-section-content');
+  try {
+    const templates = await apiRequest('/view-templates');
+    
+    let html = `<h3>Шаблоны вида</h3>
+      <p style="color:#64748b;margin-bottom:12px;">Шаблоны для настройки видимых колонок у пользователей.</p>
+      <table class="field-settings-table">
+        <thead><tr>
+          <th>Название</th>
+          <th style="text-align:center;">По умолчанию</th>
+          <th style="text-align:center;">Действия</th>
+        </tr></thead><tbody>`;
+        
+    if (templates.length === 0) {
+      html += `<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">Нет шаблонов</td></tr>`;
+    } else {
+      templates.forEach(t => {
+        html += `<tr>
+          <td>${esc(t.name)}</td>
+          <td style="text-align:center;">${t.isDefault ? '✅' : '—'}</td>
+          <td style="text-align:center;">
+            <button class="row-actions-btn" onclick="openViewTemplateActions(event, ${t.id})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+          </td>
+        </tr>`;
+      });
+    }
+    
+    html += `</tbody></table>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="addViewTemplate()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить шаблон</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+      </div>`;
+      
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+async function addViewTemplate() {
+  const name = await showPrompt('Название шаблона', {
+    icon: 'fa-plus', title: 'Новый шаблон', okText: 'Далее', placeholder: 'Например: Лаборант',
+    validator: v => v ? null : 'Укажите название'
+  });
+  if (!name) return;
+  
+  const activeFields = _cachedFields.filter(f => f.enabled).map(f => f.id);
+  activeFields.push('status', 'nextCalibration');
+  
+  try {
+    await apiRequest('/view-templates', 'POST', { name, visibleFields: activeFields, isDefault: false });
+    showToast('Шаблон создан', 'success');
+    renderViewTemplatesSettings();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function openViewTemplateActions(ev, id) {
+  ev.stopPropagation();
+  renderRowActionsMenu(ev.currentTarget, [
+    { label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: async () => {
+        const ok = await showConfirm('Удалить шаблон?', { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
+        if (!ok) return;
+        try {
+          await apiRequest('/view-templates/' + id, 'DELETE');
+          showToast('Удалён', 'success');
+          renderViewTemplatesSettings();
+        } catch (e) { showToast(e.message, 'error'); }
+    }}
+  ]);
+}
+
+// ============================================================
 // МЕНЮ ДЕЙСТВИЙ ДЛЯ НАСТРОЕК
 // ============================================================
 function openFieldActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить поле', class: 'item-danger', action: () => deleteFieldSetting(idx) }]); }
