@@ -203,7 +203,7 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
 
       for (const id of ids) {
         const [rows] = await conn.query(
-          'SELECT id, model, sent_for_calibration, equipment_type, department FROM pipettes WHERE id = ? FOR UPDATE',
+          'SELECT id, model, sent_for_calibration, equipment_type, department, replacing FROM pipettes WHERE id = ? FOR UPDATE',
           [id]
         );
         if (!rows.length) { notFound.push(id); continue; }
