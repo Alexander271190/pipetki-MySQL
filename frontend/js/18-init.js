@@ -36,8 +36,10 @@ function renderAuthUI() {
     const canScan         = canScanBarcode() && !isMobileDevice();
     const canPrint        = canPrintLabels();
 
-    document.querySelectorAll('.btn-add-pipette').forEach(el =>
-      el.style.display = canAdd ? 'inline-flex' : 'none');
+   document.querySelectorAll('.btn-add-pipette').forEach(el => {
+      const isDropdown = el.classList.contains('dropdown-item');
+      el.style.display = canAdd ? (isDropdown ? 'flex' : 'inline-flex') : 'none';
+    });
     document.querySelectorAll('.btn-import').forEach(el =>
       el.style.display = canImportData ? 'inline-flex' : 'none');
     document.querySelectorAll('.btn-export').forEach(el =>
