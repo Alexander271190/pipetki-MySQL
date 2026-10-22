@@ -90,14 +90,21 @@ router.get('/paged', authenticate, async (req, res) => {
     );
     const total = Number(countRows[0].c) || 0;
     const totalPages = Math.max(1, Math.ceil(total / limit));
+    const searchStr = (search || '').trim();
+    let orderSql = sqlOrderBy(sort, dir, warnDays);
+    let orderParams = [];
+    
+    if (searchStr) {
+        orderSql = `(id = ?) DESC, ${orderSql}`;
+        orderParams.push(searchStr);
+    }
 
-    const orderSql = sqlOrderBy(sort, dir, warnDays);
     const [rows] = await db.query(
       `SELECT *, (${statusExpr}) AS computed_status
        FROM pipettes${finalWhere}
        ORDER BY ${orderSql}, id
        LIMIT ? OFFSET ?`,
-      [...finalParams, limit, offset]
+      [...finalParams, ...orderParams, limit, offset]
     );
 
     if (rows.length > 0) {
@@ -291,10 +298,15 @@ router.get('/all', authenticate, async (req, res) => {
 
     const finalWhere = whereSql + statusFilterSql;
     const finalParams = [...allParams, ...statusFilterParams];
-
-    const orderSql = sqlOrderBy(sort, dir, warnDays);
-
-    // 🆕 Защита от OOM: не более 50000 строк. Если больше — обрезаем.
+    const searchStr = (search || '').trim();
+    let orderSql = sqlOrderBy(sort, dir, warnDays);
+    let orderParams = [];
+    
+    if (searchStr) {
+        orderSql = `(id = ?) DESC, ${orderSql}`;
+        orderParams.push(searchStr);
+    }
+   
     const ALL_HARD_LIMIT = 50000;
 
     const [countRows] = await db.query(
@@ -309,9 +321,8 @@ router.get('/all', authenticate, async (req, res) => {
        FROM pipettes${finalWhere}
        ORDER BY ${orderSql}, id
        LIMIT ?`,
-      [...finalParams, ALL_HARD_LIMIT]
+      [...finalParams, ...orderParams, ALL_HARD_LIMIT]
     );
-
     if (rows.length > 0) {
       const ids = rows.map(r => r.id);
       const ph = ids.map(() => '?').join(',');
