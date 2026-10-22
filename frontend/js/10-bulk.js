@@ -142,8 +142,8 @@ async function saveBulkSend(e) {
         
   const toSend = _bulkSendIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
-  return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
-  });
+  return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
+});
 
   if (toSend.length === 0) {
     showToast('Не выбрано ни одной единицы для внешней поверки', 'error');
@@ -205,8 +205,8 @@ async function printSendAct() {
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
   const sendItems = _bulkSendIds.filter(id => {
   const p = pipettes.find(x => x.id === id);
-  return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
-  });
+  return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
+});
 
   if (sendItems.length === 0) {
     showToast('Нет единиц для печати', 'error');
