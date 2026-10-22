@@ -53,10 +53,24 @@ router.get('/paged', authenticate, async (req, res) => {
       statusFilterSql = ` AND (${statusExpr}) = ?`;
       statusFilterParams.push(String(filters.status));
     }
+      
+    let exactFilter = '';
+    let exactParams = [];
+    const searchStr = (search || '').trim();
 
-    const finalWhere = whereSql + statusFilterSql;
-    const finalParams = [...allParams, ...statusFilterParams];
+    if (searchStr) {
+        const exSql = `id = ? OR serial = ? OR model = ? OR manufacturer = ? OR department = ? OR responsible = ? OR JSON_SEARCH(custom_data, 'one', ?) IS NOT NULL`;
+        const exParams = [searchStr, searchStr, searchStr, searchStr, searchStr, searchStr, searchStr];
+        
+        const [exRows] = await db.query(`SELECT id FROM pipettes WHERE ${exSql} LIMIT 1`, exParams);
+            if (exRows.length > 0) {
+            exactFilter = ` AND (${exSql})`;
+            exactParams = exParams;
+        }
+    }
 
+    const finalWhere = whereSql + statusFilterSql + exactFilter;
+    const finalParams = [...allParams, ...statusFilterParams, ...exactParams];
     const [counterRows] = await db.query(
       `SELECT
          COUNT(*) AS total,
@@ -90,28 +104,13 @@ router.get('/paged', authenticate, async (req, res) => {
     );
     const total = Number(countRows[0].c) || 0;
     const totalPages = Math.max(1, Math.ceil(total / limit));
-    const searchStr = (search || '').trim();
-    let orderSql = sqlOrderBy(sort, dir, warnDays);
-    let orderParams = [];
-    
-    if (searchStr) {
-        
-        orderSql = `
-          (id = ?) DESC, 
-          (model = ?) DESC, 
-          (serial = ?) DESC, 
-          (CAST(custom_data AS CHAR) LIKE ?) DESC,
-          ${orderSql}
-        `;
-      orderParams.push(searchStr, searchStr, searchStr, `%"${searchStr}"%`);
-    }
-
+    const orderSql = sqlOrderBy(sort, dir, warnDays);
     const [rows] = await db.query(
       `SELECT *, (${statusExpr}) AS computed_status
        FROM pipettes${finalWhere}
        ORDER BY ${orderSql}, id
        LIMIT ? OFFSET ?`,
-      [...finalParams, ...orderParams, limit, offset]
+      [...finalParams, limit, offset]
     );
 
     if (rows.length > 0) {
@@ -302,24 +301,27 @@ router.get('/all', authenticate, async (req, res) => {
       statusFilterSql = ` AND (${statusExpr}) = ?`;
       statusFilterParams.push(String(filters.status));
     }
-
-    const finalWhere = whereSql + statusFilterSql;
-    const finalParams = [...allParams, ...statusFilterParams];
+      
+    let exactFilter = '';
+    let exactParams = [];
     const searchStr = (search || '').trim();
-    let orderSql = sqlOrderBy(sort, dir, warnDays);
-    let orderParams = [];
-    
+
     if (searchStr) {
+        const exSql = `id = ? OR serial = ? OR model = ? OR manufacturer = ? OR department = ? OR responsible = ? OR JSON_SEARCH(custom_data, 'one', ?) IS NOT NULL`;
+        const exParams = [searchStr, searchStr, searchStr, searchStr, searchStr, searchStr, searchStr];
         
-        orderSql = `
-          (id = ?) DESC, 
-          (model = ?) DESC, 
-          (serial = ?) DESC, 
-          (CAST(custom_data AS CHAR) LIKE ?) DESC,
-          ${orderSql}
-        `;
-    orderParams.push(searchStr, searchStr, searchStr, `%"${searchStr}"%`);
+        const [exRows] = await db.query(`SELECT id FROM pipettes WHERE ${exSql} LIMIT 1`, exParams);
+                
+        if (exRows.length > 0) {
+            exactFilter = ` AND (${exSql})`;
+            exactParams = exParams;
+        }
     }
+
+    const finalWhere = whereSql + statusFilterSql + exactFilter;
+    const finalParams = [...allParams, ...statusFilterParams, ...exactParams];
+    
+    const orderSql = sqlOrderBy(sort, dir, warnDays);
    
     const ALL_HARD_LIMIT = 50000;
 
@@ -335,7 +337,7 @@ router.get('/all', authenticate, async (req, res) => {
        FROM pipettes${finalWhere}
        ORDER BY ${orderSql}, id
        LIMIT ?`,
-      [...finalParams, ...orderParams, ALL_HARD_LIMIT]
+      [...finalParams, ALL_HARD_LIMIT]
     );
     if (rows.length > 0) {
       const ids = rows.map(r => r.id);
