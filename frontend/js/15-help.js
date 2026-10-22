@@ -167,10 +167,7 @@ function renderDocsContent() {
 
 function renderContent(content) {
   if (!content) return '';
-  if (typeof marked !== 'undefined' && /(^|\n)#{1,6}\s/.test(content)) {
-    let html = marked.parse(content);
-    return html.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/gi, '<i class="fa-solid $1"></i>');
-  }
+  // Текст из БД уже в HTML. Просто подставляем иконки.
   return content.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/gi, '<i class="fa-solid $1"></i>');
 }
 
