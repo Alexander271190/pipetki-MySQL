@@ -1,267 +1,1139 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
-const multer = require('multer');
-const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
-const { logAction } = require('../utils/audit');        
-const { withTransaction } = require('../utils/db-helper'); 
+module.exports = [
+  {
+    slug: 'intro',
+    title: '{icon: fa-thumbtack} Начало работы',
+    requiredPermissions: [],
+    sortOrder: 1,
+    content: `
+<h2>Что это за система</h2>
+<p>Это веб-приложение для учёта лабораторного оборудования и контроля сроков его поверки. Работает в браузере, данные хранятся на сервере лаборатории.</p>
 
-const router = express.Router();
+<h2>Что она умеет</h2>
+<ul>
+  <li><i class="fa-solid fa-box"></i> <b>Вести единый список</b> всего оборудования вместо десятков Excel-файлов.</li>
+  <li><i class="fa-solid fa-clock"></i> <b>Напоминать</b> о сроках поверки при входе в систему.</li>
+  <li><i class="fa-solid fa-scroll"></i> <b>Хранить историю</b> каждой поверки: дата, свидетельство, результат.</li>
+  <li><i class="fa-solid fa-tag"></i> <b>Печатать этикетки</b> со штрихкодами для быстрого поиска.</li>
+  <li><i class="fa-solid fa-right-left"></i> <b>Передавать</b> приборы между отделами и менять ответственных.</li>
+  <li><i class="fa-solid fa-file-excel"></i> <b>Экспортировать</b> данные в Excel и PDF с учётом фильтров.</li>
+  <li><i class="fa-solid fa-barcode"></i> <b>Сканировать</b> штрихкоды — для быстрой отправки и возврата.</li>
+  <li><i class="fa-solid fa-users"></i> <b>Разграничивать доступ</b> — каждый видит только то, что положено.</li>
+</ul>
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'frontend', 'uploads', 'help');
-try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); } catch (e) {}
+<h2>Кому это нужно</h2>
+<ul>
+  <li><b>Лаборантам</b> — вести оборудование своего отдела.</li>
+  <li><b>Старшим лаборантам</b> — управлять поверками.</li>
+  <li><b>Администраторам</b> — настраивать права, поля, отделы.</li>
+</ul>
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.png';
-    cb(null, crypto.randomBytes(12).toString('hex') + ext);
+<h2>Что вы видите</h2>
+<p>Интерфейс <b>адаптируется под ваши права</b>. Если чего-то не хватает (например, кнопки «Добавить») — значит у вас нет на это прав. Обратитесь к администратору.</p>
+
+<h2>Как открыть справку</h2>
+<ul>
+  <li>Нажмите <code>Shift</code> + <code>?</code> на клавиатуре.</li>
+  <li>Или меню <b>Ещё ▼ → Справка</b>.</li>
+</ul>
+<div class="docs-hint"><i class="fa-solid fa-circle-info"></i> Справка открывается <b>на любом экране</b>, не закрывая вашу работу.</div>
+
+<h2>С чего начать</h2>
+<ol>
+  <li>Прочитайте раздел <b><i class="fa-solid fa-key"></i> Вход в систему</b> — если ещё не заходили.</li>
+  <li>Прочитайте <b><i class="fa-solid fa-desktop"></i> Что на экране</b> — чтобы понимать интерфейс.</li>
+  <li>Дальше — по вашей задаче. Используйте <b>поиск по разделам слева</b>.</li>
+</ol>
+<div class="docs-hint">Если что-то непонятно — загляните в <b><i class="fa-solid fa-circle-question"></i> Частые вопросы</b> в конце.</div>
+`.trim(),
   },
-});
+  {
+    slug: 'login',
+    title: '{icon: fa-key} Вход в систему',
+    requiredPermissions: [],
+    sortOrder: 2,
+    content: `
+<h2>Где открывается</h2>
+<p>Адрес системы выдает администратор. Обычно это <code>http://192.168.X.X:3000</code> — открывается в любом браузере: Chrome, Яндекс, Firefox, Edge.</p>
+<div class="docs-hint"><i class="fa-solid fa-circle-info"></i> Можно создать ярлык на рабочем столе — правый клик по странице → «Создать ярлык».</div>
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 8 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = /^image\/(png|jpe?g|gif|webp|svg\+xml)$/i.test(file.mimetype);
-    cb(ok ? null : new Error('Только изображения'), ok);
+<h2>Что вы видите при входе</h2>
+<p>Один экран с формой:</p>
+<ul>
+  <li>Поле <b>Логин</b> — обычно фамилия латиницей (например <code>ivanova</code>).</li>
+  <li>Поле <b>Пароль</b> — ваш пароль.</li>
+  <li>Кнопка <b>Войти</b>.</li>
+</ul>
+
+<h2>Как войти в первый раз</h2>
+<ol>
+  <li>Введите <b>логин</b>, который выдал администратор.</li>
+  <li>Введите <b>разовый пароль</b> (набор букв, цифр и символов).</li>
+  <li>Нажмите <b>Войти</b>.</li>
+  <li><b>Сразу</b> откроется окно «Смена пароля». Придумайте свой.</li>
+</ol>
+
+<h2>Окно смены пароля при первом входе</h2>
+<p>Если вы зашли с разовым паролем, система блокирует интерфейс до тех пор, пока вы не смените его.</p>
+<ul>
+  <li><b>Окно нельзя закрыть</b>, кликнув мимо него. Это сделано для безопасности.</li>
+  <li><b>Кнопка «Отмена» скрыта</b>. Вы не можете отложить смену пароля.</li>
+  <li>Пока пароль не изменен, <b>все кнопки в системе заблокированы</b>.</li>
+  <li>Чтобы выйти из системы, не меняя пароль, нажмите <b>«Выйти»</b> в правом верхнем углу.</li>
+</ul>
+<div class="docs-hint"><i class="fa-solid fa-circle-info"></i> Если администратор зашел под вашим аккаунтом (режим impersonate), у него вместо «Отмена» будет кнопка <b>«Позже»</b>.</div>
+
+<h2>Требования к новому паролю</h2>
+<table class="docs-table">
+  <thead><tr><th>Условие</th><th>Пояснение</th></tr></thead>
+  <tbody>
+    <tr><td><b>8+ символов</b></td><td>Чем длиннее — тем лучше</td></tr>
+    <tr><td><b>Строчная буква</b></td><td>a, b, c…</td></tr>
+    <tr><td><b>Заглавная буква</b></td><td>A, B, C…</td></tr>
+    <tr><td><b>Цифра</b></td><td>0-9</td></tr>
+    <tr><td><b>Спецсимвол</b></td><td><code>!@#$%^&amp;*</code></td></tr>
+    <tr><td><b>Без пробелов</b></td><td>Пробел запрещён</td></tr>
+  </tbody>
+</table>
+<p>Хороший пример: <code>Lab2024!pip</code>.</p>
+
+<h2>Как войти потом</h2>
+<p>Логин сохраняется автоматически. Достаточно ввести пароль и нажать <b>Войти</b>.</p>
+
+<h2>Как выйти</h2>
+<p>Кнопка <b>Выйти</b> в правом верхнем углу. Всегда выходите, если отходите от компьютера.</p>
+
+<h2>Что делать если...</h2>
+<h3>«Неверный логин или пароль»</h3>
+<ul>
+  <li>Проверьте раскладку.</li>
+  <li>Проверьте Caps Lock.</li>
+  <li>Попробуйте ещё раз.</li>
+  <li>Если не помогает — обратитесь к админу.</li>
+</ul>
+<h3>«Требуется смена пароля»</h3>
+<p>Значит ваш пароль ещё разовый. Введите новый по требованиям выше.</p>
+<h3>Не могу закрыть окно смены пароля</h3>
+<p>Так и задумано. Окно закрывается <b>только</b> кнопкой «Сохранить» или кнопкой «Выйти».</p>
+<h3>Сайт не открывается</h3>
+<ul>
+  <li>Проверьте сеть.</li>
+  <li>Проверьте адрес.</li>
+  <li>Обратитесь к администратору.</li>
+</ul>
+<h3>Забыли пароль</h3>
+<p>Обратитесь к администратору — он выдаст новый разовый пароль.</p>
+`.trim(),
   },
-});
+  {
+    slug: 'screen',
+    title: '{icon: fa-desktop} Что на экране',
+    requiredPermissions: [],
+    sortOrder: 3,
+    content: `
+<h2>Общая структура</h2>
+<p>Сверху вниз:</p>
+<ol>
+  <li><b>Шапка</b> — название системы, счётчики, ваши данные и кнопки.</li>
+  <li><b>Жёлтый баннер</b> — появляется, если есть просрочки.</li>
+  <li><b>Тулбар</b> — поиск, фильтр, кнопки действий.</li>
+  <li><b>Таблица</b> — список оборудования.</li>
+  <li><b>Страницы</b> — если записей больше 100.</li>
+</ol>
 
-// 🆕 Кэш списка разделов справки (60 сек)
-let _helpCache = null;
-let _helpCacheTime = 0;
-const HELP_CACHE_TTL = 60_000;
+<h2>Шапка</h2>
+<h3>Слева — название</h3>
+<p><b>Клинико-диагностическая лаборатория</b> + логотип.</p>
+<h3>По центру — счётчики</h3>
+<table class="docs-table">
+  <thead><tr><th>Счётчик</th><th>Что значит</th></tr></thead>
+  <tbody>
+    <tr><td><i class="fa-solid fa-circle-check"></i> <b>В норме</b></td><td>Поверка не скоро, всё хорошо</td></tr>
+    <tr><td><i class="fa-solid fa-clock"></i> <b>Скоро поверка</b></td><td>Подходит срок (обычно 30 дней)</td></tr>
+    <tr><td><i class="fa-solid fa-triangle-exclamation"></i> <b>Просрочены</b></td><td>Срок уже прошёл</td></tr>
+    <tr><td>⚪ <b>Всего</b></td><td>Общее число приборов</td></tr>
+  </tbody>
+</table>
+<div class="docs-hint"><i class="fa-solid fa-circle-info"></i> <b>Наведите мышкой на «Всего»</b> — появится подробная разбивка.</div>
 
-async function getHelpDocsCached() {
-  const now = Date.now();
-  if (_helpCache && now - _helpCacheTime < HELP_CACHE_TTL) return _helpCache;
-  const [rows] = await db.query(
-    'SELECT id, slug, title, content, required_permissions, sort_order, enabled FROM help_docs ORDER BY sort_order ASC, id ASC'
-  );
-  for (const r of rows) {
-    let rp = [];
-    try { rp = JSON.parse(r.required_permissions || '[]'); } catch (e) { rp = []; }
-    if (!Array.isArray(rp)) rp = [];
-    r._requiredPerms = rp;
-  }
-  _helpCache = rows;
-  _helpCacheTime = now;
-  return rows;
-}
+<h3>Справа — ваши данные</h3>
+<ul>
+  <li><b>ФИО и должность</b> — вы.</li>
+  <li><i class="fa-solid fa-moon"></i> / <i class="fa-solid fa-sun"></i> — тема.</li>
+  <li><i class="fa-solid fa-lock"></i> <b>Пароль</b> — сменить.</li>
+  <li><b>Выйти</b> — выход.</li>
+  <li><i class="fa-solid fa-arrow-left"></i> <b>Вернуться</b> — если зашли под другим.</li>
+</ul>
 
-function invalidateHelpCache() {
-  _helpCache = null;
-  _helpCacheTime = 0;
-}
+<h2>Жёлтый баннер</h2>
+<p>Появляется под шапкой, если есть проблемы:</p>
+<ul>
+  <li>«У N единиц проблема с поверкой!» — просрочки.</li>
+  <li>«У N единиц подходит срок поверки…» — скоро.</li>
+</ul>
+<p>Баннер <b>не закрывается</b> — исчезнет сам, когда проблема решится.</p>
 
-function canSeeSection(user, row) {
-  if (user.role === 'admin') return true;
-  let req = [];
-  try { req = JSON.parse(row.required_permissions || '[]'); } catch (e) {}
-  if (!Array.isArray(req) || req.length === 0) return true;
-  const perms = user._perms || [];
-  return req.some(p => perms.includes(p));
-}
+<h2>Тулбар</h2>
+<table class="docs-table">
+  <thead><tr><th>Кнопка</th><th>Что делает</th></tr></thead>
+  <tbody>
+    <tr><td><b><i class="fa-solid fa-bolt"></i> Выбрано: N</b></td><td>Массовые операции</td></tr>
+    <tr><td><i class="fa-solid fa-magnifying-glass"></i> <b>Поиск</b></td><td>Ищет по ID, модели, отделу, ответственному</td></tr>
+    <tr><td><i class="fa-solid fa-filter"></i> <b>Фильтр</b></td><td>Открывает панель фильтров</td></tr>
+    <tr><td><i class="fa-solid fa-barcode"></i> <b>Сканировать</b></td><td>Сканер штрихкодов (только ПК)</td></tr>
+    <tr><td><i class="fa-solid fa-plus"></i> <b>Добавить</b></td><td>Добавить единицу или партию</td></tr>
+    <tr><td><i class="fa-solid fa-ellipsis"></i> <b>Ещё ▼</b></td><td>Меню: экспорт, печать, импорт, настройки</td></tr>
+  </tbody>
+</table>
 
-// GET /api/help/visible
-router.get('/visible', authenticate, async (req, res) => {
-  try {
-    const rows = await getHelpDocsCached();
-    const visible = rows
-      .filter(r => r.enabled)
-      .filter(r => canSeeSection(req.user, r));
-    res.json(visible.map(r => ({ id: r.id, slug: r.slug, title: r.title, content: r.content })));
-  } catch (e) {
-    console.error('GET /help/visible:', e);
-    res.status(500).json({ error: 'Ошибка загрузки' });
-  }
-});
+<h2>Таблица</h2>
+<p>Главный элемент. Каждая строка — один прибор.</p>
+<h3>Колонки</h3>
+<table class="docs-table">
+  <thead><tr><th>Колонка</th><th>Что показывает</th></tr></thead>
+  <tbody>
+    <tr><td><b>Галочка</b></td><td>Для массовых операций</td></tr>
+    <tr><td><b>ID</b></td><td>Внутренний номер + <b>цветная точка</b> статуса</td></tr>
+    <tr><td><b>Тип</b></td><td>Пипетка / Весы / Микроскоп</td></tr>
+    <tr><td><b>Модель</b></td><td>+ производитель мелким шрифтом</td></tr>
+    <tr><td><b>Отдел</b>, <b>Ответственный</b></td><td>Кто отвечает</td></tr>
+    <tr><td><b>Дата поверки</b>, <b>Следующая</b></td><td>Даты</td></tr>
+    <tr><td><b>Статус</b></td><td>Цветной бейдж</td></tr>
+    <tr><td><b><i class="fa-solid fa-ellipsis-vertical"></i></b></td><td>Действия строки</td></tr>
+  </tbody>
+</table>
 
-// GET /api/help/images/list
-router.get('/images/list', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT * FROM help_images ORDER BY created_at DESC LIMIT 200');
-    res.json(rows.map(r => ({
-      id: r.id, filename: r.filename, originalName: r.original_name,
-      mimeType: r.mime_type, sizeBytes: r.size_bytes,
-      url: '/uploads/help/' + r.filename, createdAt: r.created_at,
-    })));
-  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
+<h3>Что видно по цвету строки</h3>
+<ul>
+  <li>🔴 <b>Красная полоска слева</b> — просрочка или брак.</li>
+  <li>🟡 <b>Жёлтая полоска</b> — скоро поверка.</li>
+  <li>Без полоски — всё в порядке.</li>
+</ul>
 
-// GET /api/help/export/all
-router.get('/export/all', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT * FROM help_docs ORDER BY sort_order ASC, id ASC');
-    res.json(rows.map(r => ({
-      slug: r.slug, title: r.title, content: r.content,
-      requiredPermissions: db.safeParse(r.required_permissions, []),
-      sortOrder: r.sort_order, enabled: !!r.enabled,
-    })));
-  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
+<h3>Клик по заголовку</h3>
+<p><b>Сортирует таблицу</b>. Стрелка ▲ или ▼ — направление.</p>
 
-// GET /api/help
-router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT * FROM help_docs ORDER BY sort_order ASC, id ASC');
-    res.json(rows.map(r => ({
-      id: r.id, slug: r.slug, title: r.title, content: r.content,
-      requiredPermissions: db.safeParse(r.required_permissions, []),
-      sortOrder: r.sort_order, enabled: !!r.enabled,
-    })));
-  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
+<h2>Страницы</h2>
+<p>Если записей больше 100 — снизу кнопки <b>← Назад</b> / <b>Вперёд →</b>, плюс «Стр. N из M · X записей».</p>
+`.trim(),
+  },
+  {
+    slug: 'roles',
+    title: '{icon: fa-users} Роли и права',
+    requiredPermissions: [],
+    sortOrder: 4,
+    content: `
+<h2>Что это</h2>
+<p>Не все пользователи видят одно и то же. <b>Что вам доступно</b> — определяется вашей ролью и набором прав.</p>
 
-// GET /api/help/:slug — один раздел
-// ВАЖНО: должен идти ПОСЛЕ статических GET /visible, /images/list, /export/all
-router.get('/:slug', authenticate, async (req, res) => {
-  try {
-    const [rows] = await db.query('SELECT * FROM help_docs WHERE slug = ?', [req.params.slug]);
-    if (!rows.length) return res.status(404).json({ error: 'Не найден' });
+<h2>Базовые роли</h2>
+<table class="docs-table">
+  <thead><tr><th>Роль</th><th>Что видит</th></tr></thead>
+  <tbody>
+    <tr><td><b>Пользователь</b></td><td>Оборудование + базовые действия</td></tr>
+    <tr><td><b>Старший лаборант</b></td><td>Больше действий, включая отправку/возврат</td></tr>
+    <tr><td><b>Администратор</b></td><td>Всё + настройки, пользователи</td></tr>
+  </tbody>
+</table>
 
-    const row = rows[0];
-    if (!canSeeSection(req.user, row)) {
-      return res.status(403).json({ error: 'Нет доступа к разделу' });
-    }
+<h2>Что можно разрешить отдельно</h2>
+<h3>Оборудование</h3>
+<ul>
+  <li><i class="fa-solid fa-plus"></i> <b>Добавление</b></li>
+  <li><i class="fa-solid fa-pen"></i> <b>Редактирование</b></li>
+  <li><i class="fa-solid fa-trash"></i> <b>Удаление</b></li>
+  <li><i class="fa-solid fa-check"></i> <b>Быстрая поверка</b></li>
+  <li><i class="fa-solid fa-right-left"></i> <b>Передача в отдел</b></li>
+  <li><i class="fa-solid fa-user-pen"></i> <b>Массовая смена ответственного</b></li>
+</ul>
+<h3>Поверки</h3>
+<ul>
+  <li><i class="fa-solid fa-box"></i> <b>Отправка на поверку</b></li>
+  <li><i class="fa-solid fa-box-open"></i> <b>Возврат с поверки</b></li>
+</ul>
+<h3>Данные</h3>
+<ul>
+  <li><i class="fa-solid fa-download"></i> <b>Импорт</b></li>
+  <li><i class="fa-solid fa-upload"></i> <b>Экспорт</b></li>
+</ul>
+<h3>Штрихкоды</h3>
+<ul>
+  <li><i class="fa-solid fa-barcode"></i> <b>Сканирование</b></li>
+  <li><i class="fa-solid fa-tag"></i> <b>Печать этикеток</b></li>
+  <li><i class="fa-solid fa-wand-magic-sparkles"></i> <b>Ручной ввод / сброс</b></li>
+</ul>
+<h3>Администрирование</h3>
+<ul>
+  <li><i class="fa-solid fa-users"></i> <b>Пользователи</b></li>
+  <li><i class="fa-solid fa-gear"></i> <b>Настройки системы</b></li>
+  <li><i class="fa-solid fa-print"></i> <b>Принтеры</b></li>
+  <li><i class="fa-solid fa-scroll"></i> <b>Журнал действий</b></li>
+</ul>
+<h3>Общие</h3>
+<ul>
+  <li><i class="fa-solid fa-clock-rotate-left"></i> <b>История поверок</b></li>
+</ul>
 
-    res.json({
-      id: row.id, slug: row.slug, title: row.title, content: row.content,
-      requiredPermissions: db.safeParse(row.required_permissions, []),
-      sortOrder: row.sort_order, enabled: !!row.enabled,
-    });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
-});
+<h2>Дополнительные ограничения</h2>
+<h3>«Только свой отдел»</h3>
+<p>Пользователь видит <b>только приборы своего отдела</b>.</p>
+<h3>Исполняющий обязанности (И.о.)</h3>
+<p>Сотрудник временно <b>исполняет за другого</b>. Видит оборудование «хозяина», работает под его ФИО.</p>
 
-// POST /api/help
-router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const { slug, title, content, requiredPermissions, sortOrder, enabled } = req.body || {};
-    if (!slug || !/^[a-z][a-z0-9_-]*$/.test(slug)) return res.status(400).json({ error: 'Некорректный slug' });
-    if (!title || !content) return res.status(400).json({ error: 'Заполните заголовок и содержимое' });
+<h2>Что делать если не хватает прав</h2>
+<p>Обратитесь к администратору. Он откроет <b>Настройки → Пользователи</b> и включит нужную галочку.</p>
+`.trim(),
+  },
+  {
+    slug: 'view',
+    title: '{icon: fa-box} Просмотр таблицы',
+    requiredPermissions: [],
+    sortOrder: 5,
+    content: `
+<h2>Что вы видите</h2>
+<p>Главный экран — <b>таблица всего оборудования</b>. Каждая строка — один прибор.</p>
 
-    const [ex] = await db.query('SELECT id FROM help_docs WHERE slug = ?', [slug]);
-    if (ex.length) return res.status(409).json({ error: 'Slug занят' });
+<h2>Как читать строку</h2>
+<h3>ID (внутренний номер)</h3>
+<p>Формат: <code>&lt;префикс&gt;-&lt;номер&gt;</code>, например <code>P-001</code> (пипетка №1), <code>S-015</code> (весы №15).</p>
+<table class="docs-table">
+  <thead><tr><th>Префикс</th><th>Тип</th></tr></thead>
+  <tbody>
+    <tr><td>P</td><td>Пипетка</td></tr>
+    <tr><td>A</td><td>Анализатор</td></tr>
+    <tr><td>T</td><td>Термометр</td></tr>
+    <tr><td>S</td><td>Весы</td></tr>
+    <tr><td>F</td><td>Фотометр</td></tr>
+    <tr><td>M</td><td>Микроскоп</td></tr>
+  </tbody>
+</table>
 
-    await db.query(
-      `INSERT INTO help_docs (slug, title, content, required_permissions, sort_order, enabled)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [slug, String(title).trim(), content,
-       JSON.stringify(Array.isArray(requiredPermissions) ? requiredPermissions : []),
-       parseInt(sortOrder, 10) || 0,
-       enabled === false ? 0 : 1]
-    );
+<h3>Следующая поверка</h3>
+<p>Дата, до которой нужно поверить снова. Под датой — сколько дней:</p>
+<ul>
+  <li>🟢 <b>(45 дн.)</b> — в норме.</li>
+  <li>🟡 <b>(10 дн.)</b> — скоро.</li>
+  <li>🔴 <b>(просрочка 5 дн.)</b> — просрочено.</li>
+</ul>
 
-   await logAction(req, 'Создание раздела справки', slug);
-    invalidateHelpCache();
-    res.status(201).json({ message: 'Создан' });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
-});
+<h3>Статус</h3>
+<table class="docs-table">
+  <thead><tr><th>Цвет</th><th>Значит</th></tr></thead>
+  <tbody>
+    <tr><td><i class="fa-solid fa-circle-check"></i> <b>В норме</b></td><td>Поверка не скоро</td></tr>
+    <tr><td><i class="fa-solid fa-clock"></i> <b>Скоро поверка</b></td><td>Приближается</td></tr>
+    <tr><td><i class="fa-solid fa-triangle-exclamation"></i> <b>Просрочена</b></td><td>Уже прошло</td></tr>
+    <tr><td><i class="fa-solid fa-circle-pause"></i> <b>Неактивна</b></td><td>Не используется</td></tr>
+    <tr><td><i class="fa-solid fa-box"></i> <b>На поверке</b></td><td>Отправлена в ЦСМ</td></tr>
+    <tr><td><i class="fa-solid fa-xmark"></i> <b>Брак</b></td><td>Не годна</td></tr>
+    <tr><td><i class="fa-solid fa-hourglass-half"></i> <b>В процессе</b></td><td>Идёт поверка</td></tr>
+    <tr><td><i class="fa-solid fa-circle-question"></i> <b>Не задано</b></td><td>Нет даты или МПИ</td></tr>
+  </tbody>
+</table>
 
-// PUT /api/help/:slug
-router.put('/:slug', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const { title, content, requiredPermissions, sortOrder, enabled } = req.body || {};
-    if (!title || !content) return res.status(400).json({ error: 'Заполните заголовок и содержимое' });
+<h3>Действия (<i class="fa-solid fa-ellipsis-vertical"></i>)</h3>
+<ul>
+  <li><i class="fa-solid fa-clock-rotate-left"></i> История поверок.</li>
+  <li><i class="fa-solid fa-pen"></i> Редактировать.</li>
+  <li><i class="fa-solid fa-right-left"></i> Передать в другой отдел.</li>
+  <li><i class="fa-solid fa-clipboard-check"></i> Быстрая поверка.</li>
+  <li><i class="fa-solid fa-trash"></i> Удалить.</li>
+</ul>
 
-    const [ex] = await db.query('SELECT id FROM help_docs WHERE slug = ?', [req.params.slug]);
-    if (!ex.length) return res.status(404).json({ error: 'Не найден' });
+<h2>Что можно делать</h2>
+<ul>
+  <li><i class="fa-solid fa-magnifying-glass"></i> <b>Найти</b> прибор.</li>
+  <li><i class="fa-solid fa-filter"></i> <b>Отфильтровать</b>.</li>
+  <li>↕️ <b>Отсортировать</b> кликом по заголовку.</li>
+  <li>☑️ <b>Выделить</b> галочкой.</li>
+  <li><i class="fa-solid fa-file-excel"></i> <b>Экспортировать</b>.</li>
+  <li><i class="fa-solid fa-tag"></i> <b>Печатать этикетки</b>.</li>
+</ul>
+`.trim(),
+  },
+  {
+    slug: 'search',
+    title: '{icon: fa-magnifying-glass} Поиск и фильтры',
+    requiredPermissions: [],
+    sortOrder: 6,
+    content: `
+<h2>Поиск</h2>
+<p>Поле <b><i class="fa-solid fa-magnifying-glass"></i> Поиск</b> в тулбаре. Введите часть текста — таблица <b>сразу фильтруется</b>.</p>
+<p>Ищется по: ID, серийнику, модели, производителю, отделу, ответственному.</p>
+<p>Поиск <b>не учитывает регистр</b> и <b>раскладку</b>: <code>иванова</code> = <code>Иванова</code> = <code>IVANOVA</code>.</p>
+<p><b>Горячая клавиша:</b> <code>/</code>.</p>
 
-    await db.query(
-      `UPDATE help_docs SET title = ?, content = ?, required_permissions = ?,
-         sort_order = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE slug = ?`,
-      [String(title).trim(), content,
-       JSON.stringify(Array.isArray(requiredPermissions) ? requiredPermissions : []),
-       parseInt(sortOrder, 10) || 0,
-       enabled === false ? 0 : 1,
-       req.params.slug]
-    );
+<h2>Фильтры</h2>
+<p>Кнопка <b><i class="fa-solid fa-filter"></i> Фильтр</b> в тулбаре. Открывается панель.</p>
+<table class="docs-table">
+  <thead><tr><th>Фильтр</th><th>Что делает</th></tr></thead>
+  <tbody>
+    <tr><td><b>Статус</b></td><td>Просрочены / в норме / на поверке</td></tr>
+    <tr><td><b>Тип оборудования</b></td><td>Пипетки / весы</td></tr>
+    <tr><td><b>Отдел</b></td><td>Из справочника</td></tr>
+    <tr><td><b>Активность</b></td><td>В работе / не активны</td></tr>
+    <tr><td><b>Дата поверки</b></td><td>Период</td></tr>
+    <tr><td><b>Ответственный</b></td><td>Текстом</td></tr>
+    <tr><td><b>Модель</b></td><td>Текстом</td></tr>
+  </tbody>
+</table>
 
-    await logAction(req, 'Редактирование справки', req.params.slug);
-    invalidateHelpCache();
-    res.json({ message: 'Обновлён' });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
-});
+<h3>Период дат</h3>
+<ul>
+  <li><b>Сегодня</b> / <b>Вчера</b></li>
+  <li><b>За 7 дней</b> / <b>За 30 дней</b></li>
+  <li><b>Произвольный</b> — два поля: С даты / По дату</li>
+</ul>
+<p>Также можно указать <b>какую дату</b> брать:</p>
+<ul>
+  <li>📄 <b>Дата поверки</b> (из свидетельства).</li>
+  <li>📝 <b>Дата внесения</b> в систему.</li>
+</ul>
 
-// DELETE /api/help/:slug
-router.delete('/:slug', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const [ex] = await db.query('SELECT title FROM help_docs WHERE slug = ?', [req.params.slug]);
-    if (!ex.length) return res.status(404).json({ error: 'Не найден' });
-    await db.query('DELETE FROM help_docs WHERE slug = ?', [req.params.slug]);
-    await logAction(req, 'Удаление раздела справки', ex[0].title);
-    invalidateHelpCache();
-    res.json({ message: 'Удалён' });
-   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
- });
+<p><b>Горячая клавиша:</b> <code>Ctrl</code> + <code>F</code> — открыть/закрыть фильтр.</p>
 
-// POST /api/help/reorder
-router.post('/reorder', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const { order } = req.body || {};
-    if (!Array.isArray(order)) return res.status(400).json({ error: 'order — массив' });
-    for (let i = 0; i < order.length; i++) {
-      await db.query('UPDATE help_docs SET sort_order = ? WHERE slug = ?', [i, order[i]]);
-    }
-    invalidateHelpCache();
-    res.json({ message: 'Порядок обновлён' });
-  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
+<h2>Сортировка</h2>
+<p>Клик по <b>названию колонки</b>:</p>
+<ul>
+  <li>Первый клик — ▲ (А→Я).</li>
+  <li>Второй — ▼ (Я→А).</li>
+</ul>
 
-// POST /api/help/import
-router.post('/import', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const { sections, mode } = req.body || {};
-    if (!Array.isArray(sections)) return res.status(400).json({ error: 'sections — массив' });
+<h2>Комбинация</h2>
+<p>Поиск и фильтры <b>складываются</b>. Например: поиск <code>Eppendorf</code> + отдел «Биохимия» + «Просрочены» → увидите только просроченные Eppendorf'ы из биохимии.</p>
 
-    await withTransaction(async (conn) => {
-      if (mode === 'replace') await conn.query('DELETE FROM help_docs');
-      for (const s of sections) {
-        if (!s.slug || !s.title || !s.content) continue;
-        await conn.query(
-          `INSERT INTO help_docs (slug, title, content, required_permissions, sort_order, enabled)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             title = VALUES(title), content = VALUES(content),
-             required_permissions = VALUES(required_permissions),
-             sort_order = VALUES(sort_order), enabled = VALUES(enabled)`,
-          [s.slug, s.title, s.content,
-           JSON.stringify(Array.isArray(s.requiredPermissions) ? s.requiredPermissions : []),
-           parseInt(s.sortOrder, 10) || 0,
-           s.enabled === false ? 0 : 1]
-        );
-      }
-    });
-    invalidateHelpCache();
-    res.json({ message: `Загружено: ${sections.length}` });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка' }); }
-});
+<div class="docs-hint"><i class="fa-solid fa-circle-info"></i> Экспорт в Excel выгружает то, что видно <b>после фильтров</b>. Если хотите всё — сначала сбросьте фильтры.</div>
+`.trim(),
+  },
+  {
+    slug: 'add-single',
+    title: '{icon: fa-plus} Добавить одну единицу',
+    requiredPermissions: ['add_pipette'],
+    sortOrder: 7,
+    content: `
+<h2>Когда использовать</h2>
+<p>Одна новая единица. Если несколько сразу — <b><i class="fa-solid fa-clipboard-list"></i> Добавить партию</b>.</p>
 
-// POST /api/help/images/upload
-router.post('/images/upload', authenticate, requireRole(['admin']), upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Файл не передан' });
-    const f = req.file;
-    await db.query(
-      `INSERT INTO help_images (filename, original_name, mime_type, size_bytes, uploaded_by)
-       VALUES (?, ?, ?, ?, ?)`,
-      [f.filename, f.originalname, f.mimetype, f.size, req.user.id]
-    );
-    res.json({ url: '/uploads/help/' + f.filename, filename: f.filename });
-  } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка загрузки' }); }
-});
+<h2>Где находится</h2>
+<p>Кнопка <b><i class="fa-solid fa-plus"></i> Добавить</b> в тулбаре, или <code>Ctrl</code> + <code>N</code>.</p>
 
-// DELETE /api/help/images/:filename
-router.delete('/images/:filename', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    const filename = path.basename(req.params.filename);
-    try { fs.unlinkSync(path.join(UPLOAD_DIR, filename)); } catch (e) {}
-    await db.query('DELETE FROM help_images WHERE filename = ?', [filename]);
-    res.json({ message: 'Удалено' });
-  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
-});
+<h2>Пошагово</h2>
+<ol>
+  <li>Нажали <b>Добавить</b> — открылась форма.</li>
+  <li>Заполнили поля (обязательные — с <b>*</b>).</li>
+  <li>Нажали <b><i class="fa-solid fa-floppy-disk"></i> Сохранить</b>.</li>
+  <li>Тост «Оборудование создано», модалка закрылась.</li>
+</ol>
 
-module.exports = router;
+<h2>Поля</h2>
+<h3>Внутренний номер (ID)</h3>
+<ul>
+  <li>Присваивается автоматически: <code>&lt;префикс&gt;-&lt;номер&gt;</code>.</li>
+  <li>Пример: <code>P-001</code>, <code>S-015</code>.</li>
+  <li><b>Нельзя изменить</b> после создания.</li>
+</ul>
+
+<h3>Серийный номер</h3>
+<p>Заводской номер. Необязательное. Пример: <code>EP2024001</code>.</p>
+
+<h3>Штрихкод</h3>
+<p>Обычно <b>рассчитывается автоматически</b>: инв. номер → серийник → ID. Ручной ввод — только у админа с правом.</p>
+
+<h3>Модель *</h3>
+<p>Обязательное. <code>Research Plus</code>, <code>Pipetman L</code>. Максимум 255 символов.</p>
+
+<h3>Тип оборудования *</h3>
+<p>Обязательное. Влияет на: префикс ID, МПИ, место поверки.</p>
+
+<h3>Объём (мкл)</h3>
+<p>Только для пипеток. Необязательное.</p>
+
+<h3>Отдел</h3>
+<p>Из справочника. Если вы с галкой «Только свой отдел» или И.о. — заблокировано.</p>
+
+<h3>МПИ (мес.) *</h3>
+<p>Обязательное. 1–120. По умолчанию — из типа. Смена типа → пересчёт.</p>
+
+<h3>Дата последней поверки *</h3>
+<p>Обязательное. Не может быть в будущем.</p>
+
+<h3>Результат</h3>
+<p><i class="fa-solid fa-check"></i> Годен / <i class="fa-solid fa-xmark"></i> Брак / <i class="fa-solid fa-hourglass-half"></i> В процессе.</p>
+
+<h3>Статус эксплуатации</h3>
+<p><i class="fa-solid fa-check"></i> В работе / <i class="fa-solid fa-ban"></i> Не используется.</p>
+
+<h3>Ответственный *</h3>
+<p>Обязательное. Для админа — список, для остальных — ваше ФИО, для И.о. — ФИО основного.</p>
+
+<h3>Место хранения</h3>
+<p>Необязательное. Пример: <code>Лаб. 201, шкаф 3</code>.</p>
+
+<h3>Примечание</h3>
+<p>Любой текст.</p>
+
+<h2>После сохранения</h2>
+<ol>
+  <li>Прибор появится в таблице.</li>
+  <li>В истории — запись «Первичная поверка».</li>
+  <li>В журнале — «Добавление оборудования».</li>
+  <li>Штрихкод рассчитан.</li>
+</ol>
+
+<h2>Возможные ошибки</h2>
+<table class="docs-table">
+  <thead><tr><th>Ошибка</th><th>Что делать</th></tr></thead>
+  <tbody>
+    <tr><td>«Заполните поле Модель»</td><td>Введите модель</td></tr>
+    <tr><td>«Дата в будущем»</td><td>Исправьте</td></tr>
+    <tr><td>«Модель слишком длинная»</td><td>До 255 символов</td></tr>
+    <tr><td>«ID уже существует»</td><td>Обновите страницу</td></tr>
+  </tbody>
+</table>
+`.trim(),
+  },
+  {
+    slug: 'add-batch',
+    title: '{icon: fa-clipboard-list} Добавить партию (таблица)',
+    requiredPermissions: ['add_pipette'],
+    sortOrder: 8,
+    content: `
+<h2>Когда использовать</h2>
+<p>Пришла <b>целая партия</b> — 5, 10, 50 штук. Быстрее, чем по одной.</p>
+
+<h2>Где находится</h2>
+<p>Кнопка <b><i class="fa-solid fa-plus"></i> Добавить</b> → вкладка <b><i class="fa-solid fa-clipboard-list"></i> Партия</b>.</p>
+
+<h2>Пошагово</h2>
+<ol>
+  <li><b><i class="fa-solid fa-plus"></i> Добавить строку</b> — появится строка №1.</li>
+  <li>Заполнить обязательные поля (<b>*</b>). <b>Tab</b> — переход.</li>
+  <li>Проверить все строки.</li>
+  <li>Кнопка <b><i class="fa-solid fa-floppy-disk"></i> Создать N</b>.</li>
+  <li>Тост «Создано N единиц».</li>
+</ol>
+
+<h2>Поля в таблице</h2>
+<table class="docs-table">
+  <thead><tr><th>Колонка</th><th>Обязательное</th><th>Что вписать</th></tr></thead>
+  <tbody>
+    <tr><td><b>#</b></td><td>—</td><td>Номер строки</td></tr>
+    <tr><td><b>Модель *</b></td><td>Да</td><td>Название модели</td></tr>
+    <tr><td><b>Тип *</b></td><td>Да</td><td>Из списка</td></tr>
+    <tr><td><b>МПИ *</b></td><td>Да</td><td>Месяцы</td></tr>
+    <tr><td><b>Дата поверки *</b></td><td>Да</td><td>Календарь</td></tr>
+    <tr><td><b>Ответственный *</b></td><td>Да</td><td>Из списка</td></tr>
+    <tr><td><b>Производитель</b></td><td>Нет</td><td>Фирма</td></tr>
+    <tr><td><b>Серийный</b></td><td>Нет</td><td>Заводской</td></tr>
+    <tr><td><b>Объём</b></td><td>Нет</td><td>Только для пипеток</td></tr>
+    <tr><td><b>Отдел</b></td><td>Нет</td><td>Из справочника</td></tr>
+    <tr><td><b>Свидетельство</b></td><td>Нет</td><td>Номер</td></tr>
+    <tr><td><b>Место</b></td><td>Нет</td><td>Кабинет/шкаф</td></tr>
+    <tr><td><b>Примечание</b></td><td>Нет</td><td>Текст</td></tr>
+  </tbody>
+</table>
+
+<h2>Особенности</h2>
+<ul>
+  <li><b>Разные типы в одной партии</b> — можно.</li>
+  <li><b>МПИ пересчитывается</b> при смене типа.</li>
+  <li><b><i class="fa-solid fa-trash"></i></b> — удалить строку.</li>
+  <li><b>Максимум 100 строк</b>.</li>
+</ul>
+
+<h2>После создания</h2>
+<ol>
+  <li>Все приборы появятся в таблице.</li>
+  <li>У каждого — свой ID.</li>
+  <li>«Первичная поверка» в истории.</li>
+  <li>Запись в журнале: «Пакетное добавление».</li>
+</ol>
+
+<h2>Возможные ошибки</h2>
+<table class="docs-table">
+  <thead><tr><th>Ошибка</th><th>Что делать</th></tr></thead>
+  <tbody>
+    <tr><td>«Максимум 100 строк»</td><td>Разбейте</td></tr>
+    <tr><td>«Строка N: модель»</td><td>Заполните</td></tr>
+    <tr><td>«Конфликт ID»</td><td>Обновите страницу</td></tr>
+  </tbody>
+</table>
+`.trim(),
+  },
+  {
+    slug: 'edit',
+    title: '{icon: fa-pen} Редактирование',
+    requiredPermissions: ['edit_pipette'],
+    sortOrder: 9,
+    content: `
+<h2>Где находится</h2>
+<p><b><i class="fa-solid fa-ellipsis-vertical"></i></b> в строке → <b>Редактировать</b>.</p>
+
+<h2>Что можно менять</h2>
+<p><b>Всё, кроме ID</b> (поле readonly): модель, производитель, серийник, объём, тип, отдел (только админ), МПИ, дата поверки, свидетельство, результат, статус, ответственный (только админ), место, примечание, штрихкод.</p>
+
+<h2>Как редактировать</h2>
+<ol>
+  <li>Открыли форму.</li>
+  <li>Изменили значение.</li>
+  <li>Нажали <b><i class="fa-solid fa-floppy-disk"></i> Сохранить</b>.</li>
+</ol>
+
+<h2><i class="fa-solid fa-triangle-exclamation"></i> Смена типа</h2>
+<p>При смене <b>Типа</b> меняется <b>префикс ID</b>: <code>P-001</code> → <code>S-001</code>.</p>
+<p><b>Сохраняется:</b> история, свидетельства, связки замен.</p>
+<p><b>Меняется:</b> ID и МПИ.</p>
+<p><b>Когда нужно:</b> прибор изначально создали как «Пипетка», а на самом деле «Весы».</p>
+
+<h2>Смена отдела / ответственного</h2>
+<p><b>Только админ</b> может здесь. Остальным — <b><i class="fa-solid fa-right-left"></i> Передача</b> / <b><i class="fa-solid fa-user-pen"></i> Массовая смена</b>.</p>
+
+<h2>После сохранения</h2>
+<ul>
+  <li>Изменения в таблице.</li>
+  <li>Запись в журнале.</li>
+  <li>При смене ID — история перепривязывается.</li>
+</ul>
+`.trim(),
+  },
+  {
+    slug: 'delete',
+    title: '{icon: fa-trash} Удаление',
+    requiredPermissions: ['delete_pipette'],
+    sortOrder: 10,
+    content: `
+<h2>Когда использовать</h2>
+<p><b>Только если прибор нужно стереть</b>.</p>
+<div class="docs-hint"><i class="fa-solid fa-triangle-exclamation"></i> Удаление <b>необратимо</b>. История тоже удалится.</div>
+
+<h2>Когда НЕ надо</h2>
+<ul>
+  <li>Списан → <b><i class="fa-solid fa-ban"></i> Не используется</b>.</li>
+  <li>Сломан → <b><i class="fa-solid fa-xmark"></i> Брак</b>.</li>
+  <li>Передан → <b><i class="fa-solid fa-right-left"></i> Передать</b>.</li>
+</ul>
+
+<h2>Как удалить</h2>
+<ol>
+  <li><b><i class="fa-solid fa-ellipsis-vertical"></i></b> → <b>Удалить</b>.</li>
+  <li>Подтверждение.</li>
+  <li>Нажали <b>Удалить</b>.</li>
+</ol>
+
+<h2>Когда НЕ даст удалить</h2>
+<h3>Отправлен на поверку</h3>
+<p>Сначала <b>Отменить отправку</b>.</p>
+<h3>Используется как замена</h3>
+<p>Сначала <b>Возврат с поверки</b> оригинала.</p>
+<h3>Заменён на другой</h3>
+<p>Возврат с поверки.</p>
+
+<h2>«Сбросить все данные»</h2>
+<p>Если нужно <b>удалить всё</b> — <b>Настройки → Общие → Сбросить все данные</b> (только админ).</p>
+`.trim(),
+  },
+  {
+    slug: 'quickcal',
+    title: '{icon: fa-clipboard-check} Быстрая поверка',
+    requiredPermissions: ['quick_calibration'],
+    sortOrder: 11,
+    content: `
+<h2>Когда использовать</h2>
+<p>Прибор прошёл поверку <b>на месте</b> или <b>вернулся</b> с внешней.</p>
+
+<h2>Где находится</h2>
+<p><b><i class="fa-solid fa-ellipsis-vertical"></i></b> → <b><i class="fa-solid fa-clipboard-check"></i> Быстрая поверка</b>.</p>
+<p>Для прибора со статусом «На поверке» — пункт <b>«Вернулась с поверки»</b>.</p>
+
+<h2>Поля</h2>
+<ul>
+  <li><b>Дата поверки *</b> — не в будущем.</li>
+  <li><b>Свидетельство</b> — из документа.</li>
+  <li><b>Результат</b> — Годен / Брак / В процессе.</li>
+  <li><b>Организация</b> — кто делал.</li>
+  <li><b>Примечание</b> — отметки.</li>
+</ul>
+
+<h2>После записи</h2>
+<ol>
+  <li><code>last_calibration</code> обновится.</li>
+  <li>Следующая поверка пересчитается.</li>
+  <li>Запись в истории.</li>
+  <li>Статус обновится.</li>
+  <li>Снимется «На поверке».</li>
+  <li>Замена вернётся на склад.</li>
+</ol>
+
+<h2>Что НЕ делает</h2>
+<ul>
+  <li>Не меняет отдел / ответственного / МПИ.</li>
+</ul>
+`.trim(),
+  },
+  {
+    slug: 'history',
+    title: '{icon: fa-clock-rotate-left} История поверок',
+    requiredPermissions: [],
+    sortOrder: 12,
+    content: `
+<h2>Что это</h2>
+<p><b>Журнал всех поверок</b> одного прибора. Хранится <b>навсегда</b>.</p>
+
+<h2>Где находится</h2>
+<p><b><i class="fa-solid fa-ellipsis-vertical"></i></b> → <b><i class="fa-solid fa-clock-rotate-left"></i> История поверок (N)</b>.</p>
+
+<h2>Что внутри</h2>
+<h3>Сверху — карточка</h3>
+<p>Модель, серийник, объём, отдел, МПИ, даты поверок, статус, ответственный, место.</p>
+<h3>Ниже — timeline</h3>
+<p>Все поверки в обратном порядке: дата, свидетельство, результат, организация, примечание.</p>
+
+<h2>Экспорт истории</h2>
+<p>Кнопка <b><i class="fa-solid fa-upload"></i> Экспорт истории</b> внизу. Период + Excel/PDF.</p>
+
+<h2>Добавить старую запись</h2>
+<p>Кнопка <b><i class="fa-solid fa-plus"></i> Добавить поверку</b> внизу. Заполнить, сохранить.</p>
+<div class="docs-hint"><i class="fa-solid fa-triangle-exclamation"></i> Запись добавится, но <code>last_calibration</code> <b>не изменится</b>, если она старее текущей.</div>
+
+<h2>Что НЕ откатывается</h2>
+<p>Удалить / редактировать записи нельзя. Только добавлять новые.</p>
+`.trim(),
+  },
+  {
+    slug: 'send',
+    title: '{icon: fa-box} Отправка на поверку',
+    requiredPermissions: ['bulk_send'],
+    sortOrder: 13,
+    content: `
+<h2>Когда использовать</h2>
+<p>Приборы <b>физически отправляются</b> в ЦСМ.</p>
+<div class="docs-hint">Для поверки на месте — <b><i class="fa-solid fa-clipboard-check"></i> Быстрая поверка</b>.</div>
+
+<h2>Подготовка</h2>
+<ol>
+  <li>Галочки у нужных строк (или верхний чекбокс — всё на странице).</li>
+  <li>Появится панель <b><i class="fa-solid fa-bolt"></i> Выбрано: N</b>.</li>
+  <li>Кнопка <b><i class="fa-solid fa-box"></i> Отправить (N)</b>.</li>
+</ol>
+
+<h2>В окне</h2>
+<h3>Список</h3>
+<p>Прокручиваемый ID и модели. Тех, кто уже на поверке, система пропустит.</p>
+<h3>Блок «Замены»</h3>
+<p>Для каждого прибора — складские того же типа. Радиокнопки: <code>S-003 — Sartorius</code> / «Без замены».</p>
+<p><b>С заменой:</b> складская станет активной, оригинал уйдёт, появится <code>↔ замена: X-XXX</code>.</p>
+<p><b>Без замены:</b> просто уйдёт.</p>
+<h3>Дата отправки *</h3>
+<p>По умолчанию сегодня. Не в будущем.</p>
+<h3>Примечание</h3>
+<p>Например «Курьер, накладная №123».</p>
+
+<h2>Кнопки</h2>
+<ul>
+  <li><b><i class="fa-solid fa-box"></i> Отправить</b>.</li>
+  <li><b><i class="fa-solid fa-print"></i> Распечатать акт</b>.</li>
+  <li><b>Отмена</b>.</li>
+</ul>
+
+<h2>После отправки</h2>
+<ul>
+  <li>Статус — <b><i class="fa-solid fa-box"></i> На поверке</b>.</li>
+  <li>Замены активны.</li>
+  <li>Запись в журнале.</li>
+</ul>
+
+<h2>Акт отправки</h2>
+<p>Откроется в новой вкладке. Список приборов + подписи «Сдал / Принял». Ctrl+P → печать.</p>
+
+<h2>Отмена отправки</h2>
+<p><b><i class="fa-solid fa-ellipsis-vertical"></i></b> → <b>Отменить отправку</b>. Прибор вернётся, замена — на склад.</p>
+`.trim(),
+  },
+  {
+    slug: 'return',
+    title: '{icon: fa-box-open} Возврат с поверки',
+    requiredPermissions: ['bulk_return'],
+    sortOrder: 14,
+    content: `
+<h2>Когда использовать</h2>
+<p>Приборы <b>вернулись</b> из ЦСМ.</p>
+
+<h2>Подготовка</h2>
+<ol>
+  <li>Найдите приборы со статусом <b><i class="fa-solid fa-box"></i> На поверке</b>.</li>
+  <li>Галочки.</li>
+  <li>Кнопка <b><i class="fa-solid fa-box-open"></i> Вернуть (N)</b>.</li>
+</ol>
+
+<h2>Поля</h2>
+<h3>Дата поверки *</h3>
+<p>Из свидетельства. Не в будущем.</p>
+<h3>Организация</h3>
+<p>Например <code>ФБУ «Красноярский ЦСМ»</code>.</p>
+<h3>Результат (общий)</h3>
+<p>Годен / Брак / В процессе.</p>
+<h3>☑ Одно свидетельство на всех</h3>
+<p>Один номер — для всей партии.</p>
+<h3>Таблица приборов</h3>
+<p>Каждому: свидетельство и результат.</p>
+<h3>Блок «Замены»</h3>
+<p><b>Галочка стоит</b> — замена вернётся на склад.</p>
+<p><b>Снять</b> — замена останется активной.</p>
+
+<h2>После</h2>
+<ul>
+  <li>Обновятся <code>last_calibration</code>, <code>cert</code>, <code>last_result</code>.</li>
+  <li>«На поверке» снимается.</li>
+  <li>Замены на склад.</li>
+  <li>Таблица отфильтруется по дате возврата.</li>
+</ul>
+`.trim(),
+  },
+  {
+    slug: 'transfer',
+    title: '{icon: fa-right-left} Передача в другой отдел',
+    requiredPermissions: ['transfer_pipette'],
+    sortOrder: 15,
+    content: `
+<h2>Когда использовать</h2>
+<p>Прибор <b>переезжает</b> из отдела в отдел.</p>
+
+<h2>Где находится</h2>
+<p><b><i class="fa-solid fa-ellipsis-vertical"></i></b> → <b><i class="fa-solid fa-right-left"></i> Передать</b>.</p>
+
+<h2>Поля</h2>
+<ul>
+  <li><b>Новый отдел *</b> — кроме текущего.</li>
+  <li><b>Ответственный *</b> — из выбранного отдела.</li>
+</ul>
+
+<h2>После</h2>
+<ul>
+  <li><code>department</code> и <code>responsible</code> поменяются.</li>
+  <li>История сохранится.</li>
+  <li>ID и серийник не меняются.</li>
+</ul>
+
+<h2>Отличие от массовой смены</h2>
+<table class="docs-table">
+  <thead><tr><th>Действие</th><th>Меняет</th></tr></thead>
+  <tbody>
+    <tr><td><b>Передача</b></td><td>Отдел + ответственный</td></tr>
+    <tr><td><b>Массовая смена</b></td><td>Только ответственный</td></tr>
+  </tbody>
+</table>
+`.trim(),
+  },
+  {
+    slug: 'bulk-responsible',
+    title: '{icon: fa-user-pen} Массовая смена ответственного',
+    requiredPermissions: ['bulk_change_responsible'],
+    sortOrder: 16,
+    content: `
+<h2>Когда использовать</h2>
+<p>Сотрудник уволился — перекинуть приборы на другого.</p>
+
+<h2>Подготовка</h2>
+<ol>
+  <li>Галочки.</li>
+  <li>Панель массовых операций.</li>
+  <li>Кнопка <b><i class="fa-solid fa-user-pen"></i> Ответственный (N)</b>.</li>
+</ol>
+
+<h2>Поле</h2>
+<p><b>Новый ответственный *</b> — из списка сотрудников.</p>
+
+<h2>После</h2>
+<ul>
+  <li><code>responsible</code> обновится.</li>
+  <li><b>Отдел НЕ меняется</b>.</li>
+  <li>Запись в журнале.</li>
+</ul>
+
+<div class="docs-hint"><i class="fa-solid fa-triangle-exclamation"></i> Для смены отдела — <b><i class="fa-solid fa-right-left"></i> Передача</b>.</div>
+`.trim(),
+  },
+  {
+    slug: 'scan',
+    title: '{icon: fa-barcode} Сканирование штрихкодов',
+    requiredPermissions: ['scan_barcode'],
+    sortOrder: 17,
+    content: `
+<h2>Зачем</h2>
+<p>Быстро собрать список <b>без ручного поиска</b>.</p>
+
+<h2>Где находится</h2>
+<p>Кнопка <b><i class="fa-solid fa-barcode"></i> Сканировать</b> в тулбаре.</p>
+<div class="docs-hint"><i class="fa-solid fa-circle-info"></i> Только на ПК.</div>
+
+<h2>Что нужно</h2>
+<ul>
+  <li><b>USB-сканер</b> (или ручной ввод).</li>
+</ul>
+
+<h2>Как пользоваться</h2>
+<ol>
+  <li>Нажали <b>Сканировать</b> — открылась модалка.</li>
+  <li>Сканером считали код (или вручную + Enter).</li>
+  <li>Убрать позицию — <b>×</b>. Очистить — <b><i class="fa-solid fa-rotate-left"></i> Очистить</b>.</li>
+  <li>Кнопки <b><i class="fa-solid fa-box"></i> На отправку</b> / <b><i class="fa-solid fa-box-open"></i> На возврат</b>.</li>
+</ol>
+
+<h2>Что ищется</h2>
+<p>Штрихкод, ID, серийник, инвентарный номер.</p>
+
+<h2>Особенности</h2>
+<ul>
+  <li>Дубликаты не добавляются («Уже в списке»).</li>
+  <li>Не находит — проверьте штрихкод или обратитесь к админу.</li>
+</ul>
+`.trim(),
+  },
+  {
+    slug: 'print',
+    title: '{icon: fa-tag} Печать этикеток',
+    requiredPermissions: ['print_labels'],
+    sortOrder: 18,
+    content: `
+<h2>Что это</h2>
+<p>Печать <b>наклеек со штрихкодом</b>.</p>
+
+<h2>Где находится</h2>
+<ul>
+  <li>Меню <b>Ещё ▼ → <i class="fa-solid fa-tag"></i> Печать этикеток</b>.</li>
+  <li>Или <code>Ctrl</code> + <code>P</code>.</li>
+</ul>
+
+<h2>Что выбрать</h2>
+<h3>Область</h3>
+<ul>
+  <li><b>Только выбранные</b> — из галочек.</li>
+  <li><b>Текущая страница</b>.</li>
+  <li><b>Весь фильтр</b>.</li>
+</ul>
+<h3>Принтер</h3>
+<ul>
+  <li><i class="fa-solid fa-file-lines"></i> PDF (A4)</li>
+  <li><i class="fa-solid fa-print"></i> PDF 58×40</li>
+  <li><i class="fa-solid fa-network-wired"></i> Zebra по сети (IP)</li>
+  <li><i class="fa-solid fa-bolt"></i> Zebra (агент)</li>
+</ul>
+<div class="docs-hint">Ваш принтер (привязан к отделу) — сверху с пометкой <b>← ваш</b>.</div>
+<h3>Копий</h3>
+<p>1–50 экземпляров.</p>
+
+<h2>Что на этикетке</h2>
+<p>Настраивает админ: штрихкод, ID, модель, серийник, отдел.</p>
+
+<h2>Форматы</h2>
+<p><code>58x40</code>, <code>40x25</code>, <code>100x50</code> мм.</p>
+
+<h2>Совет</h2>
+<p>Распечатайте <b>одну</b> этикетку и проверьте, что она читается сканером.</p>
+`.trim(),
+  },
+  {
+    slug: 'export',
+    title: '{icon: fa-upload} Экспорт данных',
+    requiredPermissions: ['export_data'],
+    sortOrder: 19,
+    content: `
+<h2>Что экспортируется</h2>
+<p>То, что видно <b>с учётом фильтров</b>.</p>
+<div class="docs-hint">Для экспорта всего — сбросьте фильтры.</div>
+
+<h2>Excel (.xlsx)</h2>
+<ol>
+  <li><b>Ещё ▼ → <i class="fa-solid fa-file-excel"></i> Экспорт в Excel</b>.</li>
+  <li>Или <code>Ctrl</code> + <code>E</code>.</li>
+  <li>Файл <code>pipettes_ГГГГ-ММ-ДД.xlsx</code>.</li>
+</ol>
+<p><b>Внутри:</b> шапка (название КДЛ, дата, число записей), заголовки, данные с чередованием, подвал «Документ сформировал», настройки печати A4 landscape.</p>
+
+<h2>PDF</h2>
+<ol>
+  <li><b>Ещё ▼ → <i class="fa-solid fa-print"></i> PDF</b>.</li>
+  <li>Ctrl+P → печать.</li>
+</ol>
+
+<h2>Экспорт истории одной единицы</h2>
+<ol>
+  <li>Откройте <b><i class="fa-solid fa-clock-rotate-left"></i> Историю поверок</b>.</li>
+  <li><b><i class="fa-solid fa-upload"></i> Экспорт истории</b>.</li>
+  <li>Период + Excel/PDF.</li>
+</ol>
+
+<h2>Какие поля</h2>
+<p>Настраивает админ в <b>Настройки → Экспорт</b>.</p>
+`.trim(),
+  },
+  {
+    slug: 'hotkeys',
+    title: '{icon: fa-keyboard} Горячие клавиши',
+    requiredPermissions: [],
+    sortOrder: 20,
+    content: `
+<h2>Список</h2>
+<table class="docs-table">
+  <thead><tr><th>Клавиша</th><th>Что делает</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code></td><td>Фокус в поиск</td></tr>
+    <tr><td><code>Esc</code></td><td>Закрыть модалку / фильтр</td></tr>
+    <tr><td><code>F5</code></td><td>Обновить данные</td></tr>
+    <tr><td><code>Shift</code> + <code>?</code></td><td>Справка</td></tr>
+    <tr><td><code>Ctrl</code> + <code>N</code></td><td>Добавить оборудование</td></tr>
+    <tr><td><code>Ctrl</code> + <code>F</code></td><td>Открыть/закрыть фильтр</td></tr>
+    <tr><td><code>Ctrl</code> + <code>E</code></td><td>Экспорт в Excel</td></tr>
+    <tr><td><code>Ctrl</code> + <code>P</code></td><td>Печать этикеток</td></tr>
+  </tbody>
+</table>
+
+<h2>Примечания</h2>
+<ul>
+  <li>Работает и с русской раскладкой.</li>
+  <li>В полях ввода горячие клавиши не срабатывают (кроме Esc).</li>
+</ul>
+`.trim(),
+  },
+  {
+    slug: 'theme',
+    title: '{icon: fa-palette} Тёмная тема',
+    requiredPermissions: [],
+    sortOrder: 21,
+    content: `
+<h2>Как переключить</h2>
+<p>Кнопка <b><i class="fa-solid fa-moon"></i> / <i class="fa-solid fa-sun"></i></b> в правом верхнем углу.</p>
+
+<h2>Что меняется</h2>
+<p>Фон, таблица, модалки, кнопки, поля ввода.</p>
+
+<h2>Сохраняется</h2>
+<p>Выбор запоминается в браузере.</p>
+`.trim(),
+  },
+  {
+    slug: 'help-admin',
+    title: '{icon: fa-book-open} Как редактировать справку (админ)',
+    requiredPermissions: ['manage_settings'],
+    sortOrder: 22,
+    content: `
+<h2>Где</h2>
+<p><b>Настройки → Общие → <i class="fa-solid fa-book-open"></i> Справка</b>.</p>
+
+<h2>Список разделов</h2>
+<table class="docs-table">
+  <thead><tr><th>Колонка</th><th>Что</th></tr></thead>
+  <tbody>
+    <tr><td><b>▲▼</b></td><td>Порядок</td></tr>
+    <tr><td><b>Название раздела</b></td><td>Что видит пользователь</td></tr>
+    <tr><td><b>Показ</b></td><td>✅ / ❌</td></tr>
+    <tr><td><b>Действия</b></td><td>Изменить / Удалить</td></tr>
+  </tbody>
+</table>
+
+<h2>Кнопки сверху</h2>
+<ul>
+  <li><b><i class="fa-solid fa-plus"></i> Добавить раздел</b>.</li>
+  <li><b><i class="fa-solid fa-download"></i> Экспорт</b> — JSON.</li>
+  <li><b><i class="fa-solid fa-upload"></i> Импорт</b> — JSON.</li>
+  <li><b><i class="fa-solid fa-rotate-left"></i> Сбросить к заводской</b>.</li>
+</ul>
+
+<h2>Редактор</h2>
+<h3>Название раздела *</h3>
+<p>То, что видит пользователь в сайдбаре.</p>
+<h3>Порядок</h3>
+<p>Чем меньше — тем выше.</p>
+<h3>Включён</h3>
+<p>Если снять — раздел не показывается.</p>
+<h3>Права</h3>
+<p>Если ничего не выбрано — видят все. Если выбрано — только у кого есть любое из них, либо админ.</p>
+<h3>Содержимое раздела</h3>
+<p>Визуальный редактор, как в Word:</p>
+<ul>
+  <li>Заголовки, подзаголовки.</li>
+  <li>Жирный / курсив / подчёркнутый / зачёркнутый.</li>
+  <li>Шрифт, размер, цвет текста и фона.</li>
+  <li>Списки (маркированные, нумерованные).</li>
+  <li>Таблицы.</li>
+  <li>Ссылки.</li>
+  <li>Картинки.</li>
+  <li>Файлы (PDF, DOCX, XLSX, ZIP).</li>
+</ul>
+
+<h2>Загрузка файлов</h2>
+<ol>
+  <li>Кнопка <b><i class="fa-solid fa-image"></i> Картинка</b> — для изображений.</li>
+  <li>Кнопка <b><i class="fa-solid fa-paperclip"></i> Файл</b> — для документов.</li>
+  <li>Или просто перетащите файл мышкой в редактор.</li>
+  <li>Или <b>Ctrl+V</b> — вставить скриншот из буфера.</li>
+</ol>
+<p>Картинка вставится как изображение, документ — как ссылка «📎 Скачать: файл.pdf».</p>
+
+<h2>Экспорт / Импорт</h2>
+<p><b>Экспорт</b> — JSON со всеми разделами. <b>Импорт</b> — загрузить обратно (заменить или добавить).</p>
+
+<h2>Сброс к заводской</h2>
+<p>Возвращает тексты из <code>help-seed.js</code>. Все правки потеряются.</p>
+<div class="docs-hint">Перед сбросом сделайте Экспорт.</div>
+`.trim(),
+  },
+  {
+    slug: 'faq',
+    title: '{icon: fa-circle-question} Частые вопросы',
+    requiredPermissions: [],
+    sortOrder: 23,
+    content: `
+<h2>Вход и пароль</h2>
+<h3>Не могу войти</h3>
+<p>Проверьте раскладку, Caps Lock. Не помогает — к админу.</p>
+<h3>Забыл пароль</h3>
+<p>Админ выдаст новый разовый.</p>
+<h3>Почему нельзя нажать ни на одну кнопку?</h3>
+<p>Если зашли с разовым паролем — система блокирует интерфейс до смены. Оранжевое уведомление подскажет. Введите новый пароль или выйдите.</p>
+<h3>Окно смены пароля не закрывается!</h3>
+<p>Так и задумано. Закрыть можно только «Сохранить» или выйти.</p>
+<h3>Я админ, зашел под пользователем, а меня заставляет менять пароль!</h3>
+<p>Нажмите <b>«Позже»</b> на окне, потом <b>«Вернуться»</b> в шапке.</p>
+
+<h2>Оборудование</h2>
+<h3>Не вижу прибор, который есть</h3>
+<p>Проверьте фильтры, поиск, отдел (если «только свой»), статус.</p>
+<h3>ID не тот, что нужен</h3>
+<p>ID присваивается автоматически. Обратитесь к админу.</p>
+<h3>Как быстро завести много приборов</h3>
+<p><b><i class="fa-solid fa-plus"></i> Добавить → Партия</b>.</p>
+<h3>Прибор сломался</h3>
+<p><b><i class="fa-solid fa-clipboard-check"></i> Быстрая поверка</b> → <b><i class="fa-solid fa-xmark"></i> Брак</b>. Или <b><i class="fa-solid fa-pen"></i> Редактирование</b> → <b>Не используется</b>.</p>
+<h3>Прибор отдали в другой отдел</h3>
+<p><b><i class="fa-solid fa-right-left"></i> Передать</b>.</p>
+
+<h2>Поверки</h2>
+<h3>Как отправить</h3>
+<p>Галочки → <b><i class="fa-solid fa-box"></i> Отправить</b>.</p>
+<h3>Вернулся — как оформить</h3>
+<p>Галочки → <b><i class="fa-solid fa-box-open"></i> Вернуть</b>.</p>
+
+<h2>Печать и экспорт</h2>
+<h3>Этикетка не печатается</h3>
+<p>Принтер выбран? Включён? Если нет — скачается PDF.</p>
+<h3>Excel не скачивается</h3>
+<p>Проверьте «Загрузки». Включите скачивание в браузере.</p>
+
+<h2>Данные</h2>
+<h3>Пропали данные</h3>
+<p>Проверьте фильтры, поиск, отдел.</p>
+<h3>Данные дублируются</h3>
+<p>К админу.</p>
+
+<h2>Права</h2>
+<h3>Не вижу «Удалить»</h3>
+<p>Нет прав. Обратитесь к админу.</p>
+
+<h2>Технические</h2>
+<h3>Сайт не открывается</h3>
+<p>Сеть, адрес, админ.</p>
+<h3>Всё тормозит</h3>
+<p>Компактный режим в «Ещё ▼». Или Ctrl+Shift+R.</p>
+`.trim(),
+  },
+];
