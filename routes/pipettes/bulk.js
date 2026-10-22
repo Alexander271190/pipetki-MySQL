@@ -320,7 +320,11 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
         );
         if (!rows.length) { skipped.push(item.id); continue; }
         if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
-        if (!isExternalType(rows[0].equipment_type)) { skipped.push(item.id); continue; }
+        // 🆕 Если прибор УЖЕ на поверке, разрешаем возврат (даже если тип стал internal)
+        if (!rows[0].sent_for_calibration && !isExternalType(rows[0].equipment_type)) { 
+          skipped.push(item.id); 
+          continue; 
+        }
         if (!rows[0].sent_for_calibration) { skipped.push(item.id); continue; }
 
         const ALLOWED = ['pass', 'fail', 'wip'];
