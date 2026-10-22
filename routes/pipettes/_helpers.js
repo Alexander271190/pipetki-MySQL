@@ -218,13 +218,21 @@ function buildFiltersWhere(filters, search) {
   const params = [];
 
   // Поиск по 6 колонкам
-  if (search && String(search).trim()) {
-    const q = `%${String(search).trim()}%`;
-    parts.push(`(
-      id LIKE ? OR model LIKE ? OR serial LIKE ? OR manufacturer LIKE ?
-      OR department LIKE ? OR responsible LIKE ?
-    )`);
-    params.push(q, q, q, q, q, q);
+   if (search && String(search).trim()) {
+    const s = String(search).trim();
+    const q = `%${s}%`;
+    const isIdFormat = /^[A-Za-zА-Яа-я]+-\d+$/i.test(s);
+
+    if (isIdFormat) {
+      parts.push(`id LIKE ?`);
+      params.push(q);
+    } else {
+      parts.push(`(
+        id LIKE ? OR model LIKE ? OR serial LIKE ? OR manufacturer LIKE ?
+        OR department LIKE ? OR responsible LIKE ?
+      )`);
+      params.push(q, q, q, q, q, q);
+    }
   }
 
   if (filters && typeof filters === 'object' && !Array.isArray(filters)) {
