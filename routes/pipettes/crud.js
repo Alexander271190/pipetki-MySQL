@@ -701,9 +701,17 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
   }
 
   try {
-    const result = await withTransaction(async (conn) => {
-      const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
-
+   const result = await withTransaction(async (conn) => {
+   const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
+     if (updates.updatedAt && p.updated_at) {
+    const clientTime = new Date(updates.updatedAt).getTime();
+    const dbTime = new Date(p.updated_at).getTime();
+       if (Math.abs(clientTime - dbTime) > 1000) {
+    const err = new Error('Запись была изменена другим пользователем. Пожалуйста, обновите страницу.');
+          err.status = 409;
+        throw err;
+        }
+      }
       if (updates.department !== undefined && req.user.role !== 'admin' && updates.department !== p.department) {
         const err = new Error('Смена отдела доступна только администратору');
         err.status = 403;
@@ -866,6 +874,7 @@ router.delete('/:id', authenticate, requireAnyPermission(['delete_pipette', 'man
     if (e.status === 400) return res.status(400).json({ error: e.message });
     if (e.status === 403) return res.status(403).json({ error: e.message });
     if (e.status === 404) return res.status(404).json({ error: e.message });
+    if (e.status === 409) return res.status(409).json({ error: e.message, code: 'conflict' });
     console.error('Delete error:', e);
     res.status(500).json({ error: 'Ошибка удаления' });
   }
