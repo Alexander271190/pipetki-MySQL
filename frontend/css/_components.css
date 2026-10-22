@@ -123,14 +123,14 @@
   white-space: nowrap;
   border: none;
   background: transparent;
-  color: var(--text); 
+  color: var(--text) !important; 
 }
 
 .badge-pipette,
 .badge-other {
-  background: transparent;
-  color: var(--text);
-  border-color: transparent;
+  background: transparent !important;
+  color: var(--text) !important;
+  border-color: transparent !important;
 }
 
 /* ============================================================
