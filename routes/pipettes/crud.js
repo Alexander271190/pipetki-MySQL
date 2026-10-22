@@ -810,6 +810,7 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     if (e.status === 400) return res.status(400).json({ error: e.message });
     if (e.status === 403) return res.status(403).json({ error: e.message });
     if (e.status === 404) return res.status(404).json({ error: e.message });
+    if (e.status === 409) return res.status(409).json({ error: e.message, code: 'conflict' });
 
     const DATA_ERROR_CODES = new Set(['ER_DATA_TOO_LONG', 'ER_TRUNCATED_WRONG_VALUE', 'ER_BAD_NULL_ERROR', 'ER_NO_DEFAULT_FOR_FIELD']);
     const DATA_ERROR_ERRNOS = new Set([1406, 1292, 1048, 1364]);
