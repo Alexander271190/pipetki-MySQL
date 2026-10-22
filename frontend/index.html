@@ -931,17 +931,15 @@
 
 <!-- МОДАЛКА РЕДАКТОРА СПРАВКИ -->
 <div class="modal-overlay" id="help-editor-modal">
-  <div class="modal modal-lg" style="max-width:900px;">
+  <div class="modal modal-lg" style="max-width:1100px;">
     <h2 id="help-editor-title"><i class="fa-solid fa-pen"></i> Редактирование</h2>
 
+    <input type="hidden" id="he-slug" value="">
+
     <div class="form-row">
-      <div class="form-group" style="flex:0 0 200px;">
-        <label>Slug</label>
-        <input type="text" id="he-slug" pattern="[a-z][a-z0-9_]*" placeholder="intro">
-      </div>
-      <div class="form-group">
-        <label>Заголовок *</label>
-        <input type="text" id="he-title" placeholder="📌 Начало работы">
+      <div class="form-group" style="flex:1;">
+        <label>Название раздела *</label>
+        <input type="text" id="he-title" placeholder="Например: Вход в систему">
       </div>
     </div>
 
@@ -968,23 +966,11 @@
     </div>
 
     <div class="form-group">
-      <label>Текст (Markdown)</label>
-      <div class="help-toolbar">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('## ')">H2</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('### ')">H3</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="heWrap('**','**')">B</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="heWrap('*','*')">I</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('- ')">• список</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="heInsert('> ')">подсказка</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="hePickImage()"><i class="fa-solid fa-image"></i> Картинка</button>
-      </div>
-      <textarea id="he-content" rows="14" style="font-family:ui-monospace,monospace;font-size:.83rem;"></textarea>
-      <input type="file" id="he-image-input" accept="image/*" style="display:none;">
-    </div>
-
-    <div class="form-group">
-      <label>Предпросмотр</label>
-      <div id="he-preview" class="help-preview"></div>
+      <label>Содержимое раздела</label>
+      <textarea id="he-content" rows="14"></textarea>
+      <input type="file" id="he-file-input"
+             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv"
+             style="display:none;">
     </div>
 
     <div id="he-error" class="auth-error" style="margin-top:8px;"></div>
