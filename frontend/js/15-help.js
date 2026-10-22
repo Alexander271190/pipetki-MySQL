@@ -23,11 +23,11 @@ function ensureTinyMCE() {
     tinymce.init({
       selector: '#he-content',
       license_key: 'gpl',
-      height: 420,
-      menubar: false,
+      min_height: 420,
+      max_height: 700,
       branding: false,
       promotion: false,
-      plugins: 'lists link image table code fullscreen searchreplace autoresize',
+      plugins: 'lists link image table code fullscreen searchreplace',
       toolbar: [
         'undo redo | styles fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor',
         'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent',
