@@ -388,10 +388,9 @@ function updateBulkCalButton() {
   const visibleSelected = [...selectedPipettes].filter(id => pipettes.some(p => p.id === id));
 
   const toSend = visibleSelected.filter(id => {
-    const p = pipettes.find(x => x.id === id);
-    return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
+  const p = pipettes.find(x => x.id === id);
+  return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
   });
-
   const toReturn = visibleSelected.filter(id => {
     const p = pipettes.find(x => x.id === id);
     return p && p.sent_for_calibration && isExternalCalibration(p.equipment_type);
