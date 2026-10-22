@@ -541,15 +541,19 @@ async function savePipette(e) {
   if (!isEdit && !canAddPipette())     { showToast('Нет прав на добавление', 'error'); return; }
   if (isEdit  && !canEditPipette())    { showToast('Нет прав на редактирование', 'error'); return; }
 
-    const payload = {};
+  const payload = {};
   const fieldElements = {};
 
-  document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
-    const key = el.dataset.fieldId;
-    fieldElements[key] = el; // Запоминаем, какие поля реально есть в форме
-    if (key === 'id') return;
+ document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
+  const key = el.dataset.fieldId;
+  fieldElements[key] = el;
+   
+  if (key === 'id') {
     payload[key] = el.value;
-  });
+    return;
+  }
+  payload[key] = el.value;
+});
 
   const errors = [];
   // Проверяем только те поля, которые видит пользователь
