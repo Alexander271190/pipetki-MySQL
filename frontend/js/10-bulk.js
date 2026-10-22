@@ -12,13 +12,21 @@ async function openBulkSendModal() {
       );
       const toSend = selected.filter(id => {
         const p = pipettes.find(x => x.id === id);
-        return p && !p.sent_for_calibration && isExternalCalibration(p.equipment_type);
-      });
+        return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
+       });
 
       if (toSend.length === 0) {
-        showToast('Не выбрано ни одной единицы для внешней поверки.', 'error');
-        return;
-      }
+      const usedAsReplacement = selected.some(id => {
+        const p = pipettes.find(x => x.id === id);
+        return p && p.replacing;
+        });
+        if (usedAsReplacement) {
+           showToast('Прибор используется как замена для другого. Сначала оформите возврат оригинала с поверки.', 'error');
+         } else {
+            showToast('Не выбрано ни одной единицы для внешней поверки.', 'error');
+         }
+         return;
+         }
 
       _bulkSendIds = [...toSend];
 
