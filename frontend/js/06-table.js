@@ -279,8 +279,8 @@ function renderTableBody(items, columns, hasAnyRowAction) {
 
     return `<tr class="${rowClass}">
       <td class="col-checkbox">
-        <input type="checkbox" class="row-checkbox" data-id="${esc(p.id)}" ${isChecked}
-               onchange="togglePipetteSelection('${esc(p.id)}', ${isChecked})">
+         <input type="checkbox" class="row-checkbox" data-id="${esc(p.id)}" ${isChecked}
+         onchange="togglePipetteSelection('${esc(p.id)}', this.checked)">
       </td>
       ${cellsHtml}
       <td ${!hasAnyAction ? 'style="display:none"' : ''}>${actionsHtml}</td>
