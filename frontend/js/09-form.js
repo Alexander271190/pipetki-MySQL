@@ -144,7 +144,7 @@ async function openModal(id) {
             const posText = (pos && pos !== 'Сотрудник') ? ` (${pos})` : '';
             const ok = await showConfirm(
               `Пользователь ${name}${posText} уже редактирует данный прибор.\n\nВы хотите сбросить блокировку?`,
-              { icon: '<i class="fa-solid fa-lock" style="color: #d97706;"></i>', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
+              { icon: '<i class="fa-solid fa-lock" style="color: var(--warn);"></i>', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
             );
             
             if (!ok) return;
