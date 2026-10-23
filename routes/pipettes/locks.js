@@ -7,11 +7,25 @@ const { logAction } = require('../../utils/audit');
 
 router.get('/:id/lock', authenticate, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+    const [rows] = await db.query(`
+      SELECT l.*, u.position AS actual_position 
+      FROM edit_locks l
+      LEFT JOIN users u ON u.id = l.user_id
+      WHERE l.pipette_id = ?
+    `, [req.params.id]);
+    
     if (!rows.length) return res.json({ locked: false });
     const lock = rows[0];
     if (lock.user_id === req.user.id) return res.json({ locked: true, mine: true });
-    res.json({ locked: true, mine: false, lockedBy: lock.user_full_name });
+        
+    const position = lock.actual_position || lock.user_position || '';
+    
+    res.json({ 
+      locked: true, 
+      mine: false, 
+      lockedBy: lock.user_full_name,
+      lockedByPosition: position
+    });
   } catch (e) { 
     console.error('GET /lock error:', e); 
     res.status(500).json({ error: 'Ошибка проверки' }); 
