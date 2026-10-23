@@ -1,5 +1,6 @@
 'use strict';
 let _lockCheckTimer = null;
+let _skipUnlockOnClose = false;
 
 // ============================================================
 // ДИНАМИЧЕСКАЯ ФОРМА
@@ -133,21 +134,29 @@ async function openModal(id) {
       errorMsg: isEdit ? 'Нет прав на редактирование' : 'Нет прав на добавление'
     },
     async () => {
-      // ✅ Блокировка ставится ТОЛЬКО после успешной проверки прав
-      if (id) {
+           if (id) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          
+          // ЕСЛИ ЗАБЛОКИРОВАНО ДРУГИМ
           if (lockRes.locked && !lockRes.mine) {
             const ok = await showConfirm(
-              `Заблокировано: ${lockRes.lockedBy}.\nСнять блокировку?`,
-              { icon: '🔒', okText: 'Снять', okClass: 'btn-warning' }
+              `Оборудование заблокировано для редактирования: ${lockRes.lockedBy}.\nСнять блокировку?`,
+              { icon: '🔒', title: 'Внимание', okText: 'Снять блокировку', okClass: 'btn-warning' }
             );
+            
+            // Если нажали "Отмена" — прерываем открытие
             if (!ok) return;
+            
+            // Если нажали "Снять" — удаляем чужую блокировку
             await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
             showToast('Блокировка снята', 'success');
           }
+
+          // Ставим свою блокировку
           await apiRequest(`/pipettes/${id}/lock`, 'POST');
 
+          // Запускаем таймер проверки
           if (_lockCheckTimer) clearInterval(_lockCheckTimer);
           _lockCheckTimer = setInterval(async () => {
             const modalEl = document.getElementById('modal');
@@ -156,10 +165,16 @@ async function openModal(id) {
             }
             try {
               const r = await apiRequest(`/pipettes/${id}/lock`);
+              // Если блокировку увели
               if (!r.locked || !r.mine) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
                 showToast('Сессия завершена. Сохраняем...', 'warn');
-                await savePipette();
+                
+                // Флаг: не удалять блокировку нового владельца при закрытии
+                _skipUnlockOnClose = true; 
+                
+                // Сохраняем принудительно (force = true), чтобы не было красной ошибки
+                await savePipette(null, true); 
               }
             } catch (e) {}
           }, 3000);
@@ -256,7 +271,6 @@ async function closeModal() {
 
   const editId = document.getElementById('edit-id').value;
 
-  
   UI.modal.close('modal');
   document.getElementById('edit-id').value = '';
   document.getElementById('form-fields-container').innerHTML = '';
@@ -270,11 +284,11 @@ async function closeModal() {
   _bulkFields = [];
   document.getElementById('bc-rows-body').innerHTML = '';
   document.getElementById('bc-table-head').innerHTML = '';
-
   
-  if (editId) {
+  if (editId && !_skipUnlockOnClose) {
     try { await apiRequest(`/pipettes/${editId}/lock`, 'DELETE'); } catch (e) {}
   }
+  _skipUnlockOnClose = false;
 }
 
 function switchAddTab(tab) {
@@ -584,8 +598,8 @@ async function saveBulkRows(e) {
 // ============================================================
 // СОХРАНЕНИЕ ОДНОЙ ЕДИНИЦЫ (создание или редактирование)
 // ============================================================
-async function savePipette(e) {
-  if (e) e.preventDefault();
+async function savePipette(e, force = false) {
+  if (e && e.preventDefault) e.preventDefault();
   await refreshCurrentUser();
 
   const editId = document.getElementById('edit-id').value || '';
@@ -597,23 +611,19 @@ async function savePipette(e) {
   const payload = {};
   const fieldElements = {};
   const editingPipette = isEdit ? pipettes.find(p => p.id === editId) : null;
-  if (isEdit && editingPipette && editingPipette.updated_at) {
+  
+  // Если force === true, мы НЕ отправляем updatedAt, чтобы сервер не выдал 409 Conflict
+  if (isEdit && editingPipette && editingPipette.updated_at && !force) {
     payload.updatedAt = editingPipette.updated_at;
   }
 
- document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
-  const key = el.dataset.fieldId;
-  fieldElements[key] = el;
-   
-  if (key === 'id') {
+  document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
+    const key = el.dataset.fieldId;
+    fieldElements[key] = el;
     payload[key] = el.value;
-    return;
-  }
-  payload[key] = el.value;
-});
+  });
 
   const errors = [];
-  // Проверяем только те поля, которые видит пользователь
   if (fieldElements.model && !String(payload.model || '').trim()) errors.push('Модель');
   if (fieldElements.lastCalibration && !String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
   if (fieldElements.responsible && !String(payload.responsible || '').trim()) errors.push('Ответственный');
