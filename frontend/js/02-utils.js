@@ -117,7 +117,7 @@ function showConfirm(message, options = {}) {
     const text  = document.getElementById('confirm-message');
     const okBtn = document.getElementById('confirm-ok-btn');
 
-    icon.textContent  = options.icon  || '⚠️';
+    icon.innerHTML = options.icon || '<i class="fa-solid fa-triangle-exclamation"></i>';
     title.textContent = options.title || 'Подтверждение';
     text.textContent  = message;
     okBtn.textContent = options.okText || 'ОК';
