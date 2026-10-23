@@ -252,23 +252,35 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// 🆕 Универсальное окно блокировки (используется везде)
+// 🆕 Универсальное окно блокировки (снимает блокировку при "Да")
 // ============================================================
 async function showLockWarning(lockRes, actionName = 'выполнить действие') {
   const name = lockRes.lockedBy || 'Другой пользователь';
   const pos = lockRes.lockedByPosition;
   const posText = pos ? ` (${pos})` : '';
-  
-  await showConfirm(
-    `Пользователь ${name}${posText} уже редактирует этот прибор.\n\n${actionName} невозможно.`,
+  const ok = await showConfirm(
+    `Пользователь ${name}${posText} уже редактирует этот прибор.\n\nВы хотите снять блокировку, чтобы ${actionName.toLowerCase()}?`,
     { 
       icon: '<i class="fa-solid fa-lock" style="color: var(--warn);"></i>', 
-      title: 'Заблокировано', 
-      okText: 'ОК', 
-      cancelText: 'Закрыть', 
-      okClass: 'btn-secondary' 
+      title: 'Внимание', 
+      okText: 'Да', 
+      cancelText: 'Нет', 
+      okClass: 'btn-danger' 
     }
   );
+  
+  if (ok) {
+    try {
+      await apiRequest(`/pipettes/${lockRes.pipetteId}/lock`, 'DELETE');
+      showToast('Блокировка снята', 'success');
+      return true; 
+    } catch (e) {
+      showToast('Ошибка снятия блокировки', 'error');
+      return false;
+    }
+  }
+  
+  return false; 
 }
 
 // ============================================================
