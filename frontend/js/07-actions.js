@@ -197,13 +197,18 @@ async function openTransferModal(id) {
   await UI.guard(
     { permission: ['transfer_pipette', 'manage_pipettes'], errorMsg: 'Нет прав на передачу' },
     async () => {
-  try {
-    const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-    if (lockRes.locked && !lockRes.mine) {
-      const proceed = await showLockWarning(lockRes, 'Передача в другой отдел');
-      if (!proceed) return;
-    }
-  } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
+      // 🆕 1. Проверяем блокировку и ставим свою
+      try {
+        const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+        if (lockRes.locked && !lockRes.mine) {
+          const proceed = await showLockWarning(lockRes, 'Передача в другой отдел');
+          if (!proceed) return;
+        }
+        await apiRequest(`/pipettes/${id}/lock`, 'POST');
+      } catch (e) {
+        showToast('Ошибка проверки блокировки', 'error');
+        return;
+      }
       
       const p = pipettes.find(x => x.id === id);
       if (!p) { showToast('Оборудование не найдено', 'error'); return; }
@@ -232,6 +237,10 @@ async function openTransferModal(id) {
 }
 
 function closeTransferModal() {
+  // 🆕 Снимаем блокировку
+  if (_transferPipetteId) {
+    apiRequest(`/pipettes/${_transferPipetteId}/lock`, 'DELETE').catch(() => {});
+  }
   UI.modal.close('transfer-modal');
   _transferPipetteId = null;
 }
