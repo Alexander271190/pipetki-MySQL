@@ -724,7 +724,6 @@ async function openQuickCalModal(id) {
       } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
 
       const p = pipettes.find(x => x.id === id);
-      const p = pipettes.find(x => x.id === id);
       if (!p) { showToast('Оборудование не найдено', 'error'); return; }
       document.getElementById('quick-cal-id').value = id;
       document.getElementById('quick-cal-pipette-info').innerHTML = `<strong>${esc(p.id)}</strong> — ${esc(p.model)} (${esc(p.department || 'без отдела')})`;
@@ -774,6 +773,14 @@ async function cancelSend(id) {
     showToast('Нет прав на отмену отправки', 'error');
     return;
   }
+
+  try {
+    const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+    if (lockRes.locked && !lockRes.mine) {
+      await showLockWarning(lockRes, 'Отмена отправки');
+      return;
+    }
+  } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
 
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
