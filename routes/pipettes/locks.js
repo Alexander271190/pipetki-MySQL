@@ -12,7 +12,10 @@ router.get('/:id/lock', authenticate, async (req, res) => {
     const lock = rows[0];
     if (lock.user_id === req.user.id) return res.json({ locked: true, mine: true });
     res.json({ locked: true, mine: false, lockedBy: lock.user_full_name });
-  } catch (e) { res.status(500).json({ error: 'Ошибка проверки' }); }
+  } catch (e) { 
+    console.error('GET /lock error:', e); 
+    res.status(500).json({ error: 'Ошибка проверки' }); 
+  }
 });
 
 router.post('/:id/lock', authenticate, async (req, res) => {
@@ -27,7 +30,10 @@ router.post('/:id/lock', authenticate, async (req, res) => {
     }
     await db.query('INSERT INTO edit_locks (pipette_id, user_id, user_full_name) VALUES (?, ?, ?)', [req.params.id, req.user.id, req.user.full_name]);
     res.json({ locked: true, mine: true });
-  } catch (e) { res.status(500).json({ error: 'Ошибка установки' }); }
+  } catch (e) { 
+    console.error('POST /lock error:', e); 
+    res.status(500).json({ error: 'Ошибка установки' }); 
+  }
 });
 
 router.delete('/:id/lock', authenticate, async (req, res) => {
@@ -39,6 +45,9 @@ router.delete('/:id/lock', authenticate, async (req, res) => {
       await logAction(req, 'Снятие блокировки', `Снята блокировка с ${req.params.id} (был: ${ex[0].user_full_name})`);
     }
     res.json({ message: 'Снята' });
-  } catch (e) { res.status(500).json({ error: 'Ошибка снятия' }); }
+  } catch (e) { 
+    console.error('DELETE /lock error:', e); 
+    res.status(500).json({ error: 'Ошибка снятия' }); 
+  }
 });
 module.exports = router;
