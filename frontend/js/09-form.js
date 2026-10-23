@@ -280,7 +280,7 @@ async function openModal(id) {
   );
 }
 
-async function closeModal() {
+async function closeModal(isCancel = false) {
   if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
 
   const editId = document.getElementById('edit-id').value;
@@ -299,7 +299,7 @@ async function closeModal() {
   document.getElementById('bc-rows-body').innerHTML = '';
   document.getElementById('bc-table-head').innerHTML = '';
   
-  if (editId && !_skipUnlockOnClose) {
+  if (editId && !_skipUnlockOnClose && !isCancel) {
     try { await apiRequest(`/pipettes/${editId}/lock`, 'DELETE'); } catch (e) {}
   }
   _skipUnlockOnClose = false;
@@ -746,10 +746,9 @@ async function openQuickCalModal(id) {
   );
 }
 
-function closeQuickCalModal() {
-  // 🆕 Снимаем блокировку при закрытии
+function closeQuickCalModal(isCancel = false) {
   const id = document.getElementById('quick-cal-id').value;
-  if (id) {
+  if (id && !isCancel) {
     apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
   }
   UI.modal.close('quick-cal-modal');
