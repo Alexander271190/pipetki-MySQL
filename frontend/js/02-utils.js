@@ -102,7 +102,7 @@ function showToast(msg, type) {
 let _confirmResolver = null;
 
 function showConfirm(message, options = {}) {
-  // 🛡️ Если уже открыт confirm — сначала закрываем предыдущий
+  
   if (_confirmResolver) {
     const prev = _confirmResolver;
     _confirmResolver = null;
@@ -122,6 +122,8 @@ function showConfirm(message, options = {}) {
     text.textContent  = message;
     okBtn.textContent = options.okText || 'ОК';
     okBtn.className   = 'btn ' + (options.okClass || 'btn-danger');
+    const cancelBtn = modal.querySelector('.confirm-actions .btn-secondary');
+    if (cancelBtn) cancelBtn.textContent = options.cancelText || 'Отмена';
 
     modal.classList.add('active');
   });
