@@ -236,9 +236,8 @@ async function openTransferModal(id) {
   );
 }
 
-function closeTransferModal() {
-  // 🆕 Снимаем блокировку
-  if (_transferPipetteId) {
+function closeTransferModal(isCancel = false) {
+  if (_transferPipetteId && !isCancel) {
     apiRequest(`/pipettes/${_transferPipetteId}/lock`, 'DELETE').catch(() => {});
   }
   UI.modal.close('transfer-modal');
