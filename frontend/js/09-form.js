@@ -138,10 +138,11 @@ async function openModal(id) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
                     
-         if (lockRes.locked && !lockRes.mine) {
+           if (lockRes.locked && !lockRes.mine) {
             const name = lockRes.lockedBy;
             const pos = lockRes.lockedByPosition;
-            const posText = (pos && pos !== 'Сотрудник') ? ` (${pos})` : '';
+            const posText = pos ? ` (${pos})` : '';
+            
             const ok = await showConfirm(
               `Пользователь ${name}${posText} уже редактирует данный прибор.\n\nВы хотите сбросить блокировку?`,
               { icon: '<i class="fa-solid fa-lock" style="color: var(--warn);"></i>', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
@@ -168,14 +169,20 @@ async function openModal(id) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
                 _skipUnlockOnClose = true; 
                 
+                const name = r.lockedBy || '';
                 const pos = r.lockedByPosition;
-                const name = r.lockedBy ? ` (${r.lockedBy})` : ' ';
-                const posText = (pos && pos !== 'Сотрудник') ? pos : 'Другой пользователь';
+                                
+                let displayUser = '';
+                if (pos) {
+                  displayUser = `${name} (${pos})`;
+                } else {
+                  displayUser = 'Другой пользователь';
+                }
                 
                 await savePipette(null, true); 
                
                 await showConfirm(
-                  `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${posText}${name}.`,
+                  `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`,
                   { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>', title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
                 );
               }
