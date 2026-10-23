@@ -137,26 +137,24 @@ async function openModal(id) {
            if (id) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-          
-          // ЕСЛИ ЗАБЛОКИРОВАНО ДРУГИМ
+                    
           if (lockRes.locked && !lockRes.mine) {
+            const pos = lockRes.lockedByPosition || 'Сотрудник';
+            const name = lockRes.lockedBy;
+                        
             const ok = await showConfirm(
-              `Оборудование заблокировано для редактирования: ${lockRes.lockedBy}.\nСнять блокировку?`,
-              { icon: '🔒', title: 'Внимание', okText: 'Снять блокировку', okClass: 'btn-warning' }
+              `Пользователь ${name} (${pos}) уже редактирует данный прибор.\n\nВы хотите сбросить блокировку?`,
+              { icon: '🔒', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
             );
-            
-            // Если нажали "Отмена" — прерываем открытие
+                      
             if (!ok) return;
-            
-            // Если нажали "Снять" — удаляем чужую блокировку
+                      
             await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
             showToast('Блокировка снята', 'success');
           }
-
-          // Ставим свою блокировку
+          
           await apiRequest(`/pipettes/${id}/lock`, 'POST');
-
-          // Запускаем таймер проверки
+          
           if (_lockCheckTimer) clearInterval(_lockCheckTimer);
           _lockCheckTimer = setInterval(async () => {
             const modalEl = document.getElementById('modal');
@@ -165,16 +163,19 @@ async function openModal(id) {
             }
             try {
               const r = await apiRequest(`/pipettes/${id}/lock`);
-              // Если блокировку увели
+                            
               if (!r.locked || !r.mine) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
-                showToast('Сессия завершена. Сохраняем...', 'warn');
-                
-                // Флаг: не удалять блокировку нового владельца при закрытии
                 _skipUnlockOnClose = true; 
                 
-                // Сохраняем принудительно (force = true), чтобы не было красной ошибки
+                const pos = r.lockedByPosition || 'Другой пользователь';
+                const name = r.lockedBy ? ` (${r.lockedBy})` : ' ';
                 await savePipette(null, true); 
+               
+                await showConfirm(
+                  `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${pos}${name}.`,
+                  { icon: 'ℹ️', title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
+                );
               }
             } catch (e) {}
           }, 3000);
@@ -185,8 +186,7 @@ async function openModal(id) {
           }
         }
       }
-
-      // ─── Открытие модалки ───
+      
       const tabsEl = document.getElementById('add-tabs');
       if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
 
