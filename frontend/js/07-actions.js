@@ -309,10 +309,13 @@ async function saveTransfer() {
     showToast(`Передано в «${newDept}»`, 'success');
     closeTransferModal();
     await loadPipetteData();
-  } catch (e) {
-    errEl.textContent = e.message || 'Ошибка передачи';
+    } catch (e) {
+    if (e.status === 409) {
+      errEl.textContent = 'Прибор сейчас редактируется другим пользователем. Передача невозможна.';
+    } else {
+      errEl.textContent = e.message || 'Ошибка передачи';
+    }
   }
-}
 
 // ============================================================
 // ИСТОРИЯ
