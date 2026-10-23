@@ -346,7 +346,7 @@ async function openBulkReturnModal() {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
           if (lockRes.locked && !lockRes.mine) {
-            await showLockWarning(lockRes, 'Массовая отправка');
+            await showLockWarning(lockRes, 'Массовый возврат');
             return;
           }
         } catch (e) {}
@@ -595,7 +595,7 @@ async function openBulkResponsibleModal() {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
           if (lockRes.locked && !lockRes.mine) {
-            await showLockWarning(lockRes, 'Массовая отправка');
+            await showLockWarning(lockRes, 'Массовая смена ответственного');
             return;
           }
         } catch (e) {}
