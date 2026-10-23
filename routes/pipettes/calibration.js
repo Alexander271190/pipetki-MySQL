@@ -30,6 +30,8 @@ router.post('/:id/calibration', authenticate, requireAnyPermission(['quick_calib
   let replId = null;
 
   try {
+  const [lockChk] = await db.query('SELECT user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+  if (lockChk.length) return res.status(409).json({ error: `Прибор заблокирован: ${lockChk[0].user_full_name}` });
     await withTransaction(async (conn) => {
       const exist = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
       wasSent = !!exist.sent_for_calibration;
