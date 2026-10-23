@@ -208,6 +208,8 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
         );
         if (!rows.length) { notFound.push(id); continue; }
         if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
+        const [lock] = await conn.query('SELECT user_full_name FROM edit_locks WHERE pipette_id = ?', [id]);
+        if (lock.length) { skipped.push(`${id} (заблокирован: ${lock[0].user_full_name})`); continue; }
         if (!isExternalType(rows[0].equipment_type)) { skipped.push(id); continue; }
         if (rows[0].sent_for_calibration) { skipped.push(id); continue; }
         if (rows[0].replacing) { skipped.push(id); continue; }
@@ -320,8 +322,9 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
           [item.id]
         );
         if (!rows.length) { skipped.push(item.id); continue; }
-        if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
-        // 🆕 Если прибор УЖЕ на поверке, разрешаем возврат (даже если тип стал internal)
+        if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }         
+        const [lock] = await conn.query('SELECT user_full_name FROM edit_locks WHERE pipette_id = ?', [item.id]);
+        if (lock.length) { skipped.push(`${item.id} (заблокирован: ${lock[0].user_full_name})`); continue; }
         if (!rows[0].sent_for_calibration && !isExternalType(rows[0].equipment_type)) { 
           skipped.push(item.id); 
           continue; 
@@ -412,6 +415,8 @@ router.post('/bulk-change-responsible', authenticate, requireAnyPermission(['bul
         );
         if (!rows.length) { skipped.push(id); continue; }
         if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
+        const [lock] = await conn.query('SELECT user_full_name FROM edit_locks WHERE pipette_id = ?', [id]);
+        if (lock.length) { skipped.push(`${id} (заблокирован: ${lock[0].user_full_name})`); continue; }
         if (rows[0].responsible === resp) { skipped.push(id); continue; }
 
         await conn.query(
