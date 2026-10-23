@@ -188,13 +188,19 @@ async function openModal(id) {
               }
             } catch (e) {}
           }, 3000);
-        } catch (e) {
+                } catch (e) {
+          if (e.status === 429) {
+            
+            showToast('Секунду, синхронизация...', 'warn');
+            setTimeout(() => openModal(id), 500); 
+            return;
+          }
           if (e.status === 409) {
             showToast(`Заблокировано: ${e.response?.lockedBy || ''}`, 'error');
             return;
           }
+          return;
         }
-      }
       
       const tabsEl = document.getElementById('add-tabs');
       if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
