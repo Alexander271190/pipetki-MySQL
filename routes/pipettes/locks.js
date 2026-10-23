@@ -34,22 +34,31 @@ router.get('/:id/lock', authenticate, async (req, res) => {
 
 router.post('/:id/lock', authenticate, async (req, res) => {
   try {
-    const [ex] = await db.query('SELECT * FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
-    if (ex.length > 0) {
-      if (ex[0].user_id === req.user.id) {
-        await db.query('UPDATE edit_locks SET locked_at = CURRENT_TIMESTAMP WHERE pipette_id = ?', [req.params.id]);
-        return res.json({ locked: true, mine: true });
-      }
-      return res.status(409).json({ error: 'Заблокировано', lockedBy: ex[0].user_full_name });
+    await db.query(
+      `INSERT INTO edit_locks (pipette_id, user_id, user_full_name) 
+       VALUES (?, ?, ?) 
+       ON DUPLICATE KEY UPDATE locked_at = IF(user_id = VALUES(user_id), CURRENT_TIMESTAMP, locked_at)`,
+      [req.params.id, req.user.id, req.user.full_name]
+    );
+
+    const [rows] = await db.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+        
+    if (!rows.length) {
+      return res.status(500).json({ error: 'Не удалось установить блокировку' });
     }
-    await db.query('INSERT INTO edit_locks (pipette_id, user_id, user_full_name) VALUES (?, ?, ?)', [req.params.id, req.user.id, req.user.full_name]);
-    res.json({ locked: true, mine: true });
+    
+    const lock = rows[0];
+
+    if (lock.user_id === req.user.id) {
+      res.json({ locked: true, mine: true });
+    } else {
+      res.status(409).json({ error: 'Заблокировано', lockedBy: lock.user_full_name });
+    }
   } catch (e) { 
     console.error('POST /lock error:', e); 
     res.status(500).json({ error: 'Ошибка установки' }); 
   }
 });
-
 router.delete('/:id/lock', authenticate, async (req, res) => {
   try {
     const [ex] = await db.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
