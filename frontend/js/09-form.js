@@ -715,13 +715,22 @@ async function openQuickCalModal(id) {
   await UI.guard(
     { permission: ['quick_calibration', 'manage_pipettes'], errorMsg: 'Доступ запрещён' },
     async () => {
-     try {
+      // 🆕 1. Проверяем блокировку и ставим свою (как при редактировании)
+      try {
         const lockRes = await apiRequest(`/pipettes/${id}/lock`);
         if (lockRes.locked && !lockRes.mine) {
           const proceed = await showLockWarning(lockRes, 'Проведение быстрой поверки');
-          if (!proceed) return; 
+          if (!proceed) return;
         }
-      } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
+        await apiRequest(`/pipettes/${id}/lock`, 'POST'); // Ставим свою блокировку
+      } catch (e) {
+        if (e.status === 409) {
+          showToast(`Заблокировано: ${e.response?.lockedBy || ''}`, 'error');
+          return;
+        }
+        showToast('Ошибка проверки блокировки', 'error');
+        return;
+      }
 
       const p = pipettes.find(x => x.id === id);
       if (!p) { showToast('Оборудование не найдено', 'error'); return; }
@@ -735,6 +744,16 @@ async function openQuickCalModal(id) {
       UI.modal.open('quick-cal-modal');
     }
   );
+}
+
+function closeQuickCalModal() {
+  // 🆕 Снимаем блокировку при закрытии
+  const id = document.getElementById('quick-cal-id').value;
+  if (id) {
+    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+  }
+  UI.modal.close('quick-cal-modal');
+  document.getElementById('quick-cal-id').value = '';
 }
 
 function closeQuickCalModal() {
