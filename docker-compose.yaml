@@ -21,7 +21,7 @@ services:
       MYSQL_DATABASE: pipette
       MYSQL_USER: pipette
       MYSQL_PASSWORD: Seno16/1978S
-      TZ: UTC
+      TZ: Asia/Krasnoyarsk
 
     volumes:
       - ./mysqldata:/var/lib/mysql
@@ -55,7 +55,7 @@ services:
 
     environment:
       PORT: 3000
-      TZ: UTC
+      TZ: Asia/Krasnoyarsk
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: pipette
