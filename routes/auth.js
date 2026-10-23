@@ -175,8 +175,8 @@ router.post('/stop-impersonate', allowWhenPasswordMustChange, authenticate, asyn
     }
 
     const admin = adminRows[0];
-
-        // 🆕 Логируем возврат от имени админа (создаём временный req)
+           
+    await db.query('DELETE FROM edit_locks WHERE user_id = ?', [req.user.id]);
     const adminReq = { user: { id: admin.id, full_name: admin.full_name } };
     await logAction(adminReq, 'Возврат к своей учётной записи', `Работал под: ${req.user.full_name} (${req.user.login})`);
 
