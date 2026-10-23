@@ -7,6 +7,8 @@ const { logAction } = require('../../utils/audit');
 
 router.get('/:id/lock', authenticate, async (req, res) => {
   try {
+    await db.query('DELETE FROM edit_locks WHERE locked_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)');
+
     const [rows] = await db.query(`
       SELECT l.*, u.position AS actual_position 
       FROM edit_locks l
