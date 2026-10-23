@@ -138,17 +138,17 @@ async function openModal(id) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
                     
-          if (lockRes.locked && !lockRes.mine) {
-            const pos = lockRes.lockedByPosition || 'Сотрудник';
+         if (lockRes.locked && !lockRes.mine) {
             const name = lockRes.lockedBy;
-                        
+            const pos = lockRes.lockedByPosition;
+            const posText = (pos && pos !== 'Сотрудник') ? ` (${pos})` : '';
             const ok = await showConfirm(
-              `Пользователь ${name} (${pos}) уже редактирует данный прибор.\n\nВы хотите сбросить блокировку?`,
-              { icon: '<i class="fa-solid fa-lock"></i>', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
+              `Пользователь ${name}${posText} уже редактирует данный прибор.\n\nВы хотите сбросить блокировку?`,
+              { icon: '<i class="fa-solid fa-lock" style="color: #d97706;"></i>', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
             );
-                      
+            
             if (!ok) return;
-                      
+            
             await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
             showToast('Блокировка снята', 'success');
           }
@@ -164,17 +164,19 @@ async function openModal(id) {
             try {
               const r = await apiRequest(`/pipettes/${id}/lock`);
                             
-              if (!r.locked || !r.mine) {
+               if (!r.locked || !r.mine) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
                 _skipUnlockOnClose = true; 
                 
-                const pos = r.lockedByPosition || 'Другой пользователь';
+                const pos = r.lockedByPosition;
                 const name = r.lockedBy ? ` (${r.lockedBy})` : ' ';
+                const posText = (pos && pos !== 'Сотрудник') ? pos : 'Другой пользователь';
+                
                 await savePipette(null, true); 
                
                 await showConfirm(
-                  `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${pos}${name}.`,
-                  { icon: '<i class="fa-solid fa-circle-info"></i>', title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
+                  `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${posText}${name}.`,
+                  { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>', title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
                 );
               }
             } catch (e) {}
