@@ -134,11 +134,11 @@ async function openModal(id) {
       errorMsg: isEdit ? 'Нет прав на редактирование' : 'Нет прав на добавление'
     },
     async () => {
-           if (id) {
+      if (id) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
                     
-           if (lockRes.locked && !lockRes.mine) {
+          if (lockRes.locked && !lockRes.mine) {
             const name = lockRes.lockedBy;
             const pos = lockRes.lockedByPosition;
             const posText = pos ? ` (${pos})` : '';
@@ -165,7 +165,7 @@ async function openModal(id) {
             try {
               const r = await apiRequest(`/pipettes/${id}/lock`);
                             
-               if (!r.locked || !r.mine) {
+              if (!r.locked || !r.mine) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
                 _skipUnlockOnClose = true; 
                 
@@ -188,9 +188,8 @@ async function openModal(id) {
               }
             } catch (e) {}
           }, 3000);
-                } catch (e) {
+        } catch (e) {
           if (e.status === 429) {
-            
             showToast('Секунду, синхронизация...', 'warn');
             setTimeout(() => openModal(id), 500); 
             return;
@@ -201,7 +200,8 @@ async function openModal(id) {
           }
           return;
         }
-      
+      } // <--- ВОТ ЗДЕСЬ БЫЛА ПРОПУЩЕНА ЭТА СКОБКА
+
       const tabsEl = document.getElementById('add-tabs');
       if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
 
@@ -220,7 +220,6 @@ async function openModal(id) {
         const p = pipettes.find(x => x.id === id);
         if (!p) {
           showToast('Оборудование не найдено', 'error');
-          // снимаем блокировку, раз не открыли
           try { await apiRequest(`/pipettes/${id}/lock`, 'DELETE'); } catch (e) {}
           if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
           return;
