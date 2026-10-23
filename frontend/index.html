@@ -257,7 +257,7 @@
         <input type="hidden" id="edit-id">
         <div id="form-fields-container"></div>
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal(true)">Отмена</button>
           <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
         </div>
       </form>
@@ -286,7 +286,7 @@
       <div id="bc-error" class="auth-error" style="margin-top:12px;"></div>
 
       <div class="form-actions" style="justify-content:space-between;margin-top:16px;">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal(true)">Отмена</button>
         <button type="button" class="btn btn-success" onclick="saveBulkRows(event)" id="bc-submit-btn">
           <i class="fa-solid fa-floppy-disk"></i> Создать <span id="bc-submit-count">0</span>
         </button>
@@ -327,7 +327,7 @@
       <div id="transfer-error" class="auth-error" style="margin-top:12px;"></div>
 
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeTransferModal()">Отмена</button>
+        <button type="button" class="btn btn-secondary" onclick="closeTransferModal(true)">Отмена</button>
         <button type="submit" class="btn btn-primary">
           <i class="fa-solid fa-right-left"></i> Передать
         </button>
@@ -371,7 +371,7 @@
         <textarea id="quick-cal-note" rows="2" placeholder="результаты, отклонения, особые отметки"></textarea>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeQuickCalModal()">Отмена</button>
+        <button type="button" class="btn btn-secondary" onclick="closeQuickCalModal(true)">Отмена</button>
         <button type="button" class="btn btn-success" onclick="saveQuickCalibration()"><i class="fa-solid fa-floppy-disk"></i> Записать</button>
       </div>
     </form>
