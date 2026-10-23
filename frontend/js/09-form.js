@@ -715,11 +715,11 @@ async function openQuickCalModal(id) {
   await UI.guard(
     { permission: ['quick_calibration', 'manage_pipettes'], errorMsg: 'Доступ запрещён' },
     async () => {
-       try {
+     try {
         const lockRes = await apiRequest(`/pipettes/${id}/lock`);
         if (lockRes.locked && !lockRes.mine) {
-          await showLockWarning(lockRes, 'Проведение быстрой поверки');
-          return; 
+          const proceed = await showLockWarning(lockRes, 'Проведение быстрой поверки');
+          if (!proceed) return; 
         }
       } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
 
@@ -777,11 +777,11 @@ async function cancelSend(id) {
   try {
     const lockRes = await apiRequest(`/pipettes/${id}/lock`);
     if (lockRes.locked && !lockRes.mine) {
-      await showLockWarning(lockRes, 'Отмена отправки');
-      return;
+      const proceed = await showLockWarning(lockRes, 'Отмена отправки');
+      if (!proceed) return;
     }
   } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
-
+ 
   const p = pipettes.find(x => x.id === id);
   if (!p) return;
 
