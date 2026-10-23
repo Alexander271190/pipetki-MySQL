@@ -1,4 +1,5 @@
 'use strict';
+let _lockCheckTimer = null;
 
 // ============================================================
 // ДИНАМИЧЕСКАЯ ФОРМА
@@ -114,7 +115,6 @@ let _bulkFields = [];
 const BULK_MAX_ROWS = 100;
 
 async function openModal(id) {
-  // 🆕 Защита: если типы ещё не загрузились — подгружаем
   if (!Array.isArray(_equipmentTypes) || _equipmentTypes.length === 0) {
     try {
       const types = await apiRequest('/settings/equipment-types');
@@ -123,8 +123,8 @@ async function openModal(id) {
       console.warn('Не удалось загрузить типы оборудования:', e.message);
     }
   }
-
   const isEdit = !!id;
+
   await UI.guard(
     {
       permission: isEdit
@@ -133,13 +133,50 @@ async function openModal(id) {
       errorMsg: isEdit ? 'Нет прав на редактирование' : 'Нет прав на добавление'
     },
     async () => {
-      const tabsEl = document.getElementById('add-tabs');
+      // ✅ Блокировка ставится ТОЛЬКО после успешной проверки прав
+      if (id) {
+        try {
+          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          if (lockRes.locked && !lockRes.mine) {
+            const ok = await showConfirm(
+              `Заблокировано: ${lockRes.lockedBy}.\nСнять блокировку?`,
+              { icon: '🔒', okText: 'Снять', okClass: 'btn-warning' }
+            );
+            if (!ok) return;
+            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
+            showToast('Блокировка снята', 'success');
+          }
+          await apiRequest(`/pipettes/${id}/lock`, 'POST');
 
+          if (_lockCheckTimer) clearInterval(_lockCheckTimer);
+          _lockCheckTimer = setInterval(async () => {
+            const modalEl = document.getElementById('modal');
+            if (!modalEl || !modalEl.classList.contains('active')) {
+              clearInterval(_lockCheckTimer); _lockCheckTimer = null; return;
+            }
+            try {
+              const r = await apiRequest(`/pipettes/${id}/lock`);
+              if (!r.locked || !r.mine) {
+                clearInterval(_lockCheckTimer); _lockCheckTimer = null;
+                showToast('Сессия завершена. Сохраняем...', 'warn');
+                await savePipette();
+              }
+            } catch (e) {}
+          }, 3000);
+        } catch (e) {
+          if (e.status === 409) {
+            showToast(`Заблокировано: ${e.response?.lockedBy || ''}`, 'error');
+            return;
+          }
+        }
+      }
+
+      // ─── Открытие модалки ───
+      const tabsEl = document.getElementById('add-tabs');
       if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
 
       _addTab = 'single';
       switchAddTab('single');
-
       UI.modal.open('modal');
 
       if (!id) {
@@ -151,7 +188,13 @@ async function openModal(id) {
 
       if (isEdit) {
         const p = pipettes.find(x => x.id === id);
-        if (!p) { showToast('Оборудование не найдено', 'error'); return; }
+        if (!p) {
+          showToast('Оборудование не найдено', 'error');
+          // снимаем блокировку, раз не открыли
+          try { await apiRequest(`/pipettes/${id}/lock`, 'DELETE'); } catch (e) {}
+          if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
+          return;
+        }
 
         document.getElementById('modal-title').innerHTML =
           '<i class="fa-solid fa-pen"></i> Редактировать оборудование';
@@ -176,19 +219,19 @@ async function openModal(id) {
         document.getElementById('edit-id').value = '';
 
         let nextId = '';
-try {
-  const res = await apiRequest('/pipettes/next-id?type=pipette');
-  nextId = res.nextId;
-} catch (e) {
-  console.warn('Не удалось получить next ID:', e.message);
-}
-const defaults = {
-  id: nextId, // <- ДОБАВИТЬ
-  lastCalibration: todayStr(),
-  interval: 12,
-  result: 'pass',
-  active: 'true'
-};
+        try {
+          const res = await apiRequest('/pipettes/next-id?type=pipette');
+          nextId = res.nextId;
+        } catch (e) {
+          console.warn('Не удалось получить next ID:', e.message);
+        }
+        const defaults = {
+          id: nextId,
+          lastCalibration: todayStr(),
+          interval: 12,
+          result: 'pass',
+          active: 'true'
+        };
 
         if (currentUser.role === 'admin') {
           // admin — ничего
@@ -208,7 +251,12 @@ const defaults = {
   );
 }
 
-function closeModal() {
+async function closeModal() {
+  if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
+
+  const editId = document.getElementById('edit-id').value;
+
+  
   UI.modal.close('modal');
   document.getElementById('edit-id').value = '';
   document.getElementById('form-fields-container').innerHTML = '';
@@ -222,6 +270,11 @@ function closeModal() {
   _bulkFields = [];
   document.getElementById('bc-rows-body').innerHTML = '';
   document.getElementById('bc-table-head').innerHTML = '';
+
+  
+  if (editId) {
+    try { await apiRequest(`/pipettes/${editId}/lock`, 'DELETE'); } catch (e) {}
+  }
 }
 
 function switchAddTab(tab) {
