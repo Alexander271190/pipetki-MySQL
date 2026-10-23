@@ -715,6 +715,15 @@ async function openQuickCalModal(id) {
   await UI.guard(
     { permission: ['quick_calibration', 'manage_pipettes'], errorMsg: 'Доступ запрещён' },
     async () => {
+       try {
+        const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+        if (lockRes.locked && !lockRes.mine) {
+          await showLockWarning(lockRes, 'Проведение быстрой поверки');
+          return; 
+        }
+      } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
+
+      const p = pipettes.find(x => x.id === id);
       const p = pipettes.find(x => x.id === id);
       if (!p) { showToast('Оборудование не найдено', 'error'); return; }
       document.getElementById('quick-cal-id').value = id;
