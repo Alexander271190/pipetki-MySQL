@@ -252,6 +252,26 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
+// 🆕 Универсальное окно блокировки (используется везде)
+// ============================================================
+async function showLockWarning(lockRes, actionName = 'выполнить действие') {
+  const name = lockRes.lockedBy || 'Другой пользователь';
+  const pos = lockRes.lockedByPosition;
+  const posText = pos ? ` (${pos})` : '';
+  
+  await showConfirm(
+    `Пользователь ${name}${posText} уже редактирует этот прибор.\n\n${actionName} невозможно.`,
+    { 
+      icon: '<i class="fa-solid fa-lock" style="color: var(--warn);"></i>', 
+      title: 'Заблокировано', 
+      okText: 'ОК', 
+      cancelText: 'Закрыть', 
+      okClass: 'btn-secondary' 
+    }
+  );
+}
+
+// ============================================================
 // ВАЛИДАЦИЯ ПАРОЛЯ (клиент)
 // ============================================================
 function validatePasswordClient(pwd) {
