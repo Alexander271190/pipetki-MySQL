@@ -756,10 +756,6 @@ function closeQuickCalModal() {
   document.getElementById('quick-cal-id').value = '';
 }
 
-function closeQuickCalModal() {
-  UI.modal.close('quick-cal-modal');
-}
-
 async function saveQuickCalibration() {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
