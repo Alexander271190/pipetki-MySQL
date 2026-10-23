@@ -306,7 +306,7 @@ async function saveTransfer() {
       responsible: newResp,
     });
 
-    showToast(`Передано в «${newDept}»`, 'success');
+   showToast(`Передано в «${newDept}»`, 'success');
     closeTransferModal();
     await loadPipetteData();
     } catch (e) {
@@ -316,6 +316,7 @@ async function saveTransfer() {
       errEl.textContent = e.message || 'Ошибка передачи';
     }
   }
+} 
 
 // ============================================================
 // ИСТОРИЯ
