@@ -144,7 +144,7 @@ async function openModal(id) {
                         
             const ok = await showConfirm(
               `Пользователь ${name} (${pos}) уже редактирует данный прибор.\n\nВы хотите сбросить блокировку?`,
-              { icon: '🔒', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
+              { icon: '<i class="fa-solid fa-lock"></i>', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
             );
                       
             if (!ok) return;
@@ -174,7 +174,7 @@ async function openModal(id) {
                
                 await showConfirm(
                   `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${pos}${name}.`,
-                  { icon: 'ℹ️', title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
+                  { icon: '<i class="fa-solid fa-circle-info"></i>', title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
                 );
               }
             } catch (e) {}
