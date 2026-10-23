@@ -197,13 +197,13 @@ async function openTransferModal(id) {
   await UI.guard(
     { permission: ['transfer_pipette', 'manage_pipettes'], errorMsg: 'Нет прав на передачу' },
     async () => {
-      try {
-        const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-        if (lockRes.locked && !lockRes.mine) {
-          await showLockWarning(lockRes, 'Передача в другой отдел');
-          return;
-        }
-      } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
+  try {
+    const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+    if (lockRes.locked && !lockRes.mine) {
+      const proceed = await showLockWarning(lockRes, 'Передача в другой отдел');
+      if (!proceed) return;
+    }
+  } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
       
       const p = pipettes.find(x => x.id === id);
       if (!p) { showToast('Оборудование не найдено', 'error'); return; }
