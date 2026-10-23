@@ -10,6 +10,15 @@ async function openBulkSendModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
+      for (const id of selected) {
+        try {
+          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          if (lockRes.locked && !lockRes.mine) {
+            await showLockWarning(lockRes, 'Массовая отправка');
+            return;
+          }
+        } catch (e) {}
+      }
       const toSend = selected.filter(id => {
         const p = pipettes.find(x => x.id === id);
         return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
@@ -333,6 +342,15 @@ async function openBulkReturnModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
+      for (const id of selected) {
+        try {
+          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          if (lockRes.locked && !lockRes.mine) {
+            await showLockWarning(lockRes, 'Массовая отправка');
+            return;
+          }
+        } catch (e) {}
+      }
       const sentItems = selected
         .map(id => pipettes.find(x => x.id === id))
         .filter(p => p && p.sent_for_calibration && isExternalCalibration(p.equipment_type));
@@ -573,6 +591,15 @@ async function openBulkResponsibleModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
+      for (const id of selected) {
+        try {
+          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          if (lockRes.locked && !lockRes.mine) {
+            await showLockWarning(lockRes, 'Массовая отправка');
+            return;
+          }
+        } catch (e) {}
+      }
 
       if (selected.length === 0) {
         showToast('Не выбрано ни одной единицы', 'error');
