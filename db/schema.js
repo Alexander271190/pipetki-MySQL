@@ -114,6 +114,16 @@ async function initSchema() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    
+        await conn.query(`
+      CREATE TABLE IF NOT EXISTS edit_locks (
+        pipette_id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        user_full_name VARCHAR(255) NOT NULL,
+        locked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (pipette_id) REFERENCES pipettes(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS calibration_history (
