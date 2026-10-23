@@ -22,12 +22,14 @@ router.get('/:id/lock', authenticate, async (req, res) => {
         
     const position = lock.actual_position || lock.user_position || '';
     
-    res.json({ 
+        res.json({ 
       locked: true, 
       mine: false, 
       lockedBy: lock.user_full_name,
-      lockedByPosition: position
+      lockedByPosition: position,
+      pipetteId: req.params.id 
     });
+    
   } catch (e) { 
     console.error('GET /lock error:', e); 
     res.status(500).json({ error: 'Ошибка проверки' }); 
