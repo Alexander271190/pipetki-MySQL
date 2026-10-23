@@ -139,7 +139,9 @@ router.post('/:id/transfer', authenticate, requireAnyPermission(['transfer_pipet
   let p;
   let oldDept;
 
-  try {
+  try {    
+  const [lockChk] = await db.query('SELECT user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+  if (lockChk.length) return res.status(409).json({ error: `Прибор заблокирован: ${lockChk[0].user_full_name}` });
     await withTransaction(async (conn) => {
       p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
       oldDept = p.department || '';
@@ -193,6 +195,8 @@ router.post('/:id/cancel-send', authenticate, requireAnyPermission(['bulk_send',
   let replId = null;
 
   try {
+  const [lockChk] = await db.query('SELECT user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+  if (lockChk.length) return res.status(409).json({ error: `Прибор заблокирован: ${lockChk[0].user_full_name}` });
     await withTransaction(async (conn) => {
       p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
 
