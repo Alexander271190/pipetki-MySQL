@@ -198,7 +198,7 @@ async function openModal(id) {
           }
           return;
         }
-      } // <--- ВОТ ЗДЕСЬ БЫЛА ПРОПУЩЕНА ЭТА СКОБКА
+      } 
 
       const tabsEl = document.getElementById('add-tabs');
       if (tabsEl) tabsEl.style.display = isEdit ? 'none' : 'flex';
@@ -214,8 +214,8 @@ async function openModal(id) {
         if (bar) bar.style.display = 'none';
       }
 
-      if (isEdit) {
-        const p = pipettes.find(x => x.id === id);
+            if (isEdit) {
+        let p = pipettes.find(x => x.id === id);
         if (!p) {
           showToast('Оборудование не найдено', 'error');
           try { await apiRequest(`/pipettes/${id}/lock`, 'DELETE'); } catch (e) {}
@@ -223,6 +223,20 @@ async function openModal(id) {
           return;
         }
 
+        // 🆕 После перехвата блокировки загружаем свежие данные с сервера,
+        // чтобы не перезаписать только что сохраненные данные другого пользователя.
+        try {
+          const fresh = await apiRequest(`/pipettes/${encodeURIComponent(id)}`);
+          if (fresh && fresh.id) {
+            p = { ...p, ...fresh };
+            // Обновляем локальный кэш pipettes
+            const idx = pipettes.findIndex(x => x.id === id);
+            if (idx !== -1) pipettes[idx] = { ...pipettes[idx], ...fresh };
+          }
+        } catch (e) {
+          console.warn('Не удалось загрузить свежие данные:', e.message);
+        }
+        
         document.getElementById('modal-title').innerHTML =
           '<i class="fa-solid fa-pen"></i> Редактировать оборудование';
         document.getElementById('edit-id').value = p.id;
