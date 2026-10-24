@@ -160,6 +160,15 @@ async function openModal(id) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
                 _skipUnlockOnClose = true; 
                 
+                // 🆕 Принудительно сохраняем форму перед закрытием
+                const formEl = document.getElementById('pipette-form');
+                if (formEl) {
+                  formEl.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                }
+                
+                // Ждем 800мс, чтобы PUT-запрос ушел на сервер и сохранился
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
                 const name = r.lockedBy || '';
                 const pos = r.lockedByPosition;
                                 
@@ -169,9 +178,7 @@ async function openModal(id) {
                 } else {
                   displayUser = 'Другой пользователь';
                 }
-                
-                await savePipette(null, true); 
-               
+                                               
                  await showConfirm(
                   `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`,
                   { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>', title: 'Сессия завершена', okText: 'ОК', hideCancel: true, okClass: 'btn-secondary' }
@@ -617,8 +624,8 @@ async function savePipette(e, force = false) {
   const fieldElements = {};
   const editingPipette = isEdit ? pipettes.find(p => p.id === editId) : null;
   
-  // Если force === true, мы НЕ отправляем updatedAt, чтобы сервер не выдал 409 Conflict
-  if (isEdit && editingPipette && editingPipette.updated_at && !force) {
+  const isForceSave = force || _skipUnlockOnClose; 
+  if (isEdit && editingPipette && editingPipette.updated_at && !isForceSave) {
     payload.updatedAt = editingPipette.updated_at;
   }
 
