@@ -29,6 +29,7 @@ function invalidateUsersCache() {
 let _rowActionsMenu = null;
 let _transferLockTimer = null;
 let _skipTransferUnlock = false;
+let _calFormLockedId = null;
 
 async function openUserActions(ev, userId) {
   ev.stopPropagation();
