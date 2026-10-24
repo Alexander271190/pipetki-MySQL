@@ -730,13 +730,16 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
   try {
    const result = await withTransaction(async (conn) => {
    const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
-     if (updates.updatedAt && p.updated_at) {
-    const clientTime = new Date(updates.updatedAt).getTime();
-    const dbTime = new Date(p.updated_at).getTime();
-       if (Math.abs(clientTime - dbTime) > 1000) {
-    const err = new Error('Запись была изменена другим пользователем. Пожалуйста, обновите страницу.');
+          const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+      const isLockMine = lockChk.length === 0 || lockChk[0].user_id === req.user.id;
+
+      if (updates.updatedAt && p.updated_at && isLockMine) {
+        const clientTime = new Date(updates.updatedAt).getTime();
+        const dbTime = new Date(p.updated_at).getTime();
+        if (Math.abs(clientTime - dbTime) > 1000) {
+          const err = new Error('Запись была изменена другим пользователем. Пожалуйста, обновите страницу.');
           err.status = 409;
-        throw err;
+          throw err;
         }
       }
       if (updates.department !== undefined && req.user.role !== 'admin' && updates.department !== p.department) {
