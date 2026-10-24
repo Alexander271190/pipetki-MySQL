@@ -71,9 +71,11 @@ router.post('/:id/lock', authenticate, async (req, res) => {
     } else {
       return res.status(409).json({ error: 'Заблокировано', lockedBy: lock.user_full_name });
     }
-  } catch (e) {
+    } catch (e) {
     console.error('POST /lock error:', e);
-    // 🆕 Если база данных выдала Deadlock, просто просим клиент повторить запрос
+    if (e.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
     if (e.code === 'ER_LOCK_DEADLOCK' || e.code === 'ER_LOCK_WAIT_TIMEOUT') {
       return res.status(429).json({ error: 'База данных занята, попробуйте еще раз' });
     }
