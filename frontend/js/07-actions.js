@@ -255,7 +255,7 @@ async function openTransferModal(id) {
             await showConfirm(
               `Сессия завершена. Прибор забрал в работу: ${displayUser}.\n\nПередача не выполнена.`,
               { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>',
-                title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
+                title: 'Сессия завершена', okText: 'ОК', hideCancel: true, okClass: 'btn-secondary' }
             );
           }
         } catch (e) {}
