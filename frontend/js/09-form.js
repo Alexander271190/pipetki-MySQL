@@ -689,7 +689,6 @@ async function savePipette(e, force = false) {
     }
     showToast(e.message || 'Ошибка сохранения', 'error');
   }
-  }
 }
 async function deletePipette(id) {
   await refreshCurrentUser();
