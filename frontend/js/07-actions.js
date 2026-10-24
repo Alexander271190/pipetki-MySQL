@@ -448,6 +448,7 @@ async function openCalibrationForm() {
         if (!proceed) return;
       }
       await apiRequest(`/pipettes/${id}/lock`, 'POST');
+      _calFormLockedId = id;
     } catch (e) {
       showToast('Ошибка проверки блокировки', 'error');
       return;
@@ -461,8 +462,16 @@ async function openCalibrationForm() {
   document.getElementById('cal-note').value = '';
 }
 
-function closeCalibrationForm() {
+function closeCalibrationForm(skipUnlock = false) {
   document.getElementById('calibration-form-wrap').style.display = 'none';
+
+  if (_calFormLockedId && !skipUnlock) {
+    const id = _calFormLockedId;
+    _calFormLockedId = null;
+    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+  } else {
+    _calFormLockedId = null;
+  }
 }
 
 async function addCalibrationRecord() {
@@ -486,9 +495,5 @@ async function addCalibrationRecord() {
     } catch (error) {
     if (error.status === 409) { return; }
     showToast(error.message || 'Ошибка сохранения', 'error');
-    } finally {
-    if (currentHistoryId) {
-      apiRequest(`/pipettes/${currentHistoryId}/lock`, 'DELETE').catch(() => {});
-    }
   }
 }
