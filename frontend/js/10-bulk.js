@@ -10,7 +10,7 @@ async function openBulkSendModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
-            for (const id of selected) {
+     for (const id of selected) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
           if (lockRes.locked && !lockRes.mine) {
@@ -26,7 +26,23 @@ async function openBulkSendModal() {
           }
         }
       }
-      
+            const toSend = selected.filter(id => {
+        const p = pipettes.find(x => x.id === id);
+        return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
+      });
+
+      if (toSend.length === 0) {
+        const usedAsReplacement = selected.some(id => {
+          const p = pipettes.find(x => x.id === id);
+          return p && p.replacing;
+        });
+        if (usedAsReplacement) {
+          showToast('Прибор используется как замена для другого. Сначала оформите возврат оригинала с поверки.', 'error');
+        } else {
+          showToast('Не выбрано ни одной единицы для внешней поверки.', 'error');
+        }
+        return;
+       }
       _bulkSendIds = [...toSend];
 
       document.getElementById('bulk-send-count').textContent = toSend.length;
@@ -194,16 +210,14 @@ async function saveBulkSend(e) {
     _filterRendered = false;
     currentPage = 1;
     await loadPipetteData();
-  } catch (error) {
+    } catch (error) {
     showToast(error.message || 'Ошибка отправки', 'error');
-  }
-}
   } finally {
     [..._bulkSendIds].forEach(id => {
       apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
     });
   }
-
+}
 // ============================================================
 // ПЕЧАТЬ АКТА ОТПРАВКИ
 // ============================================================
@@ -340,15 +354,23 @@ async function openBulkReturnModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
-      for (const id of selected) {
+            for (const id of selected) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
           if (lockRes.locked && !lockRes.mine) {
-            await showLockWarning(lockRes, 'Массовый возврат');
+            const proceed = await showLockWarning(lockRes, 'Массовый возврат');
+            if (!proceed) return;
+            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
+          }
+          await apiRequest(`/pipettes/${id}/lock`, 'POST');
+        } catch (e) {
+          if (e.status === 409) {
+            showToast(`Прибор ${id} заблокирован: ${e.response?.lockedBy || ''}`, 'error');
             return;
           }
-        } catch (e) {}
+        }
       }
+      
       const sentItems = selected
         .map(id => pipettes.find(x => x.id === id))
         .filter(p => p && p.sent_for_calibration && isExternalCalibration(p.equipment_type));
@@ -575,8 +597,12 @@ async function saveBulkReturn(e) {
     }
 
     applyFilterStateToPanel();
-  } catch (error) {
+    } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
+  } finally {
+    [..._bulkReturnIds].forEach(id => {
+      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+    });
   }
 }
 
@@ -592,14 +618,21 @@ async function openBulkResponsibleModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
-      for (const id of selected) {
+     for (const id of selected) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
           if (lockRes.locked && !lockRes.mine) {
-            await showLockWarning(lockRes, 'Массовая смена ответственного');
+            const proceed = await showLockWarning(lockRes, 'Массовая смена ответственного');
+            if (!proceed) return;
+            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
+          }
+          await apiRequest(`/pipettes/${id}/lock`, 'POST');
+        } catch (e) {
+          if (e.status === 409) {
+            showToast(`Прибор ${id} заблокирован: ${e.response?.lockedBy || ''}`, 'error');
             return;
           }
-        } catch (e) {}
+        }
       }
 
       if (selected.length === 0) {
@@ -694,7 +727,12 @@ async function saveBulkResponsible(e) {
     clearSelection();
     closeBulkResponsibleModal();
     await loadPipetteData();
-  } catch (e) {
+    } catch (e) {
+    if (e.status === 409) { return; }
     errEl.textContent = e.message || 'Ошибка';
+  } finally {
+    [..._bulkResponsibleIds].forEach(id => {
+      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+    });
   }
 }
