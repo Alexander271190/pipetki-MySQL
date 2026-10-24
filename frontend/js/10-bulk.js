@@ -10,23 +10,8 @@ async function openBulkSendModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
-     for (const id of selected) {
-        try {
-          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-          if (lockRes.locked && !lockRes.mine) {
-            const proceed = await showLockWarning(lockRes, 'Массовая отправка');
-            if (!proceed) return;
-            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
-          }
-          await apiRequest(`/pipettes/${id}/lock`, 'POST');
-        } catch (e) {
-          if (e.status === 409) {
-            showToast(`Прибор ${id} заблокирован: ${e.response?.lockedBy || ''}`, 'error');
-            return;
-          }
-        }
-      }
-            const toSend = selected.filter(id => {
+
+      const toSend = selected.filter(id => {
         const p = pipettes.find(x => x.id === id);
         return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
       });
@@ -42,26 +27,55 @@ async function openBulkSendModal() {
           showToast('Не выбрано ни одной единицы для внешней поверки.', 'error');
         }
         return;
-       }
-      _bulkSendIds = [...toSend];
+      }
 
-      document.getElementById('bulk-send-count').textContent = toSend.length;
+      const lockedIds = [];
+      let keepLocks = false;
 
-      const listHtml = toSend.map(id => {
-        const p = pipettes.find(x => x.id === id);
-        if (!p) return '';
-        return `<div style="padding:2px 0;">
-          <strong>${esc(p.id)}</strong> — ${esc(p.model)} 
-          <span style="color:${COLORS.faint};">(${esc(p.department || 'без отдела')})</span>
-        </div>`;
-      }).join('');
-      document.getElementById('bulk-send-list').innerHTML = listHtml;
+      try {
+        for (const id of toSend) {
+          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          if (lockRes.locked && !lockRes.mine) {
+            const proceed = await showLockWarning(lockRes, 'Массовая отправка');
+            if (!proceed) return;   // finally снимет уже поставленные
+          }
+          await apiRequest(`/pipettes/${id}/lock`, 'POST');
+          lockedIds.push(id);
+        }
 
-      document.getElementById('bulk-send-date').value = todayStr();
-      document.getElementById('bulk-send-note').value = '';
+        _bulkSendIds = [...toSend];
 
-      UI.modal.open('bulk-send-modal');
-      loadReplacementOptions(toSend);
+        document.getElementById('bulk-send-count').textContent = toSend.length;
+
+        const listHtml = toSend.map(id => {
+          const p = pipettes.find(x => x.id === id);
+          if (!p) return '';
+          return `<div style="padding:2px 0;">
+            <strong>${esc(p.id)}</strong> — ${esc(p.model)} 
+            <span style="color:${COLORS.faint};">(${esc(p.department || 'без отдела')})</span>
+          </div>`;
+        }).join('');
+        document.getElementById('bulk-send-list').innerHTML = listHtml;
+
+        document.getElementById('bulk-send-date').value = todayStr();
+        document.getElementById('bulk-send-note').value = '';
+
+        UI.modal.open('bulk-send-modal');
+        loadReplacementOptions(toSend);
+        keepLocks = true;
+      } catch (e) {
+        if (e.status === 409) {
+          showToast(`Прибор заблокирован: ${e.response?.lockedBy || ''}`, 'error');
+        } else {
+          showToast('Ошибка проверки блокировки', 'error');
+        }
+      } finally {
+        if (!keepLocks) {
+          lockedIds.forEach(id => {
+            apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+          });
+        }
+      }
     }
   );
 }
@@ -212,12 +226,8 @@ async function saveBulkSend(e) {
     await loadPipetteData();
     } catch (error) {
     showToast(error.message || 'Ошибка отправки', 'error');
-  } finally {
-    [..._bulkSendIds].forEach(id => {
-      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-    });
   }
-}
+ }
 // ============================================================
 // ПЕЧАТЬ АКТА ОТПРАВКИ
 // ============================================================
@@ -354,85 +364,99 @@ async function openBulkReturnModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
-            for (const id of selected) {
-        try {
-          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-          if (lockRes.locked && !lockRes.mine) {
-            const proceed = await showLockWarning(lockRes, 'Массовый возврат');
-            if (!proceed) return;
-            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
-          }
-          await apiRequest(`/pipettes/${id}/lock`, 'POST');
-        } catch (e) {
-          if (e.status === 409) {
-            showToast(`Прибор ${id} заблокирован: ${e.response?.lockedBy || ''}`, 'error');
-            return;
-          }
-        }
-      }
-      
+
       const sentItems = selected
         .map(id => pipettes.find(x => x.id === id))
         .filter(p => p && p.sent_for_calibration && isExternalCalibration(p.equipment_type));
+
       if (sentItems.length === 0) {
         showToast('Не выбрано ни одной единицы со статусом «На поверке»', 'error');
         return;
       }
 
-      _bulkReturnIds = sentItems.map(p => p.id);
+      const lockedIds = [];
+      let keepLocks = false;
 
-      document.getElementById('bulk-return-count').textContent = sentItems.length;
+      try {
+        for (const p of sentItems) {
+          const id = p.id;
+          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          if (lockRes.locked && !lockRes.mine) {
+            const proceed = await showLockWarning(lockRes, 'Массовый возврат');
+            if (!proceed) return;
+          }
+          await apiRequest(`/pipettes/${id}/lock`, 'POST');
+          lockedIds.push(id);
+        }
 
-      const container = document.getElementById('bulk-return-items-container');
-      container.innerHTML = `
-        <div style="font-weight:600;color:${COLORS.muted};margin-bottom:8px;font-size:.85rem;">
-          Свидетельства по оборудованию:
-        </div>
-        <table class="field-settings-table">
-          <thead>
-            <tr>
-              <th style="width:35%;">ID / Модель</th>
-              <th style="width:40%;">Номер свидетельства</th>
-              <th style="width:25%;">Результат</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sentItems.map(p => `
+        _bulkReturnIds = sentItems.map(p => p.id);
+
+        document.getElementById('bulk-return-count').textContent = sentItems.length;
+
+        const container = document.getElementById('bulk-return-items-container');
+        container.innerHTML = `
+          <div style="font-weight:600;color:${COLORS.muted};margin-bottom:8px;font-size:.85rem;">
+            Свидетельства по оборудованию:
+          </div>
+          <table class="field-settings-table">
+            <thead>
               <tr>
-                <td>
-                  <strong>${esc(p.id)}</strong><br>
-                  <small style="color:${COLORS.faint};">${esc(p.model)}</small><br>
-                  <small style="color:${COLORS.info};">отправлена ${formatDate(p.sent_for_calibration)}</small>
-                </td>
-                <td>
-                  <input type="text" class="bulk-return-cert-input" 
-                         data-id="${esc(p.id)}" 
-                         placeholder="напр. С-АБ-...">
-                </td>
-                <td>
-                  <select class="bulk-return-result-input" data-id="${esc(p.id)}">
-                    <option value="pass">✅ Годен</option>
-                    <option value="fail">❌ Брак</option>
-                    <option value="wip">⏳ В процессе</option>
-                  </select>
-                </td>
+                <th style="width:35%;">ID / Модель</th>
+                <th style="width:40%;">Номер свидетельства</th>
+                <th style="width:25%;">Результат</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
+            </thead>
+            <tbody>
+              ${sentItems.map(p => `
+                <tr>
+                  <td>
+                    <strong>${esc(p.id)}</strong><br>
+                    <small style="color:${COLORS.faint};">${esc(p.model)}</small><br>
+                    <small style="color:${COLORS.info};">отправлена ${formatDate(p.sent_for_calibration)}</small>
+                  </td>
+                  <td>
+                    <input type="text" class="bulk-return-cert-input" 
+                           data-id="${esc(p.id)}" 
+                           placeholder="напр. С-АБ-...">
+                  </td>
+                  <td>
+                    <select class="bulk-return-result-input" data-id="${esc(p.id)}">
+                      <option value="pass">✅ Годен</option>
+                      <option value="fail">❌ Брак</option>
+                      <option value="wip">⏳ В процессе</option>
+                    </select>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
 
-      document.getElementById('bulk-return-date').value = todayStr();
-      document.getElementById('bulk-return-org').value = '';
-      document.getElementById('bulk-return-result').value = 'pass';
-      document.getElementById('bulk-return-note').value = '';
-      document.getElementById('bulk-return-cert').value = '';
-      document.getElementById('bulk-return-single-cert').checked = false;
-      toggleSingleCert(false);
+        document.getElementById('bulk-return-date').value = todayStr();
+        document.getElementById('bulk-return-org').value = '';
+        document.getElementById('bulk-return-result').value = 'pass';
+        document.getElementById('bulk-return-note').value = '';
+        document.getElementById('bulk-return-cert').value = '';
+        document.getElementById('bulk-return-single-cert').checked = false;
+        toggleSingleCert(false);
 
-      renderReturnReplacements(sentItems);
+        renderReturnReplacements(sentItems);
 
-      UI.modal.open('bulk-return-modal');
+        UI.modal.open('bulk-return-modal');
+        keepLocks = true;
+      } catch (e) {
+        if (e.status === 409) {
+          showToast(`Прибор заблокирован: ${e.response?.lockedBy || ''}`, 'error');
+        } else {
+          showToast('Ошибка проверки блокировки', 'error');
+        }
+      } finally {
+        if (!keepLocks) {
+          lockedIds.forEach(id => {
+            apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+          });
+        }
+      }
     }
   );
 }
@@ -597,12 +621,8 @@ async function saveBulkReturn(e) {
     }
 
     applyFilterStateToPanel();
-    } catch (error) {
+      } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
-  } finally {
-    [..._bulkReturnIds].forEach(id => {
-      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-    });
   }
 }
 
@@ -618,57 +638,67 @@ async function openBulkResponsibleModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
-     for (const id of selected) {
-        try {
-          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-          if (lockRes.locked && !lockRes.mine) {
-            const proceed = await showLockWarning(lockRes, 'Массовая смена ответственного');
-            if (!proceed) return;
-            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
-          }
-          await apiRequest(`/pipettes/${id}/lock`, 'POST');
-        } catch (e) {
-          if (e.status === 409) {
-            showToast(`Прибор ${id} заблокирован: ${e.response?.lockedBy || ''}`, 'error');
-            return;
-          }
-        }
-      }
 
       if (selected.length === 0) {
         showToast('Не выбрано ни одной единицы', 'error');
         return;
       }
 
-      _bulkResponsibleIds = [...selected];
+      const lockedIds = [];
+      let keepLocks = false;
 
-      document.getElementById('bulk-responsible-count').textContent = selected.length;
-      document.getElementById('bulk-responsible-error').textContent = '';
+      try {
+        for (const id of selected) {
+          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+          if (lockRes.locked && !lockRes.mine) {
+            const proceed = await showLockWarning(lockRes, 'Массовая смена ответственного');
+            if (!proceed) return;
+          }
+          await apiRequest(`/pipettes/${id}/lock`, 'POST');
+          lockedIds.push(id);
+        }
 
-      const sel = document.getElementById('bulk-responsible-select');
-      sel.innerHTML = '<option value="">— выберите —</option>';
+        _bulkResponsibleIds = [...selected];
 
-      const names = new Set();
+        document.getElementById('bulk-responsible-count').textContent = selected.length;
+        document.getElementById('bulk-responsible-error').textContent = '';
 
-      if (Array.isArray(_responsibles)) {
-        for (const u of _responsibles) {
-          if (u.fullName) names.add(u.fullName);
+        const sel = document.getElementById('bulk-responsible-select');
+        sel.innerHTML = '<option value="">— выберите —</option>';
+
+        const names = new Set();
+        if (Array.isArray(_responsibles)) {
+          for (const u of _responsibles) {
+            if (u.fullName) names.add(u.fullName);
+          }
+        }
+        for (const p of pipettes) {
+          if (p.responsible) names.add(p.responsible);
+        }
+
+        const sorted = [...names].sort((a, b) => a.localeCompare(b, 'ru'));
+        for (const name of sorted) {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        }
+
+        UI.modal.open('bulk-responsible-modal');
+        keepLocks = true;
+      } catch (e) {
+        if (e.status === 409) {
+          showToast(`Прибор заблокирован: ${e.response?.lockedBy || ''}`, 'error');
+        } else {
+          showToast('Ошибка проверки блокировки', 'error');
+        }
+      } finally {
+        if (!keepLocks) {
+          lockedIds.forEach(id => {
+            apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+          });
         }
       }
-
-      for (const p of pipettes) {
-        if (p.responsible) names.add(p.responsible);
-      }
-
-      const sorted = [...names].sort((a, b) => a.localeCompare(b, 'ru'));
-      for (const name of sorted) {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
-      }
-
-      UI.modal.open('bulk-responsible-modal');
     }
   );
 }
@@ -730,9 +760,5 @@ async function saveBulkResponsible(e) {
     } catch (e) {
     if (e.status === 409) { return; }
     errEl.textContent = e.message || 'Ошибка';
-  } finally {
-    [..._bulkResponsibleIds].forEach(id => {
-      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-    });
-  }
+   }
 }
