@@ -326,8 +326,11 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
         );
         if (!rows.length) { skipped.push(item.id); continue; }
         if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }         
-        const [lock] = await conn.query('SELECT user_full_name FROM edit_locks WHERE pipette_id = ?', [item.id]);
-        if (lock.length) { skipped.push(`${item.id} (заблокирован: ${lock[0].user_full_name})`); continue; }
+        const [lock] = await conn.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [item.id]);
+        if (lock.length && lock[0].user_id !== req.user.id) {
+       skipped.push(`${item.id} (заблокирован: ${lock[0].user_full_name})`);
+       continue;
+       }
         if (!rows[0].sent_for_calibration && !isExternalType(rows[0].equipment_type)) { 
           skipped.push(item.id); 
           continue; 
