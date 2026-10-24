@@ -730,10 +730,12 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
   try {
    const result = await withTransaction(async (conn) => {
    const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
-          const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
-      const isLockMine = lockChk.length === 0 || lockChk[0].user_id === req.user.id;
-
-      if (updates.updatedAt && p.updated_at && isLockMine) {
+      const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+      
+      // 🆕 Проверяем: если блокировка наша (или её нет) — пропускаем проверку конфликта
+      const hasForeignLock = lockChk.length > 0 && String(lockChk[0].user_id) !== String(req.user.id);
+      
+      if (updates.updatedAt && p.updated_at && hasForeignLock) {
         const clientTime = new Date(updates.updatedAt).getTime();
         const dbTime = new Date(p.updated_at).getTime();
         if (Math.abs(clientTime - dbTime) > 1000) {
