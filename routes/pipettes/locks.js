@@ -59,18 +59,23 @@ router.post('/:id/lock', authenticate, async (req, res) => {
       return res.json({ locked: true, mine: true });
     }
 
-    // 3. Если вставить не удалось, значит блокировка чужая
+       // 3. Вставка не прошла. Причины: лок чужой ИЛИ прибора не существует.
     const [rows] = await db.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
-    if (!rows.length) {
-      return res.status(500).json({ error: 'Не удалось установить блокировку' });
-    }
-    
-    const lock = rows[0];
-    if (lock.user_id === req.user.id) {
-      return res.json({ locked: true, mine: true });
-    } else {
+    if (rows.length) {
+      const lock = rows[0];
+      if (lock.user_id === req.user.id) {
+        return res.json({ locked: true, mine: true });
+      }
       return res.status(409).json({ error: 'Заблокировано', lockedBy: lock.user_full_name });
     }
+
+    // Лока нет — проверяем, есть ли сам прибор
+    const [pipCheck] = await db.query('SELECT id FROM pipettes WHERE id = ?', [req.params.id]);
+    if (!pipCheck.length) {
+      return res.status(404).json({ error: 'Оборудование не найдено' });
+    }
+
+    return res.status(500).json({ error: 'Не удалось установить блокировку' });
     } catch (e) {
     console.error('POST /lock error:', e);
     if (e.code === 'ER_NO_REFERENCED_ROW_2') {
