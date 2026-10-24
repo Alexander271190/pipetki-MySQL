@@ -233,9 +233,9 @@ async function openTransferModal(id) {
       respSel.disabled = true;
 
       document.getElementById('transfer-error').textContent = '';
-      UI.modal.open('transfer-modal');
-    }
-          if (_transferLockTimer) clearInterval(_transferLockTimer);
+            UI.modal.open('transfer-modal');
+
+      if (_transferLockTimer) clearInterval(_transferLockTimer);
       _transferLockTimer = setInterval(async () => {
         const modalEl = document.getElementById('transfer-modal');
         if (!modalEl || !modalEl.classList.contains('active')) {
@@ -260,6 +260,7 @@ async function openTransferModal(id) {
           }
         } catch (e) {}
       }, 3000);
+    }
   );
 }
 
@@ -453,7 +454,11 @@ async function openCalibrationForm() {
     }
   }
   document.getElementById('calibration-form-wrap').style.display = 'block';
-  ...
+  document.getElementById('cal-date').value = todayStr();
+  document.getElementById('cal-cert').value = '';
+  document.getElementById('cal-result').value = 'pass';
+  document.getElementById('cal-org').value = '';
+  document.getElementById('cal-note').value = '';
 }
 
 function closeCalibrationForm() {
@@ -481,8 +486,9 @@ async function addCalibrationRecord() {
     } catch (error) {
     if (error.status === 409) { return; }
     showToast(error.message || 'Ошибка сохранения', 'error');
-  } finally {
+    } finally {
     if (currentHistoryId) {
       apiRequest(`/pipettes/${currentHistoryId}/lock`, 'DELETE').catch(() => {});
     }
   }
+}
