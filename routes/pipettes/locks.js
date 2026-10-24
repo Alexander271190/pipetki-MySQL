@@ -85,16 +85,29 @@ router.post('/:id/lock', authenticate, async (req, res) => {
 
 router.delete('/:id/lock', authenticate, async (req, res) => {
   try {
+    const force = req.query.force === 'true' || req.query.force === '1';
+
     const [ex] = await db.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
     if (!ex.length) return res.json({ message: 'Нет блокировки' });
-    await db.query('DELETE FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
-    if (ex[0].user_id !== req.user.id) {
-      await logAction(req, 'Снятие блокировки', `Снята блокировка с ${req.params.id} (был: ${ex[0].user_full_name})`);
+
+    if (!force && ex[0].user_id !== req.user.id) {
+      return res.status(409).json({
+        error: 'Блокировка принадлежит другому пользователю',
+        lockedBy: ex[0].user_full_name,
+      });
     }
+
+    await db.query('DELETE FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+
+    if (ex[0].user_id !== req.user.id) {
+      await logAction(req, 'Снятие блокировки',
+        `Снята блокировка с ${req.params.id} (был: ${ex[0].user_full_name})`);
+    }
+
     res.json({ message: 'Снята' });
-  } catch (e) { 
-    console.error('DELETE /lock error:', e); 
-    res.status(500).json({ error: 'Ошибка снятия' }); 
+  } catch (e) {
+    console.error('DELETE /lock error:', e);
+    res.status(500).json({ error: 'Ошибка снятия' });
   }
 });
 module.exports = router;
