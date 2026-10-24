@@ -679,13 +679,25 @@ async function savePipette(e, force = false) {
         showToast(`Оборудование создано (${res.id})`, 'success');
       }
     });
-    } catch (e) {
+        } catch (e) {
+    // 🆕 Если поймали 409 (кто-то успел изменить данные), 
+    // принудительно сохраняем еще раз, БЕЗ updatedAt, чтобы перезаписать.
     if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
+      delete payload.updatedAt; 
+      try {
+        await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
+        showToast('Оборудование обновлено', 'success');
+        closeModal();
+        if (typeof loadPipetteData === 'function') await loadPipetteData();
+      } catch (err2) {
+        showToast(err2.message || 'Ошибка сохранения', 'error');
+      }
       return;
     }
     showToast(e.message || 'Ошибка сохранения', 'error');
   }
 }
+
 async function deletePipette(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
