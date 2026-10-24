@@ -858,6 +858,11 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
 // ═══════════════════════════════════════════════════════════
 router.delete('/:id', authenticate, requireAnyPermission(['delete_pipette', 'manage_pipettes']), async (req, res) => {
   try {
+    const [lockChk] = await db.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+    if (lockChk.length && lockChk[0].user_id !== req.user.id) {
+      return res.status(409).json({ error: `Прибор заблокирован: ${lockChk[0].user_full_name}` });
+    }
+
     let deletedModel = null;
 
     await withTransaction(async (conn) => {
