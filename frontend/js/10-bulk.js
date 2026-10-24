@@ -10,33 +10,23 @@ async function openBulkSendModal() {
       const selected = [...selectedPipettes].filter(id =>
         pipettes.some(p => p.id === id)
       );
-      for (const id of selected) {
+            for (const id of selected) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
           if (lockRes.locked && !lockRes.mine) {
-            await showLockWarning(lockRes, 'Массовая отправка');
+            const proceed = await showLockWarning(lockRes, 'Массовая отправка');
+            if (!proceed) return;
+            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
+          }
+          await apiRequest(`/pipettes/${id}/lock`, 'POST');
+        } catch (e) {
+          if (e.status === 409) {
+            showToast(`Прибор ${id} заблокирован: ${e.response?.lockedBy || ''}`, 'error');
             return;
           }
-        } catch (e) {}
+        }
       }
-      const toSend = selected.filter(id => {
-        const p = pipettes.find(x => x.id === id);
-        return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
-       });
-
-      if (toSend.length === 0) {
-      const usedAsReplacement = selected.some(id => {
-        const p = pipettes.find(x => x.id === id);
-        return p && p.replacing;
-        });
-        if (usedAsReplacement) {
-           showToast('Прибор используется как замена для другого. Сначала оформите возврат оригинала с поверки.', 'error');
-         } else {
-            showToast('Не выбрано ни одной единицы для внешней поверки.', 'error');
-         }
-         return;
-         }
-
+      
       _bulkSendIds = [...toSend];
 
       document.getElementById('bulk-send-count').textContent = toSend.length;
@@ -208,6 +198,11 @@ async function saveBulkSend(e) {
     showToast(error.message || 'Ошибка отправки', 'error');
   }
 }
+  } finally {
+    [..._bulkSendIds].forEach(id => {
+      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+    });
+  }
 
 // ============================================================
 // ПЕЧАТЬ АКТА ОТПРАВКИ
