@@ -173,9 +173,9 @@ async function openModal(id) {
                 
                 await savePipette(null, true); 
                
-                await showConfirm(
+                 await showConfirm(
                   `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`,
-                  { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>', title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
+                  { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>', title: 'Сессия завершена', okText: 'ОК', hideCancel: true, okClass: 'btn-secondary' }
                 );
               }
             } catch (e) {}
@@ -779,9 +779,9 @@ async function openQuickCalModal(id) {
             const msg = saved
               ? `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`
               : `Сессия завершена. Прибор забрал в работу: ${displayUser}.`;
-            await showConfirm(msg, {
+              await showConfirm(msg, {
               icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>',
-              title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary'
+              title: 'Сессия завершена', okText: 'ОК', hideCancel: true, okClass: 'btn-secondary'
             });
           }
         } catch (e) {}
