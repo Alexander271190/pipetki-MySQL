@@ -338,22 +338,25 @@ async function saveTransfer() {
   );
   if (!ok) return;
 
-  try {
+    try {
     await apiRequest(`/pipettes/${id}/transfer`, 'POST', {
       department: newDept,
       responsible: newResp,
     });
 
-   showToast(`Передано в «${newDept}»`, 'success');
+    showToast(`Передано в «${newDept}»`, 'success');
     closeTransferModal();
     await loadPipetteData();
-   } catch (e) {
-    if (e.status === 409) { return; }
+  } catch (e) {
+    if (e.status === 409) {
+      // Блокировку уже забрали — снимать чужую нельзя.
+      _skipTransferUnlock = true;
+      _transferPipetteId = null;
+      return;
+    }
     errEl.textContent = e.message || 'Ошибка передачи';
-  } finally {
-    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
   }
-} 
+}
 
 // ============================================================
 // ИСТОРИЯ
