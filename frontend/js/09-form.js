@@ -1,7 +1,8 @@
 'use strict';
+let _lockCheckTimer = null;
+let _skipUnlockOnClose = false;
 let _calLockTimer = null;
 let _skipCalUnlock = false;
-let _calFormLockedId = null;
 
 // ============================================================
 // ДИНАМИЧЕСКАЯ ФОРМА
