@@ -348,12 +348,10 @@ async function saveTransfer() {
     showToast(`Передано в «${newDept}»`, 'success');
     closeTransferModal();
     await loadPipetteData();
-  } catch (e) {
+    } catch (e) {
     if (e.status === 409) {
-      // Блокировку уже забрали — снимать чужую нельзя.
       _skipTransferUnlock = true;
       _transferPipetteId = null;
-      return;
     }
     errEl.textContent = e.message || 'Ошибка передачи';
   }
@@ -496,8 +494,7 @@ async function addCalibrationRecord() {
     closeCalibrationForm();
     closeHistoryModal();
     await loadPipetteData();
-    } catch (error) {
-    if (error.status === 409) { return; }
+   } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
