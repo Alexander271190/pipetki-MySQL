@@ -141,20 +141,9 @@ async function openModal(id) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
                     
-          if (lockRes.locked && !lockRes.mine) {
-            const name = lockRes.lockedBy;
-            const pos = lockRes.lockedByPosition;
-            const posText = pos ? ` (${pos})` : '';
-            
-            const ok = await showConfirm(
-              `Пользователь ${name}${posText} уже редактирует данный прибор.\n\nВы хотите сбросить блокировку?`,
-              { icon: '<i class="fa-solid fa-lock" style="color: var(--warn);"></i>', title: 'Внимание', okText: 'Да', cancelText: 'Нет', okClass: 'btn-danger' }
-            );
-            
-            if (!ok) return;
-            
-            await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
-            showToast('Блокировка снята', 'success');
+                    if (lockRes.locked && !lockRes.mine) {
+            const proceed = await showLockWarning(lockRes, 'Редактирование');
+            if (!proceed) return;
           }
           
           await apiRequest(`/pipettes/${id}/lock`, 'POST');
@@ -695,12 +684,11 @@ async function deletePipette(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
-  try {
+    try {
     const lockRes = await apiRequest(`/pipettes/${id}/lock`);
     if (lockRes.locked && !lockRes.mine) {
       const proceed = await showLockWarning(lockRes, 'Удаление оборудования');
       if (!proceed) return;
-      await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
     }
   } catch (e) {
     showToast('Ошибка проверки блокировки', 'error');
