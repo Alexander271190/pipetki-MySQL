@@ -1,6 +1,8 @@
 'use strict';
 let _lockCheckTimer = null;
 let _skipUnlockOnClose = false;
+let _calLockTimer = null;
+let _skipCalUnlock = false;
 
 // ============================================================
 // ДИНАМИЧЕСКАЯ ФОРМА
@@ -681,23 +683,37 @@ async function savePipette(e, force = false) {
         showToast(`Оборудование создано (${res.id})`, 'success');
       }
     });
-  } catch (e) {
-      if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
-      showToast('Кто-то уже редактирует этот прибор. Пожалуйста, закройте форму и откройте позже.', 'error');
-    } else {
-      showToast(e.message || 'Ошибка сохранения', 'error');
+    } catch (e) {
+    if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
+      return;
     }
+    showToast(e.message || 'Ошибка сохранения', 'error');
+  }
   }
 }
 async function deletePipette(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+
+  try {
+    const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+    if (lockRes.locked && !lockRes.mine) {
+      const proceed = await showLockWarning(lockRes, 'Удаление оборудования');
+      if (!proceed) return;
+      await apiRequest(`/pipettes/${id}/lock`, 'DELETE');
+    }
+  } catch (e) {
+    showToast('Ошибка проверки блокировки', 'error');
+    return;
+  }
+
   const ok = await showConfirm(
     `Удалить оборудование «${id}» вместе со всей историей поверок? Действие необратимо.`,
     { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }
   );
   if (!ok) return;
-    try {
+
+  try {
     await apiRequest(`/pipettes/${id}`, 'DELETE');
     showToast('Оборудование удалено', 'success');
     selectedPipettes.delete(id);
@@ -742,17 +758,59 @@ async function openQuickCalModal(id) {
       document.getElementById('quick-cal-org').value = '';
       document.getElementById('quick-cal-note').value = '';
       UI.modal.open('quick-cal-modal');
+            if (_calLockTimer) clearInterval(_calLockTimer);
+      _calLockTimer = setInterval(async () => {
+        const modalEl = document.getElementById('quick-cal-modal');
+        if (!modalEl || !modalEl.classList.contains('active')) {
+          clearInterval(_calLockTimer); _calLockTimer = null; return;
+        }
+        try {
+          const r = await apiRequest(`/pipettes/${id}/lock`);
+          if (!r.locked || !r.mine) {
+            clearInterval(_calLockTimer); _calLockTimer = null;
+            _skipCalUnlock = true;
+            const pos = r.lockedByPosition;
+            const name = r.lockedBy;
+            let displayUser = pos ? `${name} (${pos})` : (name || 'Другой пользователь');
+
+            const date = document.getElementById('quick-cal-date').value;
+            const cert = document.getElementById('quick-cal-cert').value.trim();
+            const result = document.getElementById('quick-cal-result').value;
+            const org = document.getElementById('quick-cal-org').value.trim();
+            const note = document.getElementById('quick-cal-note').value.trim();
+            let saved = false;
+            if (date && date <= todayStr()) {
+              try {
+                await apiRequest(`/pipettes/${id}/calibration`, 'POST', { date, cert, result, org, note });
+                saved = true;
+              } catch (e) {}
+            }
+            UI.modal.close('quick-cal-modal');
+            document.getElementById('quick-cal-id').value = '';
+            _skipCalUnlock = false;
+            const msg = saved
+              ? `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`
+              : `Сессия завершена. Прибор забрал в работу: ${displayUser}.`;
+            await showConfirm(msg, {
+              icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>',
+              title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary'
+            });
+          }
+        } catch (e) {}
+      }, 3000);
     }
   );
 }
 
-function closeQuickCalModal(isCancel = false) {
+function closeQuickCalModal() {
+  if (_calLockTimer) { clearInterval(_calLockTimer); _calLockTimer = null; }
   const id = document.getElementById('quick-cal-id').value;
-  if (id && !isCancel) {
+  if (id && !_skipCalUnlock) {
     apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
   }
   UI.modal.close('quick-cal-modal');
   document.getElementById('quick-cal-id').value = '';
+  _skipCalUnlock = false;
 }
 
 async function saveQuickCalibration() {
@@ -774,6 +832,9 @@ async function saveQuickCalibration() {
     closeQuickCalModal();
     await loadPipetteData();
     } catch (error) {
+    if (error.status === 409) {
+      return;
+    }
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
@@ -794,29 +855,33 @@ async function cancelSend(id) {
       const proceed = await showLockWarning(lockRes, 'Отмена отправки');
       if (!proceed) return;
     }
-  } catch (e) { showToast('Ошибка проверки блокировки', 'error'); return; }
- 
+    await apiRequest(`/pipettes/${id}/lock`, 'POST');
+  } catch (e) {
+    if (e.status === 409) { showToast(`Заблокировано: ${e.response?.lockedBy || ''}`, 'error'); return; }
+    showToast('Ошибка проверки блокировки', 'error');
+    return;
+  }
+
   const p = pipettes.find(x => x.id === id);
-  if (!p) return;
+  if (!p) { apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {}); return; }
 
   const hasReplacement = !!p.replaced_by;
   const confirmMsg = hasReplacement
-    ? `Отменить отправку «${id}» на поверку?\n\n` +
-      `Замена «${p.replaced_by}» вернётся на склад и станет неактивной.`
+    ? `Отменить отправку «${id}» на поверку?\n\nЗамена «${p.replaced_by}» вернётся на склад и станет неактивной.`
     : `Отменить отправку «${id}» на поверку?`;
 
-  const ok = await showConfirm(
-    confirmMsg,
-    { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' }
-  );
-  if (!ok) return;
+  const ok = await showConfirm(confirmMsg, { icon: '↩️', title: 'Отмена отправки', okText: 'Отменить', okClass: 'btn-warning' });
+  if (!ok) { apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {}); return; }
 
   try {
     await apiRequest(`/pipettes/${encodeURIComponent(id)}/cancel-send`, 'POST', {});
     showToast('Отправка отменена', 'success');
     await loadPipetteData();
   } catch (e) {
+    if (e.status === 409) { return; }
     showToast(e.message || 'Ошибка отмены', 'error');
+  } finally {
+    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
   }
 }
 
