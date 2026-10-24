@@ -141,6 +141,9 @@ function buildReplacementBlock(id, p, options) {
 
 function closeBulkSendModal() {
   UI.modal.close('bulk-send-modal');
+  [..._bulkSendIds].forEach(id => {
+    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+  });
   _bulkSendIds = [];
 }
 
@@ -454,6 +457,9 @@ function renderReturnReplacements(sentItems) {
 
 function closeBulkReturnModal() {
   UI.modal.close('bulk-return-modal');
+  [..._bulkReturnIds].forEach(id => {
+    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+  });
   _bulkReturnIds = [];
 }
 
@@ -641,6 +647,9 @@ async function openBulkResponsibleModal() {
 
 function closeBulkResponsibleModal() {
   UI.modal.close('bulk-responsible-modal');
+  [..._bulkResponsibleIds].forEach(id => {
+    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+  });
   _bulkResponsibleIds = [];
 }
 
