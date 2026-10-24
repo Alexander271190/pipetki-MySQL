@@ -269,11 +269,11 @@ async function showLockWarning(lockRes, actionName = 'выполнить дей�
     }
   );
   
-  if (ok) {
+    if (ok) {
     try {
-      await apiRequest(`/pipettes/${lockRes.pipetteId}/lock`, 'DELETE');
+      await apiRequest(`/pipettes/${lockRes.pipetteId}/lock?force=true`, 'DELETE');
       showToast('Блокировка снята', 'success');
-      return true; 
+      return true;
     } catch (e) {
       showToast('Ошибка снятия блокировки', 'error');
       return false;
