@@ -838,9 +838,7 @@ async function saveQuickCalibration() {
     closeQuickCalModal();
     await loadPipetteData();
     } catch (error) {
-    if (error.status === 409) {
-      return;
-    }
+    // Если блокировка перехвачена только что, даем серверу время
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
