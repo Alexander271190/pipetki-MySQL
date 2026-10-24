@@ -236,12 +236,14 @@ async function openTransferModal(id) {
   );
 }
 
-function closeTransferModal(isCancel = false) {
-  if (_transferPipetteId && !isCancel) {
+function closeTransferModal() {
+  if (_transferLockTimer) { clearInterval(_transferLockTimer); _transferLockTimer = null; }
+  if (_transferPipetteId && !_skipTransferUnlock) {
     apiRequest(`/pipettes/${_transferPipetteId}/lock`, 'DELETE').catch(() => {});
   }
   UI.modal.close('transfer-modal');
   _transferPipetteId = null;
+  _skipTransferUnlock = false;
 }
 
 async function onTransferDepartmentChange(dept) {
