@@ -278,7 +278,7 @@ async function showLockWarning(lockRes, actionName = 'выполнить дей�
   
     if (ok) {
     try {
-      await apiRequest(`/pipettes/${lockRes.pipetteId}/lock?force=true`, 'DELETE');
+      await apiRequest(`/pipettes/${lockRes.pipetteId}/lock`, 'DELETE');
       showToast('Блокировка снята', 'success');
       return true;
     } catch (e) {
