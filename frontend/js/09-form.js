@@ -280,7 +280,7 @@ async function openModal(id) {
   );
 }
 
-async function closeModal(isCancel = false) {
+async function closeModal() {
   if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
 
   const editId = document.getElementById('edit-id').value;
@@ -299,7 +299,7 @@ async function closeModal(isCancel = false) {
   document.getElementById('bc-rows-body').innerHTML = '';
   document.getElementById('bc-table-head').innerHTML = '';
   
-  if (editId && !_skipUnlockOnClose && !isCancel) {
+  if (editId && !_skipUnlockOnClose) {
     try { await apiRequest(`/pipettes/${editId}/lock`, 'DELETE'); } catch (e) {}
   }
   _skipUnlockOnClose = false;
