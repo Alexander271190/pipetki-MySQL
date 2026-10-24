@@ -123,7 +123,14 @@ function showConfirm(message, options = {}) {
     okBtn.textContent = options.okText || 'ОК';
     okBtn.className   = 'btn ' + (options.okClass || 'btn-danger');
     const cancelBtn = modal.querySelector('.confirm-actions .btn-secondary');
-    if (cancelBtn) cancelBtn.textContent = options.cancelText || 'Отмена';
+    if (cancelBtn) {
+      if (options.hideCancel) {
+        cancelBtn.style.display = 'none';
+      } else {
+        cancelBtn.style.display = '';
+        cancelBtn.textContent = options.cancelText || 'Отмена';
+      }
+    }
 
     modal.classList.add('active');
   });
