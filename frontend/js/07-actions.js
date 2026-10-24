@@ -27,6 +27,8 @@ function invalidateUsersCache() {
 // 🆕 МЕНЮ ДЕЙСТВИЙ В СТРОКЕ (кнопка ⋮)
 // ============================================================
 let _rowActionsMenu = null;
+let _transferLockTimer = null;
+let _skipTransferUnlock = false;
 
 async function openUserActions(ev, userId) {
   ev.stopPropagation();
@@ -233,6 +235,31 @@ async function openTransferModal(id) {
       document.getElementById('transfer-error').textContent = '';
       UI.modal.open('transfer-modal');
     }
+          if (_transferLockTimer) clearInterval(_transferLockTimer);
+      _transferLockTimer = setInterval(async () => {
+        const modalEl = document.getElementById('transfer-modal');
+        if (!modalEl || !modalEl.classList.contains('active')) {
+          clearInterval(_transferLockTimer); _transferLockTimer = null; return;
+        }
+        try {
+          const r = await apiRequest(`/pipettes/${id}/lock`);
+          if (!r.locked || !r.mine) {
+            clearInterval(_transferLockTimer); _transferLockTimer = null;
+            _skipTransferUnlock = true;
+            const pos = r.lockedByPosition;
+            const name = r.lockedBy;
+            let displayUser = pos ? `${name} (${pos})` : (name || 'Другой пользователь');
+            UI.modal.close('transfer-modal');
+            _transferPipetteId = null;
+            _skipTransferUnlock = false;
+            await showConfirm(
+              `Сессия завершена. Прибор забрал в работу: ${displayUser}.\n\nПередача не выполнена.`,
+              { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>',
+                title: 'Сессия завершена', okText: 'ОК', cancelText: 'Закрыть', okClass: 'btn-secondary' }
+            );
+          }
+        } catch (e) {}
+      }, 3000);
   );
 }
 
@@ -319,12 +346,11 @@ async function saveTransfer() {
    showToast(`Передано в «${newDept}»`, 'success');
     closeTransferModal();
     await loadPipetteData();
-    } catch (e) {
-    if (e.status === 409) {
-      errEl.textContent = 'Прибор сейчас редактируется другим пользователем. Передача невозможна.';
-    } else {
-      errEl.textContent = e.message || 'Ошибка передачи';
-    }
+   } catch (e) {
+    if (e.status === 409) { return; }
+    errEl.textContent = e.message || 'Ошибка передачи';
+  } finally {
+    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
   }
 } 
 
@@ -412,12 +438,22 @@ async function renderHistoryContent(p) {
 async function openCalibrationForm() {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
+  const id = currentHistoryId;
+  if (id) {
+    try {
+      const lockRes = await apiRequest(`/pipettes/${id}/lock`);
+      if (lockRes.locked && !lockRes.mine) {
+        const proceed = await showLockWarning(lockRes, 'Добавление поверки');
+        if (!proceed) return;
+      }
+      await apiRequest(`/pipettes/${id}/lock`, 'POST');
+    } catch (e) {
+      showToast('Ошибка проверки блокировки', 'error');
+      return;
+    }
+  }
   document.getElementById('calibration-form-wrap').style.display = 'block';
-  document.getElementById('cal-date').value = todayStr();
-  document.getElementById('cal-cert').value = '';
-  document.getElementById('cal-result').value = 'pass';
-  document.getElementById('cal-org').value = '';
-  document.getElementById('cal-note').value = '';
+  ...
 }
 
 function closeCalibrationForm() {
@@ -442,7 +478,11 @@ async function addCalibrationRecord() {
     closeCalibrationForm();
     closeHistoryModal();
     await loadPipetteData();
-  } catch (error) {
+    } catch (error) {
+    if (error.status === 409) { return; }
     showToast(error.message || 'Ошибка сохранения', 'error');
+  } finally {
+    if (currentHistoryId) {
+      apiRequest(`/pipettes/${currentHistoryId}/lock`, 'DELETE').catch(() => {});
+    }
   }
-}
