@@ -410,19 +410,13 @@ document.getElementById('search').addEventListener('input', () => {
 // ОБРАБОТЧИКИ «КЛИК МИМО» ДЛЯ ВСЕХ МОДАЛОК
 // ============================================================
 const modalCloseMap = {
-  'modal':                  closeModal,
-  'quick-cal-modal':        closeQuickCalModal,
   'history-modal':          closeHistoryModal,
-  'bulk-send-modal':        closeBulkSendModal,
-  'bulk-return-modal':      closeBulkReturnModal,
-  'bulk-responsible-modal': closeBulkResponsibleModal,
   'import-modal':           closeImportModal,
   'barcode-scanner-modal':  closeBarcodeScannerModal,
   'barcode-print-modal':    closeBarcodePrintModal,
   'settings-modal':         closeSettingsModal,
   'history-export-modal':   closeHistoryExportModal,
   'temp-password-modal':    closeTempPasswordModal,
-  'transfer-modal':         closeTransferModal,
   'user-view-modal':        closeUserViewModal,
   'hotkeys-modal':          closeHotkeysHelp,
   'help-editor-modal':      closeHelpEditor,
