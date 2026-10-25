@@ -387,7 +387,7 @@ router.get('/all', authenticate, async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 // GET /audit — глобальный аудит (для админа)
 // ═══════════════════════════════════════════════════════════
-router.get('/audit', authenticate, async (req, res) => {
+router.get('/audit', authenticate, requireAnyPermission(['view_log']), async (req, res) => {
   try {
     const search = req.query.search || '';
     const category = req.query.category || '';
@@ -452,7 +452,7 @@ router.get('/audit', authenticate, async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 // GET /:id/audit — аудит одного прибора
 // ═══════════════════════════════════════════════════════════
-router.get('/:id/audit', authenticate, async (req, res) => {
+router.get('/:id/audit', authenticate, requireAnyPermission(['view_audit', 'view_history']), async (req, res) => {
   try {
     const [pipRows] = await db.query(
       'SELECT id, model, department FROM pipettes WHERE id = ?',
