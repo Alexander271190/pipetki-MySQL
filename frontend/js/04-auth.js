@@ -148,6 +148,7 @@ function canManageUsers()   { return hasPermission('manage_users'); }
 function canManageSettings(){ return hasPermission('manage_settings'); }
 function canManagePrinters(){ return hasPermission('manage_printers'); }
 function canViewLog()       { return hasPermission('view_log'); }
+function canViewAudit()     { return hasPermission('view_audit'); }
 function canViewHistory()   { return true; }
 
 // 🆕 Проверка необходимости смены пароля для блокировки других действий
