@@ -14,9 +14,198 @@ function _fmtDateTime(ts) {
 
 let _auditCache = [];
 let _auditFiltered = [];
+let _auditTab = 'actions';
+let _errorsCache = [];
+let _errorsFiltered = [];
 let _eqAuditCache = [];
 let _eqAuditId = null;
 let _eqAuditInfo = null;
+
+function switchAuditTab(tab) {
+  _auditTab = tab;
+  document.querySelectorAll('.audit-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.getElementById('audit-tab-actions').style.display = tab === 'actions' ? '' : 'none';
+  document.getElementById('audit-tab-errors').style.display = tab === 'errors' ? '' : 'none';
+  if (tab === 'errors' && _errorsCache.length === 0) {
+    loadErrorsData();
+  }
+}
+
+async function loadErrorsData() {
+  const tbody = document.getElementById('errors-body');
+  tbody.innerHTML = Array(5).fill(0).map(() => `
+    <tr class="skeleton-row">
+      <td><div class="skeleton-line" style="width:80%;"></div></td>
+      <td><div class="skeleton-line" style="width:50%;"></div></td>
+      <td><div class="skeleton-line" style="width:70%;"></div></td>
+      <td><div class="skeleton-line" style="width:60%;"></div></td>
+      <td><div class="skeleton-line" style="width:90%;"></div></td>
+    </tr>`).join('');
+  try {
+    const res = await apiRequest('/log/errors?limit=500');
+    _errorsCache = Array.isArray(res.items) ? res.items : [];
+    renderErrorsList();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#dc2626;">Ошибка: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+function onErrorsPeriodChange() {
+  const v = document.getElementById('errors-period').value;
+  const box = document.getElementById('errors-custom-period');
+  box.style.display = v === 'custom' ? 'flex' : 'none';
+  box.style.gap = '8px';
+  renderErrorsList();
+}
+
+function _errorsPeriodRange() {
+  const period = document.getElementById('errors-period').value;
+  const today = todayStr();
+  if (period === 'today') return { from: today, to: today };
+  if (period === 'week') {
+    const d = new Date(); d.setDate(d.getDate() - 7);
+    return { from: d.toISOString().slice(0, 10), to: today };
+  }
+  if (period === 'month') {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    return { from: d.toISOString().slice(0, 10), to: today };
+  }
+  if (period === 'custom') {
+    return {
+      from: document.getElementById('errors-from').value || '',
+      to: document.getElementById('errors-to').value || ''
+    };
+  }
+  return { from: '', to: '' };
+}
+
+function renderErrorsList() {
+  const q = (document.getElementById('errors-search')?.value || '').trim().toLowerCase();
+  const lvl = document.getElementById('errors-level')?.value || '';
+  const { from, to } = _errorsPeriodRange();
+
+  _errorsFiltered = _errorsCache.filter(r => {
+    if (lvl && r.level !== lvl) return false;
+    const d = (r.timestamp || '').slice(0, 10);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    if (q) {
+      const hay = [r.message, r.stack, r.url, r.user_full_name]
+        .map(x => String(x || '').toLowerCase()).join(' ');
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const counters = document.getElementById('errors-counters');
+  if (counters) {
+    const lvls = {};
+    for (const r of _errorsFiltered) lvls[r.level] = (lvls[r.level] || 0) + 1;
+    const lvlStr = Object.entries(lvls).map(([k, v]) => `${k}: ${v}`).join(' · ');
+    counters.textContent = `Показано: ${_errorsFiltered.length} из ${_errorsCache.length}${lvlStr ? ' · ' + lvlStr : ''}`;
+  }
+
+  const tbody = document.getElementById('errors-body');
+  if (!_errorsFiltered.length) {
+    const hasFilter = q || lvl;
+    tbody.innerHTML = `
+      <tr><td colspan="5" style="text-align:center;padding:30px 20px;">
+        <div style="font-size:32px;margin-bottom:8px;">${hasFilter ? '🔍' : '✅'}</div>
+        <div style="color:#64748b;font-size:.9rem;">
+          ${hasFilter ? 'Ничего не найдено по фильтрам.' : 'Ошибок нет — система работает штатно.'}
+        </div>
+      </td></tr>`;
+  } else {
+    tbody.innerHTML = _errorsFiltered.map(r => {
+      const levelColor = r.level === 'error' ? '#dc2626' : (r.level === 'warn' ? '#d97706' : '#0ea5e9');
+      return `
+        <tr>
+          <td class="timestamp">${_fmtDateTime(r.timestamp)}</td>
+          <td style="color:${levelColor};font-weight:600;text-transform:uppercase;">${esc(r.level)}</td>
+          <td>${esc(r.source || '—')}</td>
+          <td>${esc(r.user_full_name || '—')}</td>
+          <td style="font-size:.82rem;">
+            ${esc(r.message || '')}
+            ${r.url ? `<br><small style="color:#94a3b8;">${esc(r.method || '')} ${esc(r.url)}</small>` : ''}
+            ${r.stack ? `<details style="margin-top:4px;"><summary style="cursor:pointer;color:#94a3b8;font-size:.75rem;">Стек-трейс</summary><pre style="white-space:pre-wrap;font-size:.72rem;background:#f1f5f9;padding:6px;border-radius:4px;margin-top:4px;">${esc(r.stack)}</pre></details>` : ''}
+          </td>
+        </tr>`;
+    }).join('');
+  }
+}
+
+function exportErrorsPDF() {
+  if (!_errorsFiltered.length) { showToast('Нет ошибок для печати', 'error'); return; }
+  _printErrorsTable(_errorsFiltered);
+}
+
+function _printErrorsTable(items) {
+  const today = new Date().toLocaleDateString('ru-RU');
+  const user = currentUser ? currentUser.fullName : '';
+  const userPosition = currentUser ? (currentUser.position || '') : '';
+
+  const rows = items.map(r => `
+    <tr>
+      <td>${_fmtDateTime(r.timestamp)}</td>
+      <td>${esc(r.level || '')}</td>
+      <td>${esc(r.source || '')}</td>
+      <td>${esc(r.user_full_name || '—')}</td>
+      <td>${esc(r.message || '')}${r.url ? '<br><small>' + esc((r.method || '') + ' ' + r.url) + '</small>' : ''}</td>
+    </tr>`).join('');
+
+  const html = `
+    <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
+    <title>Журнал ошибок — ${today}</title>
+    <style>
+      @page { size: A4 landscape; margin: 12mm 8mm; }
+      * { box-sizing: border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; margin: 0; }
+      h1 { font-size: 14pt; margin: 0 0 4px; color: #1e293b; }
+      .meta { font-size: 9pt; color: #64748b; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
+      table { width: 100%; border-collapse: collapse; font-size: 8pt; border: 1.5px solid #1e293b; }
+      th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; }
+      td { padding: 5px; border-bottom: 0.5px solid #94a3b8; vertical-align: top; }
+      tbody tr:nth-child(even) td { background: #f8fafc; }
+      .footer { margin-top: 12px; font-size: 8pt; display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 6px; }
+    </style></head><body>
+      <h1>Журнал ошибок</h1>
+      <div class="meta">Дата печати: <b>${today}</b> · Записей: <b>${items.length}</b></div>
+      <table>
+        <thead><tr>
+          <th style="width:14%;">Дата</th>
+          <th style="width:8%;">Уровень</th>
+          <th style="width:12%;">Источник</th>
+          <th style="width:15%;">Пользователь</th>
+          <th>Сообщение</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="footer">
+        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+        <div>Подпись: _______________</div>
+      </div>
+    </body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { showToast('Разрешите всплывающие окна для печати', 'error'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+async function clearErrorsLog() {
+  const ok = await showConfirm('Очистить журнал ошибок?', { icon: '🗑️', title: 'Очистка', okText: 'Очистить', okClass: 'btn-danger' });
+  if (!ok) return;
+  try {
+    await apiRequest('/log/errors', 'DELETE');
+    showToast('Журнал ошибок очищен', 'success');
+    _errorsCache = [];
+    renderErrorsList();
+  } catch (e) {
+    showToast(e.message || 'Ошибка очистки', 'error');
+  }
+}
 
 // ── Глобальный аудит ─────────────────────────────────────
 async function openAuditModal() {
