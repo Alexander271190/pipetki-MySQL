@@ -62,8 +62,8 @@ services:
       DB_USER: pipette
       DB_PASSWORD: Seno16/1978S
       JWT_SECRET: 7f3a9c2e8b1d4f6a0e5c7b9d2f4a6c8e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a
-      # 🧹 Очистка audit_log (90 дней, работает автоматически)
-      AUDIT_LOG_RETENTION_DAYS: "90"
+      # 🧹 Очистка audit_log (365 дней, работает автоматически)
+      AUDIT_LOG_RETENTION_DAYS: "365"
 
     depends_on:
       db:
