@@ -7,9 +7,10 @@ const router = express.Router();
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const raw = parseInt(req.query.limit, 10);
-    const limit = Math.min(Number.isFinite(raw) && raw > 0 ? raw : 100, 1000);
+    const limit = Math.min(Number.isFinite(raw) && raw > 0 ? raw : 100, 2000);
     const [rows] = await db.query(
-      'SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT ?',
+      `SELECT id, user_id, user_full_name, action, details, pipette_id, category, timestamp
+       FROM audit_log ORDER BY timestamp DESC LIMIT ?`,
       [limit]
     );
     res.json(rows);
@@ -18,7 +19,6 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
     res.status(500).json({ error: 'Ошибка загрузки журнала' });
   }
 });
-
 router.delete('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     await db.query('DELETE FROM audit_log');
