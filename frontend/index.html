@@ -24,9 +24,10 @@
   <script src="js/14-barcodes.js" defer></script>
   <script src="js/15-help.js" defer></script>
   <script src="js/16-reminders.js" defer></script>
-   <script src="js/17-help-templates.js" defer></script>
+  <script src="js/17-help-templates.js" defer></script>
   <script src="js/99-components.js" defer></script>
-  <script src="js/18-init.js" defer></script>
+  <script src="js/20-audit.js" defer></script>
+   <script src="js/18-init.js" defer></script>
 </head>
 <body>
 
@@ -175,6 +176,9 @@
       <div class="dropdown-divider"></div>
       <button class="dropdown-item" onclick="toggleCompactMode(); closeMoreMenu();">
         <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
+      </button>
+      <button class="dropdown-item" onclick="openAuditModal(); closeMoreMenu();">
+        <i class="fa-solid fa-clipboard-list"></i> Аудит оборудования
       </button>
       <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
          <i class="fa-solid fa-book-open"></i> Справка
@@ -908,8 +912,112 @@
   </div>
  </div>
 </div>
-  
 
+  <div class="modal-overlay" id="audit-modal">
+  <div class="modal modal-lg">
+    <h2><i class="fa-solid fa-clipboard-list"></i> Аудит изменений</h2>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <input type="text" id="audit-search" placeholder="Поиск по ID, модели, пользователю, деталям..."
+             style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;"
+             oninput="renderAuditList()">
+      <select id="audit-category" onchange="renderAuditList()"
+              style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+        <option value="">Все категории</option>
+        <option value="equipment">Оборудование</option>
+        <option value="users">Пользователи</option>
+        <option value="calibration">Поверки</option>
+        <option value="barcode">Штрихкоды</option>
+        <option value="settings">Настройки</option>
+        <option value="locks">Блокировки</option>
+        <option value="auth">Вход/выход</option>
+        <option value="help">Справка</option>
+      </select>
+      <select id="audit-period" onchange="onAuditPeriodChange()"
+              style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+        <option value="">Всё время</option>
+        <option value="today">Сегодня</option>
+        <option value="week">7 дней</option>
+        <option value="month">30 дней</option>
+        <option value="custom">Произвольный</option>
+      </select>
+      <button class="btn btn-info" onclick="exportAuditPDF()"><i class="fa-solid fa-print"></i> PDF</button>
+    </div>
+    <div id="audit-custom-period" style="display:none;gap:8px;margin-bottom:10px;">
+      <input type="date" id="audit-from" onchange="renderAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+      <span style="align-self:center;">—</span>
+      <input type="date" id="audit-to" onchange="renderAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+    </div>
+
+    <div id="audit-counters" style="font-size:.85rem;color:var(--text-muted);margin-bottom:10px;"></div>
+
+    <div class="log-container" style="max-height:55vh;">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th style="width:140px;">Дата и время</th>
+            <th style="width:90px;">Прибор</th>
+            <th style="width:130px;">Кто</th>
+            <th style="width:120px;">Действие</th>
+            <th>Изменения</th>
+          </tr>
+        </thead>
+        <tbody id="audit-body"></tbody>
+      </table>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px;">
+      <span id="audit-total" style="color:var(--text-muted);font-size:.85rem;margin-right:auto;"></span>
+      <button class="btn btn-secondary" onclick="closeAuditModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="equipment-audit-modal">
+  <div class="modal modal-lg">
+    <h2 id="equipment-audit-title"><i class="fa-solid fa-clipboard-list"></i> Аудит изменений прибора</h2>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <input type="text" id="eq-audit-search" placeholder="Поиск по деталям, пользователю..."
+             style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;"
+             oninput="renderEquipmentAuditList()">
+      <select id="eq-audit-period" onchange="onEqAuditPeriodChange()"
+              style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+        <option value="">Всё время</option>
+        <option value="today">Сегодня</option>
+        <option value="week">7 дней</option>
+        <option value="month">30 дней</option>
+        <option value="custom">Произвольный</option>
+      </select>
+      <button class="btn btn-info" onclick="exportEquipmentAuditPDF()"><i class="fa-solid fa-print"></i> PDF</button>
+    </div>
+    <div id="eq-audit-custom-period" style="display:none;gap:8px;margin-bottom:10px;">
+      <input type="date" id="eq-audit-from" onchange="renderEquipmentAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+      <span style="align-self:center;">—</span>
+      <input type="date" id="eq-audit-to" onchange="renderEquipmentAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+    </div>
+
+    <div class="log-container" style="max-height:55vh;">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th style="width:140px;">Дата и время</th>
+            <th style="width:130px;">Кто</th>
+            <th style="width:120px;">Действие</th>
+            <th>Изменения</th>
+          </tr>
+        </thead>
+        <tbody id="eq-audit-body"></tbody>
+      </table>
+    </div>
+
+    <div class="form-actions" style="margin-top:16px;">
+      <span id="eq-audit-total" style="color:var(--text-muted);font-size:.85rem;margin-right:auto;"></span>
+      <button class="btn btn-secondary" onclick="closeEquipmentAuditModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+  
   <!-- МОДАЛКА СПРАВКИ -->
 <div class="modal-overlay" id="hotkeys-modal">
   <div class="modal modal-xl">
