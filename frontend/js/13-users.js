@@ -1,5 +1,7 @@
 'use strict';
 
+let _cachedPresets = [];
+
 // ============================================================
 // ПОЛЬЗОВАТЕЛИ — СПИСОК И ФОРМА
 // ============================================================
@@ -205,24 +207,25 @@ function renderUserEditForm() {
           Для роли «Администратор» все права выдаются автоматически.
         </small>
 
-        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')">
-               <i class="fa-solid fa-eraser"></i> Очистить
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')">
-                <i class="fa-solid fa-user"></i> Пользователь
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')">
-                <i class="fa-solid fa-flask"></i> Ст. лаборант
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('manager')">
-                <i class="fa-solid fa-chart-line"></i> Менеджер
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')">
-                <i class="fa-solid fa-star"></i> Все права
+               <div style="margin-bottom:14px;">
+          <div style="font-size:.78rem; font-weight:600; color:#64748b; margin-bottom:6px;">Стандартные:</div>
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')"><i class="fa-solid fa-eraser"></i> Очистить</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')"><i class="fa-solid fa-user"></i> Пользователь</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')"><i class="fa-solid fa-flask"></i> Ст. лаборант</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')"><i class="fa-solid fa-star"></i> Все права</button>
+          </div>
+          
+          <div style="font-size:.78rem; font-weight:600; color:#64748b; margin-bottom:6px;">Мои пресеты:</div>
+          <div id="custom-presets-container" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap; align-items:center;">
+            <span style="font-size:.8rem; color:#94a3b8;">Загрузка…</span>
+          </div>
+          
+          <button type="button" class="btn btn-outline btn-sm" onclick="saveCurrentPermsAsPreset()">
+            <i class="fa-solid fa-floppy-disk"></i> Сохранить текущие как пресет
           </button>
         </div>
-
+        
         <div id="usr-permissions">${permsHtml}</div>
       `)}
 
@@ -275,25 +278,89 @@ function applyPermPreset(preset) {
     user: ['view_history', 'print_labels', 'export_data'],
     senior: [
       'add_pipette', 'edit_pipette', 'quick_calibration', 'transfer_pipette',
-      'bulk_change_responsible',
-      'bulk_send', 'bulk_return',
-      'export_data', 'scan_barcode', 'print_labels',
-      'view_history',
-    ],
-    manager: [
-      'add_pipette', 'edit_pipette', 'delete_pipette', 'quick_calibration',
-      'bulk_send', 'bulk_return',
-      'import_data', 'export_data',
-      'scan_barcode', 'print_labels', 'manage_barcodes',
-      'manage_users', 'view_log',
-      'view_history',
+      'bulk_change_responsible', 'bulk_send', 'bulk_return',
+      'export_data', 'scan_barcode', 'print_labels', 'view_history', 'view_audit',
     ],
     all: ALL_PERMISSIONS.map(p => p.key),
   };
-  const selected = presets[preset] || [];
+  applyPermsArray(presets[preset] || []);
+}
+
+function applyPermsArray(selected) {
   document.querySelectorAll('.usr-perm-cb').forEach(cb => {
     cb.checked = selected.includes(cb.value);
   });
+}
+
+async function loadCustomPresets() {
+  const container = document.getElementById('custom-presets-container');
+  if (!container) return;
+
+  if (_cachedPresets.length === 0) {
+    try {
+      _cachedPresets = await apiRequest('/users/presets');
+    } catch (e) {
+      console.warn('Не удалось загрузить пресеты:', e.message);
+    }
+  }
+
+  if (_cachedPresets.length === 0) {
+    container.innerHTML = '<span style="font-size:.8rem; color:#94a3b8;">Нет сохраненных пресетов</span>';
+    return;
+  }
+
+  container.innerHTML = _cachedPresets.map(p => `
+    <div style="display:inline-flex; align-items:center; background:#f1f5f9; border-radius:6px; padding:2px 4px; gap:4px;">
+      <button type="button" class="btn btn-secondary btn-sm" style="border:none; background:transparent; padding:4px 6px;" onclick="applyCustomPreset(${p.id})">
+        ${esc(p.name)}
+      </button>
+      <button type="button" class="btn btn-danger btn-sm" style="padding:2px 4px; border-radius:4px; background:transparent; color:#dc2626; border:none;" onclick="deleteCustomPreset(${p.id})" title="Удалить">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+function applyCustomPreset(id) {
+  const p = _cachedPresets.find(x => x.id === id);
+  if (p) applyPermsArray(p.permissions);
+}
+
+async function saveCurrentPermsAsPreset() {
+  const selected = [];
+  document.querySelectorAll('.usr-perm-cb:checked').forEach(cb => selected.push(cb.value));
+  if (selected.length === 0) {
+    showToast('Отметьте хотя бы одно право для сохранения', 'error');
+    return;
+  }
+
+  const name = await showPrompt('Название нового пресета', {
+    icon: 'fa-floppy-disk', title: 'Сохранить пресет', okText: 'Сохранить',
+    placeholder: 'Например: Врач КДЛ'
+  });
+  if (!name) return;
+
+  try {
+    await apiRequest('/users/presets', 'POST', { name, permissions: selected });
+    showToast('Пресет сохранен', 'success');
+    _cachedPresets = [];
+    await loadCustomPresets();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function deleteCustomPreset(id) {
+  const ok = await showConfirm('Удалить этот пресет?', { icon: 'fa-solid fa-trash', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
+  if (!ok) return;
+  try {
+    await apiRequest('/users/presets/' + id, 'DELETE');
+    _cachedPresets = _cachedPresets.filter(p => p.id !== id);
+    await loadCustomPresets();
+    showToast('Пресет удален', 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 function onUserRoleChange(role) {
@@ -367,7 +434,7 @@ async function editUserSetting(id) {
       perms.push('add_pipette', 'edit_pipette', 'delete_pipette', 'quick_calibration', 'bulk_send', 'bulk_return');
       perms = [...new Set(perms)];
     }
-    
+    await loadCustomPresets();
     document.querySelectorAll('.usr-perm-cb').forEach(cb => {
       cb.checked = perms.includes(cb.value);
       cb.disabled = (u.role === 'admin');
