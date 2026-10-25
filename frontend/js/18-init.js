@@ -420,6 +420,8 @@ const modalCloseMap = {
   'user-view-modal':        closeUserViewModal,
   'hotkeys-modal':          closeHotkeysHelp,
   'help-editor-modal':      closeHelpEditor,
+  'audit-modal':            closeAuditModal,
+  'equipment-audit-modal':  closeEquipmentAuditModal,
 };
 Object.entries(modalCloseMap).forEach(([id, fn]) => UI.modal.bindOutsideClick(id, fn));
 
