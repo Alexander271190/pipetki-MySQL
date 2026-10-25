@@ -136,8 +136,9 @@ async function loadPipetteData() {
       // ── 5) Параллельно: paged + stats ──
       await Promise.all([loadPaged(), loadStats()]);
 
-      render();
+       render();
       checkReminder();
+      _reminderScheduled = false;
     } catch (error) {
       console.error('Error loading data:', error);
       if (error.message === 'Неавторизован') return;
@@ -208,9 +209,13 @@ async function loadPaged() {
 // ============================================================
 // 🆕 СТАТИСТИКА (напоминания) — для 16-reminders.js (этап B)
 // ============================================================
+let _loadStatsPromise = null;
+
 async function loadStats() {
   if (!isAuthenticated()) return;
+  if (_loadStatsPromise) return _loadStatsPromise;
 
+  _loadStatsPromise = (async () => {
   try {
     const data = await apiRequest('/pipettes/stats');
     statsState = {
@@ -219,11 +224,16 @@ async function loadStats() {
     };
   } catch (e) {
     console.error('loadStats error:', e);
-    statsState = {
+        statsState = {
       counters: { ok: 0, warn: 0, danger: 0, total: 0 },
       reminders: { danger: [], warn: [] },
     };
+  } finally {
+    _loadStatsPromise = null;
   }
+  })();
+
+  return _loadStatsPromise;
 }
 
 // ============================================================
