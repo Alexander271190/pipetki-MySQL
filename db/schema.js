@@ -158,6 +158,16 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+        await conn.query(`
+      CREATE TABLE IF NOT EXISTS permission_presets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        permissions JSON NOT NULL,
+        created_by VARCHAR(255) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
         id INT AUTO_INCREMENT PRIMARY KEY,
