@@ -110,7 +110,7 @@ async function openRowActions(ev, id) {
     }
 
     // 5. Аудит изменений
-    if (canViewHistory()) {
+    if (canViewAudit()) {
       items.push({
         label: '<i class="fa-solid fa-clipboard-list"></i> Аудит изменений',
         action: () => openEquipmentAuditModal(id),
