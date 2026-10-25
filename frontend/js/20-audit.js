@@ -1,5 +1,17 @@
 'use strict';
 
+function _fmtDateTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '—';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}.${mm}.${yyyy}   ${hh}:${mi}`;
+}
+
 let _auditCache = [];
 let _auditFiltered = [];
 let _eqAuditCache = [];
@@ -140,7 +152,7 @@ function _actionColor(action) {
 function _renderAuditRow(r) {
   return `
     <tr>
-      <td class="timestamp">${new Date(r.timestamp).toLocaleString('ru-RU')}</td>
+      <td class="timestamp">${_fmtDateTime(r.timestamp)}</td>
       <td><strong>${esc(r.pipette_id || '—')}</strong>${r.model ? `<br><small>${esc(r.model)}</small>` : ''}</td>
       <td>${esc(r.user_full_name || '—')}</td>
       <td style="color:${_actionColor(r.action)};font-weight:600;">${esc(r.action)}</td>
@@ -259,7 +271,7 @@ function renderEquipmentAuditList() {
   } else {
     tbody.innerHTML = list.map(r => `
       <tr>
-        <td class="timestamp">${new Date(r.timestamp).toLocaleString('ru-RU')}</td>
+        <td class="timestamp">${_fmtDateTime(r.timestamp)}</td>
         <td>${esc(r.user_full_name || '—')}</td>
         <td style="color:${_actionColor(r.action)};font-weight:600;">${esc(r.action)}</td>
         <td style="font-size:.82rem;">${esc(r.details || '')}</td>
@@ -289,7 +301,7 @@ function _printAuditTable(items, title, dateLabel, equipmentInfo) {
 
   const rows = items.map(r => `
     <tr>
-      <td>${new Date(r.timestamp).toLocaleString('ru-RU')}</td>
+      <td>${_fmtDateTime(r.timestamp)}</td>
       <td>${esc(r.pipette_id || '—')}${r.model ? '<br><small>' + esc(r.model) + '</small>' : ''}</td>
       <td>${esc(r.user_full_name || '—')}</td>
       <td>${esc(r.action)}</td>
