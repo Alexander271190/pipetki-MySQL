@@ -62,11 +62,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
-app.use((err, req, res, next) => {
-  console.error('💥 Unhandled error:', err);
-  if (res.headersSent) return next(err);
-  res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-});
+const { errorHandler } = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 // ============================================================
 // Старт: ждём БД, инициализируем схему
