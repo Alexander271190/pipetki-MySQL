@@ -508,6 +508,7 @@ async function addCalibrationRecord() {
     closeCalibrationForm();
     closeHistoryModal();
     await loadPipetteData();
+    await loadStats();
    } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
