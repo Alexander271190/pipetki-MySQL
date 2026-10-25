@@ -7,6 +7,60 @@ const { logAction } = require('../utils/audit');
 const router = express.Router();
 
 // ============================================================
+// ПРЕСЕТЫ ПРАВ (только для админа)
+// ============================================================
+router.get('/presets', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT id, name, permissions FROM permission_presets ORDER BY name');
+    res.json(rows.map(r => ({
+      id: r.id,
+      name: r.name,
+      permissions: db.safeParse(r.permissions, [])
+    })));
+  } catch (e) {
+    console.error('GET /users/presets:', e);
+    res.status(500).json({ error: 'Ошибка загрузки пресетов' });
+  }
+});
+
+router.post('/presets', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const { name, permissions } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'Укажите название пресета' });
+    }
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'Ожидается массив прав' });
+    }
+    const cleanName = String(name).trim();
+    const [ex] = await db.query('SELECT id FROM permission_presets WHERE name = ?', [cleanName]);
+    if (ex.length) return res.status(409).json({ error: 'Пресет с таким названием уже существует' });
+
+    const [result] = await db.query(
+      'INSERT INTO permission_presets (name, permissions, created_by) VALUES (?, ?, ?)',
+      [cleanName, JSON.stringify(permissions), req.user.id]
+    );
+    res.status(201).json({ id: result.insertId, name: cleanName, permissions });
+  } catch (e) {
+    console.error('POST /users/presets:', e);
+    res.status(500).json({ error: 'Ошибка сохранения пресета' });
+  }
+});
+
+router.delete('/presets/:id', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    await db.query('DELETE FROM permission_presets WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Пресет удалён' });
+  } catch (e) {
+    console.error('DELETE /users/presets:', e);
+    res.status(500).json({ error: 'Ошибка удаления пресета' });
+  }
+});
+
+// ============================================================
+// СПИСОК ОТВЕТСТВЕННЫХ (для поля «Ответственный»)
+
+// ============================================================
 // СПИСОК ОТВЕТСТВЕННЫХ (для поля «Ответственный»)
 // Доступно всем авторизованным пользователям
 // ============================================================
