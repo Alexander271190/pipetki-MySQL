@@ -12,6 +12,7 @@ function _fmtDateTime(ts) {
   return `${dd}.${mm}.${yyyy}   ${hh}:${mi}`;
 }
 
+// ── Все состояния — ОДИН раз, в начале файла ──
 let _auditCache = [];
 let _auditFiltered = [];
 let _auditTab = 'actions';
@@ -21,6 +22,9 @@ let _eqAuditCache = [];
 let _eqAuditId = null;
 let _eqAuditInfo = null;
 
+// ═══════════════════════════════════════════════════════════
+// ВКЛАДКИ ЖУРНАЛА ДЕЙСТВИЙ
+// ═══════════════════════════════════════════════════════════
 function switchAuditTab(tab) {
   _auditTab = tab;
   document.querySelectorAll('.audit-tab-btn').forEach(b => {
@@ -33,6 +37,9 @@ function switchAuditTab(tab) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// ЖУРНАЛ ОШИБОК
+// ═══════════════════════════════════════════════════════════
 async function loadErrorsData() {
   const tbody = document.getElementById('errors-body');
   tbody.innerHTML = Array(5).fill(0).map(() => `
@@ -207,13 +214,22 @@ async function clearErrorsLog() {
   }
 }
 
-// ── Глобальный аудит ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// ГЛОБАЛЬНЫЙ АУДИТ (вкладка «Действия»)
+// ═══════════════════════════════════════════════════════════
 async function openAuditModal() {
   UI.modal.open('audit-modal');
   document.getElementById('audit-search').value = '';
   document.getElementById('audit-category').value = '';
   document.getElementById('audit-period').value = '';
   document.getElementById('audit-custom-period').style.display = 'none';
+  // Сбрасываем на вкладку «Действия»
+  _auditTab = 'actions';
+  document.querySelectorAll('.audit-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === 'actions');
+  });
+  document.getElementById('audit-tab-actions').style.display = '';
+  document.getElementById('audit-tab-errors').style.display = 'none';
   await loadAuditData();
 }
 
@@ -298,9 +314,7 @@ function renderAuditList() {
   }
 
   const tbody = document.getElementById('audit-body');
-    if (!_auditFiltered.length) {
-    const q = (document.getElementById('audit-search')?.value || '').trim();
-    const cat = (document.getElementById('audit-category')?.value || '');
+  if (!_auditFiltered.length) {
     const hasFilter = q || cat;
     tbody.innerHTML = `
       <tr><td colspan="5" style="text-align:center;padding:30px 20px;">
@@ -354,7 +368,9 @@ function exportAuditPDF() {
   _printAuditTable(_auditFiltered, 'Аудит изменений', 'Дата');
 }
 
-// ── Аудит одного прибора ──────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// АУДИТ ОДНОГО ПРИБОРА
+// ═══════════════════════════════════════════════════════════
 async function openEquipmentAuditModal(id) {
   _eqAuditId = id;
   UI.modal.open('equipment-audit-modal');
@@ -442,7 +458,7 @@ function _filteredEqAudit() {
 function renderEquipmentAuditList() {
   const list = _filteredEqAudit();
   const tbody = document.getElementById('eq-audit-body');
-   if (!list.length) {
+  if (!list.length) {
     const q = (document.getElementById('eq-audit-search')?.value || '').trim();
     const hasFilter = !!q;
     tbody.innerHTML = `
@@ -478,7 +494,9 @@ function exportEquipmentAuditPDF() {
   _printAuditTable(list, title, 'Дата', _eqAuditInfo);
 }
 
-// ── Общий принтер ────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// ОБЩИЙ ПРИНТЕР ДЛЯ PDF
+// ═══════════════════════════════════════════════════════════
 function _printAuditTable(items, title, dateLabel, equipmentInfo) {
   const today = new Date().toLocaleDateString('ru-RU');
   const user = currentUser ? currentUser.fullName : '';
