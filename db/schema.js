@@ -139,6 +139,25 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+        await conn.query(`
+      CREATE TABLE IF NOT EXISTS app_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        level VARCHAR(20) NOT NULL DEFAULT 'error',
+        source VARCHAR(50) DEFAULT NULL,
+        message TEXT NOT NULL,
+        stack TEXT,
+        user_id VARCHAR(255) DEFAULT NULL,
+        user_full_name VARCHAR(255) DEFAULT NULL,
+        method VARCHAR(10) DEFAULT NULL,
+        url VARCHAR(500) DEFAULT NULL,
+        status_code INT DEFAULT NULL,
+        ip VARCHAR(64) DEFAULT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_app_logs_ts (timestamp),
+        INDEX idx_app_logs_level (level)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS audit_log (
         id INT AUTO_INCREMENT PRIMARY KEY,
