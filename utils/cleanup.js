@@ -14,6 +14,13 @@ async function cleanupAuditLog() {
     if (result.affectedRows > 0) {
       console.log(`🧹 audit_log: удалено ${result.affectedRows} записей старше ${AUDIT_LOG_RETENTION_DAYS} дней`);
     }
+          const [result2] = await db.query(
+        'DELETE FROM app_logs WHERE timestamp < DATE_SUB(NOW(), INTERVAL ? DAY)',
+        [AUDIT_LOG_RETENTION_DAYS]
+      );
+      if (result2.affectedRows > 0) {
+        console.log(`🧹 app_logs: удалено ${result2.affectedRows} записей старше ${AUDIT_LOG_RETENTION_DAYS} дней`);
+      }
   } catch (e) {
     console.error('❌ Ошибка очистки audit_log:', e.message);
   }
