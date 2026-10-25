@@ -385,6 +385,118 @@ router.get('/all', authenticate, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// GET /audit — глобальный аудит (для админа)
+// ═══════════════════════════════════════════════════════════
+router.get('/audit', authenticate, async (req, res) => {
+  try {
+    const search = req.query.search || '';
+    const category = req.query.category || '';
+    const dateFrom = req.query.from || '';
+    const dateTo = req.query.to || '';
+    const limit = Math.min(1000, parseInt(req.query.limit, 10) || 500);
+    const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+
+    const { empty, baseWhere, baseParams } = buildDepartmentScope(req.user);
+    if (empty) return res.json({ items: [], total: 0 });
+
+    const parts = ['1=1'];
+    const params = [...baseParams];
+
+    if (baseWhere.length > 0) {
+      parts.push(`l.pipette_id IN (SELECT id FROM pipettes WHERE ${baseWhere.join(' AND ')})`);
+    }
+    if (category) { parts.push('l.category = ?'); params.push(category); }
+    if (search) {
+      const q = `%${search}%`;
+      parts.push('(l.pipette_id LIKE ? OR l.details LIKE ? OR l.user_full_name LIKE ? OR l.action LIKE ? OR p.model LIKE ?)');
+      params.push(q, q, q, q, q);
+    }
+    if (dateFrom) { parts.push('DATE(l.timestamp) >= ?'); params.push(dateFrom); }
+    if (dateTo)   { parts.push('DATE(l.timestamp) <= ?'); params.push(dateTo); }
+
+    const whereSql = 'WHERE ' + parts.join(' AND ');
+
+    const [cnt] = await db.query(
+      `SELECT COUNT(*) AS c FROM audit_log l
+       LEFT JOIN pipettes p ON p.id = l.pipette_id
+       ${whereSql}`,
+      params
+    );
+    const total = Number(cnt[0].c) || 0;
+
+    const [rows] = await db.query(
+      `SELECT l.*, p.model
+       FROM audit_log l
+       LEFT JOIN pipettes p ON p.id = l.pipette_id
+       ${whereSql}
+       ORDER BY l.timestamp DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    const [cats] = await db.query(
+      `SELECT category, COUNT(*) AS c FROM audit_log
+       WHERE category IS NOT NULL
+       GROUP BY category`
+    );
+    const counters = {};
+    for (const r of cats) counters[r.category] = Number(r.c);
+
+    res.json({ items: rows, total, counters, limit, offset });
+  } catch (e) {
+    console.error('GET /pipettes/audit:', e);
+    res.status(500).json({ error: 'Ошибка загрузки аудита' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// GET /:id/audit — аудит одного прибора
+// ═══════════════════════════════════════════════════════════
+router.get('/:id/audit', authenticate, async (req, res) => {
+  try {
+    const [pipRows] = await db.query(
+      'SELECT id, model, department FROM pipettes WHERE id = ?',
+      [req.params.id]
+    );
+    if (!pipRows.length) return res.status(404).json({ error: 'Оборудование не найдено' });
+    if (!canAccessDepartment(req.user, pipRows[0].department)) {
+      return res.status(403).json({ error: 'Нет доступа' });
+    }
+
+    const search = req.query.search || '';
+    const dateFrom = req.query.from || '';
+    const dateTo = req.query.to || '';
+    const limit = Math.min(1000, parseInt(req.query.limit, 10) || 500);
+
+    const parts = ['l.pipette_id = ?'];
+    const params = [req.params.id];
+    if (search) {
+      const q = `%${search}%`;
+      parts.push('(l.details LIKE ? OR l.user_full_name LIKE ? OR l.action LIKE ?)');
+      params.push(q, q, q);
+    }
+    if (dateFrom) { parts.push('DATE(l.timestamp) >= ?'); params.push(dateFrom); }
+    if (dateTo)   { parts.push('DATE(l.timestamp) <= ?'); params.push(dateTo); }
+
+    const [rows] = await db.query(
+      `SELECT l.*, p.model FROM audit_log l
+       LEFT JOIN pipettes p ON p.id = l.pipette_id
+       WHERE ${parts.join(' AND ')}
+       ORDER BY l.timestamp DESC LIMIT ?`,
+      [...params, limit]
+    );
+
+    res.json({
+      equipment: { id: pipRows[0].id, model: pipRows[0].model },
+      items: rows
+    });
+  } catch (e) {
+    console.error('GET /pipettes/:id/audit:', e);
+    res.status(500).json({ error: 'Ошибка загрузки аудита' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // GET /next-id — предварительный просмотр следующего ID
 // ВАЖНО: должно быть до /:id, иначе Express перехватит как :id
 // ═══════════════════════════════════════════════════════════
@@ -615,7 +727,7 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
       createdId = id;
     });
 
-    await logAction(req, 'Добавление оборудования', `${createdId} (${trimmedModel})`);
+    await logAction(req, 'Добавление оборудования', `${createdId} (${trimmedModel})`, null, createdId);
 
     res.status(201).json({ message: 'Оборудование создано', id: createdId });
   } catch (e) {
@@ -727,10 +839,11 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     }
   }
 
-  try {
+   try {
    const result = await withTransaction(async (conn) => {
    const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
-      const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+   const oldValues = { ...p };
+   const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
       
       // 🆕 Проверяем: если блокировка наша (или её нет) — пропускаем проверку конфликта
       const hasForeignLock = lockChk.length > 0 && String(lockChk[0].user_id) !== String(req.user.id);
@@ -826,12 +939,58 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       return { oldType, newType, regeneratedId };
     });
 
-    const auditDetails = result.regeneratedId
-      ? `${req.params.id} → ${result.regeneratedId} (смена типа ${result.oldType} → ${result.newType})`
-      : req.params.id;
+       const fieldLabels = {
+      model: 'Модель', serial: 'Серийный номер', manufacturer: 'Производитель',
+      equipment_type: 'Тип', volume: 'Объём', department: 'Отдел',
+      interval: 'МПИ (мес.)', last_calibration: 'Дата поверки',
+      cert: 'Свидетельство', last_result: 'Результат', active: 'Статус',
+      responsible: 'Ответственный', location: 'Место', notes: 'Примечание'
+    };
+    const changes = [];
 
-    await logAction(req, 'Редактирование оборудования', auditDetails);
+    for (const [col, label] of Object.entries(fieldLabels)) {
+      let newVal;
+      if (col === 'equipment_type') newVal = updates.equipmentType;
+      else if (col === 'last_calibration') newVal = updates.lastCalibration;
+      else if (col === 'last_result') newVal = updates.lastResult;
+      else newVal = updates[col];
 
+      if (newVal === undefined) continue;
+      let oldVal = oldValues[col];
+      if (oldVal === undefined || oldVal === null) oldVal = '';
+      if (newVal === null) newVal = '';
+      if (col === 'active') {
+        oldVal = Number(oldVal) ? 'В работе' : 'Не используется';
+        newVal = (newVal === false || newVal === 0 || newVal === 'false' || newVal === '0') ? 'Не используется' : 'В работе';
+      }
+      if (String(oldVal) !== String(newVal)) {
+        changes.push(`${label}: ${oldVal || '—'} → ${newVal || '—'}`);
+      }
+    }
+
+    const oldCustom = parseCustomData(oldValues.custom_data);
+    const allCustomKeys = new Set([...Object.keys(oldCustom), ...Object.keys(customUpdates)]);
+    let customLabels = {};
+    if (allCustomKeys.size > 0) {
+      const [fcs] = await db.query('SELECT id, label FROM field_config');
+      for (const f of fcs) customLabels[f.id] = f.label;
+    }
+    for (const key of allCustomKeys) {
+      const oldV = oldCustom[key] ?? '';
+      const newV = customUpdates[key] !== undefined ? customUpdates[key] : oldV;
+      if (String(oldV) !== String(newV)) {
+        changes.push(`${customLabels[key] || key}: ${oldV || '—'} → ${newV || '—'}`);
+      }
+    }
+
+    let auditDetails;
+    if (result.regeneratedId) {
+      auditDetails = `[ID: ${req.params.id} → ${result.regeneratedId}] ` + (changes.join('; ') || 'смена типа');
+    } else {
+      auditDetails = changes.length ? changes.join('; ') : `${req.params.id} (без изменений)`;
+    }
+
+    await logAction(req, 'Редактирование оборудования', auditDetails, null, req.params.id);
     res.json({
       message: 'Оборудование обновлено',
       idChanged: !!result.regeneratedId,
@@ -905,7 +1064,7 @@ router.delete('/:id', authenticate, requireAnyPermission(['delete_pipette', 'man
       deletedModel = p.model;
     });
 
-    await logAction(req, 'Удаление оборудования', `${req.params.id} (${deletedModel})`);
+    await logAction(req, 'Удаление оборудования', `${req.params.id} (${deletedModel})`, null, req.params.id);
 
     res.json({ message: 'Оборудование удалено' });
   } catch (e) {
