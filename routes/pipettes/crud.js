@@ -833,7 +833,9 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
   const NUMERIC_FIELDS = new Set(['interval']);
 
   const customUpdates = {};
+  const SERVICE_FIELDS = new Set(['updatedAt']);
   for (const [k, v] of Object.entries(updates)) {
+    if (SERVICE_FIELDS.has(k)) continue;
     if (!STANDARD_FIELDS.has(k)) {
       customUpdates[k] = (typeof v === 'string') ? v.replace(/\u0000/g, '') : v;
     }
