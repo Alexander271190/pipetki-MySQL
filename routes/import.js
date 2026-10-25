@@ -446,14 +446,18 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         // слишком длинная строка не роняла весь batch (ER_DATA_TOO_LONG)
         // и не уводила его в медленный fallback.
         const MAX_STR = 255;
+        const MAX_TEXT = 65535;
         const TOO_LONG = [];
         const _strFields = ['serial', 'manufacturer', 'volume', 'department',
-                            'cert', 'responsible', 'location', 'notes'];
+                            'cert', 'responsible', 'location'];
         if (String(model).length > MAX_STR) TOO_LONG.push(`model=${String(model).length}`);
         for (const k of _strFields) {
           if (obj[k] && String(obj[k]).length > MAX_STR) {
             TOO_LONG.push(`${k}=${String(obj[k]).length}`);
           }
+        }
+        if (obj.notes && String(obj.notes).length > MAX_TEXT) {
+          TOO_LONG.push(`notes=${String(obj.notes).length} (макс ${MAX_TEXT})`);
         }
         for (const [ck, cv] of Object.entries(customObj)) {
           if (cv && String(cv).length > MAX_STR) {
