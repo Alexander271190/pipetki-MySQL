@@ -224,6 +224,7 @@ async function saveBulkSend(e) {
     _filterRendered = false;
     currentPage = 1;
     await loadPipetteData();
+    await loadStats();
     } catch (error) {
     showToast(error.message || 'Ошибка отправки', 'error');
   }
@@ -613,6 +614,7 @@ async function saveBulkReturn(e) {
     }
     
     await loadPipetteData();
+    await loadStats();
 
     if (calFilter && date) {
       showToast(`Таблица отфильтрована по дате ${date}. Сбросьте фильтр, чтобы увидеть всё.`, 'warn');
