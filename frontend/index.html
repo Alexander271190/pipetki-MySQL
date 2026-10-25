@@ -177,8 +177,8 @@
       <button class="dropdown-item" onclick="toggleCompactMode(); closeMoreMenu();">
         <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
       </button>
-      <button class="dropdown-item" onclick="openAuditModal(); closeMoreMenu();">
-        <i class="fa-solid fa-clipboard-list"></i> Аудит оборудования
+       <button class="dropdown-item" onclick="openAuditModal(); closeMoreMenu();">
+        <i class="fa-solid fa-clipboard-list"></i> Журнал действий
       </button>
       <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
          <i class="fa-solid fa-book-open"></i> Справка
@@ -915,7 +915,7 @@
 
   <div class="modal-overlay" id="audit-modal">
   <div class="modal modal-lg">
-    <h2><i class="fa-solid fa-clipboard-list"></i> Аудит изменений</h2>
+    <h2><i class="fa-solid fa-clipboard-list"></i> Журнал действий</h2>
 
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
       <input type="text" id="audit-search" placeholder="Поиск по ID, модели, пользователю, деталям..."
