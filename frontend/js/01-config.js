@@ -87,4 +87,5 @@ const SETTINGS_SECTIONS = [
   { key: 'view_log',          group: 'Администрирование', label: '<i class="fa-solid fa-scroll"></i> Просмотр журнала' },
 
   { key: 'view_history',      group: 'Общие',        label: '<i class="fa-solid fa-clock-rotate-left"></i> Просмотр истории поверок' },
+  { key: 'view_audit',        group: 'Общие',        label: '<i class="fa-solid fa-clipboard-list"></i> Просмотр аудита изменений' },
 ];
