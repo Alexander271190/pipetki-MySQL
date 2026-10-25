@@ -8,23 +8,32 @@ function errorLogger(req, res, next) {
     try {
       const status = res.statusCode;
 
-      // Логируем только серьёзные: 500, 409, 403
-      // 404 (не найдено) и 400 (валидация) — не пишем, чтобы не засорять
+    
       const shouldLog = status >= 500 || status === 409 || status === 403;
 
       if (shouldLog) {
-        const msg = (body && body.error) ? body.error : ('HTTP ' + status);
+        let msg = (body && body.error) ? body.error : ('HTTP ' + status);
+        let friendly = '';
+        if (req.originalUrl.includes('/pipettes') && req.method === 'POST') {
+          friendly = `Создание прибора: ${msg}`;
+        } else if (req.originalUrl.includes('/pipettes') && req.method === 'PUT') {
+          friendly = `Редактирование прибора: ${msg}`;
+        } else if (req.originalUrl.includes('/lock')) {
+          friendly = `Блокировка: ${msg}`;
+        } else {
+          friendly = `${req.method} ${req.originalUrl || req.url} — ${msg}`;
+        }
         logError({
           level: status >= 500 ? 'error' : 'warn',
           source: 'http',
-          message: `${req.method} ${req.originalUrl || req.url} — ${msg}`,
+          message: friendly,
           stack: null,
           req,
           statusCode: status,
         }).catch(() => {});
-      }
+      }   
     } catch (e) {
-      // Не роняем ответ, если что-то пошло не так
+      
     }
 
     return originalJson(body);
