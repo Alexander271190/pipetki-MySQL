@@ -17,6 +17,8 @@ app.use((err, req, res, next) => {
   }
   next(err);
 });
+const { errorLogger } = require('./middleware/errorLogger');
+app.use(errorLogger);
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 const asyncHandler = fn => (req, res, next) =>
