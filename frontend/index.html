@@ -916,6 +916,17 @@
   <div class="modal-overlay" id="audit-modal">
   <div class="modal modal-lg">
     <h2><i class="fa-solid fa-clipboard-list"></i> Журнал действий</h2>
+  
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button type="button" class="audit-tab-btn active" data-tab="actions" onclick="switchAuditTab('actions')">
+        <i class="fa-solid fa-pen"></i> Действия
+      </button>
+      <button type="button" class="audit-tab-btn" data-tab="errors" onclick="switchAuditTab('errors')">
+        <i class="fa-solid fa-triangle-exclamation"></i> Ошибки
+      </button>
+    </div>
+
+    <div id="audit-tab-actions">
 
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
       <input type="text" id="audit-search" placeholder="Поиск по ID, модели, пользователю, деталям..."
@@ -962,8 +973,54 @@
             <th>Изменения</th>
           </tr>
         </thead>
-        <tbody id="audit-body"></tbody>
+                <tbody id="audit-body"></tbody>
       </table>
+    </div>
+    </div>
+
+    <!-- Вкладка ОШИБКИ -->
+    <div id="audit-tab-errors" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="text" id="errors-search" placeholder="Поиск по тексту, URL, пользователю..."
+               style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;"
+               oninput="renderErrorsList()">
+        <select id="errors-level" onchange="renderErrorsList()"
+                style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+          <option value="">Все уровни</option>
+          <option value="error">Ошибки (error)</option>
+          <option value="warn">Предупреждения (warn)</option>
+        </select>
+        <select id="errors-period" onchange="onErrorsPeriodChange()"
+                style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+          <option value="">Всё время</option>
+          <option value="today">Сегодня</option>
+          <option value="week">7 дней</option>
+          <option value="month">30 дней</option>
+          <option value="custom">Произвольный</option>
+        </select>
+        <button class="btn btn-info" onclick="exportErrorsPDF()"><i class="fa-solid fa-print"></i> PDF</button>
+        <button class="btn btn-danger" onclick="clearErrorsLog()"><i class="fa-solid fa-trash"></i> Очистить</button>
+      </div>
+      <div id="errors-custom-period" style="display:none;gap:8px;margin-bottom:10px;">
+        <input type="date" id="errors-from" onchange="renderErrorsList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+        <span style="align-self:center;">—</span>
+        <input type="date" id="errors-to" onchange="renderErrorsList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+      </div>
+      <div id="errors-counters" style="font-size:.85rem;color:var(--text-muted);margin-bottom:10px;"></div>
+      <div class="log-container" style="max-height:55vh;">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th style="width:140px;">Дата и время</th>
+              <th style="width:80px;">Уровень</th>
+              <th style="width:120px;">Источник</th>
+              <th style="width:150px;">Пользователь</th>
+              <th>Сообщение</th>
+            </tr>
+          </thead>
+          <tbody id="errors-body"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="form-actions" style="margin-top:16px;">
