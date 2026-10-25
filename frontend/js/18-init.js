@@ -471,15 +471,17 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-    if (e.key === 'Escape') {
+        if (e.key === 'Escape') {
     const confirmModal = document.getElementById('confirm-modal');
     if (confirmModal && confirmModal.classList.contains('active')) return;
 
-    const hotkeysModal = document.getElementById('hotkeys-modal');
-    if (hotkeysModal && hotkeysModal.classList.contains('active')) {
-      closeHotkeysHelp();
+    // 🆕 Закрываем ЛЮБУЮ активную модалку, у которой есть обработчик в modalCloseMap
+    const activeModal = document.querySelector('.modal-overlay.active');
+    if (activeModal && modalCloseMap[activeModal.id]) {
+      modalCloseMap[activeModal.id]();
       return;
     }
+
     const panel = document.getElementById('filter-panel');
     if (panel && panel.classList.contains('show')) {
       panel.classList.remove('show');
@@ -538,15 +540,38 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З') {
+    if (e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З') {
     e.preventDefault();
     if (typeof canPrintLabels === 'function' && canPrintLabels()) {
       openBarcodePrintModal();
     }
     return;
   }
-});
 
+  // 🆕 Ctrl+H — история текущего прибора (если есть выбранный)
+  if (e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') {
+    e.preventDefault();
+    const selected = [...selectedPipettes];
+    if (selected.length === 1 && typeof openHistoryModal === 'function') {
+      openHistoryModal(selected[0]);
+    } else {
+      showToast('Выберите ровно один прибор для истории', 'warn');
+    }
+    return;
+  }
+
+  // 🆕 Ctrl+Shift+A — аудит текущего прибора
+  if ((e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') && e.shiftKey) {
+    e.preventDefault();
+    const selected = [...selectedPipettes];
+    if (selected.length === 1 && typeof openEquipmentAuditModal === 'function') {
+      openEquipmentAuditModal(selected[0]);
+    } else {
+      showToast('Выберите ровно один прибор для аудита', 'warn');
+    }
+    return;
+  }
+});
 
 // ============================================================
 // PULL-TO-REFRESH (Свайп вниз для обновления данных)
