@@ -48,6 +48,9 @@ function renderAuthUI() {
       el.style.display = canSettings ? 'inline-flex' : 'none');
     document.querySelectorAll('.btn-scan-barcode').forEach(el =>
       el.style.display = canScan ? 'inline-flex' : 'none');
+   const canViewAuditLog = canViewLog();
+    document.querySelectorAll('.btn-audit-log').forEach(el =>
+      el.style.display = canViewAuditLog ? 'flex' : 'none');
     document.querySelectorAll('.btn-print-labels').forEach(el =>
       el.style.display = canPrint ? 'inline-flex' : 'none');
 
