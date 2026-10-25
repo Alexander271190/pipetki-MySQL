@@ -293,11 +293,11 @@ function applyPermsArray(selected) {
   });
 }
 
-async function loadCustomPresets() {
+async function loadCustomPresets(forceReload = false) {
   const container = document.getElementById('custom-presets-container');
   if (!container) return;
 
-  if (_cachedPresets.length === 0) {
+  if (forceReload || _cachedPresets.length === 0) {
     try {
       _cachedPresets = await apiRequest('/users/presets');
     } catch (e) {
@@ -322,9 +322,11 @@ async function loadCustomPresets() {
   `).join('');
 }
 
-function applyCustomPreset(id) {
+async function applyCustomPreset(id) {
+  await loadCustomPresets(true);
   const p = _cachedPresets.find(x => x.id === id);
   if (p) applyPermsArray(p.permissions);
+  else showToast('Пресет не найден — возможно, удалён в другой вкладке', 'warn');
 }
 
 async function saveCurrentPermsAsPreset() {
@@ -1077,6 +1079,14 @@ function closeTempPasswordModal() {
   UI.modal.close('temp-password-modal');
   _tempPasswordValue = '';
 }
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'pipette_session') {
+    _cachedPresets = [];
+    const container = document.getElementById('custom-presets-container');
+    if (container) loadCustomPresets(true);
+  }
+});
 
 async function copyTempPassword() {
   if (!_tempPasswordValue) return;
