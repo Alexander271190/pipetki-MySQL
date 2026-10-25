@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireAnyPermission } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -8,7 +8,7 @@ const router = express.Router();
 // GET /log/errors — журнал ошибок (для админки)
 // ВАЖНО: должен идти ДО GET /
 // ═══════════════════════════════════════════════════════════
-router.get('/errors', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/errors', authenticate, requireAnyPermission(['view_log']), async (req, res) => {
   try {
     const search = req.query.search || '';
     const level = req.query.level || '';
@@ -52,7 +52,7 @@ router.get('/errors', authenticate, requireRole(['admin']), async (req, res) => 
   }
 });
 
-router.delete('/errors', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/errors', authenticate, requireAnyPermission(['view_log']), async (req, res) => {
   try {
     await db.query('DELETE FROM app_logs');
     res.json({ message: 'Журнал ошибок очищен' });
@@ -62,7 +62,7 @@ router.delete('/errors', authenticate, requireRole(['admin']), async (req, res) 
   }
 });
 
-router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/', authenticate, requireAnyPermission(['view_log']), async (req, res) => {
   try {
     const raw = parseInt(req.query.limit, 10);
     const limit = Math.min(Number.isFinite(raw) && raw > 0 ? raw : 100, 2000);
@@ -78,7 +78,7 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   }
 });
 
-router.delete('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/', authenticate, requireAnyPermission(['view_log']), async (req, res) => {
   try {
     await db.query('DELETE FROM audit_log');
     res.json({ message: 'Лог очищен' });
