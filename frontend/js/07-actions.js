@@ -82,23 +82,8 @@ async function openRowActions(ev, id) {
 
     const items = [];
 
-    if (canViewHistory()) {
-      items.push({
-        label: '<i class="fa-solid fa-clock-rotate-left"></i> История поверок' + (histCount > 0 ? ` (${histCount})` : ''),
-        action: () => openHistoryModal(id),
-      });
-    }
-
-    if (canEditPipette()) {
-      items.push({ label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => openModal(id) });
-    }
-
-    if (canTransferPipette()) {
-      items.push({ label: '<i class="fa-solid fa-right-left"></i> Передать в другой отдел', action: () => openTransferModal(id) });
-    }
-
+    // 1. Быстрая поверка
     if (canQuickCal()) {
-      items.push({ divider: true });
       if (status === 'sent') {
         items.push({ label: '<i class="fa-solid fa-rotate-left"></i> Вернулась с поверки', class: 'item-success', action: () => openQuickCalModal(id) });
       } else {
@@ -106,10 +91,39 @@ async function openRowActions(ev, id) {
       }
     }
 
+    // 2. Редактировать
+    if (canEditPipette()) {
+      items.push({ label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => openModal(id) });
+    }
+
+    // 3. Передать в другой отдел
+    if (canTransferPipette()) {
+      items.push({ label: '<i class="fa-solid fa-right-left"></i> Передать в другой отдел', action: () => openTransferModal(id) });
+    }
+
+    // 4. История поверок
+    if (canViewHistory()) {
+      items.push({
+        label: '<i class="fa-solid fa-clock-rotate-left"></i> История поверок' + (histCount > 0 ? ` (${histCount})` : ''),
+        action: () => openHistoryModal(id),
+      });
+    }
+
+    // 5. Аудит изменений
+    if (canViewHistory()) {
+      items.push({
+        label: '<i class="fa-solid fa-clipboard-list"></i> Аудит изменений',
+        action: () => openEquipmentAuditModal(id),
+      });
+    }
+
+    // Отмена отправки (не входит в основной порядок, но должна быть доступна)
     if (status === 'sent' && canBulkSend()) {
+      items.push({ divider: true });
       items.push({ label: '<i class="fa-solid fa-xmark"></i> Отменить отправку', class: 'item-warning', action: () => cancelSend(id) });
     }
 
+    // 6. Удалить
     if (canDeletePipette()) {
       items.push({ divider: true });
       items.push({ label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: () => deletePipette(id) });
