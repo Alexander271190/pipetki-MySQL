@@ -968,10 +968,15 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
         oldVal = Number(oldVal) ? 'В работе' : 'Не используется';
         newVal = (newVal === false || newVal === 0 || newVal === 'false' || newVal === '0') ? 'Не используется' : 'В работе';
       }
-      if (String(oldVal) !== String(newVal)) {
-        changes.push(`${label}: ${oldVal || '—'} → ${newVal || '—'}`);
+        if (String(oldVal) !== String(newVal)) {
+        if (!oldVal && newVal) {
+          changes.push(`${label}: + ${newVal}`);
+        } else if (oldVal && !newVal) {
+          changes.push(`${label}: − ${oldVal}`);
+        } else {
+          changes.push(`${label}: ${oldVal} → ${newVal}`);
+        }
       }
-    }
 
     const oldCustom = parseCustomData(oldValues && oldValues.custom_data);
     const allCustomKeys = new Set([...Object.keys(oldCustom), ...Object.keys(customUpdates)]);
@@ -984,9 +989,15 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       const oldV = oldCustom[key] ?? '';
       const newV = customUpdates[key] !== undefined ? customUpdates[key] : oldV;
       if (String(oldV) !== String(newV)) {
-        changes.push(`${customLabels[key] || key}: ${oldV || '—'} → ${newV || '—'}`);
+        const lbl = customLabels[key] || key;
+        if (!oldV && newV) {
+          changes.push(`${lbl}: + ${newV}`);
+        } else if (oldV && !newV) {
+          changes.push(`${lbl}: − ${oldV}`);
+        } else {
+          changes.push(`${lbl}: ${oldV} → ${newV}`);
+        }
       }
-    }
 
     let auditDetails;
     if (result.regeneratedId) {
