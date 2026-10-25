@@ -2,6 +2,15 @@
 
 function _fmtDateTime(ts) {
   if (!ts) return '—';
+  // Если ts уже строка '2026-10-25T13:35:00.000Z' — просто парсим вручную
+  const s = String(ts);
+  // Извлекаем компоненты из ISO-строки (без конвертации часового пояса)
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (m) {
+    const [, yyyy, mm, dd, hh, mi] = m;
+    return `${dd}.${mm}.${yyyy}   ${hh}:${mi}`;
+  }
+  // fallback
   const d = new Date(ts);
   if (isNaN(d.getTime())) return '—';
   const dd = String(d.getDate()).padStart(2, '0');
