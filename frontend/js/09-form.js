@@ -118,6 +118,7 @@ let _bulkFields = [];
 const BULK_MAX_ROWS = 100;
 
 async function openModal(id) {
+  if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
   if (!Array.isArray(_equipmentTypes) || _equipmentTypes.length === 0) {
     try {
       const types = await apiRequest('/settings/equipment-types');
@@ -748,6 +749,7 @@ async function deletePipette(id) {
 // БЫСТРАЯ ПОВЕРКА
 // ============================================================
 async function openQuickCalModal(id) {
+  if (_calLockTimer) { clearInterval(_calLockTimer); _calLockTimer = null; }
   await UI.guard(
     { permission: ['quick_calibration', 'manage_pipettes'], errorMsg: 'Доступ запрещён' },
     async () => {
