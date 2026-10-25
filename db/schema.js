@@ -296,6 +296,18 @@ async function initSchema() {
       { name: 'must_set_password',   ddl: 'TINYINT DEFAULT 0' },
       { name: 'view_template_id',    ddl: 'INT NULL DEFAULT NULL' },
     ]);
+    
+        await ensureColumns(conn, 'audit_log', [
+      { name: 'pipette_id', ddl: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'category',   ddl: 'VARCHAR(50) DEFAULT NULL' }
+    ]);
+
+    try {
+      await conn.query('CREATE INDEX idx_audit_pipette ON audit_log(pipette_id)');
+    } catch (e) {}
+    try {
+      await conn.query('CREATE INDEX idx_audit_category ON audit_log(category)');
+    } catch (e) {}
 
     await ensureColumns(conn, 'pipettes', [
       { name: 'custom_data',          ddl: 'JSON DEFAULT NULL' },
