@@ -445,3 +445,35 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
   .bc-settings-grid { grid-template-columns: 1fr; }
   .bc-fields-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Табы в модалке «Журнал действий»
+   ============================================================ */
+.audit-tab-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-hard);
+  background: var(--card);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.audit-tab-btn:hover {
+  background: #f1f5f9;
+  color: var(--text-strong);
+}
+.audit-tab-btn.active {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(79,70,229,.3);
+}
+[data-theme="dark"] .audit-tab-btn:hover {
+  background: #273449;
+}
