@@ -544,3 +544,28 @@ html[data-theme="dark"] .docs-hint { background: rgba(14,165,233,.12); color: #9
   text-align: left !important;
   padding-left: 16px !important;
 }
+
+/* ============================================================
+   СКЕЛЕТОНЫ ЗАГРУЗКИ (аудит, журнал, другие таблицы)
+   ============================================================ */
+.skeleton-row td {
+  padding: 10px 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+html[data-theme="dark"] .skeleton-line {
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes skeleton-pulse {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
