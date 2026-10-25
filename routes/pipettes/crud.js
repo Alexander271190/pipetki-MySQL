@@ -977,6 +977,7 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
           changes.push(`${label}: ${oldVal} → ${newVal}`);
         }
       }
+    }
 
     const oldCustom = parseCustomData(oldValues && oldValues.custom_data);
     const allCustomKeys = new Set([...Object.keys(oldCustom), ...Object.keys(customUpdates)]);
@@ -985,7 +986,7 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       const [fcs] = await db.query('SELECT id, label FROM field_config');
       for (const f of fcs) customLabels[f.id] = f.label;
     }
-    for (const key of allCustomKeys) {
+        for (const key of allCustomKeys) {
       const oldV = oldCustom[key] ?? '';
       const newV = customUpdates[key] !== undefined ? customUpdates[key] : oldV;
       if (String(oldV) !== String(newV)) {
@@ -998,6 +999,7 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
           changes.push(`${lbl}: ${oldV} → ${newV}`);
         }
       }
+    }
 
     let auditDetails;
     if (result.regeneratedId) {
