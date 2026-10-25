@@ -30,7 +30,14 @@ function onAuditPeriodChange() {
 
 async function loadAuditData() {
   const tbody = document.getElementById('audit-body');
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8;">Загрузка...</td></tr>';
+  tbody.innerHTML = Array(5).fill(0).map(() => `
+    <tr class="skeleton-row">
+      <td><div class="skeleton-line" style="width:80%;"></div></td>
+      <td><div class="skeleton-line" style="width:60%;"></div></td>
+      <td><div class="skeleton-line" style="width:70%;"></div></td>
+      <td><div class="skeleton-line" style="width:50%;"></div></td>
+      <td><div class="skeleton-line" style="width:90%;"></div></td>
+    </tr>`).join('');
   try {
     const res = await apiRequest('/pipettes/audit?limit=500');
     _auditCache = Array.isArray(res.items) ? res.items : [];
@@ -160,7 +167,13 @@ function onEqAuditPeriodChange() {
 
 async function loadEquipmentAuditData(id) {
   const tbody = document.getElementById('eq-audit-body');
-  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">Загрузка...</td></tr>';
+  tbody.innerHTML = Array(5).fill(0).map(() => `
+    <tr class="skeleton-row">
+      <td><div class="skeleton-line" style="width:80%;"></div></td>
+      <td><div class="skeleton-line" style="width:60%;"></div></td>
+      <td><div class="skeleton-line" style="width:70%;"></div></td>
+      <td><div class="skeleton-line" style="width:90%;"></div></td>
+    </tr>`).join('');
   try {
     const res = await apiRequest(`/pipettes/${encodeURIComponent(id)}/audit?limit=500`);
     _eqAuditInfo = res.equipment || null;
