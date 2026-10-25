@@ -839,10 +839,11 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     }
   }
 
+   let oldValues = null;
    try {
    const result = await withTransaction(async (conn) => {
    const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
-   const oldValues = { ...p };
+   oldValues = { ...p };
    const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
       
       // 🆕 Проверяем: если блокировка наша (или её нет) — пропускаем проверку конфликта
@@ -946,7 +947,11 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       cert: 'Свидетельство', last_result: 'Результат', active: 'Статус',
       responsible: 'Ответственный', location: 'Место', notes: 'Примечание'
     };
-    const changes = [];
+        const changes = [];
+
+    if (!oldValues) {
+      oldValues = {};  
+    }
 
     for (const [col, label] of Object.entries(fieldLabels)) {
       let newVal;
@@ -968,7 +973,7 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       }
     }
 
-    const oldCustom = parseCustomData(oldValues.custom_data);
+    const oldCustom = parseCustomData(oldValues && oldValues.custom_data);
     const allCustomKeys = new Set([...Object.keys(oldCustom), ...Object.keys(customUpdates)]);
     let customLabels = {};
     if (allCustomKeys.size > 0) {
