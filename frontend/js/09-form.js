@@ -739,6 +739,7 @@ async function deletePipette(id) {
     showToast('Оборудование удалено', 'success');
     selectedPipettes.delete(id);
     await loadPipetteData();
+    await loadStats();
   } catch (error) {
     const isBlock = /Нельзя удалить/.test(error.message || '');
     showToast(error.message || 'Ошибка удаления', isBlock ? 'warn' : 'error');
@@ -853,6 +854,7 @@ async function saveQuickCalibration() {
     showToast('Поверка зарегистрирована', 'success');
     closeQuickCalModal();
     await loadPipetteData();
+    await loadStats();
     } catch (error) {
     // Если блокировка перехвачена только что, даем серверу время
     showToast(error.message || 'Ошибка сохранения', 'error');
@@ -897,6 +899,7 @@ async function cancelSend(id) {
     await apiRequest(`/pipettes/${encodeURIComponent(id)}/cancel-send`, 'POST', {});
     showToast('Отправка отменена', 'success');
     await loadPipetteData();
+    await loadStats();
   } catch (e) {
     if (e.status === 409) { return; }
     showToast(e.message || 'Ошибка отмены', 'error');
