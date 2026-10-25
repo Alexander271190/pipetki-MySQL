@@ -97,8 +97,22 @@ function renderAuditList() {
   }
 
   const tbody = document.getElementById('audit-body');
-  if (!_auditFiltered.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8;">Нет записей</td></tr>';
+    if (!_auditFiltered.length) {
+    const q = (document.getElementById('audit-search')?.value || '').trim();
+    const cat = (document.getElementById('audit-category')?.value || '');
+    const hasFilter = q || cat;
+    tbody.innerHTML = `
+      <tr><td colspan="5" style="text-align:center;padding:30px 20px;">
+        <div style="font-size:32px;margin-bottom:8px;">${hasFilter ? '🔍' : '📋'}</div>
+        <div style="color:#64748b;font-size:.9rem;margin-bottom:${hasFilter ? '12px' : '0'};">
+          ${hasFilter
+            ? 'Ничего не найдено по выбранным фильтрам.'
+            : 'Записей пока нет. Изменения будут появляться здесь автоматически.'}
+        </div>
+        ${hasFilter ? `<button class="btn btn-secondary btn-sm" onclick="document.getElementById('audit-search').value='';document.getElementById('audit-category').value='';renderAuditList();">
+          <i class="fa-solid fa-rotate-left"></i> Сбросить фильтры
+        </button>` : ''}
+      </td></tr>`;
   } else {
     tbody.innerHTML = _auditFiltered.map(_renderAuditRow).join('');
   }
@@ -227,8 +241,21 @@ function _filteredEqAudit() {
 function renderEquipmentAuditList() {
   const list = _filteredEqAudit();
   const tbody = document.getElementById('eq-audit-body');
-  if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">Нет записей</td></tr>';
+   if (!list.length) {
+    const q = (document.getElementById('eq-audit-search')?.value || '').trim();
+    const hasFilter = !!q;
+    tbody.innerHTML = `
+      <tr><td colspan="4" style="text-align:center;padding:30px 20px;">
+        <div style="font-size:32px;margin-bottom:8px;">${hasFilter ? '🔍' : '📋'}</div>
+        <div style="color:#64748b;font-size:.9rem;margin-bottom:${hasFilter ? '12px' : '0'};">
+          ${hasFilter
+            ? 'Ничего не найдено по поиску.'
+            : 'В этом приборе пока не было изменений. Отредактируйте его — и аудит начнёт вестись.'}
+        </div>
+        ${hasFilter ? `<button class="btn btn-secondary btn-sm" onclick="document.getElementById('eq-audit-search').value='';renderEquipmentAuditList();">
+          <i class="fa-solid fa-rotate-left"></i> Очистить поиск
+        </button>` : ''}
+      </td></tr>`;
   } else {
     tbody.innerHTML = list.map(r => `
       <tr>
