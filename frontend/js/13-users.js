@@ -67,6 +67,7 @@ async function renderUsersSettings() {
     html += `</tbody></table>`;
     html += renderUserEditForm();
     c.innerHTML = html;
+    setTimeout(() => loadCustomPresets(), 0);
   } catch (e) {
     c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>';
   }
@@ -351,7 +352,7 @@ async function saveCurrentPermsAsPreset() {
 }
 
 async function deleteCustomPreset(id) {
-  const ok = await showConfirm('Удалить этот пресет?', { icon: 'fa-solid fa-trash', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
+  const ok = await showConfirm('Удалить этот пресет?', { icon: '<i class="fa-solid fa-trash"></i>', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   try {
     await apiRequest('/users/presets/' + id, 'DELETE');
