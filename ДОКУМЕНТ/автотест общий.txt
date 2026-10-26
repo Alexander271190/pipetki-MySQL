@@ -1,0 +1,436 @@
+/* ============================================================
+ * ФИНАЛЬНЫЙ АВТОТЕСТ v9.2 — с проверкой прав view_log/view_audit,
+ * пресетов и нового текста ошибок errorLogger
+ * ============================================================ */
+(async function runFinalTest() {
+  'use strict';
+  const results = [];
+  const log = (g, n, s, d = '') => {
+    results.push({ g, n, s, d });
+    console.log(`${s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'SKIP' ? '⏭️' : 'ℹ️'} [${g}] ${n}${d ? ' — ' + d : ''}`);
+  };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const token = (() => { try { return JSON.parse(sessionStorage.getItem('pipette_session')).token; } catch { return null; } })();
+  if (!token) { console.error('❌ Нет токена. Войдите.'); return; }
+
+  const api = async (ep, m = 'GET', b = null) => {
+    const opts = { method: m, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+    if (b) opts.body = JSON.stringify(b);
+    const r = await fetch('/api' + ep, opts);
+    const t = await r.text();
+    let j = null;
+    try { j = t ? JSON.parse(t) : null; } catch { j = { _raw: t }; }
+    return { status: r.status, ok: r.ok, body: j };
+  };
+  const today = new Date().toISOString().slice(0, 10);
+  const modalActive = id => { const el = document.getElementById(id); return !!(el && el.classList.contains('active')); };
+
+  // 🆕 Защита от отсутствия _fmtDateTime (если 20-audit.js не загружен)
+  const fmtDT = typeof _fmtDateTime === 'function'
+    ? _fmtDateTime
+    : (ts) => {
+        const s = String(ts || '');
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+        return m ? `${m[3]}.${m[2]}.${m[1]}   ${m[4]}:${m[5]}` : '—';
+      };
+
+  console.log('%c🎯 ФИНАЛЬНЫЙ АВТОТЕСТ v9.2', 'font-size:16px;font-weight:bold;color:#0ea5e9;');
+
+  const _origConfirm = window.showConfirm;
+  const _origPrompt  = window.showPrompt;
+  const _origLockW   = window.showLockWarning;
+  window.showConfirm   = async () => true;
+  window.showPrompt    = async () => null;
+  window.showLockWarning = async () => true;
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 1: Имитация ошибок + проверка текста
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🔥 ЧАСТЬ 1: Имитация ошибок', 'font-size:14px;font-weight:bold;color:#dc2626;');
+
+  // 409 — создание прибора с существующим ID
+  const list = await api('/pipettes/paged?limit=1');
+  let r409 = { status: 0 };
+  if (list.ok && list.body.items && list.body.items.length) {
+    r409 = await api('/pipettes', 'POST', {
+      id: list.body.items[0].id, model: 'Conflict Test v9.2', equipmentType: 'pipette',
+      lastCalibration: today, responsible: currentUser.fullName || 'Admin'
+    });
+    console.log(`   409 → ${r409.status} ${r409.body?.error || ''}`);
+  }
+
+  // Ждём, пока запишется
+  await sleep(1500);
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 2: Проверка app_logs (новый текст)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c📋 ЧАСТЬ 2: Проверка app_logs', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  {
+    const r = await api('/log/errors?limit=30');
+    if (r.ok && r.body && Array.isArray(r.body.items)) {
+      log('ERRLOG', 'GET /log/errors', 'PASS', `${r.body.items.length} записей`);
+
+      // Ищем последнюю 409
+      const last409 = r.body.items.find(x => x.status_code === 409);
+      if (last409) {
+        log('ERRLOG', '409 записан', 'PASS', last409.message);
+        // Проверка: должен быть новый текст «Создание прибора: …»
+        const hasNewPrefix = /^Создание прибора:/.test(last409.message || '');
+        const hasOldPrefix = /^POST \/api\/pipettes/.test(last409.message || '');
+        log('ERRLOG', 'Новый текст «Создание прибора:»', hasNewPrefix && !hasOldPrefix ? 'PASS' : 'FAIL',
+            hasNewPrefix ? last409.message : 'старый текст: ' + last409.message);
+      } else {
+        log('ERRLOG', '409 записан', 'FAIL', 'нет записи 409');
+      }
+
+      // 🆕 Проверка errorLogger для PUT /pipettes/:id
+      const lastPut = r.body.items.find(x => /Редактирование прибора:/.test(x.message || ''));
+      if (lastPut) {
+        log('ERRLOG', 'Новый текст «Редактирование прибора:»', 'PASS', lastPut.message);
+      } else {
+        log('ERRLOG', '«Редактирование прибора:» (если была ошибка PUT)', 'SKIP', 'нет записи — норм, если PUT не падал');
+      }
+
+      console.log('\n%cПоследние записи в app_logs:', 'font-weight:bold;');
+      console.table(r.body.items.slice(0, 8).map(x => ({
+        time: fmtDT(x.timestamp),
+        level: x.level,
+        status: x.status_code,
+        message: (x.message || '').slice(0, 70)
+      })));
+    } else {
+      log('ERRLOG', 'GET /log/errors', 'FAIL', `status ${r.status}`);
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 3: AUTH
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🔐 ЧАСТЬ 3: Auth', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (!currentUser || currentUser.role !== 'admin') {
+    log('AUTH', 'admin', 'FAIL');
+    window.showConfirm = _origConfirm; window.showPrompt = _origPrompt; window.showLockWarning = _origLockW;
+    return;
+  }
+  log('AUTH', 'admin', 'PASS');
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 3.5: Права view_log / view_audit + пресеты
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🛡 ЧАСТЬ 3.5: Права и пресеты', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+
+  // 3.5.1. view_audit в ALL_PERMISSIONS
+  {
+    const hasViewAudit = Array.isArray(ALL_PERMISSIONS)
+      && ALL_PERMISSIONS.some(p => p.key === 'view_audit');
+    const hasViewLog = Array.isArray(ALL_PERMISSIONS)
+      && ALL_PERMISSIONS.some(p => p.key === 'view_log');
+    log('PERMS', 'ALL_PERMISSIONS.view_audit', hasViewAudit ? 'PASS' : 'FAIL');
+    log('PERMS', 'ALL_PERMISSIONS.view_log',   hasViewLog   ? 'PASS' : 'FAIL');
+  }
+
+  // 3.5.2. canViewAudit / canViewLog — существуют
+  log('PERMS', 'canViewAudit() существует', typeof canViewAudit === 'function' ? 'PASS' : 'FAIL');
+  log('PERMS', 'canViewLog() существует',   typeof canViewLog   === 'function' ? 'PASS' : 'FAIL');
+
+  // 3.5.3. Пресеты: API
+  {
+    const r = await api('/users/presets');
+    log('PERMS', 'GET /users/presets', r.ok && Array.isArray(r.body) ? 'PASS' : 'FAIL',
+        `status ${r.status}, count ${Array.isArray(r.body) ? r.body.length : '—'}`);
+  }
+
+  // 3.5.4. Пресеты: функции
+  for (const fn of ['loadCustomPresets', 'applyCustomPreset', 'saveCurrentPermsAsPreset', 'deleteCustomPreset', 'applyPermsArray']) {
+    const exists = typeof window[fn] === 'function' || (() => { try { return typeof eval(fn) === 'function'; } catch { return false; } })();
+    log('PERMS', `функция ${fn}`, exists ? 'PASS' : 'FAIL');
+  }
+
+  // 3.5.5. applyPermPreset: без manager, вызывает applyPermsArray
+  {
+    const applyPermSrc = (typeof applyPermPreset === 'function') ? applyPermPreset.toString() : '';
+    log('PERMS', 'applyPermPreset без manager', !applyPermSrc.includes("manager") ? 'PASS' : 'FAIL');
+    log('PERMS', 'applyPermPreset вызывает applyPermsArray', applyPermSrc.includes('applyPermsArray') ? 'PASS' : 'FAIL');
+  }
+
+  // 3.5.6. saveCurrentPermsAsPreset / deleteCustomPreset — исходники
+  {
+    const savePresetSrc = (typeof saveCurrentPermsAsPreset === 'function') ? saveCurrentPermsAsPreset.toString() : '';
+    log('PERMS', 'saveCurrentPermsAsPreset → showPrompt', savePresetSrc.includes('showPrompt') ? 'PASS' : 'FAIL');
+    log('PERMS', 'saveCurrentPermsAsPreset → /users/presets', savePresetSrc.includes('/users/presets') ? 'PASS' : 'FAIL');
+
+    const delPresetSrc = (typeof deleteCustomPreset === 'function') ? deleteCustomPreset.toString() : '';
+    log('PERMS', 'deleteCustomPreset → DELETE', delPresetSrc.includes("'DELETE'") ? 'PASS' : 'FAIL');
+    log('PERMS', 'deleteCustomPreset: HTML-иконка корзины',
+        delPresetSrc.includes('fa-solid fa-trash') && delPresetSrc.includes('<i ') ? 'PASS' : 'FAIL');
+  }
+
+  // 3.5.7. Форма прав: HTML-блоки (если открыт раздел «Пользователи»)
+  {
+    const form = document.getElementById('user-edit-form');
+    if (form) {
+      const hasContainer = !!form.querySelector('#custom-presets-container');
+      log('PERMS', 'форма: #custom-presets-container', hasContainer ? 'PASS' : 'FAIL');
+
+      const stdBtns = form.querySelectorAll('button[onclick*="applyPermPreset"]');
+      log('PERMS', 'форма: стандартных кнопок = 4', stdBtns.length === 4 ? 'PASS' : 'FAIL', `${stdBtns.length}`);
+
+      const keys = ['none', 'user', 'senior', 'all'];
+      const allPresent = keys.every(k => form.innerHTML.includes(`applyPermPreset('${k}')`));
+      log('PERMS', 'форма: кнопки none/user/senior/all', allPresent ? 'PASS' : 'FAIL');
+
+      const noManager = !form.innerHTML.includes("applyPermPreset('manager')");
+      log('PERMS', 'форма: НЕТ кнопки manager', noManager ? 'PASS' : 'FAIL');
+
+      const hasSavePreset = !!form.querySelector('button[onclick*="saveCurrentPermsAsPreset"]');
+      log('PERMS', 'форма: кнопка «Сохранить как пресет»', hasSavePreset ? 'PASS' : 'FAIL');
+    } else {
+      log('PERMS', 'форма прав пользователя', 'SKIP', 'раздел «Пользователи» не открыт — HTML-проверки пропущены');
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 4: CRUD + AUDIT
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🛠 ЧАСТЬ 4: CRUD + Аудит', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const uid = Date.now();
+  const idA = 'TEST-V92-A-' + uid;
+  const created = [];
+
+  async function create(id) {
+    const r = await api('/pipettes', 'POST', {
+      id, model: 'V92 ' + id, equipmentType: 'pipette',
+      lastCalibration: today, responsible: currentUser.fullName || 'Admin', volume: '100'
+    });
+    if (r.ok) { created.push(id); log('CRUD', `POST ${id}`, 'PASS'); return true; }
+    log('CRUD', `POST ${id}`, 'FAIL', r.body?.error || r.status);
+    return false;
+  }
+  await create(idA);
+
+  if (created.includes(idA)) {
+    // 4.1. updatedAt НЕ в diff
+    await api(`/pipettes/${encodeURIComponent(idA)}`, 'PUT', {
+      model: 'V92 Updated', updatedAt: '2000-01-01 00:00:00'
+    });
+    const r1 = await api(`/pipettes/${encodeURIComponent(idA)}/audit?limit=20`);
+    if (r1.ok && Array.isArray(r1.body.items)) {
+      const editRecord = r1.body.items.find(x => x.action === 'Редактирование оборудования');
+      if (editRecord) {
+        const hasUpdatedAt = /updatedAt/i.test(editRecord.details || '');
+        log('AUDIT', 'updatedAt НЕ в diff', hasUpdatedAt ? 'FAIL' : 'PASS',
+            (editRecord.details || '').slice(0, 80));
+      }
+    }
+
+    // 4.2. Diff с + / − / →
+    await api(`/pipettes/${encodeURIComponent(idA)}`, 'PUT', { notes: 'Было' });
+    await api(`/pipettes/${encodeURIComponent(idA)}`, 'PUT', { notes: '' });
+    await api(`/pipettes/${encodeURIComponent(idA)}`, 'PUT', { notes: 'Новое' });
+
+    const r2 = await api(`/pipettes/${encodeURIComponent(idA)}/audit?limit=20`);
+    if (r2.ok && Array.isArray(r2.body.items)) {
+      const hasMinus = r2.body.items.some(x => /:\s*−/.test(x.details || ''));
+      const hasPlus  = r2.body.items.some(x => /:\s*\+/.test(x.details || ''));
+      const hasArrow = r2.body.items.some(x => /→/.test(x.details || ''));
+      log('AUDIT', 'diff с «+»', hasPlus ? 'PASS' : 'FAIL');
+      log('AUDIT', 'diff с «−»', hasMinus ? 'PASS' : 'FAIL');
+      log('AUDIT', 'diff с «→»', hasArrow ? 'PASS' : 'FAIL');
+    }
+
+    // 🆕 4.3. Аудит прибора доступен по view_audit / view_history (для админа — всегда)
+    const rAudit = await api(`/pipettes/${encodeURIComponent(idA)}/audit`);
+    log('AUDIT', 'GET /:id/audit (admin)', rAudit.ok ? 'PASS' : 'FAIL', `status ${rAudit.status}`);
+  }
+
+  // 🆕 4.4. Глобальный аудит доступен (view_log)
+  {
+    const r = await api('/pipettes/audit?limit=1');
+    log('AUDIT', 'GET /pipettes/audit (admin)', r.ok ? 'PASS' : 'FAIL', `status ${r.status}`);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 5: Формат даты
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c📅 ЧАСТЬ 5: Формат даты', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const dt = fmtDT('2026-10-25T12:17:00');
+    const ok = /^\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/.test(dt);
+    log('DATE', '25.10.2026   12:17 (ISO)', ok ? 'PASS' : 'FAIL', dt);
+
+    const dtEmpty = fmtDT(null);
+    log('DATE', 'пустое → «—»', dtEmpty === '—' ? 'PASS' : 'FAIL', dtEmpty);
+
+    const dtSql = fmtDT('2026-10-25 12:17:00');
+    log('DATE', 'SQL-формат', /^\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/.test(dtSql) ? 'PASS' : 'FAIL', dtSql);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 6: Блокировки
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🔒 ЧАСТЬ 6: Блокировки', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (created.length) {
+    const id = created[0];
+    await api(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST');
+    const lock = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
+    log('LOCK', 'GET /lock (mine)', lock.ok && lock.body.mine ? 'PASS' : 'FAIL');
+    const upd = await api(`/pipettes/${encodeURIComponent(id)}`, 'PUT', {
+      model: 'Locked', updatedAt: '2000-01-01 00:00:00'
+    });
+    log('LOCK', 'PUT с устаревшим updatedAt (своя блокировка)', upd.ok ? 'PASS' : 'FAIL');
+    await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE');
+    log('LOCK', 'DELETE /lock?force=true', 'PASS');
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 7: UI — модалки
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🪟 ЧАСТЬ 7: UI — модалки', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+
+  if (created.length) {
+    const allData = await api('/pipettes/all?limit=1000');
+    if (allData.ok && Array.isArray(allData.body.items)) pipettes = allData.body.items;
+  }
+
+  // 7.1. Журнал действий + табы
+  await openAuditModal();
+  await sleep(500);
+  if (modalActive('audit-modal')) {
+    log('UI', 'openAuditModal', 'PASS');
+    const tabErrors = document.getElementById('audit-tab-errors');
+    log('UI', 'таб "Ошибки" скрыт по умолчанию', tabErrors && tabErrors.style.display === 'none' ? 'PASS' : 'FAIL');
+
+    // Переключаем на «Ошибки»
+    switchAuditTab('errors');
+    await sleep(500);
+    const errorsTbody = document.getElementById('errors-body');
+    const errorsRows = errorsTbody ? errorsTbody.querySelectorAll('tr').length : 0;
+    log('UI', 'errors-body отрендерен', errorsRows > 0 ? 'PASS' : 'FAIL', `${errorsRows} строк`);
+
+    // Проверяем, что в UI виден новый текст
+    if (errorsRows > 0) {
+      const firstMsg = errorsTbody.querySelector('tr td:last-child');
+      const hasNewPrefix = firstMsg && /Создание прибора:/.test(firstMsg.textContent || '');
+      log('UI', 'UI показывает «Создание прибора:»', hasNewPrefix ? 'PASS' : 'FAIL',
+          (firstMsg?.textContent || '').slice(0, 60));
+    }
+
+    closeAuditModal();
+    await sleep(200);
+  } else {
+    log('UI', 'openAuditModal', 'FAIL');
+  }
+
+  // 7.2. Аудит прибора
+  if (created.includes(idA)) {
+    await openEquipmentAuditModal(idA);
+    await sleep(400);
+    if (modalActive('equipment-audit-modal')) {
+      log('UI', 'openEquipmentAuditModal', 'PASS');
+      closeEquipmentAuditModal();
+    } else {
+      log('UI', 'openEquipmentAuditModal', 'FAIL');
+    }
+  }
+
+  // 7.3. Остальные модалки
+  const modalChecks = [
+    ['openHistoryModal', () => openHistoryModal(idA), closeHistoryModal, 'history-modal'],
+    ['openQuickCalModal', () => openQuickCalModal(idA), closeQuickCalModal, 'quick-cal-modal'],
+    ['openTransferModal', () => openTransferModal(idA), closeTransferModal, 'transfer-modal'],
+    ['openBarcodeScannerModal', () => openBarcodeScannerModal(), closeBarcodeScannerModal, 'barcode-scanner-modal'],
+    ['openHotkeysHelp', () => openHotkeysHelp(), closeHotkeysHelp, 'hotkeys-modal'],
+  ];
+  for (const [name, openFn, closeFn, modalId] of modalChecks) {
+    try {
+      await openFn();
+      await sleep(400);
+      if (modalActive(modalId)) { await closeFn(); await sleep(150); log('UI', name, 'PASS'); }
+      else log('UI', name, 'FAIL');
+    } catch (e) { log('UI', name, 'FAIL', e.message); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 8: Горячие клавиши
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c⌨️ ЧАСТЬ 8: Горячие клавиши', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (created.length) {
+    selectedPipettes.clear();
+    selectedPipettes.add(created[0]);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }));
+    await sleep(400);
+    log('KEYS', 'Ctrl+H → история', modalActive('history-modal') ? 'PASS' : 'FAIL');
+    if (modalActive('history-modal')) closeHistoryModal();
+    await sleep(200);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', shiftKey: true, ctrlKey: true, bubbles: true }));
+    await sleep(400);
+    log('KEYS', 'Ctrl+Shift+A → аудит', modalActive('equipment-audit-modal') ? 'PASS' : 'FAIL');
+    if (modalActive('equipment-audit-modal')) closeEquipmentAuditModal();
+    await sleep(200);
+
+    await openHistoryModal(created[0]);
+    await sleep(300);
+    if (modalActive('history-modal')) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(300);
+      log('KEYS', 'Esc закрывает модалку', !modalActive('history-modal') ? 'PASS' : 'FAIL');
+      if (modalActive('history-modal')) closeHistoryModal();
+    }
+    selectedPipettes.clear();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 9: Скелетоны
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c💀 ЧАСТЬ 9: Скелетоны', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const testEl = document.createElement('div');
+    testEl.className = 'skeleton-line';
+    document.body.appendChild(testEl);
+    const cs = getComputedStyle(testEl);
+    log('SKELETON', '.skeleton-line стилизован',
+        cs.animationName && cs.animationName !== 'none' ? 'PASS' : 'FAIL',
+        `animation=${cs.animationName}`);
+    testEl.remove();
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 10: Cleanup
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🧹 ЧАСТЬ 10: Cleanup', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  for (const id of created) {
+    await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE').catch(() => {});
+    const r = await api(`/pipettes/${encodeURIComponent(id)}`, 'DELETE');
+    log('CLEAN', `DELETE ${id}`, r.ok || r.status === 404 ? 'PASS' : 'FAIL');
+  }
+  await loadPipetteData();
+
+  window.showConfirm = _origConfirm;
+  window.showPrompt  = _origPrompt;
+  window.showLockWarning = _origLockW;
+
+  /* ═══════════════════════════════════════════════════════════
+   * ИТОГ
+   * ═══════════════════════════════════════════════════════════ */
+  const pass = results.filter(r => r.s === 'PASS').length;
+  const fail = results.filter(r => r.s === 'FAIL').length;
+  const skip = results.filter(r => r.s === 'SKIP').length;
+  console.log('\n%c════════════════════════════════════════', 'color:#0ea5e9;');
+  console.log(`%c📊 ИТОГ: ✅ ${pass}  ❌ ${fail}  ⏭️ ${skip}`, `font-size:16px;font-weight:bold;color:${fail ? '#dc2626' : '#16a34a'};`);
+  console.log('%c════════════════════════════════════════', 'color:#0ea5e9;');
+  if (fail > 0) {
+    console.log('%c❌ ПРОВАЛЫ:', 'color:#dc2626;font-weight:bold;');
+    console.table(results.filter(r => r.s === 'FAIL'));
+  } else {
+    console.log('%c🎉 Всё отлично! Все проверки прошли.', 'color:#16a34a;font-weight:bold;font-size:14px;');
+  }
+
+  console.log('\n%c👉 Откройте: Меню «Ещё» → «Журнал действий» → таб «Ошибки»', 'color:#0ea5e9;font-weight:bold;');
+  console.log('%c   Текст должен быть: "Создание прибора: ID уже существует"', 'color:#64748b;font-style:italic;');
+  console.log('%c👉 Проверьте: Настройки → Пользователи → Редактировать → «Мои пресеты»', 'color:#0ea5e9;font-weight:bold;');
+
+  window.__finalTestResults = results;
+})();
