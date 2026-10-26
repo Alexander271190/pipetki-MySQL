@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
+const { PRINTER_COLUMNS } = require('./pipettes/_helpers');
 
 const router = express.Router();
 
@@ -9,8 +10,8 @@ const router = express.Router();
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT * FROM barcode_printers ORDER BY sort_order ASC, id ASC`
-    );
+  `SELECT ${PRINTER_COLUMNS} FROM barcode_printers ORDER BY sort_order ASC, id ASC`
+);
     res.json(rows.map(r => ({
       id: r.id,
       name: r.name,
