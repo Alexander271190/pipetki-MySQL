@@ -136,7 +136,9 @@ router.get('/departments-full', authenticate, requireRole(['admin']), async (req
 // ============================================================
 router.get('/fields', authenticate, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM field_config ORDER BY field_order');
+    const [rows] = await db.query(
+      'SELECT id, label, type, required, enabled, options, default_value, field_order FROM field_config ORDER BY field_order'
+      );
     res.json(rows.map(f => ({
       id: f.id,
       label: f.label,
@@ -330,7 +332,9 @@ router.put('/system', authenticate, requireRole(['admin']), async (req, res) => 
 // ============================================================
 router.get('/filters', authenticate, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM filter_config ORDER BY filter_order');
+    const [rows] = await db.query(
+       'SELECT id, label, type, field_id, enabled, options_source, filter_order FROM filter_config ORDER BY filter_order'
+     );
     res.json(rows.map(f => ({
       id: f.id,
       label: f.label,
