@@ -100,7 +100,7 @@ router.get('/:id/calibration', authenticate, async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'SELECT * FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC, id DESC',
+      'SELECT id, pipette_id, `date`, cert, result, note FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC, id DESC',
       [req.params.id]
     );
     res.json(rows);
