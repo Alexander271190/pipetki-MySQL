@@ -11,6 +11,7 @@ const {
   maybeRegenerateId, applyIdChange, canAccessDepartment,
   findPipetteOrFail, buildDepartmentScope,
   sqlComputedStatus, sqlStatusOrder, buildFiltersWhere, sqlOrderBy, getWarnDays,
+  PIPETTE_COLUMNS, AUDIT_COLUMNS,
 } = require('./_helpers');
 const { withTransaction } = require('../../utils/db-helper');
 const { logAction } = require('../../utils/audit');
@@ -106,7 +107,7 @@ router.get('/paged', authenticate, async (req, res) => {
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const orderSql = sqlOrderBy(sort, dir, warnDays);
     const [rows] = await db.query(
-      `SELECT *, (${statusExpr}) AS computed_status
+      `SELECT ${PIPETTE_COLUMNS}, (${statusExpr}) AS computed_status
        FROM pipettes${finalWhere}
        ORDER BY ${orderSql}, id
        LIMIT ? OFFSET ?`,
@@ -333,7 +334,7 @@ router.get('/all', authenticate, async (req, res) => {
     const truncated = totalCount > ALL_HARD_LIMIT;
 
     const [rows] = await db.query(
-      `SELECT *, (${statusExpr}) AS computed_status
+      `SELECT ${PIPETTE_COLUMNS}, (${statusExpr}) AS computed_status
        FROM pipettes${finalWhere}
        ORDER BY ${orderSql}, id
        LIMIT ?`,
@@ -425,7 +426,7 @@ router.get('/audit', authenticate, requireAnyPermission(['view_log']), async (re
     const total = Number(cnt[0].c) || 0;
 
     const [rows] = await db.query(
-      `SELECT l.*, p.model
+       `SELECT l.id, l.user_id, l.user_full_name, l.action, l.details, l.pipette_id, l.category, l.timestamp, p.model
        FROM audit_log l
        LEFT JOIN pipettes p ON p.id = l.pipette_id
        ${whereSql}
@@ -479,7 +480,8 @@ router.get('/:id/audit', authenticate, requireAnyPermission(['view_audit', 'view
     if (dateTo)   { parts.push('DATE(l.timestamp) <= ?'); params.push(dateTo); }
 
     const [rows] = await db.query(
-      `SELECT l.*, p.model FROM audit_log l
+       `SELECT l.id, l.user_id, l.user_full_name, l.action, l.details, l.pipette_id, l.category, l.timestamp, p.model
+       FROM audit_log l
        LEFT JOIN pipettes p ON p.id = l.pipette_id
        WHERE ${parts.join(' AND ')}
        ORDER BY l.timestamp DESC LIMIT ?`,
@@ -537,7 +539,7 @@ router.get('/:id', authenticate, async (req, res) => {
     const statusExpr = sqlComputedStatus(warnDays);
 
     const [rows] = await db.query(
-      `SELECT *, (${statusExpr}) AS computed_status
+      `SELECT ${PIPETTE_COLUMNS}, (${statusExpr}) AS computed_status
        FROM pipettes WHERE id = ?`,
       [req.params.id]
     );
