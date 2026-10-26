@@ -5,6 +5,7 @@ const db = require('../db');
 const { authenticate } = require('../middleware/auth');
 const { validatePassword } = require('../middleware/passwordPolicy');
 const { logAction } = require('../utils/audit');
+const { USER_COLUMNS } = require('./pipettes/_helpers');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
 
@@ -45,7 +46,7 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-     const [rows] = await db.query('SELECT * FROM users WHERE login = ?', [login]);
+     const [rows] = await db.query(`SELECT ${USER_COLUMNS} FROM users WHERE login = ?`, [login]);
     if (!rows.length)
       return res.status(401).json({ error: 'Неверный логин или пароль' });
 
@@ -106,7 +107,7 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Только администратор может входить под другими' });
     }
 
-    const [targets] = await db.query('SELECT * FROM users WHERE id = ?', [req.params.userId]);
+    const [targets] = await db.query(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [req.params.userId]);
     if (!targets.length) return res.status(404).json({ error: 'Пользователь не найден' });
 
     const target = targets[0];
