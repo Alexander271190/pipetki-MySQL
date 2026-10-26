@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const { USER_COLUMNS } = require('../routes/pipettes/_helpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
 
@@ -15,7 +16,7 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [decoded.id]);
+    const [rows] = await db.query(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`, [decoded.id]);
     if (!rows.length) return res.status(401).json({ error: 'Пользователь не найден' });
 
     const user = rows[0];
