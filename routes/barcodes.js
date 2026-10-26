@@ -11,6 +11,7 @@ const PDFDocument = require('pdfkit');
 const db = require('../db');
 const { authenticate, requireRole, requirePermission } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
+const { PRINTER_COLUMNS } = require('./pipettes/_helpers');
 
 // 🆕 Реестр шрифтов с кириллицей.
 // Файлы лежат в frontend/fonts/. Ключ хранится в system_settings.barcode_font.
@@ -608,9 +609,9 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
     let printer = null;
     if (printerId) {
       const [rows] = await db.query(
-        'SELECT * FROM barcode_printers WHERE id = ? AND enabled = 1',
-        [printerId]
-      );
+   `SELECT ${PRINTER_COLUMNS} FROM barcode_printers WHERE id = ? AND enabled = 1`,
+       [printerId]
+       );
       printer = rows[0] || null;
     }
 
@@ -620,21 +621,21 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
         : req.user.department;
 
       if (userDept) {
-        const [rows] = await db.query(
-          `SELECT * FROM barcode_printers
-           WHERE department = ? AND enabled = 1
-           ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`,
-          [userDept]
-        );
+    const [rows] = await db.query(
+      `SELECT ${PRINTER_COLUMNS} FROM barcode_printers
+       WHERE department = ? AND enabled = 1
+       ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`,
+       [userDept]
+     );
         printer = rows[0] || null;
       }
     }
 
     if (!printer) {
-      const [rows] = await db.query(
-        `SELECT * FROM barcode_printers WHERE enabled = 1
-         ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`
-      );
+  const [rows] = await db.query(
+      `SELECT ${PRINTER_COLUMNS} FROM barcode_printers WHERE enabled = 1
+       ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`
+    );
       printer = rows[0] || null;
     }
 
