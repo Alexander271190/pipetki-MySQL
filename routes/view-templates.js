@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT * FROM view_templates ORDER BY is_default DESC, name ASC'
+      'SELECT id, name, visible_fields, is_default FROM view_templates ORDER BY is_default DESC, name ASC'
     );
     res.json(rows.map(r => ({
       id: r.id,
