@@ -626,7 +626,7 @@ async function renderEquipmentSettings() {
   const c = document.getElementById('settings-section-content');
   try {
     const types = await apiRequest('/settings/equipment-types');
-    _cachedEquipmentTypes = JSON.parse(JSON.stringify(types));
+    _equipmentTypesDraft = JSON.parse(JSON.stringify(types));
 
     c.innerHTML = `
       <p style="color:#64748b;font-size:.88rem;margin:0 0 12px;">Управление списком типов.</p>
@@ -659,13 +659,13 @@ async function renderEquipmentSettings() {
 function renderEquipmentTypesTable() {
   const tbody = document.getElementById('equip-types-body');
   if (!tbody) return;
-  if (_cachedEquipmentTypes.length === 0) {
+  if (_equipmentTypesDraft.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
-  tbody.innerHTML = _cachedEquipmentTypes.map((t, i) => `
+  tbody.innerHTML = _equipmentTypesDraft.map((t, i) => `
   <tr>
-    <td>${UI.moveBtns(i, _cachedEquipmentTypes.length, 'moveEquipmentType')}</td>
+    <td>${UI.moveBtns(i, _equipmentTypesDraft.length, 'moveEquipmentType')}</td>
     <td><input type="text" value="${esc(t.value)}" readonly style="background:#f1f5f9;cursor:not-allowed;" title="value менять нельзя"></td>
     <td><input type="text" value="${esc(t.label)}" oninput="updateEquipmentType(${i}, 'label', this.value)"></td>
     <td><input type="text" value="${esc(t.prefix || '')}" maxlength="4" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())"></td>
@@ -682,20 +682,20 @@ function renderEquipmentTypesTable() {
 }
 
 function updateEquipmentType(idx, field, value) {
-  if (idx < 0 || idx >= _cachedEquipmentTypes.length) return;
+  if (idx < 0 || idx >= _equipmentTypesDraft.length) return;
   if (field === 'interval') {
     const n = parseInt(value, 10);
-    _cachedEquipmentTypes[idx][field] = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
+    _equipmentTypesDraft[idx][field] = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
   } else {
-    _cachedEquipmentTypes[idx][field] = String(value).trim();
+    _equipmentTypesDraft[idx][field] = String(value).trim();
   }
   updateEquipmentTypesWarning();
 }
 
 function moveEquipmentType(idx, dir) {
   const to = idx + dir;
-  if (to < 0 || to >= _cachedEquipmentTypes.length) return;
-  [_cachedEquipmentTypes[idx], _cachedEquipmentTypes[to]] = [_cachedEquipmentTypes[to], _cachedEquipmentTypes[idx]];
+  if (to < 0 || to >= _equipmentTypesDraft.length) return;
+  [_equipmentTypesDraft[idx], _equipmentTypesDraft[to]] = [_equipmentTypesDraft[to], _equipmentTypesDraft[idx]];
   renderEquipmentTypesTable();
 }
 
@@ -706,23 +706,23 @@ async function addEquipmentType() {
         if (!v) return 'Укажите ключ';
         const t = v.trim().toLowerCase();
         if (!/^[a-z][a-z0-9_]*$/.test(t)) return 'Только латиница, цифры и _';
-        if (_cachedEquipmentTypes.some(x => x.value === t)) return 'Тип с таким ключом уже есть';
+        if (_equipmentTypesDraft.some(x => x.value === t)) return 'Тип с таким ключом уже есть';
         return null;
       }
   });
   if (!value) return;
   const trimmed = value.trim().toLowerCase();
-  _cachedEquipmentTypes.push({ value: trimmed, label: trimmed, prefix: 'EQ', calibrationPlace: 'internal', interval: 12 });
+  _equipmentTypesDraft.push({ value: trimmed, label: trimmed, prefix: 'EQ', calibrationPlace: 'internal', interval: 12 });
   renderEquipmentTypesTable();
   showToast('Тип добавлен', 'success');
 }
 
 async function deleteEquipmentType(idx) {
-  if (idx < 0 || idx >= _cachedEquipmentTypes.length) return;
-  const t = _cachedEquipmentTypes[idx];
+  if (idx < 0 || idx >= _equipmentTypesDraft.length) return;
+  const t = _equipmentTypesDraft[idx];
   const ok = await showConfirm(`Удалить тип «${t.label}»?`, { icon: '🔧', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
-  _cachedEquipmentTypes.splice(idx, 1);
+  _equipmentTypesDraft.splice(idx, 1);
   renderEquipmentTypesTable();
   showToast('Тип удалён', 'success');
 }
@@ -731,9 +731,9 @@ function updateEquipmentTypesWarning() {
   const warn = document.getElementById('equip-types-warning');
   if (!warn) return;
   const problems = [];
-  const values = _cachedEquipmentTypes.map(t => t.value);
+  const values = _equipmentTypesDraft.map(t => t.value);
   if (values.filter((v, i) => values.indexOf(v) !== i).length > 0) problems.push('Дубли value');
-  if (_cachedEquipmentTypes.some(t => !t.label || !t.label.trim())) problems.push('Пустой label');
+  if (_equipmentTypesDraft.some(t => !t.label || !t.label.trim())) problems.push('Пустой label');
   
   if (problems.length > 0) {
     warn.style.display = 'block';
@@ -744,11 +744,11 @@ function updateEquipmentTypesWarning() {
 }
 
 async function saveEquipmentTypes() {
-  const values = _cachedEquipmentTypes.map(t => t.value);
+  const values = _equipmentTypesDraft.map(t => t.value);
   if (values.filter((v, i) => values.indexOf(v) !== i).length > 0) { showToast('Есть дубли value', 'error'); return; }
-  if (_cachedEquipmentTypes.some(t => !t.label || !t.label.trim())) { showToast('Заполните label', 'error'); return; }
+  if (_equipmentTypesDraft.some(t => !t.label || !t.label.trim())) { showToast('Заполните label', 'error'); return; }
   
-  _cachedEquipmentTypes.forEach(t => {
+  _equipmentTypesDraft.forEach(t => {
     if (!t.calibrationPlace) t.calibrationPlace = 'internal';
     const n = parseInt(t.interval, 10);
     t.interval = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
@@ -756,8 +756,8 @@ async function saveEquipmentTypes() {
 
   try {
     await UI.saveAction({ successMsg: 'Типы сохранены', reload: false }, async () => {
-      await apiRequest('/settings/equipment-types', 'PUT', _cachedEquipmentTypes);
-      _equipmentTypes = JSON.parse(JSON.stringify(_cachedEquipmentTypes));
+      await apiRequest('/settings/equipment-types', 'PUT', _equipmentTypesDraft);
+      _equipmentTypes = JSON.parse(JSON.stringify(_equipmentTypesDraft));
       await loadFilterConfig();
       syncFilterState();
       await refreshAfterSettingsChange();
@@ -1046,9 +1046,65 @@ async function addViewTemplate() {
   }
 }
 
+async function editViewTemplate(id) {
+  const templates = await apiRequest('/view-templates');
+  const tpl = templates.find(t => t.id === id);
+  if (!tpl) return;
+
+  // Получаем все возможные поля (активные + виртуальные)
+  const allFields = [
+    ..._cachedFields.filter(f => f.enabled).map(f => ({ id: f.id, label: f.label })),
+    { id: 'status', label: 'Статус' },
+    { id: 'nextCalibration', label: 'Следующая поверка' }
+  ];
+
+  let html = `<h3>Редактирование шаблона: ${esc(tpl.name)}</h3>
+    <input type="hidden" id="edit-tpl-name" value="${esc(tpl.name)}">
+    <div style="margin:12px 0; display:grid; grid-template-columns:1fr 1fr; gap:8px;">`;
+  
+  allFields.forEach(f => {
+    const checked = tpl.visibleFields.includes(f.id) ? 'checked' : '';
+    html += `<label><input type="checkbox" class="tpl-field-cb" value="${f.id}" ${checked}> ${esc(f.label)}</label>`;
+  });
+  
+  html += `</div>
+    <div style="margin-bottom:16px;">
+      <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="edit-tpl-default" ${tpl.isDefault ? 'checked' : ''}> 
+        Сделать шаблоном по умолчанию
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" onclick="renderViewTemplatesSettings()">Отмена</button>
+      <button class="btn btn-success" onclick="saveViewTemplate(${id})"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+    </div>`;
+
+  document.getElementById('settings-section-content').innerHTML = html;
+}
+
+async function saveViewTemplate(id) {
+  const checked = Array.from(document.querySelectorAll('.tpl-field-cb:checked')).map(cb => cb.value);
+  const name = document.getElementById('edit-tpl-name').value;
+  const isDefault = document.getElementById('edit-tpl-default').checked;
+  
+  if (checked.length === 0) {
+    showToast('Выберите хотя бы одно поле', 'error');
+    return;
+  }
+
+  try {
+    await apiRequest('/view-templates/' + id, 'PUT', { name, visibleFields: checked, isDefault });
+    showToast('Шаблон обновлён', 'success');
+    renderViewTemplatesSettings();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
 function openViewTemplateActions(ev, id) {
   ev.stopPropagation();
   renderRowActionsMenu(ev.currentTarget, [
+    { label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => editViewTemplate(id) },
     { label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: async () => {
         const ok = await showConfirm('Удалить шаблон?', { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
         if (!ok) return;
