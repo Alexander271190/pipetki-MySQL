@@ -5,6 +5,15 @@ const {
   normalizeInterval,
   todayLocalStr,
 } = require('../../middleware/validate');
+const db = require('../../db');
+
+const PIPETTE_COLUMNS = 'id, serial, manufacturer, model, equipment_type, volume, department, `interval`, last_calibration, cert, last_result, active, responsible, location, notes, sent_for_calibration, sent_note, replaced_by, replacing, custom_data, barcode, barcode_source, created_at, updated_at';
+const USER_COLUMNS = 'id, login, password, full_name, position, department, role, only_own_department, is_acting, acting_for_id, extra_permissions, must_change_password, must_set_password, password_changed_at';
+const AUDIT_COLUMNS = 'id, user_id, user_full_name, action, details, pipette_id, category, timestamp';
+const PRINTER_COLUMNS = 'id, name, department, mode, ip, port, label_size, enabled, is_default, sort_order';
+
+
+
 
 // ============================================================
 // КОНСТАНТЫ
@@ -147,7 +156,7 @@ function canAccessDepartment(user, department) {
 // Бросает err со status = 404 / 403 — чтобы использовать внутри withTransaction.
 // ============================================================
 async function findPipetteOrFail(executor, id, user, { forUpdate = false } = {}) {
-  const sql = `SELECT * FROM pipettes WHERE id = ?${forUpdate ? ' FOR UPDATE' : ''}`;
+  const sql = `SELECT ${PIPETTE_COLUMNS} FROM pipettes WHERE id = ?${forUpdate ? ' FOR UPDATE' : ''}`;
   const [rows] = await executor.query(sql, [id]);
   if (!rows.length) {
     const err = new Error('Оборудование не найдено');
@@ -173,8 +182,8 @@ async function findPipetteOrFail(executor, id, user, { forUpdate = false } = {})
 // Меняешь порядок/условия — меняй ТОЛЬКО здесь.
 // ═══════════════════════════════════════════════════════════════════
 function sqlComputedStatus(warnDays) {
-  // 🆕 Принудительный каст в число — защита от инъекции, если warnDays
-  // когда-нибудь придёт из небезопасного источника (query/body).
+   // ⚠️ ТОЛЬКО числа, никогда не строки. Принудительный каст защищает
+  // от SQL-инъекции, если warnDays придёт из query/body.
   const n = Number(warnDays);
   const wd = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
   return `
@@ -193,7 +202,7 @@ function sqlComputedStatus(warnDays) {
 
 // Числовой порядок статусов (для ORDER BY)
 function sqlStatusOrder(warnDays) {
-  // 🆕 Тот же каст, что в sqlComputedStatus
+  // ⚠️ ТОЛЬКО числа, никогда не строки
   const n = Number(warnDays);
   const wd = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
   return `
@@ -217,7 +226,7 @@ function buildFiltersWhere(filters, search) {
   const parts = [];
   const params = [];
 
-  // Поиск по 6 колонкам
+  // Поиск по 7 колонкам
      if (search && String(search).trim()) {
     const s = String(search).trim();
     const q = `%${s}%`;    
@@ -332,7 +341,7 @@ async function getWarnDays(executor) {
     return _warnDaysCache;
   }
   try {
-    const ex = executor || require('../../db');
+    const ex = executor || db;
     const [rows] = await ex.query(
       "SELECT setting_value FROM system_settings WHERE setting_key = 'warn_days'"
     );
@@ -349,6 +358,7 @@ function invalidateWarnDaysCache() {
   _warnDaysCache = null;
   _warnDaysCacheTime = 0;
 }
+
 
 module.exports = {
   validateISODate,
@@ -372,5 +382,8 @@ module.exports = {
   sqlOrderBy,
   getWarnDays,
   invalidateWarnDaysCache,
+  PIPETTE_COLUMNS,
+  USER_COLUMNS,
+  AUDIT_COLUMNS,
+  PRINTER_COLUMNS,
 };
-
