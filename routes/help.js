@@ -101,7 +101,7 @@ router.get('/visible', authenticate, async (req, res) => {
 
 router.get('/images/list', authenticate, requireRole(['admin']), async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM help_images ORDER BY created_at DESC LIMIT 200');
+    const [rows] = await db.query('SELECT id, filename, original_name, mime_type, size_bytes, uploaded_by, created_at FROM help_images ORDER BY created_at DESC LIMIT 200');
     res.json(rows.map(r => ({
       id: r.id, filename: r.filename, originalName: r.original_name,
       mimeType: r.mime_type, sizeBytes: r.size_bytes,
@@ -112,7 +112,7 @@ router.get('/images/list', authenticate, requireRole(['admin']), async (req, res
 
 router.get('/export/all', authenticate, requireRole(['admin']), async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM help_docs ORDER BY sort_order ASC, id ASC');
+    const [rows] = await db.query('SELECT id, slug, title, content, required_permissions, sort_order, enabled FROM help_docs ORDER BY sort_order ASC, id ASC');
     res.json(rows.map(r => ({
       slug: r.slug, title: r.title, content: r.content,
       requiredPermissions: db.safeParse(r.required_permissions, []),
@@ -123,7 +123,7 @@ router.get('/export/all', authenticate, requireRole(['admin']), async (req, res)
 
 router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM help_docs ORDER BY sort_order ASC, id ASC');
+    const [rows] = await db.query('SELECT id, slug, title, content, required_permissions, sort_order, enabled FROM help_docs ORDER BY sort_order ASC, id ASC');
     res.json(rows.map(r => ({
       id: r.id, slug: r.slug, title: r.title, content: r.content,
       requiredPermissions: db.safeParse(r.required_permissions, []),
@@ -134,7 +134,7 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 
 router.get('/:slug', authenticate, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM help_docs WHERE slug = ?', [req.params.slug]);
+    const [rows] = await db.query('SELECT id, slug, title, content, required_permissions, sort_order, enabled FROM help_docs WHERE slug = ?', [req.params.slug]);
     if (!rows.length) return res.status(404).json({ error: 'Не найден' });
 
     const row = rows[0];
