@@ -9,8 +9,8 @@ router.get('/:id/lock', authenticate, async (req, res) => {
   try {
     await db.query('DELETE FROM edit_locks WHERE locked_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)');
 
-    const [rows] = await db.query(`
-      SELECT l.*, u.position AS actual_position 
+  const [rows] = await db.query(`
+      SELECT l.pipette_id, l.user_id, l.user_full_name, l.locked_at, u.position AS actual_position 
       FROM edit_locks l
       LEFT JOIN users u ON u.id = l.user_id
       WHERE l.pipette_id = ?
@@ -20,7 +20,7 @@ router.get('/:id/lock', authenticate, async (req, res) => {
     const lock = rows[0];
     if (lock.user_id === req.user.id) return res.json({ locked: true, mine: true });
         
-    const position = lock.actual_position || lock.user_position || '';
+    const position = lock.actual_position || '';
     
         res.json({ 
       locked: true, 
