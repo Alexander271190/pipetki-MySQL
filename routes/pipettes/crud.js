@@ -551,7 +551,7 @@ router.get('/:id', authenticate, async (req, res) => {
     }
 
     const [h] = await db.query(
-      'SELECT * FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC, id DESC',
+      'SELECT id, pipette_id, `date`, cert, result, org, note FROM calibration_history WHERE pipette_id = ? ORDER BY `date` DESC, id DESC',
       [req.params.id]
     );
     p.active = !!p.active;
