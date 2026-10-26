@@ -8,7 +8,7 @@ const {
 const db = require('../../db');
 
 const PIPETTE_COLUMNS = 'id, serial, manufacturer, model, equipment_type, volume, department, `interval`, last_calibration, cert, last_result, active, responsible, location, notes, sent_for_calibration, sent_note, replaced_by, replacing, custom_data, barcode, barcode_source, created_at, updated_at';
-const USER_COLUMNS = 'id, login, password, full_name, position, department, role, only_own_department, is_acting, acting_for_id, extra_permissions, must_change_password, must_set_password, password_changed_at';
+const USER_COLUMNS = 'id, login, password, full_name, position, department, role, only_own_department, is_acting, acting_for_id, extra_permissions, must_change_password, must_set_password, password_changed_at, view_template_id';
 const AUDIT_COLUMNS = 'id, user_id, user_full_name, action, details, pipette_id, category, timestamp';
 const PRINTER_COLUMNS = 'id, name, department, mode, ip, port, label_size, enabled, is_default, sort_order';
 
