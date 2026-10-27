@@ -353,3 +353,10 @@ html[data-theme="dark"] .modal textarea:disabled {
   color: inherit !important;
 }
 
+/* 🆕 Тултип счетчика «Всего» (тёмная тема) */
+html[data-theme="dark"] .stat-tooltip {
+  background: var(--card);
+  border-color: var(--border-hard);
+  color: var(--text); /* Делает весь текст тултипа светлым */
+}
+
