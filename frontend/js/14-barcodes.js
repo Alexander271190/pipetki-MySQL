@@ -61,8 +61,8 @@ function renderBarcodeScanList() {
     return;
   }
   if (list) {
-    list.innerHTML = _barcodeScanList.map((p, i) => `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e2e8f0;">
+     list.innerHTML = _barcodeScanList.map((p, i) => `
+      <div class="flex-row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid #e2e8f0;">
         <div><strong>${esc(p.id)}</strong> — ${esc(p.model || '')}</div>
         <button class="btn btn-danger btn-sm" onclick="removeFromBarcodeScanList(${i})" style="padding:2px 8px;font-size:.7rem;">×</button>
       </div>
