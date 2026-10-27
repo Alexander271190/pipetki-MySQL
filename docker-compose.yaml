@@ -49,11 +49,12 @@ services:
     build: .
     container_name: pipette_app
     restart: unless-stopped
-
+   
     expose:
       - "3000"
 
     environment:
+      NODE_ENV: production
       PORT: 3000
       TZ: Asia/Krasnoyarsk
       DB_HOST: db
