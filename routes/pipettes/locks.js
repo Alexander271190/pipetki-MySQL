@@ -115,4 +115,23 @@ router.delete('/:id/lock', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Ошибка снятия' });
   }
 });
+
+router.post('/bulk-unlock', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.json({ ok: true });
+    }
+    const ph = ids.map(() => '?').join(',');
+    await db.query(
+      `DELETE FROM edit_locks WHERE user_id = ? AND pipette_id IN (${ph})`,
+      [req.user.id, ...ids]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('POST /bulk-unlock error:', e);
+    res.status(500).json({ error: 'Ошибка разблокировки' });
+  }
+});
+
 module.exports = router;
