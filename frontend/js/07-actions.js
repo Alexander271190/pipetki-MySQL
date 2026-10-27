@@ -234,8 +234,7 @@ async function openTransferModal(id) {
 
       document.getElementById('transfer-pipette-info').innerHTML =
         `<strong>${esc(p.id)}</strong> — ${esc(p.model)}<br>
-         <small style="color:${COLORS.muted};">Текущий отдел: ${esc(p.department || 'без отдела')}</small>`;
-
+         <small class="text-muted-sm">Текущий отдел: ${esc(p.department || 'без отдела')}</small>`;
       const currentDept = p.department || '';
       const available = departmentsList.filter(d => d !== currentDept);
 
@@ -438,12 +437,13 @@ async function renderHistoryContent(p) {
     histHtml += '<div class="timeline" style="position:relative;padding-left:28px;margin-top:15px;">';
     history.forEach(h => {
       const itemClass = h.result === 'fail' ? 'danger' : (h.result === 'wip' ? 'warn' : '');
+      const resultClass = h.result === 'pass' ? 'badge-result-pass' : h.result === 'fail' ? 'badge-result-fail' : 'badge-result-wip';
       histHtml += `<div class="timeline-item ${itemClass}" style="position:relative;padding-bottom:20px;border-left:2px solid #e2e8f0;padding-left:20px;">
-        <div style="font-weight:600;font-size:.85rem;color:#475569;">${formatDate(h.date)}</div>
-        ${h.cert ? `<div style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;"><i class="fa-solid fa-file-lines"></i> Свидетельство № ${esc(h.cert)}</div>` : ''}
-        <span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:.78rem;margin-top:4px;margin-left:6px;${h.result === 'pass' ? 'background:#dcfce7;color:#166534;' : h.result === 'fail' ? 'background:#fee2e2;color:#991b1b;' : 'background:#e0f2fe;color:#0369a1;'}">${RESULT_LABELS[h.result] || h.result}</span>
-        ${h.org ? `<div style="font-size:.85rem;color:#64748b;margin-top:4px;">Организация: ${esc(h.org)}</div>` : ''}
-        ${h.note ? `<div style="font-size:.85rem;color:#64748b;margin-top:4px;">${esc(h.note)}</div>` : ''}
+        <div class="text-strong-sm">${formatDate(h.date)}</div>
+        ${h.cert ? `<div class="badge-cert"><i class="fa-solid fa-file-lines"></i> Свидетельство № ${esc(h.cert)}</div>` : ''}
+        <span class="badge-result ${resultClass}">${RESULT_LABELS[h.result] || h.result}</span>
+        ${h.org ? `<div class="text-muted-sm" style="margin-top:4px;">Организация: ${esc(h.org)}</div>` : ''}
+        ${h.note ? `<div class="text-muted-sm" style="margin-top:4px;">${esc(h.note)}</div>` : ''}
       </div>`;
     });
     histHtml += '</div>';
