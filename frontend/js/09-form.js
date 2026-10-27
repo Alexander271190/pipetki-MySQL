@@ -774,7 +774,7 @@ async function openQuickCalModal(id) {
       const p = pipettes.find(x => x.id === id);
       if (!p) { showToast('Оборудование не найдено', 'error'); return; }
       document.getElementById('quick-cal-id').value = id;
-      document.getElementById('quick-cal-pipette-info').innerHTML = `<strong>${esc(p.id)}</strong> — ${esc(p.model)} (${esc(p.department || 'без отдела')})`;
+      document.getElementById('quick-cal-pipette-info').innerHTML = getDeviceIdentityHtml(p);
       document.getElementById('quick-cal-date').value = todayStr();
       document.getElementById('quick-cal-cert').value = '';
       document.getElementById('quick-cal-result').value = 'pass';
