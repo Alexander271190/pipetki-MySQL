@@ -286,6 +286,9 @@ async function loadAllForExport() {
     }
 
     const data = await apiRequest('/pipettes/all?' + params.toString());
+    if (data.truncated) {
+      showToast(`Внимание: показаны первые ${data.limit} из ${data.total} записей`, 'error');
+    }
     return Array.isArray(data.items) ? data.items : [];
   } catch (e) {
     console.error('loadAllForExport error:', e);
