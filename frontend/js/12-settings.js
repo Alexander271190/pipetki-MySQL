@@ -85,7 +85,8 @@ async function openSettingsSection(id) {
   c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
 
   try {
-    if (id === 'fields')           await renderFieldsSettings();
+    if (id === 'identity')         await renderIdentitySettings(); 
+    else if (id === 'fields')      await renderFieldsSettings();
     else if (id === 'departments') await renderDepartmentsSettings();
     else if (id === 'filters')     await renderFiltersSettings();
     else if (id === 'export')      await renderExportSettings();
@@ -1124,3 +1125,72 @@ function openFieldActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(
 function openDeptActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить отдел', class: 'item-danger', action: () => deleteDepartmentItem(idx) }]); }
 function openFilterActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить фильтр', class: 'item-danger', action: () => deleteFilter(idx) }]); }
 function openEquipTypeActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить тип', class: 'item-danger', action: () => deleteEquipmentType(idx) }]); }
+
+// ============================================================
+// РАЗДЕЛ: ИДЕНТИФИКАЦИЯ ПРИБОРА
+// ============================================================
+async function renderIdentitySettings() {
+  const c = document.getElementById('settings-section-content');
+  try {
+    const s = await apiRequest('/settings/system');
+    
+    // Парсим текущие поля (по умолчанию — стандартный набор)
+    let currentIdFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
+    if (s.bulk_identity_fields) {
+      try { currentIdFields = JSON.parse(s.bulk_identity_fields); } catch(e) {}
+    }
+
+    c.innerHTML = `
+      <h3>Идентификация прибора</h3>
+      <p style="color:#64748b;font-size:.88rem;margin:8px 0 16px;">
+        Выберите поля, которые будут отображаться в модалках массовых операций и быстрой поверки.
+        Первые выбранные ID и Модель будут стоять в заголовке, остальные — мелким шрифтом под ним.
+      </p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap; background:var(--card-alt); padding:16px; border-radius:8px;">
+        ${[
+          { id: 'id', label: 'ID' },
+          { id: 'model', label: 'Модель' },
+          { id: 'serial', label: 'Серийный номер' },
+          { id: 'inventorynumber', label: 'Инвентарный номер' },
+          { id: 'department', label: 'Отдел' },
+          { id: 'responsible', label: 'Ответственный' }
+        ].map(f => `
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.9rem;">
+            <input type="checkbox" class="bulk-id-field-cb" value="${f.id}" ${currentIdFields.includes(f.id) ? 'checked' : ''}>
+            ${f.label}
+          </label>
+        `).join('')}
+      </div>
+      <div class="form-actions" style="margin-top:20px;">
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+        <button class="btn btn-success" onclick="saveBulkIdentitySettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+      </div>
+    `;
+  } catch (e) { 
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`; 
+  }
+}
+
+async function saveBulkIdentitySettings() {
+  const fields = Array.from(document.querySelectorAll('.bulk-id-field-cb:checked')).map(cb => cb.value);
+  if (fields.length === 0) { 
+    showToast('Выберите хотя бы одно поле', 'error'); 
+    return; 
+  }
+  
+  try {
+    await UI.saveAction({ 
+      successMsg: 'Настройки идентификации сохранены', 
+      reload: false 
+    }, async () => {
+      await apiRequest('/settings/system', 'PUT', { bulk_identity_fields: JSON.stringify(fields) });
+      settings.bulkIdentityFields = fields;
+      
+      // Принудительно обновляем данные, чтобы при следующем открытии модалки применились новые настройки
+      if (typeof loadPipetteData === 'function') await loadPipetteData();
+      
+      // Перерисовываем форму (чтобы галочки обновились)
+      await renderIdentitySettings(); 
+    });
+  } catch (e) {}
+}
