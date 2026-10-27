@@ -6,6 +6,7 @@ const { logAction } = require('../utils/audit');
 const { withTransaction } = require('../utils/db-helper');
 
 const router = express.Router();
+const debug = process.env.NODE_ENV === 'production' ? () => {} : console.log.bind(console);
 
 // ============================================================
 // КАРТА ЗАГОЛОВКОВ (не менялась)
@@ -390,7 +391,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
     }
 
     const totalBatches = Math.ceil(validObjects.length / BATCH_SIZE);
-    console.log(`📥 Импорт: ${validObjects.length} строк, ${totalBatches} батчей по ${BATCH_SIZE}`);
+    debug(`📥 Импорт: ${validObjects.length} строк, ${totalBatches} батчей по ${BATCH_SIZE}`);
 
     for (let b = 0; b < totalBatches; b++) {
       const batchStart = b * BATCH_SIZE;
@@ -586,7 +587,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
         batchCommitted = true;
         parsed.forEach(p => added.push(p.id));
         const elapsed = Date.now() - batchStartTime;
-        console.log(`   ✅ Батч ${b + 1}/${totalBatches}: ${parsed.length} строк за ${elapsed} мс`);
+        debug(`   ✅ Батч ${b + 1}/${totalBatches}: ${parsed.length} строк за ${elapsed} мс`);
       } catch (batchErr) {
         console.error(`❌ Батч ${b + 1}/${totalBatches}: ${batchErr.message} → fallback на построчную`);
       }
@@ -662,7 +663,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
             }
           }
         }
-        console.log(`   ⚠️ Батч ${b + 1}/${totalBatches}: fallback обработал ${parsed.length} строк построчно`);
+        debug(`   ⚠️ Батч ${b + 1}/${totalBatches}: fallback обработал ${parsed.length} строк построчно`);
       }
     }
 
