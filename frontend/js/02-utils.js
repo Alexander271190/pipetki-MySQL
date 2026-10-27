@@ -303,3 +303,27 @@ function validatePasswordClient(pwd) {
   if (/\s/.test(pwd))             errors.push('Пробелы в пароле недопустимы');
   return { ok: errors.length === 0, errors };
 }
+
+// ============================================================
+// 🆕 ИДЕНТИФИКАЦИЯ ПРИБОРА (для массовых модалок)
+// ============================================================
+function getDeviceIdentityHtml(p) {
+  const fields = settings.bulkIdentityFields || ['id', 'model', 'serial', 'inventorynumber', 'department'];
+  const main = [];
+  const sub = [];
+
+  if (fields.includes('id')) main.push(`<strong>${esc(p.id)}</strong>`);
+  if (fields.includes('model')) main.push(`${esc(p.model)}`);
+
+  // Во вторую строку собираем всё остальное
+  if (fields.includes('serial') && p.serial) sub.push(`S/N: ${esc(p.serial)}`);
+  if (fields.includes('inventorynumber') && p.inventorynumber) sub.push(`Инв: ${esc(p.inventorynumber)}`);
+  if (fields.includes('department') && p.department) sub.push(`${esc(p.department)}`);
+  if (fields.includes('responsible') && p.responsible) sub.push(`${esc(p.responsible)}`);
+
+  let html = main.length ? main.join(' — ') : `<strong>${esc(p.id)}</strong>`;
+  if (sub.length > 0) {
+    html += `<br><small class="text-muted-sm">${sub.join(' · ')}</small>`;
+  }
+  return html;
+}
