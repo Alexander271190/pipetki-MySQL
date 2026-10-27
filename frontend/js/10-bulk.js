@@ -50,9 +50,9 @@ async function openBulkSendModal() {
         const listHtml = toSend.map(id => {
           const p = pipettes.find(x => x.id === id);
           if (!p) return '';
-          return `<div style="padding:2px 0;">
+           return `<div style="padding:2px 0;">
             <strong>${esc(p.id)}</strong> — ${esc(p.model)} 
-            <span style="color:${COLORS.faint};">(${esc(p.department || 'без отдела')})</span>
+            <span class="text-faint">(${esc(p.department || 'без отдела')})</span>
           </div>`;
         }).join('');
         document.getElementById('bulk-send-list').innerHTML = listHtml;
@@ -130,16 +130,14 @@ async function loadReplacementOptions(ids) {
 
 function buildReplacementBlock(id, p, options) {
   const safeName = id.replace(/[^a-zA-Z0-9_-]/g, '_');
-  let html = `<div style="margin-bottom:12px;padding:10px;background:#f8fafc;border-radius:8px;">
-    <div style="font-weight:600;font-size:.85rem;color:#475569;margin-bottom:6px;">
-      ${esc(id)} — ${esc(p.model)} (${esc(p.department || 'без отдела')})
-    </div>
-    <div style="font-size:.78rem;color:#64748b;margin-bottom:6px;">Складские того же типа:</div>
-    <div style="display:flex;flex-direction:column;gap:4px;">`;
+   let html = `<div class="card">
+    <div class="card-title">${esc(id)} — ${esc(p.model)} (${esc(p.department || 'без отдела')})</div>
+    <div class="text-muted-sm" style="margin-bottom:6px;">Складские того же типа:</div>
+    <div class="flex-col">`;
 
   for (const opt of options) {
     html += `
-      <label style="display:flex;align-items:center;gap:8px;padding:6px;background:#fff;border-radius:6px;cursor:pointer;font-size:.82rem;">
+      <label style="display:flex;align-items:center;gap:8px;padding:6px;background:var(--card);border-radius:6px;cursor:pointer;font-size:.82rem;">
         <input type="radio" name="repl-${safeName}" value="${esc(opt.id)}" data-for="${esc(id)}">
         <span><strong>${esc(opt.id)}</strong> — ${esc(opt.model)}
         ${opt.manufacturer ? `<span style="color:#94a3b8;">(${esc(opt.manufacturer)})</span>` : ''}
@@ -396,9 +394,9 @@ async function openBulkReturnModal() {
 
         const container = document.getElementById('bulk-return-items-container');
         container.innerHTML = `
-          <div style="font-weight:600;color:${COLORS.muted};margin-bottom:8px;font-size:.85rem;">
-            Свидетельства по оборудованию:
-          </div>
+      <div class="card-title" style="margin-bottom:8px;">
+          Свидетельства по оборудованию:
+       </div>
           <table class="field-settings-table">
             <thead>
               <tr>
@@ -475,14 +473,14 @@ function renderReturnReplacements(sentItems) {
 
   container.style.display = 'block';
 
-  let html = `<div style="margin:15px 0;padding:12px;background:#eff6ff;border-left:3px solid #3b82f6;border-radius:8px;font-size:.85rem;">
-    <div style="font-weight:600;color:#1e40af;margin-bottom:8px;">
+  let html = `<div class="info-block" style="margin:15px 0;">
+    <div class="sub-title" style="color:#1e40af;margin-bottom:8px;">
       <i class="fa-solid fa-arrows-rotate"></i> На время поверки было выдано со склада:
     </div>`;
 
   withRepl.forEach(p => {
     html += `
-      <label style="display:flex;align-items:flex-start;gap:8px;padding:6px;background:#fff;border-radius:6px;margin-bottom:4px;cursor:pointer;">
+      <label style="display:flex;align-items:flex-start;gap:8px;padding:6px;background:var(--card);border-radius:6px;margin-bottom:4px;cursor:pointer;">
         <input type="checkbox" class="return-repl-cb" value="${esc(p.id)}" checked style="margin-top:3px;">
         <span>
           <strong>${esc(p.id)}</strong> → было заменено на
