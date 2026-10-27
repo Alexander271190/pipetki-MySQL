@@ -87,7 +87,7 @@ async function waitForDatabase(maxAttempts = 90) {
     try {
       conn = await db.pool.getConnection();
       await conn.query('SELECT 1');
-      debug('✅ MySQL подключён');
+      console.log('✅ MySQL подключён');
       return true;
     } catch (e) {
       const left = maxAttempts - attempt;
@@ -111,7 +111,7 @@ async function waitForDatabase(maxAttempts = 90) {
   if (connected) {
     try {
       await db.initSchema();
-      debug('✅ Схема БД готова');
+      console.log('✅ Схема БД готова');
       try {
         const seeded = await db.seedInitialData();
         if (seeded) {
@@ -127,7 +127,7 @@ async function waitForDatabase(maxAttempts = 90) {
 
   // 🆕 Захватываем сервер, чтобы можно было закрыть его graceful
   const server = app.listen(PORT, () => {
-    debug(`🚀 Server on http://0.0.0.0:${PORT}`);
+    console.log(`🚀 Server on http://0.0.0.0:${PORT}`);
   });
 
   // 🧹 Очистка audit_log (из коробки)
@@ -146,11 +146,11 @@ async function waitForDatabase(maxAttempts = 90) {
       try {
         conn = await db.pool.getConnection();
         await conn.query('SELECT 1');
-        debug('✅ MySQL подключён (отложенное подключение)');
+        console.log('✅ MySQL подключён (отложенное подключение)');
 
         try {
           await db.initSchema();
-          debug('✅ Схема БД готова');
+          console.log('✅ Схема БД готова (отложенно)');
           try {
             const seeded = await db.seedInitialData();
             if (seeded) {
