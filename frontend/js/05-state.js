@@ -83,7 +83,14 @@ async function loadPipetteData() {
         apiRequest('/settings/departments').catch(() => []),
       ]);
 
-      settings = { warnDays: parseInt(settingsData?.warn_days) || 30 };
+      let bulkFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
+      if (settingsData?.bulk_identity_fields) {
+        try { bulkFields = JSON.parse(settingsData.bulk_identity_fields); } catch (e) {}
+      }
+      settings = { 
+        warnDays: parseInt(settingsData?.warn_days) || 30,
+        bulkIdentityFields: bulkFields 
+      };
 
       if (Array.isArray(typesResult) && typesResult.length > 0) {
         _equipmentTypes = typesResult;
