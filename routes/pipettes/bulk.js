@@ -452,4 +452,74 @@ router.post('/bulk-change-responsible', authenticate, requireAnyPermission(['bul
   }
 });
 
+// 🆕 Массовая блокировка — 1 запрос вместо N
+router.post('/bulk-lock', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids обязателен (массив)' });
+    }
+    if (ids.length > 200) {
+      return res.status(400).json({ error: 'Максимум 200 за раз' });
+    }
+
+    // Снимаем просроченные (30 мин)
+    await db.query('DELETE FROM edit_locks WHERE locked_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)');
+
+    // Проверяем, какие приборы существуют
+    const ph = ids.map(() => '?').join(',');
+    const [existing] = await db.query(
+      `SELECT id FROM pipettes WHERE id IN (${ph})`,
+      ids
+    );
+    const existingSet = new Set(existing.map(r => r.id));
+    const notFound = ids.filter(id => !existingSet.has(id));
+    const validIds = ids.filter(id => existingSet.has(id));
+
+    if (validIds.length === 0) {
+      return res.json({ locked: [], busy: [], notFound });
+    }
+
+    // Массовый INSERT IGNORE — только там, где нет блокировки
+    const validPh = validIds.map(() => '?').join(',');
+    await db.query(
+      `INSERT IGNORE INTO edit_locks (pipette_id, user_id, user_full_name)
+       SELECT id, ?, ? FROM pipettes WHERE id IN (${validPh})`,
+      [req.user.id, req.user.full_name, ...validIds]
+    );
+
+    // Обновляем время у наших (если уже были наши)
+    await db.query(
+      `UPDATE edit_locks SET locked_at = CURRENT_TIMESTAMP
+       WHERE user_id = ? AND pipette_id IN (${validPh})`,
+      [req.user.id, ...validIds]
+    );
+
+    // Проверяем, какие остались занятыми
+    const [locks] = await db.query(
+      `SELECT l.pipette_id, l.user_id, l.user_full_name, u.position AS locked_by_position
+       FROM edit_locks l
+       LEFT JOIN users u ON u.id = l.user_id
+       WHERE l.pipette_id IN (${validPh})`,
+      validIds
+    );
+
+    const locked = [];
+    const busy = [];
+    for (const l of locks) {
+      if (l.user_id === req.user.id) locked.push(l.pipette_id);
+      else busy.push({
+        id: l.pipette_id,
+        lockedBy: l.user_full_name,
+        lockedByPosition: l.locked_by_position,
+      });
+    }
+
+    res.json({ locked, busy, notFound });
+  } catch (e) {
+    console.error('POST /bulk-lock error:', e);
+    res.status(500).json({ error: 'Ошибка блокировки' });
+  }
+});
+
 module.exports = router;
