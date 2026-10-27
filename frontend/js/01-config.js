@@ -26,9 +26,10 @@ let _cachedUsersTime = 0;
 // 🆕 СТРУКТУРА РАЗДЕЛОВ НАСТРОЕК
 // ============================================================
 const SETTINGS_SECTIONS = [
-  {
+   {
     group: 'Оборудование и данные',
   items: [
+    { id: 'identity',        label: 'Идентификация прибора' }, 
     { id: 'fields',          label: 'Поля формы' },
     { id: 'departments',     label: 'Отделы' },
     { id: 'filters',         label: 'Фильтры' },
