@@ -29,53 +29,45 @@ async function openBulkSendModal() {
         return;
       }
 
-      const lockedIds = [];
-      let keepLocks = false;
+       _bulkSendIds = [...toSend];
+      document.getElementById('bulk-send-count').textContent = toSend.length;
 
-      try {
-        for (const id of toSend) {
-          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-          if (lockRes.locked && !lockRes.mine) {
-            const proceed = await showLockWarning(lockRes, 'Массовая отправка');
-            if (!proceed) return;   // finally снимет уже поставленные
+      // 🆕 O(n) — Map вместо find
+      const pipettesMap = new Map(pipettes.map(p => [p.id, p]));
+      const listHtml = toSend.map(id => {
+        const p = pipettesMap.get(id);
+        if (!p) return '';
+        return `<div style="padding:2px 0;">
+          <strong>${esc(p.id)}</strong> — ${esc(p.model)} 
+          <span class="text-faint">(${esc(p.department || 'без отдела')})</span>
+        </div>`;
+      }).join('');
+      document.getElementById('bulk-send-list').innerHTML = listHtml;
+
+      document.getElementById('bulk-send-date').value = todayStr();
+      document.getElementById('bulk-send-note').value = '';
+
+      // 🆕 Модалка — сразу
+      UI.modal.open('bulk-send-modal');
+
+      // 🆕 Блокировки — один запрос, в фоне
+      (async () => {
+        try {
+          const r = await apiRequest('/pipettes/bulk-lock', 'POST', { ids: toSend });
+          if (r.busy && r.busy.length > 0) {
+            const names = r.busy.map(b => `${b.id} (${b.lockedBy})`).join(', ');
+            showToast(`Уже редактируются другими: ${names}`, 'warn');
           }
-          await apiRequest(`/pipettes/${id}/lock`, 'POST');
-          lockedIds.push(id);
+          if (r.notFound && r.notFound.length > 0) {
+            showToast(`Не найдены: ${r.notFound.join(', ')}`, 'warn');
+          }
+        } catch (e) {
+          console.warn('bulk-lock error:', e.message);
         }
+      })();
 
-        _bulkSendIds = [...toSend];
-
-        document.getElementById('bulk-send-count').textContent = toSend.length;
-
-        const listHtml = toSend.map(id => {
-          const p = pipettes.find(x => x.id === id);
-          if (!p) return '';
-           return `<div style="padding:2px 0;">
-            <strong>${esc(p.id)}</strong> — ${esc(p.model)} 
-            <span class="text-faint">(${esc(p.department || 'без отдела')})</span>
-          </div>`;
-        }).join('');
-        document.getElementById('bulk-send-list').innerHTML = listHtml;
-
-        document.getElementById('bulk-send-date').value = todayStr();
-        document.getElementById('bulk-send-note').value = '';
-
-        UI.modal.open('bulk-send-modal');
-        loadReplacementOptions(toSend);
-        keepLocks = true;
-      } catch (e) {
-        if (e.status === 409) {
-          showToast(`Прибор заблокирован: ${e.response?.lockedBy || ''}`, 'error');
-        } else {
-          showToast('Ошибка проверки блокировки', 'error');
-        }
-      } finally {
-        if (!keepLocks) {
-          lockedIds.forEach(id => {
-            apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-          });
-        }
-      }
+      // Замены — в фоне
+      loadReplacementOptions(toSend);
     }
   );
 }
@@ -159,9 +151,9 @@ function buildReplacementBlock(id, p, options) {
 
 function closeBulkSendModal() {
   UI.modal.close('bulk-send-modal');
-  [..._bulkSendIds].forEach(id => {
-    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-  });
+  if (_bulkSendIds.length > 0) {
+    apiRequest('/pipettes/bulk-unlock', 'POST', { ids: _bulkSendIds }).catch(() => {});
+  }
   _bulkSendIds = [];
 }
 
