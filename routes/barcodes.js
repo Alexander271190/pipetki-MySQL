@@ -76,6 +76,7 @@ function registerFontOnDoc(doc, font) {
 }
 
 const router = express.Router();
+const debug = process.env.NODE_ENV === 'production' ? () => {} : console.log.bind(console);
 
 function normalizeBarcode(s) {
   return String(s || '').trim().replace(/\s+/g, '');
@@ -450,7 +451,7 @@ router.get('/labels.pdf', authenticate, requirePermission('print_labels'), async
     const fontOk = registerFontOnDoc(doc, font);
 
     if (fontOk) {
-      console.log(`✅ PDF: используется ${font.def.name} (${font.key})`);
+      debug(`✅ PDF: используется ${font.def.name} (${font.key})`);
     } else {
       console.warn('⚠️ PDF: ни одного шрифта с кириллицей не найдено, используется Helvetica.');
       console.warn('   Положите .ttf файлы в frontend/fonts/');
