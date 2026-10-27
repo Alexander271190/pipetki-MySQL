@@ -569,3 +569,78 @@ html[data-theme="dark"] .skeleton-line {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ============================================================
+   🆕 Утилитарные классы (для замены inline-стилей в JS)
+   ============================================================ */
+
+/* Карточки */
+.card        { margin-bottom: 12px; padding: 10px; background: var(--card-alt); border-radius: 8px; }
+.card-sm     { margin-bottom: 8px; padding: 8px; background: var(--card-alt); border-radius: 6px; }
+.card-title  { font-weight: 600; font-size: .85rem; color: var(--text-muted); margin-bottom: 6px; }
+.card-title-sm { font-weight: 600; font-size: .82rem; color: var(--text-muted); margin-bottom: 4px; }
+
+/* Текст */
+.text-muted   { color: var(--text-muted); }
+.text-muted-sm { color: var(--text-muted); font-size: .82rem; }
+.text-faint   { color: var(--text-faint); }
+.text-faint-sm { color: var(--text-faint); font-size: .8rem; }
+.text-strong  { color: var(--text-strong); font-weight: 600; }
+.text-strong-sm { color: var(--text-strong); font-weight: 600; font-size: .85rem; }
+
+/* Flex-контейнеры */
+.flex-row     { display: flex; align-items: center; gap: 8px; }
+.flex-row-sm  { display: flex; align-items: center; gap: 6px; }
+.flex-wrap    { display: flex; flex-wrap: wrap; gap: 8px; }
+.flex-col     { display: flex; flex-direction: column; gap: 4px; }
+.btn-group    { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+
+/* Разделители */
+.section-divider {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.section-divider-solid {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.section-title {
+  font-weight: 700;
+  font-size: .82rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 8px;
+}
+.sub-title {
+  font-weight: 600;
+  font-size: .85rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* Бейджи */
+.badge-cert {
+  display: inline-block;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: .78rem;
+  margin-top: 4px;
+}
+.badge-result { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: .78rem; margin-top: 4px; margin-left: 6px; }
+.badge-result-pass { background: #dcfce7; color: #166534; }
+.badge-result-fail { background: #fee2e2; color: #991b1b; }
+.badge-result-wip  { background: #e0f2fe; color: #0369a1; }
+
+/* Тёмная тема */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .card-sm { background: #273449; }
+html[data-theme="dark"] .badge-cert { background: rgba(14, 165, 233, .2); color: #93c5fd; }
+html[data-theme="dark"] .badge-result-pass { background: rgba(22, 163, 74, .2); color: #86efac; }
+html[data-theme="dark"] .badge-result-fail { background: rgba(220, 38, 38, .2); color: #fca5a5; }
+html[data-theme="dark"] .badge-result-wip  { background: rgba(14, 165, 233, .2); color: #93c5fd; }
+
