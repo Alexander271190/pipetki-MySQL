@@ -123,6 +123,7 @@ function renderCounters() {
           </div>
         </div>
       `;
+      }
       
       tipEl.innerHTML = html;
     }
