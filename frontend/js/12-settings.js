@@ -85,7 +85,7 @@ async function openSettingsSection(id) {
   c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
 
   try {
-    if (id === 'identity')         await renderIdentitySettings(); 
+    if (id === 'identity')         await renderIdentitySettingsInline(); 
     else if (id === 'fields')      await renderFieldsSettings();
     else if (id === 'departments') await renderDepartmentsSettings();
     else if (id === 'filters')     await renderFiltersSettings();
@@ -145,6 +145,7 @@ async function renderFieldsSettings(skipFetch = false) {
      html += `</tbody></table>
       <div class="form-actions">
         <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить поле</button>
+        <button class="btn btn-warning" onclick="renderIdentitySettingsInline()" title="Настроить, какие поля видны в массовых операциях"><i class="fa-solid fa-list-ul"></i> Отображение в списках</button>
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
         <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>`;
@@ -219,17 +220,29 @@ function moveFieldSetting(idx, dir) {
 }
 
 async function addFieldSetting() {
-  const id = await showPrompt('ID нового поля (латиница, начинается с буквы)', {
-      icon: 'fa-plus', title: 'Новое поле', okText: 'Добавить', placeholder: 'Например: inventorynumber',
-      validator: (v) => {
-        if (!v) return 'Укажите ID поля';
-        if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(v)) return 'Только латиница, цифры и _, начиная с буквы';
-        if (_cachedFields.some(f => f.id === v)) return 'Поле с таким ID уже существует';
-        return null;
-      }
+  const label = await showPrompt('Название поля (по-русски)', {
+      icon: 'fa-plus', title: 'Новое поле', okText: 'Добавить', placeholder: 'Например: Инвентарный номер',
+      validator: (v) => v ? null : 'Укажите название поля'
   });
-  if (!id) return;
-  _cachedFields.push({ id, label: id, type: 'text', required: false, enabled: true, options: [], default: '', order: _cachedFields.length + 1 });
+  if (!label) return;
+
+  let baseId = slugify(label);
+  let finalId = baseId;
+  let counter = 1;
+  while (_cachedFields.some(f => f.id === finalId)) {
+    finalId = `${baseId}_${counter++}`;
+  }
+
+  _cachedFields.push({ 
+    id: finalId, 
+    label: label.trim(), 
+    type: 'text', 
+    required: false, 
+    enabled: true, 
+    options: [], 
+    default: '', 
+    order: _cachedFields.length + 1 
+  });
   renderFieldsSettings(true);
 }
 
@@ -489,19 +502,31 @@ function moveFilter(idx, dir) {
 }
 
 async function addFilter() {
-  const id = await showPrompt('ID нового фильтра', {
-      icon: 'fa-filter', title: 'Новый фильтр', okText: 'Добавить', placeholder: 'Например: responsible',
-      validator: (v) => {
-        if (!v) return 'Укажите ID фильтра';
-        if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(v)) return 'Только латиница, цифры и _';
-        if (_cachedFilters.some(f => f.id === v)) return 'Такой фильтр уже есть';
-        return null;
-      }
+  const label = await showPrompt('Название фильтра (по-русски)', {
+      icon: 'fa-filter', title: 'Новый фильтр', okText: 'Добавить', placeholder: 'Например: Ответственный',
+      validator: (v) => v ? null : 'Укажите название'
   });
-  if (!id) return;
-  _cachedFilters.push({ id, label: id, type: 'text', fieldId: '', enabled: true, optionsSource: '', order: _cachedFilters.length + 1 });
+  if (!label) return;
+
+  let baseId = slugify(label);
+  let finalId = baseId;
+  let counter = 1;
+  while (_cachedFilters.some(f => f.id === finalId)) {
+    finalId = `${baseId}_${counter++}`;
+  }
+
+  _cachedFilters.push({ 
+    id: finalId, 
+    label: label.trim(), 
+    type: 'text', 
+    fieldId: '', 
+    enabled: true, 
+    optionsSource: '', 
+    order: _cachedFilters.length + 1 
+  });
   renderFiltersSettings(true);
 }
+
 
 async function deleteFilter(idx) {
   const ok = await showConfirm(`Удалить фильтр «${_cachedFilters[idx].label}»?`, { icon: '🔍', title: 'Удаление фильтра', okText: 'Удалить', okClass: 'btn-danger' });
@@ -701,19 +726,27 @@ function moveEquipmentType(idx, dir) {
 }
 
 async function addEquipmentType() {
-  const value = await showPrompt('Ключ типа', {
-      icon: 'fa-screwdriver-wrench', title: 'Новый тип', okText: 'Добавить', placeholder: 'Например: ph_meter',
-      validator: (v) => {
-        if (!v) return 'Укажите ключ';
-        const t = v.trim().toLowerCase();
-        if (!/^[a-z][a-z0-9_]*$/.test(t)) return 'Только латиница, цифры и _';
-        if (_equipmentTypesDraft.some(x => x.value === t)) return 'Тип с таким ключом уже есть';
-        return null;
-      }
+  const label = await showPrompt('Название типа (по-русски)', {
+      icon: 'fa-screwdriver-wrench', title: 'Новый тип', okText: 'Добавить', placeholder: 'Например: Пипетка',
+      validator: (v) => v ? null : 'Укажите название'
   });
-  if (!value) return;
-  const trimmed = value.trim().toLowerCase();
-  _equipmentTypesDraft.push({ value: trimmed, label: trimmed, prefix: 'EQ', calibrationPlace: 'internal', interval: 12 });
+  if (!label) return;
+  
+  let baseValue = slugify(label);
+  let finalValue = baseValue;
+  let counter = 1;
+  // Если сгенерированный value уже существует — добавляем цифру
+  while (_equipmentTypesDraft.some(x => x.value === finalValue)) {
+    finalValue = `${baseValue}_${counter++}`;
+  }
+
+  _equipmentTypesDraft.push({ 
+    value: finalValue, 
+    label: label.trim(), 
+    prefix: 'EQ', 
+    calibrationPlace: 'internal', 
+    interval: 12 
+  });
   renderEquipmentTypesTable();
   showToast('Тип добавлен', 'success');
 }
@@ -1129,19 +1162,18 @@ function openEquipTypeActions(ev, idx) { ev.stopPropagation(); renderRowActionsM
 // ============================================================
 // РАЗДЕЛ: ИДЕНТИФИКАЦИЯ ПРИБОРА
 // ============================================================
-async function renderIdentitySettings() {
+async function renderIdentitySettingsInline() {
   const c = document.getElementById('settings-section-content');
   try {
     const s = await apiRequest('/settings/system');
     
-    // Парсим текущие поля (по умолчанию — стандартный набор)
     let currentIdFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
     if (s.bulk_identity_fields) {
       try { currentIdFields = JSON.parse(s.bulk_identity_fields); } catch(e) {}
     }
 
     c.innerHTML = `
-      <h3>Идентификация прибора</h3>
+      <h3>Отображение в списках</h3>
       <p style="color:#64748b;font-size:.88rem;margin:8px 0 16px;">
         Выберите поля, которые будут отображаться в модалках массовых операций и быстрой поверки.
         Первые выбранные ID и Модель будут стоять в заголовке, остальные — мелким шрифтом под ним.
@@ -1162,7 +1194,9 @@ async function renderIdentitySettings() {
         `).join('')}
       </div>
       <div class="form-actions" style="margin-top:20px;">
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+        <button type="button" class="btn btn-secondary" onclick="renderFieldsSettings()">
+          <i class="fa-solid fa-arrow-left"></i> Назад к полям
+        </button>
         <button class="btn btn-success" onclick="saveBulkIdentitySettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
     `;
@@ -1180,17 +1214,15 @@ async function saveBulkIdentitySettings() {
   
   try {
     await UI.saveAction({ 
-      successMsg: 'Настройки идентификации сохранены', 
+      successMsg: 'Настройки отображения сохранены', 
       reload: false 
     }, async () => {
       await apiRequest('/settings/system', 'PUT', { bulk_identity_fields: JSON.stringify(fields) });
       settings.bulkIdentityFields = fields;
-      
-      // Принудительно обновляем данные, чтобы при следующем открытии модалки применились новые настройки
       if (typeof loadPipetteData === 'function') await loadPipetteData();
-      
-      // Перерисовываем форму (чтобы галочки обновились)
-      await renderIdentitySettings(); 
+      await renderIdentitySettingsInline(); 
     });
   } catch (e) {}
 }
+
+
