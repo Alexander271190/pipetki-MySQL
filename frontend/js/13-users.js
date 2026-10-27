@@ -16,7 +16,7 @@ async function renderUsersSettings() {
         <input type="text" id="users-search" 
                placeholder="Поиск по логину, ФИО, должности, отделу…"
                oninput="filterUsersTable(this.value)"
-               style="width:100%; padding:9px 12px 9px 36px; border:1px solid var(--border-hard); border-radius:8px; font-size:.9rem; box-sizing:border-box;">
+               style="width:100%; padding:9px 12px 9px 36px; border:1px solid var(--border-hard); border-radius:8px; font-size:.9rem; box-sizing:border-box; background:var(--card); color:var(--text-strong);">
         <i class="fa-solid fa-magnifying-glass" 
            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:.85rem; pointer-events:none;"></i>
       </div>
