@@ -129,7 +129,7 @@ function renderErrorsList() {
     tbody.innerHTML = `
       <tr><td colspan="5" style="text-align:center;padding:30px 20px;">
         <div style="font-size:32px;margin-bottom:8px;">${hasFilter ? '🔍' : '✅'}</div>
-        <div style="color:#64748b;font-size:.9rem;">
+        <div class="text-muted-sm">
           ${hasFilter ? 'Ничего не найдено по фильтрам.' : 'Ошибок нет — система работает штатно.'}
         </div>
       </td></tr>`;
@@ -328,7 +328,7 @@ function renderAuditList() {
     tbody.innerHTML = `
       <tr><td colspan="5" style="text-align:center;padding:30px 20px;">
         <div style="font-size:32px;margin-bottom:8px;">${hasFilter ? '🔍' : '📋'}</div>
-        <div style="color:#64748b;font-size:.9rem;margin-bottom:${hasFilter ? '12px' : '0'};">
+        <div class="text-muted-sm" style="margin-bottom:${hasFilter ? '12px' : '0'};">
           ${hasFilter
             ? 'Ничего не найдено по выбранным фильтрам.'
             : 'Записей пока нет. Изменения будут появляться здесь автоматически.'}
@@ -473,7 +473,7 @@ function renderEquipmentAuditList() {
     tbody.innerHTML = `
       <tr><td colspan="4" style="text-align:center;padding:30px 20px;">
         <div style="font-size:32px;margin-bottom:8px;">${hasFilter ? '🔍' : '📋'}</div>
-        <div style="color:#64748b;font-size:.9rem;margin-bottom:${hasFilter ? '12px' : '0'};">
+        <div class="text-muted-sm" style="margin-bottom:${hasFilter ? '12px' : '0'};">
           ${hasFilter
             ? 'Ничего не найдено по поиску.'
             : 'В этом приборе пока не было изменений. Отредактируйте его — и аудит начнёт вестись.'}
