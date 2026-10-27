@@ -327,3 +327,17 @@ function getDeviceIdentityHtml(p) {
   }
   return html;
 }
+
+
+// 🆕 Транслитерация (для генерации системных ID из русского текста)
+function slugify(text) {
+  if (!text) return '';
+  const ru = {
+    'а':'a', 'б':'b', 'в':'v', 'г':'g', 'д':'d', 'е':'e', 'ё':'yo', 'ж':'zh', 'з':'z', 'и':'i', 'й':'y',
+    'к':'k', 'л':'l', 'м':'m', 'н':'n', 'о':'o', 'п':'p', 'р':'r', 'с':'s', 'т':'t', 'у':'u', 'ф':'f',
+    'х':'h', 'ц':'ts', 'ч':'ch', 'ш':'sh', 'щ':'shch', 'ъ':'', 'ы':'y', 'ь':'', 'э':'e', 'ю':'yu', 'я':'ya'
+  };
+  let result = text.toLowerCase().split('').map(ch => ru[ch] !== undefined ? ru[ch] : ch).join('');
+  result = result.replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  return result || 'item_' + Math.floor(Math.random() * 1000);
+}
