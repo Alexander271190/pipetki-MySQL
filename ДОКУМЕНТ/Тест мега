@@ -1,0 +1,308 @@
+/* ============================================================
+ * МЕГА-АВТОТЕСТ v2.0 — Полная проверка всех правок
+ * Проверяет: API, bulk-lock, slugify, getDeviceIdentityHtml,
+ * таймеры, модалки, CSS-классы, исходники функций.
+ * ============================================================ */
+(async function runMegaTest() {
+  'use strict';
+
+  const results = [];
+  const log = (g, n, s, d = '') => {
+    results.push({ g, n, s, d });
+    const icon = s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'SKIP' ? '⏭️' : 'ℹ️';
+    console.log(`${icon} [${g}] ${n}${d ? ' — ' + d : ''}`);
+  };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  const token = (() => { try { return JSON.parse(sessionStorage.getItem('pipette_session')).token; } catch { return null; } })();
+  if (!token) { console.error('❌ Нет токена. Войдите админом.'); return; }
+
+  const api = async (ep, m = 'GET', b = null, customToken = null) => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (customToken) headers['Authorization'] = 'Bearer ' + customToken;
+    else if (token) headers['Authorization'] = 'Bearer ' + token;
+    
+    const opts = { method: m, headers };
+    if (b) opts.body = JSON.stringify(b);
+    const r = await fetch('/api' + ep, opts);
+    const t = await r.text();
+    let j = null;
+    try { j = t ? JSON.parse(t) : null; } catch { j = { _raw: t }; }
+    return { status: r.status, ok: r.ok, body: j };
+  };
+
+  const today = new Date().toISOString().slice(0, 10);
+  const uid = Date.now();
+  const testIds = [];
+  const createdUsers = [];
+  
+  const _origConfirm = window.showConfirm;
+  const _origPrompt = window.showPrompt;
+  const _origLockW = window.showLockWarning;
+  window.showConfirm = async () => true;
+  window.showPrompt = async () => 'AutoTest-' + uid;
+  window.showLockWarning = async () => true;
+
+  console.log('%c🤖 МЕГА-АВТОТЕСТ v2.0', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
+
+  if (!currentUser || currentUser.role !== 'admin') {
+    console.error('❌ Требуется вход под администратором.');
+    window.showConfirm = _origConfirm; window.showPrompt = _origPrompt; window.showLockWarning = _origLockW;
+    return;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 1: Проверка API (SELECT * заменен на явные колонки)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c📦 ЧАСТЬ 1: API и явные колонки', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  {
+    const r = await api('/pipettes/paged?limit=1');
+    if (r.ok && r.body.items && r.body.items.length) {
+      const p = r.body.items[0];
+      const fields = ['custom_data', 'barcode', 'barcode_source', 'computed_status'];
+      log('API', 'pipettes/paged (поля)', fields.every(f => f in p) ? 'PASS' : 'FAIL');
+    } else log('API', 'pipettes/paged', 'SKIP', 'нет данных');
+  }
+  {
+    const r = await api('/settings/fields');
+    if (r.ok && r.body.length) {
+      const f = r.body[0];
+      const badKeys = Object.keys(f).filter(k => k === 'created_at' || k === 'updated_at');
+      log('API', 'settings/fields (явные колонки)', badKeys.length === 0 ? 'PASS' : 'FAIL', `лишние: ${badKeys}`);
+    }
+  }
+  {
+    const r = await api('/log/errors?limit=1');
+    if (r.ok) {
+      log('API', 'log/errors (доступ)', 'PASS');
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 2: Транслитерация (slugify)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🔤 ЧАСТЬ 2: Транслитерация (slugify)', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  if (typeof window.slugify === 'function') {
+    const tests = [
+      { in: 'Инвентарный номер', out: 'inventarnyy_nomer' },
+      { in: 'Весы', out: 'vesy' },
+      { in: 'Пипетка', out: 'pipetka' },
+      { in: 'Термометр (электронный)', out: 'termometr_elektronnyy' }
+    ];
+    tests.forEach(t => {
+      const res = window.slugify(t.in);
+      log('SLUGIFY', `"${t.in}" → "${t.out}"`, res === t.out ? 'PASS' : 'FAIL', `получено: ${res}`);
+    });
+  } else {
+    log('SLUGIFY', 'Функция slugify', 'FAIL', 'не найдена в window');
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 3: Идентификация прибора (getDeviceIdentityHtml)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🪪 ЧАСТЬ 3: Отображение прибора', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  if (typeof window.getDeviceIdentityHtml === 'function') {
+    const mockPipette = { id: 'P-999', model: 'Test', serial: 'SN-123', inventorynumber: 'INV-456', department: 'Лаб', responsible: 'Иванов' };
+    
+    // Тест 1: Дефолтные поля
+    settings.bulkIdentityFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
+    const html1 = window.getDeviceIdentityHtml(mockPipette);
+    const ok1 = html1.includes('P-999') && html1.includes('Test') && html1.includes('SN-123') && html1.includes('INV-456');
+    log('IDENTITY', 'Дефолтные поля', ok1 ? 'PASS' : 'FAIL', html1.replace(/<[^>]+>/g, ' '));
+
+    // Тест 2: Измененный набор (без инвентарного)
+    settings.bulkIdentityFields = ['id', 'model', 'serial', 'department', 'responsible'];
+    const html2 = window.getDeviceIdentityHtml(mockPipette);
+    const ok2 = !html2.includes('INV-456') && html2.includes('Иванов');
+    log('IDENTITY', 'Кастомные поля (без Инв.)', ok2 ? 'PASS' : 'FAIL', html2.replace(/<[^>]+>/g, ' '));
+    
+    // Восстановить
+    settings.bulkIdentityFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
+  } else {
+    log('IDENTITY', 'Функция getDeviceIdentityHtml', 'FAIL', 'не найдена');
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 4: Массовые блокировки (bulk-lock / bulk-unlock)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🔒 ЧАСТЬ 4: Массовые блокировки', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  const bulkIds = [];
+  for (let i = 0; i < 3; i++) {
+    const id = `AUTOTEST-MEGA-${uid}-${i}`;
+    const r = await api('/pipettes', 'POST', {
+      id, model: 'Mega ' + i, equipmentType: 'pipette',
+      lastCalibration: today, responsible: currentUser.fullName || 'Admin'
+    });
+    if (r.ok) { bulkIds.push(id); testIds.push(id); }
+  }
+  log('BULK', 'Создано 3 тестовых прибора', bulkIds.length === 3 ? 'PASS' : 'FAIL');
+
+  if (bulkIds.length > 0) {
+    // Блокировка
+    const rLock = await api('/pipettes/bulk-lock', 'POST', { ids: bulkIds });
+    log('BULK', 'POST /bulk-lock (200)', rLock.ok ? 'PASS' : 'FAIL', `status: ${rLock.status}`);
+    
+    // Проверка что заблокированы
+    let lockCount = 0;
+    for (const id of bulkIds) {
+      const r = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
+      if (r.ok && r.body.locked && r.body.mine) lockCount++;
+    }
+    log('BULK', 'Все приборы заблокированы', lockCount === 3 ? 'PASS' : 'FAIL', `${lockCount}/3`);
+
+    // Защита от неавторизованного доступа
+    const rNoAuth = await api('/pipettes/bulk-lock', 'POST', { ids: [bulkIds[0]] }, 'invalid-token');
+    log('BULK', 'bulk-lock без токена → 401', rNoAuth.status === 401 ? 'PASS' : 'FAIL', `status: ${rNoAuth.status}`);
+
+    // Разблокировка
+    const rUnlock = await api('/pipettes/bulk-unlock', 'POST', { ids: bulkIds });
+    log('BULK', 'POST /bulk-unlock (200)', rUnlock.ok ? 'PASS' : 'FAIL');
+    
+    let freeCount = 0;
+    for (const id of bulkIds) {
+      const r = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
+      if (r.ok && !r.body.locked) freeCount++;
+    }
+    log('BULK', 'Все приборы разблокированы', freeCount === 3 ? 'PASS' : 'FAIL', `${freeCount}/3`);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 5: Таймеры (утечка при открытии/закрытии)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c⏱ ЧАСТЬ 5: Таймеры модалок', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  if (bulkIds.length > 0) {
+    // Перезагружаем pipettes, чтобы модалки нашли прибор
+    const all = await api('/pipettes/all?limit=5000');
+    if (all.ok) pipettes = all.body.items;
+
+    const testId = bulkIds[0];
+    if (pipettes.find(p => p.id === testId)) {
+      // openModal
+      await openModal(testId);
+      await sleep(300);
+      const t1 = _lockCheckTimer;
+      await closeModal();
+      await sleep(100);
+      const t1c = _lockCheckTimer;
+      
+      log('TIMER', 'openModal: таймер создан', t1 !== null ? 'PASS' : 'FAIL');
+      log('TIMER', 'closeModal: таймер очищен', t1c === null ? 'PASS' : 'FAIL');
+
+      // openQuickCalModal
+      await openQuickCalModal(testId);
+      await sleep(300);
+      const t2 = _calLockTimer;
+      await closeQuickCalModal();
+      await sleep(100);
+      const t2c = _calLockTimer;
+
+      log('TIMER', 'openQuickCal: таймер создан', t2 !== null ? 'PASS' : 'FAIL');
+      log('TIMER', 'closeQuickCal: таймер очищен', t2c === null ? 'PASS' : 'FAIL');
+    } else {
+      log('TIMER', 'Тестовый прибор не найден в pipettes', 'SKIP');
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 6: Проверка исходного кода функций
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🔍 ЧАСТЬ 6: Исходный код функций', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  const checkSource = (fnName, searchStr, expectPresent = true) => {
+    const src = (typeof window[fnName] === 'function') ? window[fnName].toString() : '';
+    const has = src.includes(searchStr);
+    const ok = expectPresent ? has : !has;
+    log('CODE', `${fnName}: ${expectPresent ? 'содержит' : 'НЕ содержит'} "${searchStr}"`, ok ? 'PASS' : 'FAIL');
+  };
+
+  // bulk-lock / bulk-unlock
+  checkSource('openBulkSendModal', 'bulk-lock');
+  checkSource('openBulkReturnModal', 'bulk-lock');
+  checkSource('openBulkResponsibleModal', 'bulk-lock');
+  checkSource('closeBulkSendModal', 'bulk-unlock');
+  checkSource('closeBulkReturnModal', 'bulk-unlock');
+  checkSource('closeBulkResponsibleModal', 'bulk-unlock');
+
+  // loadStats
+  checkSource('saveBulkSend', 'loadStats');
+  checkSource('saveBulkReturn', 'loadStats');
+  checkSource('saveQuickCalibration', 'loadStats');
+  checkSource('cancelSend', 'loadStats');
+  checkSource('deletePipette', 'loadStats');
+  checkSource('addCalibrationRecord', 'loadStats');
+
+  // Таймеры (сброс в начале)
+  checkSource('openModal', 'if (_lockCheckTimer)');
+  checkSource('openQuickCalModal', 'if (_calLockTimer)');
+
+  // Перенос Identity Settings
+  checkSource('renderIdentitySettingsInline', 'renderFieldsSettings(true)');
+  checkSource('renderFieldsSettings', 'renderIdentitySettingsInline');
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 7: CSS-классы
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🎨 ЧАСТЬ 7: CSS-классы', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  const checkCSS = (className, prop) => {
+    const el = document.createElement('div');
+    el.className = className;
+    el.style.position = 'absolute';
+    el.style.left = '-9999px';
+    document.body.appendChild(el);
+    const val = getComputedStyle(el)[prop];
+    el.remove();
+    log('CSS', `.${className} { ${prop} }`, val && val !== 'none' && val !== 'rgba(0, 0, 0, 0)' ? 'PASS' : 'FAIL', val);
+  };
+
+  checkCSS('card', 'backgroundColor');
+  checkCSS('card-title', 'fontWeight');
+  checkCSS('text-muted', 'color');
+  checkCSS('flex-col', 'display');
+  checkCSS('badge-cert', 'padding');
+  checkCSS('tooltip-row', 'display');
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 8: Очистка (Cleanup)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🧹 ЧАСТЬ 8: Очистка тестовых данных', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  for (const id of testIds) {
+    try {
+      await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE').catch(() => {});
+      const r = await api(`/pipettes/${encodeURIComponent(id)}`, 'DELETE');
+      if (r.ok || r.status === 404) {
+        log('CLEAN', `Удален ${id}`, 'PASS');
+      } else {
+        log('CLEAN', `Удален ${id}`, 'FAIL', `status: ${r.status}`);
+      }
+    } catch (e) {
+      log('CLEAN', `Удален ${id}`, 'FAIL', e.message);
+    }
+  }
+
+  window.showConfirm = _origConfirm; window.showPrompt = _origPrompt; window.showLockWarning = _origLockW;
+
+  /* ═══════════════════════════════════════════════════════════
+   * ИТОГ
+   * ═══════════════════════════════════════════════════════════ */
+  const pass = results.filter(r => r.s === 'PASS').length;
+  const fail = results.filter(r => r.s === 'FAIL').length;
+  const skip = results.filter(r => r.s === 'SKIP').length;
+
+  console.log('\n%c═══════════════════════════════════════════', 'color:#8b5cf6;');
+  console.log(`%c📊 ИТОГ: ✅ ${pass}  ❌ ${fail}  ⏭️ ${skip}`, `font-size:18px;font-weight:bold;color:${fail ? '#dc2626' : '#16a34a'};`);
+  console.log('%c═══════════════════════════════════════════', 'color:#8b5cf6;');
+
+  if (fail > 0) {
+    console.log('%c❌ ПРОВАЛЫ:', 'color:#dc2626;font-weight:bold;');
+    console.table(results.filter(r => r.s === 'FAIL'));
+  } else {
+    console.log('%c🎉 Все проверки пройдены!', 'color:#16a34a;font-weight:bold;font-size:16px;');
+  }
+})();
