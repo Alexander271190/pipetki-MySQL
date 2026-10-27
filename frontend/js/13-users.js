@@ -139,11 +139,9 @@ function renderUserEditForm() {
 
   let permsHtml = '';
   for (const [group, items] of Object.entries(groups)) {
-    permsHtml += `
+   permsHtml += `
       <div style="margin-bottom:14px;">
-        <div style="font-weight:700;font-size:.82rem;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;">
-          ${esc(group)}
-        </div>
+        <div class="section-title">${esc(group)}</div>
         <div class="help-perms-grid" style="padding: 8px 0; background: transparent; max-height: none;">
           ${items.map(p => `
             <label class="help-perm-item" style="padding:5px 8px;">
@@ -208,24 +206,25 @@ function renderUserEditForm() {
           Для роли «Администратор» все права выдаются автоматически.
         </small>
 
-               <div style="margin-bottom:14px;">
-          <div style="font-size:.78rem; font-weight:600; color:#64748b; margin-bottom:6px;">Стандартные:</div>
-          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+              <div style="margin-bottom:14px;">
+          <div class="card-title-sm">Стандартные:</div>
+          <div class="btn-group">
             <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')"><i class="fa-solid fa-eraser"></i> Очистить</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('user')"><i class="fa-solid fa-user"></i> Пользователь</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('senior')"><i class="fa-solid fa-flask"></i> Ст. лаборант</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('all')"><i class="fa-solid fa-star"></i> Все права</button>
           </div>
           
-          <div style="font-size:.78rem; font-weight:600; color:#64748b; margin-bottom:6px;">Мои пресеты:</div>
-          <div id="custom-presets-container" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap; align-items:center;">
-            <span style="font-size:.8rem; color:#94a3b8;">Загрузка…</span>
+          <div class="card-title-sm">Мои пресеты:</div>
+          <div id="custom-presets-container" class="btn-group" style="align-items:center;">
+            <span class="text-faint-sm">Загрузка…</span>
           </div>
           
           <button type="button" class="btn btn-outline btn-sm" onclick="saveCurrentPermsAsPreset()">
             <i class="fa-solid fa-floppy-disk"></i> Сохранить текущие как пресет
           </button>
         </div>
+
         
         <div id="usr-permissions">${permsHtml}</div>
       `)}
@@ -311,7 +310,7 @@ async function loadCustomPresets(forceReload = false) {
   }
 
   container.innerHTML = _cachedPresets.map(p => `
-    <div style="display:inline-flex; align-items:center; background:#f1f5f9; border-radius:6px; padding:2px 4px; gap:4px;">
+    <div class="flex-row-sm" style="background:#f1f5f9; border-radius:6px; padding:2px 4px;">
       <button type="button" class="btn btn-secondary btn-sm" style="border:none; background:transparent; padding:4px 6px;" onclick="applyCustomPreset(${p.id})">
         ${esc(p.name)}
       </button>
