@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { USER_COLUMNS } = require('../routes/pipettes/_helpers');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
