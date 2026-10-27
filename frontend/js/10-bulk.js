@@ -34,12 +34,11 @@ async function openBulkSendModal() {
 
       // 🆕 O(n) — Map вместо find
       const pipettesMap = new Map(pipettes.map(p => [p.id, p]));
-      const listHtml = toSend.map(id => {
+     const listHtml = toSend.map(id => {
         const p = pipettesMap.get(id);
         if (!p) return '';
-        return `<div style="padding:2px 0;">
-          <strong>${esc(p.id)}</strong> — ${esc(p.model)} 
-          <span class="text-faint">(${esc(p.department || 'без отдела')})</span>
+        return `<div style="padding:6px 0; border-bottom: 1px dashed var(--border-soft);">
+          ${getDeviceIdentityHtml(p)}
         </div>`;
       }).join('');
       document.getElementById('bulk-send-list').innerHTML = listHtml;
@@ -123,7 +122,8 @@ async function loadReplacementOptions(ids) {
 function buildReplacementBlock(id, p, options) {
   const safeName = id.replace(/[^a-zA-Z0-9_-]/g, '_');
    let html = `<div class="card">
-    <div class="card-title">${esc(id)} — ${esc(p.model)} (${esc(p.department || 'без отдела')})</div>
+    <div class="card-title" style="margin-bottom: 8px;">${getDeviceIdentityHtml(p)}</div>
+
     <div class="text-muted-sm" style="margin-bottom:6px;">Складские того же типа:</div>
     <div class="flex-col">`;
 
@@ -386,9 +386,8 @@ async function openBulkReturnModal() {
               ${sentItems.map(p => `
                 <tr>
                   <td>
-                    <strong>${esc(p.id)}</strong><br>
-                    <small style="color:${COLORS.faint};">${esc(p.model)}</small><br>
-                    <small style="color:${COLORS.info};">отправлена ${formatDate(p.sent_for_calibration)}</small>
+                    ${getDeviceIdentityHtml(p)}
+                    <br><small style="color:${COLORS.info}; margin-top:4px; display:inline-block;"><i class="fa-solid fa-box"></i> отпр. ${formatDate(p.sent_for_calibration)}</small>
                   </td>
                   <td>
                     <input type="text" class="bulk-return-cert-input" 
