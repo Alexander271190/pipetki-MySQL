@@ -5,6 +5,13 @@ const path = require('path');
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+  console.error('❌ JWT_SECRET не задан. Проверьте docker-compose.yaml или переменные окружения.');
+  process.exit(1);
+}
+
+const debug = process.env.NODE_ENV === 'production' ? () => {} : console.log.bind(console);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -80,11 +87,11 @@ async function waitForDatabase(maxAttempts = 90) {
     try {
       conn = await db.pool.getConnection();
       await conn.query('SELECT 1');
-      console.log('✅ MySQL подключён');
+      debug('✅ MySQL подключён');
       return true;
     } catch (e) {
       const left = maxAttempts - attempt;
-      console.log(`⏳ Ожидание MySQL... (${left} попыток осталось)`);
+      debug(`⏳ Ожидание MySQL... (${left} попыток осталось)`);
       await new Promise(r => setTimeout(r, 2000));
     } finally {
       if (conn) conn.release();
@@ -104,11 +111,11 @@ async function waitForDatabase(maxAttempts = 90) {
   if (connected) {
     try {
       await db.initSchema();
-      console.log('✅ Схема БД готова');
+      debug('✅ Схема БД готова');
       try {
         const seeded = await db.seedInitialData();
         if (seeded) {
-          console.log('👤 Начальные пользователи и данные созданы');
+          debug('👤 Начальные пользователи и данные созданы');
         }
       } catch (seedErr) {
         console.error('⚠️ Ошибка seed (схема создана):', seedErr.message);
@@ -120,7 +127,7 @@ async function waitForDatabase(maxAttempts = 90) {
 
   // 🆕 Захватываем сервер, чтобы можно было закрыть его graceful
   const server = app.listen(PORT, () => {
-    console.log(`🚀 Server on http://0.0.0.0:${PORT}`);
+    debug(`🚀 Server on http://0.0.0.0:${PORT}`);
   });
 
   // 🧹 Очистка audit_log (из коробки)
@@ -139,15 +146,15 @@ async function waitForDatabase(maxAttempts = 90) {
       try {
         conn = await db.pool.getConnection();
         await conn.query('SELECT 1');
-        console.log('✅ MySQL подключён (отложенное подключение)');
+        debug('✅ MySQL подключён (отложенное подключение)');
 
         try {
           await db.initSchema();
-          console.log('✅ Схема БД готова');
+          debug('✅ Схема БД готова');
           try {
             const seeded = await db.seedInitialData();
             if (seeded) {
-              console.log('👤 Начальные пользователи и данные созданы');
+              debug('👤 Начальные пользователи и данные созданы');
             }
           } catch (seedErr) {
             console.error('⚠️ Ошибка seed (схема создана):', seedErr.message);
@@ -173,12 +180,12 @@ async function waitForDatabase(maxAttempts = 90) {
 
   async function gracefulShutdown(signal) {
     if (_shuttingDown) {
-      console.log(`⚠️ ${signal} получен повторно, уже останавливаемся...`);
+      debug(`⚠️ ${signal} получен повторно, уже останавливаемся...`);
       return;
     }
     _shuttingDown = true;
 
-    console.log(`\n⚠️ ${signal} получен. Начинаем graceful shutdown...`);
+    debug(`\n⚠️ ${signal} получен. Начинаем graceful shutdown...`);
 
     // Останавливаем переподключение к БД, если запущено
     if (reconnectInterval) {
@@ -192,7 +199,7 @@ async function waitForDatabase(maxAttempts = 90) {
         if (err) {
           console.error('❌ Ошибка закрытия HTTP-сервера:', err.message);
         } else {
-          console.log('✅ HTTP-сервер остановлен');
+          debug('✅ HTTP-сервер остановлен');
         }
         resolve();
       });
@@ -211,12 +218,12 @@ async function waitForDatabase(maxAttempts = 90) {
     // 3) Закрываем пул БД
     try {
       await db.pool.end();
-      console.log('✅ Пул БД закрыт');
+      debug('✅ Пул БД закрыт');
     } catch (e) {
       console.error('❌ Ошибка закрытия пула БД:', e.message);
     }
 
-    console.log('👋 Завершение работы');
+    debug('👋 Завершение работы');
     process.exit(0);
   }
 
