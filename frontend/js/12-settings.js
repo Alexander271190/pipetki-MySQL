@@ -1194,7 +1194,7 @@ async function renderIdentitySettingsInline() {
         `).join('')}
       </div>
       <div class="form-actions" style="margin-top:20px;">
-        <button type="button" class="btn btn-secondary" onclick="renderFieldsSettings()">
+        <button type="button" class="btn btn-secondary" onclick="renderFieldsSettings(true)">
           <i class="fa-solid fa-arrow-left"></i> Назад к полям
         </button>
         <button class="btn btn-success" onclick="saveBulkIdentitySettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
