@@ -89,29 +89,40 @@ function renderCounters() {
           { label: '⛔ Неактивные',         value: c.inactive || 0 },
         ];
         
-        const visibleLines = allCategories
-          .filter(cat => cat.value > 0)
-          .map(cat => `${cat.label}: <b>${cat.value}</b>`);
-        
-        const sumCategories = allCategories.reduce((sum, cat) => sum + cat.value, 0);
-        
-        // Если сумма не сходится — показываем «Прочее»
-        const diff = outside - sumCategories;
-        if (diff > 0) {
-          visibleLines.push(`<span style="color:#94a3b8;">Прочее: <b>${diff}</b></span>`);
-        }
-        
-        if (visibleLines.length === 0) visibleLines.push('— (нет данных)');
-        
-        html += `
-          <div class="tooltip-outside">
-            <div style="font-weight:600; margin-bottom: 4px;">Вне индикаторов: ${outside}</div>
-            <div style="font-size:0.78rem; line-height: 1.5;">
-              ${visibleLines.join('<br>')}
-            </div>
+       const visibleLines = allCategories
+        .filter(cat => cat.value > 0)
+        .map(cat => `
+          <div class="tooltip-row" style="font-size:0.78rem;">
+            <span>${cat.label}:</span> <b>${cat.value}</b>
           </div>
-        `;
+        `);
+      
+      const sumCategories = allCategories.reduce((sum, cat) => sum + cat.value, 0);
+      
+      // Если сумма не сходится — показываем «Прочее»
+      const diff = outside - sumCategories;
+      if (diff > 0) {
+        visibleLines.push(`
+          <div class="tooltip-row" style="font-size:0.78rem; color:#94a3b8;">
+            <span>Прочее:</span> <b>${diff}</b>
+          </div>
+        `);
       }
+      
+      if (visibleLines.length === 0) {
+        visibleLines.push(`<div class="tooltip-row" style="font-size:0.78rem;"><span>— (нет данных)</span></div>`);
+      }
+      
+      html += `
+        <div class="tooltip-outside">
+          <div class="tooltip-row" style="font-weight:600; margin-bottom: 4px; color: var(--warn);">
+            <span>Вне индикаторов:</span> <b>${outside}</b>
+          </div>
+          <div style="font-size:0.78rem; line-height: 1.5; color: var(--text);">
+            ${visibleLines.join('')}
+          </div>
+        </div>
+      `;
       
       tipEl.innerHTML = html;
     }
