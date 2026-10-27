@@ -7,7 +7,7 @@ const { validatePassword } = require('../middleware/passwordPolicy');
 const { logAction } = require('../utils/audit');
 const { USER_COLUMNS } = require('./pipettes/_helpers');
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Помечает роут как доступный, даже если требуется смена пароля
 const allowWhenPasswordMustChange = (req, res, next) => {
