@@ -365,24 +365,9 @@ async function openBulkReturnModal() {
         return;
       }
 
-      const lockedIds = [];
-      let keepLocks = false;
+      _bulkReturnIds = sentItems.map(p => p.id);
 
-      try {
-        for (const p of sentItems) {
-          const id = p.id;
-          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-          if (lockRes.locked && !lockRes.mine) {
-            const proceed = await showLockWarning(lockRes, 'Массовый возврат');
-            if (!proceed) return;
-          }
-          await apiRequest(`/pipettes/${id}/lock`, 'POST');
-          lockedIds.push(id);
-        }
-
-        _bulkReturnIds = sentItems.map(p => p.id);
-
-        document.getElementById('bulk-return-count').textContent = sentItems.length;
+      document.getElementById('bulk-return-count').textContent = sentItems.length;
 
         const container = document.getElementById('bulk-return-items-container');
         container.innerHTML = `
@@ -434,20 +419,19 @@ async function openBulkReturnModal() {
         renderReturnReplacements(sentItems);
 
         UI.modal.open('bulk-return-modal');
-        keepLocks = true;
-      } catch (e) {
-        if (e.status === 409) {
-          showToast(`Прибор заблокирован: ${e.response?.lockedBy || ''}`, 'error');
-        } else {
-          showToast('Ошибка проверки блокировки', 'error');
-        }
-      } finally {
-        if (!keepLocks) {
-          lockedIds.forEach(id => {
-            apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-          });
-        }
-      }
+
+        // 🆕 Блокировки — один запрос, в фоне
+        (async () => {
+          try {
+            const r = await apiRequest('/pipettes/bulk-lock', 'POST', { ids: _bulkReturnIds });
+            if (r.busy && r.busy.length > 0) {
+              const names = r.busy.map(b => `${b.id} (${b.lockedBy})`).join(', ');
+              showToast(`Уже редактируются другими: ${names}`, 'warn');
+            }
+          } catch (e) {
+            console.warn('bulk-lock error:', e.message);
+          }
+        })();
     }
   );
 }
@@ -489,9 +473,9 @@ function renderReturnReplacements(sentItems) {
 
 function closeBulkReturnModal() {
   UI.modal.close('bulk-return-modal');
-  [..._bulkReturnIds].forEach(id => {
-    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-  });
+  if (_bulkReturnIds.length > 0) {
+    apiRequest('/pipettes/bulk-unlock', 'POST', { ids: _bulkReturnIds }).catch(() => {});
+  }
   _bulkReturnIds = [];
 }
 
@@ -636,70 +620,55 @@ async function openBulkResponsibleModal() {
         return;
       }
 
-      const lockedIds = [];
-      let keepLocks = false;
+       _bulkResponsibleIds = [...selected];
 
-      try {
-        for (const id of selected) {
-          const lockRes = await apiRequest(`/pipettes/${id}/lock`);
-          if (lockRes.locked && !lockRes.mine) {
-            const proceed = await showLockWarning(lockRes, 'Массовая смена ответственного');
-            if (!proceed) return;
-          }
-          await apiRequest(`/pipettes/${id}/lock`, 'POST');
-          lockedIds.push(id);
-        }
+      document.getElementById('bulk-responsible-count').textContent = selected.length;
+      document.getElementById('bulk-responsible-error').textContent = '';
 
-        _bulkResponsibleIds = [...selected];
+      const sel = document.getElementById('bulk-responsible-select');
+      sel.innerHTML = '<option value="">— выберите —</option>';
 
-        document.getElementById('bulk-responsible-count').textContent = selected.length;
-        document.getElementById('bulk-responsible-error').textContent = '';
-
-        const sel = document.getElementById('bulk-responsible-select');
-        sel.innerHTML = '<option value="">— выберите —</option>';
-
-        const names = new Set();
-        if (Array.isArray(_responsibles)) {
-          for (const u of _responsibles) {
-            if (u.fullName) names.add(u.fullName);
-          }
-        }
-        for (const p of pipettes) {
-          if (p.responsible) names.add(p.responsible);
-        }
-
-        const sorted = [...names].sort((a, b) => a.localeCompare(b, 'ru'));
-        for (const name of sorted) {
-          const opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = name;
-          sel.appendChild(opt);
-        }
-
-        UI.modal.open('bulk-responsible-modal');
-        keepLocks = true;
-      } catch (e) {
-        if (e.status === 409) {
-          showToast(`Прибор заблокирован: ${e.response?.lockedBy || ''}`, 'error');
-        } else {
-          showToast('Ошибка проверки блокировки', 'error');
-        }
-      } finally {
-        if (!keepLocks) {
-          lockedIds.forEach(id => {
-            apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-          });
+      const names = new Set();
+      if (Array.isArray(_responsibles)) {
+        for (const u of _responsibles) {
+          if (u.fullName) names.add(u.fullName);
         }
       }
+      for (const p of pipettes) {
+        if (p.responsible) names.add(p.responsible);
+      }
+
+      const sorted = [...names].sort((a, b) => a.localeCompare(b, 'ru'));
+      for (const name of sorted) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      }
+
+      UI.modal.open('bulk-responsible-modal');
+
+      // 🆕 Блокировки — один запрос, в фоне
+      (async () => {
+        try {
+          const r = await apiRequest('/pipettes/bulk-lock', 'POST', { ids: _bulkResponsibleIds });
+          if (r.busy && r.busy.length > 0) {
+            const names = r.busy.map(b => `${b.id} (${b.lockedBy})`).join(', ');
+            showToast(`Уже редактируются другими: ${names}`, 'warn');
+          }
+        } catch (e) {
+          console.warn('bulk-lock error:', e.message);
+        }
+      })();
     }
   );
 }
 
 function closeBulkResponsibleModal() {
   UI.modal.close('bulk-responsible-modal');
-  [..._bulkResponsibleIds].forEach(id => {
-    apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
-  });
+  if (_bulkResponsibleIds.length > 0) {
+    apiRequest('/pipettes/bulk-unlock', 'POST', { ids: _bulkResponsibleIds }).catch(() => {});
+  }
   _bulkResponsibleIds = [];
 }
 
