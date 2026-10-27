@@ -453,7 +453,7 @@ router.post('/bulk-change-responsible', authenticate, requireAnyPermission(['bul
 });
 
 // 🆕 Массовая блокировка — 1 запрос вместо N
-router.post('/bulk-lock', authenticate, async (req, res) => {
+router.post('/bulk-lock', authenticate, requireAnyPermission(['add_pipette', 'edit_pipette', 'bulk_send', 'bulk_return', 'bulk_change_responsible', 'manage_pipettes']), async (req, res) => {
   try {
     const { ids } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) {
