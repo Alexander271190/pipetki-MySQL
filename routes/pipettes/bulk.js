@@ -223,8 +223,11 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
           [sentDate, note || null, id]
         );
 
+        const typeDef = typesCache.find(t => t.value === rows[0].equipment_type);
+        const isReplacementAllowed = typeDef ? (typeDef.allowReplacement !== false) : true;
+
         const replacementId = replacements[id];
-        if (replacementId) {
+        if (replacementId && isReplacementAllowed) {
           const [repRows] = await conn.query(
             `SELECT id, location, department, equipment_type, active, sent_for_calibration, replacing
              FROM pipettes WHERE id = ?`, [replacementId]
