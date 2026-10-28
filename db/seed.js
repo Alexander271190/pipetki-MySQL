@@ -125,12 +125,12 @@ async function seedInitialData() {
 
   // Дефолтные типы оборудования
   const defaultTypes = [
-    { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12 },
-    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12 },
-    { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12 },
-    { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12 },
-    { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12 },
-    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12 },
+    { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12, allowReplacement: true },
+    { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12, allowReplacement: true },
+    { value: 'thermometer', label: 'Термометр',   prefix: 'T', calibrationPlace: 'internal', interval: 12, allowReplacement: true },
+    { value: 'scales',      label: 'Весы',        prefix: 'S', calibrationPlace: 'internal', interval: 12, allowReplacement: true },
+    { value: 'photometer',  label: 'Фотометр',    prefix: 'F', calibrationPlace: 'internal', interval: 12, allowReplacement: true },
+    { value: 'microscope',  label: 'Микроскоп',   prefix: 'M', calibrationPlace: 'internal', interval: 12, allowReplacement: true },
   ];
   await pool.query(
     `INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('equipment_types', ?)`,
