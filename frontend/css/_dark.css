@@ -458,3 +458,40 @@ html[data-theme="dark"] .tox .tox-collection__item--active {
   background-color: #334155 !important;
   color: #ffffff !important;
 }
+
+/* ============================================================
+   TinyMCE — ФИНАЛЬНЫЕ ФИКСЫ (Скроллбар и чекбоксы)
+   ============================================================ */
+
+/* 1. Убираем белое пятно (перекрашиваем скроллбар тулбара) */
+html[data-theme="dark"] .tox .tox-toolbar-overlord::-webkit-scrollbar,
+html[data-theme="dark"] .tox .tox-toolbar__primary::-webkit-scrollbar,
+html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar {
+  background-color: #1e293b !important;
+  width: 8px;
+}
+html[data-theme="dark"] .tox .tox-toolbar-overlord::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .tox .tox-toolbar__primary::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar-thumb {
+  background-color: #475569 !important;
+  border-radius: 4px;
+}
+
+/* 2. Убираем белый фон у активных/выбранных пунктов в меню (Visual aids) */
+html[data-theme="dark"] .tox .tox-collection__item {
+  background-color: transparent !important; 
+}
+
+/* Делаем фон темным только при наведении или если пункт активен */
+html[data-theme="dark"] .tox .tox-collection__item--active,
+html[data-theme="dark"] .tox .tox-collection__item:hover {
+  background-color: #334155 !important; 
+  color: #ffffff !important;
+}
+
+/* Саму галочку тоже делаем светлой */
+html[data-theme="dark"] .tox .tox-collection__item-checkmark,
+html[data-theme="dark"] .tox .tox-collection__item-checkmark svg {
+  fill: #e2e8f0 !important;
+  color: #e2e8f0 !important;
+}
