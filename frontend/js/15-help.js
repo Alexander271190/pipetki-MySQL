@@ -99,9 +99,23 @@ function ensureTinyMCE() {
       extended_valid_elements: 'i[class|style]',
       content_css: '/fontawesome/css/all.min.css',
       skin: 'oxide',
-      content_style: 'body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.5; }'
+      content_style: `
+        body { 
+          font-family: system-ui, -apple-system, sans-serif; 
+          font-size: 14px; 
+          line-height: 1.5; 
+        }
+        ${document.documentElement.getAttribute('data-theme') === 'dark' ? `
+          body {
+            background-color: #1e293b !important;
+            color: #e2e8f0 !important;
+          }
+          a { color: #818cf8 !important; }
+          table, th, td { border-color: #475569 !important; }
+          th { background-color: #273449 !important; }
+        ` : ''}
+     `
     });
-  });
   return _tinymceReadyPromise;
 }
 
