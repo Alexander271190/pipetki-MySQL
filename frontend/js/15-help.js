@@ -13,6 +13,7 @@ let _tinymceReadyPromise = null;
 
 function ensureTinyMCE() {
   if (_tinymceReadyPromise) return _tinymceReadyPromise;
+  
   _tinymceReadyPromise = new Promise((resolve) => {
     if (typeof tinymce === 'undefined') {
       console.error('TinyMCE не загружен. Проверьте /vendor/tinymce/tinymce.min.js');
@@ -37,6 +38,16 @@ function ensureTinyMCE() {
     setTimeout(() => {
       EventTarget.prototype.addEventListener = _origAdd;
     }, 3000);
+
+    // 🆕 Безопасная сборка стилей без вложенных бэктиков
+    let customStyle = 'body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.5; }';
+    
+    if (document.documentElement.getAttribute('data-theme') === 'dark') {
+      customStyle += ' body { background-color: #1e293b !important; color: #e2e8f0 !important; } ';
+      customStyle += ' a { color: #818cf8 !important; } ';
+      customStyle += ' table, th, td { border-color: #475569 !important; } ';
+      customStyle += ' th { background-color: #273449 !important; } ';
+    }
 
     tinymce.init({
       selector: '#he-content',
@@ -99,23 +110,10 @@ function ensureTinyMCE() {
       extended_valid_elements: 'i[class|style]',
       content_css: '/fontawesome/css/all.min.css',
       skin: 'oxide',
-      content_style: `
-        body { 
-          font-family: system-ui, -apple-system, sans-serif; 
-          font-size: 14px; 
-          line-height: 1.5; 
-        }
-        ${document.documentElement.getAttribute('data-theme') === 'dark' ? `
-          body {
-            background-color: #1e293b !important;
-            color: #e2e8f0 !important;
-          }
-          a { color: #818cf8 !important; }
-          table, th, td { border-color: #475569 !important; }
-          th { background-color: #273449 !important; }
-        ` : ''}
-     `
+      content_style: customStyle
     });
+  });
+  
   return _tinymceReadyPromise;
 }
 
