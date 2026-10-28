@@ -370,33 +370,45 @@ html[data-theme="dark"] .tox .tox-editor-header {
   background-color: #1e293b !important;
   border-bottom: 1px solid #334155 !important;
 }
-html[data-theme="dark"] .tox .tox-menubar {
-  background-color: #1e293b !important;
-}
+html[data-theme="dark"] .tox .tox-menubar,
 html[data-theme="dark"] .tox .tox-toolbar,
 html[data-theme="dark"] .tox .tox-toolbar__overflow,
 html[data-theme="dark"] .tox .tox-toolbar__primary {
   background-color: #1e293b !important;
   background-image: none !important;
 }
-html[data-theme="dark"] .tox .tox-tbtn {
+
+/* Иконки и текст на кнопках */
+html[data-theme="dark"] .tox .tox-tbtn,
+html[data-theme="dark"] .tox .tox-mbtn,
+html[data-theme="dark"] .tox .tox-tbtn__select-label,
+html[data-theme="dark"] .tox .tox-collection__item {
   color: #e2e8f0 !important;
 }
-html[data-theme="dark"] .tox .tox-tbtn svg {
+
+html[data-theme="dark"] .tox .tox-tbtn svg,
+html[data-theme="dark"] .tox .tox-mbtn svg,
+html[data-theme="dark"] .tox .tox-icon svg {
   fill: #e2e8f0 !important;
 }
-html[data-theme="dark"] .tox .tox-tbtn:hover {
-  background-color: #334155 !important;
+
+/* Стрелочки выпадающих списков (чуть тусклее) */
+html[data-theme="dark"] .tox .tox-tbtn__select-chevron svg {
+  fill: #94a3b8 !important;
 }
-html[data-theme="dark"] .tox .tox-mbtn {
-  color: #e2e8f0 !important;
-}
+
+/* Ховер (наведение) */
+html[data-theme="dark"] .tox .tox-tbtn:hover,
 html[data-theme="dark"] .tox .tox-mbtn:hover {
   background-color: #334155 !important;
 }
+html[data-theme="dark"] .tox .tox-tbtn:hover svg {
+  fill: #ffffff !important;
+}
+
+/* Статус-бар снизу */
 html[data-theme="dark"] .tox .tox-statusbar {
   background-color: #1e293b !important;
   border-top: 1px solid #334155 !important;
   color: #94a3b8 !important;
 }
-
