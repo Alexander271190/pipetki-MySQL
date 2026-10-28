@@ -65,8 +65,17 @@ async function openBulkSendModal() {
         }
       })();
 
-      // Замены — в фоне
-      loadReplacementOptions(toSend);
+      // Замены — в фоне (только для типов, где замена разрешена)
+      const idsForReplacement = toSend.filter(id => {
+        const p = pipettes.find(x => x.id === id);
+        return p && allowReplacement(p.equipment_type);
+      });
+      
+      if (idsForReplacement.length > 0) {
+        loadReplacementOptions(idsForReplacement);
+      } else {
+        document.getElementById('replacement-options').innerHTML = '';
+      }
     }
   );
 }
@@ -192,7 +201,13 @@ async function saveBulkSend(e) {
   const replacements = {};
   document.querySelectorAll('#replacement-options input[type="radio"]:checked').forEach(rb => {
     const forId = rb.dataset.for;
-    if (rb.value) replacements[forId] = rb.value;
+    if (rb.value) {
+      // Защита: применяем замену только если для типа это разрешено
+      const p = pipettes.find(x => x.id === forId);
+      if (p && allowReplacement(p.equipment_type)) {
+        replacements[forId] = rb.value;
+      }
+    }
   });
 
   try {
