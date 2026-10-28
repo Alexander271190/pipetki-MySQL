@@ -341,3 +341,11 @@ function slugify(text) {
   result = result.replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
   return result || 'item_' + Math.floor(Math.random() * 1000);
 }
+
+// 🆕 Проверка, разрешена ли замена для данного типа оборудования
+function allowReplacement(equipmentType) {
+  const t = _equipmentTypes.find(x => x.value === equipmentType);
+  // По умолчанию (если поле не задано) считаем, что замена разрешена
+  if (!t) return true;
+  return t.allowReplacement !== false;
+}
