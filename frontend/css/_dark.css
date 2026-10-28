@@ -495,3 +495,49 @@ html[data-theme="dark"] .tox .tox-collection__item-checkmark svg {
   fill: #e2e8f0 !important;
   color: #e2e8f0 !important;
 }
+
+/* ============================================================
+   TinyMCE — ЖЕСТКИЙ ФИКС (Меню и Скроллбары)
+   ============================================================ */
+
+/* 1. Убираем белый скроллбар (пятно справа) во ВСЕХ частях редактора */
+html[data-theme="dark"] .tox-tinymce ::-webkit-scrollbar,
+html[data-theme="dark"] .tox-tinymce ::-webkit-scrollbar-track {
+  background-color: #1e293b !important;
+  width: 10px;
+  height: 10px;
+}
+html[data-theme="dark"] .tox-tinymce ::-webkit-scrollbar-thumb {
+  background-color: #475569 !important;
+  border-radius: 5px;
+  border: 2px solid #1e293b !important;
+}
+
+/* 2. Жестко перекрашиваем ВСЕ пункты в выпадающих меню (Visual aids, Source code) */
+html[data-theme="dark"] .tox .tox-collection__item,
+html[data-theme="dark"] .tox .tox-collection__item--enabled,
+html[data-theme="dark"] .tox .tox-collection__item--active,
+html[data-theme="dark"] .tox .tox-collection__item[aria-checked="true"],
+html[data-theme="dark"] .tox .tox-collection__item-icon {
+  background-color: #1e293b !important; /* Темный фон вместо белого */
+  color: #e2e8f0 !important;
+}
+
+/* 3. Текст внутри пункта меню (чтобы не был белым на белом) */
+html[data-theme="dark"] .tox .tox-collection__item-label,
+html[data-theme="dark"] .tox .tox-collection__item[aria-checked="true"] .tox-collection__item-label {
+  color: #e2e8f0 !important;
+}
+
+/* 4. При наведении мышки на пункт меню (ховер) */
+html[data-theme="dark"] .tox .tox-collection__item:hover,
+html[data-theme="dark"] .tox .tox-collection__item--active:hover {
+  background-color: #334155 !important;
+  color: #ffffff !important;
+}
+
+/* 5. Галочка (checkmark) внутри меню должна быть светлой */
+html[data-theme="dark"] .tox .tox-collection__item-checkmark svg,
+html[data-theme="dark"] .tox .tox-collection__item-checkmark svg * {
+  fill: #16a34a !important; /* Оставляем зеленой, как в оригинале, но яркой */
+}
