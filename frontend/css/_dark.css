@@ -441,3 +441,21 @@ html[data-theme="dark"] .tox .tox-collection {
   background-color: #1e293b !important;
   border-color: #334155 !important;
 }
+
+/* Убираем белое пятно справа в меню редактора */
+html[data-theme="dark"] .tox .tox-menubar,
+html[data-theme="dark"] .tox .tox-editor-header {
+  background-color: #1e293b !important;
+}
+
+html[data-theme="dark"] .tox .tox-menubar > * {
+  background-color: transparent !important;
+}
+
+/* Если это скроллбар меню — прячем/красим его */
+html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar {
+  background-color: #1e293b !important;
+}
+html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar-thumb {
+  background-color: #334155 !important;
+}
