@@ -665,6 +665,7 @@ async function renderEquipmentSettings() {
             <th style="width:80px; text-align:center;">prefix</th>
             <th style="width:100px; text-align:center;">МПИ (мес.)</th>
             <th style="width:200px; text-align:center;">Место поверки</th>
+            <th style="width:90px; text-align:center;">Замена</th>
             <th style="width:60px;"></th>
           </tr>
         </thead>
@@ -686,7 +687,7 @@ function renderEquipmentTypesTable() {
   const tbody = document.getElementById('equip-types-body');
   if (!tbody) return;
   if (_equipmentTypesDraft.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
   tbody.innerHTML = _equipmentTypesDraft.map((t, i) => `
@@ -696,14 +697,18 @@ function renderEquipmentTypesTable() {
     <td><input type="text" value="${esc(t.label)}" oninput="updateEquipmentType(${i}, 'label', this.value)"></td>
     <td><input type="text" value="${esc(t.prefix || '')}" maxlength="4" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())"></td>
     <td><input type="number" value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}" min="1" max="120" style="text-align:center;" oninput="updateEquipmentType(${i}, 'interval', this.value)"></td>
-    <td>
+     <td>
       <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
         <option value="external" ${t.calibrationPlace === 'external' ? 'selected' : ''}>📦 Внешняя</option>
         <option value="internal" ${(!t.calibrationPlace || t.calibrationPlace === 'internal') ? 'selected' : ''}>🏠 На месте</option>
       </select>
     </td>
-    <td style="text-align: center;"><button class="row-actions-btn" onclick="openEquipTypeActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button></td>
+    <td style="text-align: center;">
+      <input type="checkbox" ${t.allowReplacement !== false ? 'checked' : ''} onchange="updateEquipmentType(${i}, 'allowReplacement', this.checked)" title="Предлагать замену со склада">
+    </td>
+   <td style="text-align: center;"><button class="row-actions-btn" onclick="openEquipTypeActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button></td>
   </tr>`).join('');
+  
   updateEquipmentTypesWarning();
 }
 
@@ -712,6 +717,8 @@ function updateEquipmentType(idx, field, value) {
   if (field === 'interval') {
     const n = parseInt(value, 10);
     _equipmentTypesDraft[idx][field] = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
+  } else if (field === 'allowReplacement') {
+    _equipmentTypesDraft[idx][field] = !!value;
   } else {
     _equipmentTypesDraft[idx][field] = String(value).trim();
   }
@@ -745,7 +752,8 @@ async function addEquipmentType() {
     label: label.trim(), 
     prefix: 'EQ', 
     calibrationPlace: 'internal', 
-    interval: 12 
+    interval: 12, 
+    allowReplacement: true
   });
   renderEquipmentTypesTable();
   showToast('Тип добавлен', 'success');
