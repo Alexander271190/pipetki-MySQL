@@ -452,3 +452,36 @@ html[data-theme="dark"] .tox .tox-statusbar {
   border-top: 1px solid #334155 !important;
   color: #94a3b8 !important;
 }
+
+/* 💣 УЛЬТИМАТИВНЫЙ ФИКС TINYMCE */
+html[data-theme="dark"] .tox-tinymce * {
+  border-color: #334155 !important;
+}
+
+/* Все кнопки и текст внутри тулбара */
+html[data-theme="dark"] .tox-toolbar button,
+html[data-theme="dark"] .tox-toolbar__primary button,
+html[data-theme="dark"] .tox-menubar button,
+html[data-theme="dark"] .tox .tox-tbtn {
+  background-color: transparent !important;
+}
+
+/* Текст на кнопках */
+html[data-theme="dark"] .tox-toolbar button span,
+html[data-theme="dark"] .tox-toolbar button .tox-tbtn__select-label,
+html[data-theme="dark"] .tox-toolbar button svg {
+  color: #e2e8f0 !important;
+  fill: #e2e8f0 !important;
+}
+
+/* Ховер (наведение) */
+html[data-theme="dark"] .tox-toolbar button:hover,
+html[data-theme="dark"] .tox .tox-tbtn:hover {
+  background-color: #334155 !important;
+}
+html[data-theme="dark"] .tox-toolbar button:hover span,
+html[data-theme="dark"] .tox-toolbar button:hover svg,
+html[data-theme="dark"] .tox-toolbar button:hover svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
