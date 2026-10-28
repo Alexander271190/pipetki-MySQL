@@ -361,65 +361,73 @@ html[data-theme="dark"] .stat-tooltip {
 }
 
 /* ============================================================
-   TinyMCE (Редактор справки) — ТЁМНАЯ ТЕМА
+   TinyMCE (Редактор справки) — ТЁМНАЯ ТЕМА (ОПТИМИЗИРОВАНО)
    ============================================================ */
 
-/* Задаем официальные переменные TinyMCE для темной темы */
+/* 1. Официальные переменные TinyMCE (делают 80% работы) */
 html[data-theme="dark"] .tox-tinymce {
-  border-color: #334155 !important;
   --tox-colors-text: #e2e8f0;
   --tox-colors-background: #1e293b;
   --tox-colors-background-hover: #334155;
   --tox-colors-background-active: #475569;
   --tox-colors-icon: #e2e8f0;
   --tox-colors-border: #334155;
+  border-color: #334155 !important;
 }
 
-/* Панели (меню и тулбар) */
+/* 2. Фон панелей (тулбар, меню, статус-бар) */
 html[data-theme="dark"] .tox .tox-editor-header,
 html[data-theme="dark"] .tox .tox-menubar,
 html[data-theme="dark"] .tox .tox-toolbar,
 html[data-theme="dark"] .tox .tox-toolbar__overflow,
-html[data-theme="dark"] .tox .tox-toolbar__primary {
+html[data-theme="dark"] .tox .tox-toolbar__primary,
+html[data-theme="dark"] .tox .tox-statusbar {
   background-color: #1e293b !important;
   background-image: none !important;
-  border-bottom-color: #334155 !important;
+  border-color: #334155 !important;
 }
 
-/* Текст на всех кнопках (Format, Insert, system-ui и т.д.) */
+/* 3. Базовый текст и иконки */
 html[data-theme="dark"] .tox .tox-tbtn,
 html[data-theme="dark"] .tox .tox-mbtn,
-html[data-theme="dark"] .tox .tox-tbtn__select-label,
+html[data-theme="dark"] .tox .tox-collection__item,
 html[data-theme="dark"] .tox .tox-tbtn span,
-html[data-theme="dark"] .tox .tox-mbtn span {
+html[data-theme="dark"] .tox .tox-mbtn span,
+html[data-theme="dark"] .tox .tox-tbtn__select-label {
   color: #e2e8f0 !important;
 }
 
-/* Все SVG-иконки (жирный, курсив, списки и т.д.) */
 html[data-theme="dark"] .tox .tox-tbtn svg,
 html[data-theme="dark"] .tox .tox-mbtn svg,
+html[data-theme="dark"] .tox .tox-collection__item-icon svg,
 html[data-theme="dark"] .tox .tox-tbtn svg *,
 html[data-theme="dark"] .tox .tox-mbtn svg * {
   fill: #e2e8f0 !important;
 }
 
-/* Стрелочки вниз (чуть тусклее) */
+/* Стрелочки вниз чуть тусклее */
 html[data-theme="dark"] .tox .tox-tbtn__select-chevron svg,
 html[data-theme="dark"] .tox .tox-tbtn__select-chevron svg * {
   fill: #94a3b8 !important;
 }
 
-/* ХОВЕР (при наведении мышки) — фон светлее, ТЕКСТ И ИКОНКИ БЕЛЫЕ */
+/* 4. Ховер (наведение мышки) и активные кнопки */
 html[data-theme="dark"] .tox .tox-tbtn:hover,
 html[data-theme="dark"] .tox .tox-mbtn:hover,
-html[data-theme="dark"] .tox .tox-tbtn.tox-tbtn--enabled {
+html[data-theme="dark"] .tox .tox-tbtn.tox-tbtn--enabled,
+html[data-theme="dark"] .tox .tox-collection__item:hover,
+html[data-theme="dark"] .tox .tox-collection__item--active {
   background-color: #334155 !important;
 }
+
 html[data-theme="dark"] .tox .tox-tbtn:hover span,
 html[data-theme="dark"] .tox .tox-mbtn:hover span,
-html[data-theme="dark"] .tox .tox-tbtn__select-label:hover {
+html[data-theme="dark"] .tox .tox-tbtn__select-label:hover,
+html[data-theme="dark"] .tox .tox-collection__item:hover,
+html[data-theme="dark"] .tox .tox-collection__item--active {
   color: #ffffff !important;
 }
+
 html[data-theme="dark"] .tox .tox-tbtn:hover svg,
 html[data-theme="dark"] .tox .tox-mbtn:hover svg,
 html[data-theme="dark"] .tox .tox-tbtn:hover svg *,
@@ -427,61 +435,9 @@ html[data-theme="dark"] .tox .tox-mbtn:hover svg * {
   fill: #ffffff !important;
 }
 
-/* Выпадающие меню (когда нажимаешь на Format или Font) */
+/* 5. Выпадающие меню (Format, Font и т.д.) */
 html[data-theme="dark"] .tox .tox-menu,
 html[data-theme="dark"] .tox .tox-collection {
   background-color: #1e293b !important;
   border-color: #334155 !important;
-}
-html[data-theme="dark"] .tox .tox-collection__item {
-  color: #e2e8f0 !important;
-}
-html[data-theme="dark"] .tox .tox-collection__item:hover,
-html[data-theme="dark"] .tox .tox-collection__item--active {
-  background-color: #334155 !important;
-  color: #ffffff !important;
-}
-html[data-theme="dark"] .tox .tox-collection__item-icon svg,
-html[data-theme="dark"] .tox .tox-collection__item-icon svg * {
-  fill: #e2e8f0 !important;
-}
-
-/* Статус-бар снизу */
-html[data-theme="dark"] .tox .tox-statusbar {
-  background-color: #1e293b !important;
-  border-top: 1px solid #334155 !important;
-  color: #94a3b8 !important;
-}
-
-/* 💣 УЛЬТИМАТИВНЫЙ ФИКС TINYMCE */
-html[data-theme="dark"] .tox-tinymce * {
-  border-color: #334155 !important;
-}
-
-/* Все кнопки и текст внутри тулбара */
-html[data-theme="dark"] .tox-toolbar button,
-html[data-theme="dark"] .tox-toolbar__primary button,
-html[data-theme="dark"] .tox-menubar button,
-html[data-theme="dark"] .tox .tox-tbtn {
-  background-color: transparent !important;
-}
-
-/* Текст на кнопках */
-html[data-theme="dark"] .tox-toolbar button span,
-html[data-theme="dark"] .tox-toolbar button .tox-tbtn__select-label,
-html[data-theme="dark"] .tox-toolbar button svg {
-  color: #e2e8f0 !important;
-  fill: #e2e8f0 !important;
-}
-
-/* Ховер (наведение) */
-html[data-theme="dark"] .tox-toolbar button:hover,
-html[data-theme="dark"] .tox .tox-tbtn:hover {
-  background-color: #334155 !important;
-}
-html[data-theme="dark"] .tox-toolbar button:hover span,
-html[data-theme="dark"] .tox-toolbar button:hover svg,
-html[data-theme="dark"] .tox-toolbar button:hover svg * {
-  color: #ffffff !important;
-  fill: #ffffff !important;
 }
