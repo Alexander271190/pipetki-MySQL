@@ -361,68 +361,100 @@ html[data-theme="dark"] .stat-tooltip {
 }
 
 /* ============================================================
-   TinyMCE (Редактор справки) — ТЁМНАЯ ТЕМА (АБСОЛЮТНЫЙ ФИКС)
+   TinyMCE (Редактор справки) — ТЁМНАЯ ТЕМА (ФИНАЛ)
    ============================================================ */
 
-/* 1. Общий фон редактора и всех панелей */
+/* 1. Переменные TinyMCE для темной темы */
+html[data-theme="dark"] .tox-tinymce {
+  --tox-colors-text: #e2e8f0;
+  --tox-colors-background: #1e293b;
+  --tox-colors-background-hover: #334155;
+  --tox-colors-background-active: #475569;
+  --tox-colors-icon: #e2e8f0;
+  --tox-colors-border: #334155;
+  border-color: #334155 !important;
+}
+
+/* 2. Фон всех панелей (тут же убирается белое пятно справа) */
 html[data-theme="dark"] .tox .tox-editor-header,
 html[data-theme="dark"] .tox .tox-menubar,
 html[data-theme="dark"] .tox .tox-toolbar,
 html[data-theme="dark"] .tox .tox-toolbar-overlord,
-html[data-theme="dark"] .tox .tox-toolbar__primary,
 html[data-theme="dark"] .tox .tox-toolbar__overflow,
+html[data-theme="dark"] .tox .tox-toolbar__primary,
 html[data-theme="dark"] .tox .tox-statusbar {
-    background-color: #1e293b !important;
-    background-image: none !important;
-    border-color: #334155 !important;
+  background-color: #1e293b !important;
+  background-image: none !important;
+  border-color: #334155 !important;
 }
 
-/* 2. Кнопки и их текст */
+/* Убираем белый скроллбар в меню (File, Edit, View...) */
+html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar {
+  background-color: #1e293b !important;
+}
+html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar-thumb {
+  background-color: #334155 !important;
+}
+
+/* 3. Кнопки и выпадающие списки (Paragraph, system-ui) */
+/* Принудительно делаем прозрачный фон, чтобы не было белых квадратов */
 html[data-theme="dark"] .tox .tox-tbtn,
 html[data-theme="dark"] .tox .tox-mbtn,
+html[data-theme="dark"] .tox .tox-tbtn--select,
 html[data-theme="dark"] .tox .tox-tbtn__select-label,
-html[data-theme="dark"] .tox .tox-tbtn__select-chevron {
-    background-color: #1e293b !important; /* Жестко задаем фон кнопок как у тулбара */
-    background-image: none !important;
-    color: #e2e8f0 !important; /* Светлый текст */
-    border: none !important;
-    box-shadow: none !important;
+html[data-theme="dark"] .tox .tox-tbtn span {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #e2e8f0 !important;
+  box-shadow: none !important;
 }
 
-/* 3. Иконки (SVG) */
+/* 4. Иконки (жирный, курсив и т.д.) */
 html[data-theme="dark"] .tox .tox-tbtn svg,
 html[data-theme="dark"] .tox .tox-mbtn svg,
 html[data-theme="dark"] .tox .tox-tbtn svg *,
 html[data-theme="dark"] .tox .tox-mbtn svg * {
-    fill: #e2e8f0 !important;
+  fill: #e2e8f0 !important;
 }
 
-/* 4. При наведении (Ховер) */
+/* Стрелочки вниз (чуть тусклее) */
+html[data-theme="dark"] .tox .tox-tbtn__select-chevron svg,
+html[data-theme="dark"] .tox .tox-tbtn__select-chevron svg * {
+  fill: #94a3b8 !important;
+}
+
+/* 5. Наведение (ховер) и активные кнопки */
 html[data-theme="dark"] .tox .tox-tbtn:hover,
 html[data-theme="dark"] .tox .tox-mbtn:hover,
-html[data-theme="dark"] .tox .tox-tbtn--enabled {
-    background-color: #334155 !important;
-    color: #ffffff !important;
+html[data-theme="dark"] .tox .tox-tbtn--enabled,
+html[data-theme="dark"] .tox .tox-tbtn--select:hover {
+  background-color: #334155 !important;
+}
+
+html[data-theme="dark"] .tox .tox-tbtn:hover span,
+html[data-theme="dark"] .tox .tox-mbtn:hover span,
+html[data-theme="dark"] .tox .tox-tbtn__select-label:hover {
+  color: #ffffff !important;
 }
 
 html[data-theme="dark"] .tox .tox-tbtn:hover svg,
-html[data-theme="dark"] .tox .tox-tbtn:hover svg *,
 html[data-theme="dark"] .tox .tox-mbtn:hover svg,
+html[data-theme="dark"] .tox .tox-tbtn:hover svg *,
 html[data-theme="dark"] .tox .tox-mbtn:hover svg * {
-    fill: #ffffff !important;
+  fill: #ffffff !important;
 }
 
-/* 5. Выпадающие списки (Format, Paragraph) */
+/* 6. Выпадающие меню (когда нажимаешь на Format или Font) */
 html[data-theme="dark"] .tox .tox-menu,
 html[data-theme="dark"] .tox .tox-collection {
-    background-color: #1e293b !important;
-    border-color: #334155 !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
 }
 html[data-theme="dark"] .tox .tox-collection__item {
-    color: #e2e8f0 !important;
+  color: #e2e8f0 !important;
 }
-html[data-theme="dark"] .tox .tox-collection__item--active,
-html[data-theme="dark"] .tox .tox-collection__item:hover {
-    background-color: #334155 !important;
-    color: #ffffff !important;
+html[data-theme="dark"] .tox .tox-collection__item:hover,
+html[data-theme="dark"] .tox .tox-collection__item--active {
+  background-color: #334155 !important;
+  color: #ffffff !important;
 }
