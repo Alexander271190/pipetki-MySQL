@@ -361,10 +361,10 @@ html[data-theme="dark"] .stat-tooltip {
 }
 
 /* ============================================================
-   TinyMCE (Редактор справки) — ТЁМНАЯ ТЕМА (ОПТИМИЗИРОВАНО)
+   TinyMCE (Редактор справки) — ТЁМНАЯ ТЕМА (ФИНАЛ)
    ============================================================ */
 
-/* 1. Официальные переменные TinyMCE (делают 80% работы) */
+/* 1. Переменные TinyMCE */
 html[data-theme="dark"] .tox-tinymce {
   --tox-colors-text: #e2e8f0;
   --tox-colors-background: #1e293b;
@@ -375,9 +375,10 @@ html[data-theme="dark"] .tox-tinymce {
   border-color: #334155 !important;
 }
 
-/* 2. Фон панелей (тулбар, меню, статус-бар) */
+/* 2. Фоны всех панелей (включая тулбар и статус-бар) */
 html[data-theme="dark"] .tox .tox-editor-header,
 html[data-theme="dark"] .tox .tox-menubar,
+html[data-theme="dark"] .tox .tox-toolbar-overlord,
 html[data-theme="dark"] .tox .tox-toolbar,
 html[data-theme="dark"] .tox .tox-toolbar__overflow,
 html[data-theme="dark"] .tox .tox-toolbar__primary,
@@ -387,31 +388,35 @@ html[data-theme="dark"] .tox .tox-statusbar {
   border-color: #334155 !important;
 }
 
-/* 3. Базовый текст и иконки */
+/* 3. Убираем БЕЛЫЙ фон у самих кнопок */
+html[data-theme="dark"] .tox .tox-tbtn,
+html[data-theme="dark"] .tox .tox-mbtn {
+  background-color: transparent !important;
+}
+
+/* 4. Цвет текста на кнопках (Format, system-ui и т.д.) */
 html[data-theme="dark"] .tox .tox-tbtn,
 html[data-theme="dark"] .tox .tox-mbtn,
-html[data-theme="dark"] .tox .tox-collection__item,
-html[data-theme="dark"] .tox .tox-tbtn span,
-html[data-theme="dark"] .tox .tox-mbtn span,
-html[data-theme="dark"] .tox .tox-tbtn__select-label {
+html[data-theme="dark"] .tox .tox-tbtn__select-label,
+html[data-theme="dark"] .tox .tox-collection__item {
   color: #e2e8f0 !important;
 }
 
+/* 5. Цвет иконок (жирный, курсив и т.д.) */
 html[data-theme="dark"] .tox .tox-tbtn svg,
 html[data-theme="dark"] .tox .tox-mbtn svg,
-html[data-theme="dark"] .tox .tox-collection__item-icon svg,
 html[data-theme="dark"] .tox .tox-tbtn svg *,
 html[data-theme="dark"] .tox .tox-mbtn svg * {
   fill: #e2e8f0 !important;
 }
 
-/* Стрелочки вниз чуть тусклее */
+/* Стрелочки вниз (чуть тусклее) */
 html[data-theme="dark"] .tox .tox-tbtn__select-chevron svg,
 html[data-theme="dark"] .tox .tox-tbtn__select-chevron svg * {
   fill: #94a3b8 !important;
 }
 
-/* 4. Ховер (наведение мышки) и активные кнопки */
+/* 6. Ховер (наведение) и активные кнопки */
 html[data-theme="dark"] .tox .tox-tbtn:hover,
 html[data-theme="dark"] .tox .tox-mbtn:hover,
 html[data-theme="dark"] .tox .tox-tbtn.tox-tbtn--enabled,
@@ -435,27 +440,9 @@ html[data-theme="dark"] .tox .tox-mbtn:hover svg * {
   fill: #ffffff !important;
 }
 
-/* 5. Выпадающие меню (Format, Font и т.д.) */
+/* 7. Выпадающие меню (Format, Font) */
 html[data-theme="dark"] .tox .tox-menu,
 html[data-theme="dark"] .tox .tox-collection {
   background-color: #1e293b !important;
   border-color: #334155 !important;
-}
-
-/* Убираем белое пятно справа в меню редактора */
-html[data-theme="dark"] .tox .tox-menubar,
-html[data-theme="dark"] .tox .tox-editor-header {
-  background-color: #1e293b !important;
-}
-
-html[data-theme="dark"] .tox .tox-menubar > * {
-  background-color: transparent !important;
-}
-
-/* Если это скроллбар меню — прячем/красим его */
-html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar {
-  background-color: #1e293b !important;
-}
-html[data-theme="dark"] .tox .tox-menubar::-webkit-scrollbar-thumb {
-  background-color: #334155 !important;
 }
