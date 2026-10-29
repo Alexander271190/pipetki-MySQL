@@ -12,14 +12,44 @@ const router = express.Router();
 const UPLOAD_DIR = path.join(__dirname, '..', 'frontend', 'uploads', 'help');
 try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); } catch (e) {}
 
+// 🆕 Вспомогательная функция для очистки и транслитерации имени файла
+function slugifyFilename(originalName) {
+  const ru = { 'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya' };
+  const base = path.parse(originalName).name;
+  const ext = path.extname(originalName).toLowerCase();
+  
+  // Транслитерируем и заменяем всё лишнее на подчеркивания
+  let res = base.toLowerCase().split('').map(ch => ru[ch] !== undefined ? ru[ch] : ch).join('');
+  res = res.replace(/[^a-z0-9_-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  
+  return { base: res || 'file', ext };
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`);
+    const { base, ext } = slugifyFilename(file.originalname);
+    
+    // 🆕 Формируем дату: 20261029_191445
+    const now = new Date();
+    const ts = 
+      `${now.getFullYear()}` +
+      `${String(now.getMonth()+1).padStart(2,'0')}` +
+      `${String(now.getDate()).padStart(2,'0')}_` +
+      `${String(now.getHours()).padStart(2,'0')}` +
+      `${String(now.getMinutes()).padStart(2,'0')}` +
+      `${String(now.getSeconds()).padStart(2,'0')}`;
+    
+    // 🆕 Проверяем на конфликт имен (если два файла загружены в одну секунду)
+    let filename = `${ts}_${base}${ext}`;
+    let counter = 1;
+    while (fs.existsSync(path.join(UPLOAD_DIR, filename))) {
+      filename = `${ts}_${base}_${counter++}${ext}`;
+    }
+    
+    cb(null, filename);
   },
 });
-
 const upload = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 },
