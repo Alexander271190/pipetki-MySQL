@@ -4,10 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Клинико-диагностическая лаборатория</title>
-   <link rel="stylesheet" href="fontawesome/css/all.min.css">
-  <script src="https://unpkg.com/jszip/dist/jszip.min.js"></script>
-  <script src="https://unpkg.com/docx-preview/dist/docx-preview.min.js"></script>
-   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="fontawesome/css/all.min.css">   <link rel="stylesheet" href="style.css">
   <script src="js/00-constants.js" defer></script>
   <script src="js/01-config.js" defer></script>
   <script src="js/02-utils.js" defer></script>
@@ -1076,7 +1073,7 @@
   </div>
 </div>
   
-  <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
+    <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
 <div class="modal-overlay" id="hotkeys-modal">
   <div class="modal modal-xl" style="height: 90vh; display: flex; flex-direction: column;">
     <h2><i class="fa-solid fa-book-open"></i> Инструкция по работе с системой</h2>
@@ -1084,33 +1081,15 @@
     <div class="docs-layout" style="flex: 1; display: flex; gap: 20px; overflow: hidden; min-height: 0;">
       
       <!-- Сайдбар слева -->
-      <aside class="docs-sidebar" id="docs-sidebar" style="width: 260px; overflow-y: auto; border-right: 1px solid #e2e8f0; padding-right: 10px; flex-shrink: 0;"></aside>
+      <aside class="docs-sidebar" id="docs-sidebar" style="width: 260px; overflow-y: auto; border-right: 1px solid var(--border); padding-right: 10px; flex-shrink: 0;"></aside>
       
-      <!-- Предпросмотр документа справа -->
-      <main style="flex: 1; display: flex; flex-direction: column; background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; position: relative;">
+      <!-- Предпросмотр документа справа (КАРТОЧКА) -->
+      <main style="flex: 1; display: flex; flex-direction: column; background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative;">
         
-        <div id="doc-preview-container" style="flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; padding: 10px;">
+        <div id="doc-preview-container" style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px;">
           <p style="color: #94a3b8;">Выберите раздел слева</p>
         </div>
-
-        <!-- Кнопки навигации -->
-        <button id="doc-btn-prev" onclick="changeDocPage(-1)" style="display: none; position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(30, 41, 59, 0.7); color: #fff; border: none; cursor: pointer; z-index: 10; font-size: 1.2rem; backdrop-filter: blur(4px); transition: 0.2s;">
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-        <button id="doc-btn-next" onclick="changeDocPage(1)" style="display: none; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(30, 41, 59, 0.7); color: #fff; border: none; cursor: pointer; z-index: 10; font-size: 1.2rem; backdrop-filter: blur(4px); transition: 0.2s;">
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
-
-        <!-- Счетчик страниц -->
-        <div id="doc-page-indicator" style="display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.85); color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; pointer-events: none; z-index: 10; backdrop-filter: blur(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-          1 / 1
-        </div>
         
-        <!-- Кнопки действий внизу -->
-        <div style="padding: 10px 20px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end; display: none;" id="doc-actions">
-          <button type="button" class="btn btn-info" onclick="printCurrentDoc()"><i class="fa-solid fa-print"></i> Печать</button>
-          <a id="doc-download-link" class="btn btn-secondary" download><i class="fa-solid fa-download"></i> Скачать файл</a>
-        </div>
       </main>
     </div>
 
