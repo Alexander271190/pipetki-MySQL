@@ -697,3 +697,37 @@ html[data-theme="dark"] .help-file-icon {
 html[data-theme="dark"] .hup-multiselect-menu { background: #1e293b; }
 html[data-theme="dark"] .hup-multiselect-menu label:hover { background: #334155; }
 .hup-multiselect-menu label:hover { background: #f1f5f9; }
+
+/* ============================================================
+   🆕 СПИСОК ССЫЛОК В СПРАВКЕ
+   ============================================================ */
+.help-link-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  width: 100%;
+  box-sizing: border-box;
+  transition: all .2s ease;
+}
+.help-link-item:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+}
+
+/* Темная тема */
+html[data-theme="dark"] .help-link-item {
+  background: #1e293b;
+}
+html[data-theme="dark"] .help-link-item:hover {
+  background: #312e81; 
+  border-color: #818cf8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
