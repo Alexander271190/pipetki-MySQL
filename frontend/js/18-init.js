@@ -237,6 +237,11 @@ function applyTheme(theme) {
       ? '<i class="fa-solid fa-sun"></i>'
       : '<i class="fa-solid fa-moon"></i>';
   }
+
+  // 🆕 Синхронизация темы Jodit, если редактор открыт
+  if (typeof helpEditor !== 'undefined' && helpEditor) {
+    helpEditor.setTheme(theme === 'dark' ? 'dark' : 'default');
+  }
 }
 
 function toggleTheme() {
