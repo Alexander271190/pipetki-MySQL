@@ -616,36 +616,66 @@ html[data-theme="dark"] .badge-result-pass { background: rgba(22, 163, 74, .2); 
 html[data-theme="dark"] .badge-result-fail { background: rgba(220, 38, 38, .2); color: #fca5a5; }
 html[data-theme="dark"] .badge-result-wip  { background: rgba(14, 165, 233, .2); color: #93c5fd; }
 
-/* Постраничная читалка */
-#doc-preview-container { background: #525659 !important; }
-.docx-wrapper { background: transparent !important; padding: 0 !important; margin: 0 !important; }
-.docx-wrapper > section.docx {
-  display: none; /* Показываем только активную страницу */
-  background: #ffffff !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
-  border-radius: 2px;
-  margin: 0 !important;
-  transform-origin: center center !important;
+/* ============================================================
+   🆕 КАРТОЧКА ДОКУМЕНТА В СПРАВКЕ (В стиле QMS)
+   ============================================================ */
+.help-file-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  max-width: 450px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.docx-wrapper > section.docx.active-page { display: block !important; }
-#doc-btn-prev:hover, #doc-btn-next:hover { background: rgba(30, 41, 59, 0.95) !important; }
 
-/* Темная тема для читалки */
-html[data-theme="dark"] #doc-preview-container { background: #0f172a !important; }
-html[data-theme="dark"] .docx-wrapper > section.docx { background: #1e293b !important; }
-html[data-theme="dark"] .docx-wrapper > section.docx p,
-html[data-theme="dark"] .docx-wrapper > section.docx span,
-html[data-theme="dark"] .docx-wrapper > section.docx div,
-html[data-theme="dark"] .docx-wrapper > section.docx li { color: #e2e8f0 !important; }
-html[data-theme="dark"] .docx-wrapper > section.docx h1,
-html[data-theme="dark"] .docx-wrapper > section.docx h2,
-html[data-theme="dark"] .docx-wrapper > section.docx h3,
-html[data-theme="dark"] .docx-wrapper > section.docx h4 { color: #f1f5f9 !important; }
-html[data-theme="dark"] .docx-wrapper > section.docx table,
-html[data-theme="dark"] .docx-wrapper > section.docx th,
-html[data-theme="dark"] .docx-wrapper > section.docx td { border-color: #475569 !important; }
-html[data-theme="dark"] .docx-wrapper > section.docx th { background-color: #273449 !important; }
+.help-file-icon {
+  font-size: 4rem;
+  color: #0ea5e9; /* Синий цвет для иконки */
+  margin-bottom: 20px;
+}
 
+.help-file-card h3 {
+  font-size: 1.25rem;
+  color: var(--text-strong);
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.help-file-name {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 30px;
+  word-break: break-all;
+}
+
+.help-file-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.help-file-actions .btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 0.95rem;
+  justify-content: center;
+}
+
+/* Темная тема */
+html[data-theme="dark"] .help-file-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+html[data-theme="dark"] .help-file-icon {
+  color: #38bdf8;
+}
 /* ============================================================
    🆕 КАСТОМНЫЙ ВЫПАДАЮЩИЙ СПИСОК ПРАВ (МУЛЬТИСЕЛЕКТ)
    ============================================================ */
@@ -666,3 +696,4 @@ html[data-theme="dark"] .docx-wrapper > section.docx th { background-color: #273
 .hup-multiselect-menu.show { display: block; }
 html[data-theme="dark"] .hup-multiselect-menu { background: #1e293b; }
 html[data-theme="dark"] .hup-multiselect-menu label:hover { background: #334155; }
+.hup-multiselect-menu label:hover { background: #f1f5f9; }
