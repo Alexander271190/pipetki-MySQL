@@ -731,3 +731,23 @@ html[data-theme="dark"] .help-link-item:hover {
   border-color: #818cf8;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
+
+/* 🆕 Стиль для раздела без файла */
+.help-link-missing {
+  cursor: pointer;
+  opacity: 0.85;
+  border-left: 3px solid #d97706 !important;
+}
+.help-link-missing:hover {
+  background: #fef3c7 !important;
+  border-color: #d97706 !important;
+  opacity: 1;
+}
+html[data-theme="dark"] .help-link-missing {
+  background: #422006 !important;
+  border-color: #78350f !important;
+}
+html[data-theme="dark"] .help-link-missing:hover {
+  background: #78350f !important;
+  border-color: #d97706 !important;
+}
