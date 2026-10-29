@@ -139,10 +139,10 @@ router.post('/upload', authenticate, requireRole(['admin']), upload.single('file
       await db.query(`UPDATE help_docs SET title=?, file_path=?, required_permissions=?, sort_order=?, enabled=? WHERE slug=?`,
         [String(title).trim(), filePath, permsJson, sort, isEnabled, slug]);
     } else {
-      await db.query(`INSERT INTO help_docs (slug, title, file_path, required_permissions, sort_order, enabled) VALUES (?, ?, ?, ?, ?, ?)`,
+      // 🆕 Добавили передачу пустой строки для content, чтобы MySQL не ругался
+      await db.query(`INSERT INTO help_docs (slug, title, content, file_path, required_permissions, sort_order, enabled) VALUES (?, ?, '', ?, ?, ?, ?)`,
         [slug, String(title).trim(), filePath, permsJson, sort, isEnabled]);
     }
-
     await logAction(req, 'Сохранение раздела справки', `${title} (${slug})`);
     invalidateHelpCache();
     res.json({ message: 'Раздел сохранен' });
