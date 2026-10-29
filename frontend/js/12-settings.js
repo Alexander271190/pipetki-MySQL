@@ -654,15 +654,14 @@ async function renderEquipmentSettings() {
     const types = await apiRequest('/settings/equipment-types');
     _equipmentTypesDraft = JSON.parse(JSON.stringify(types));
 
-    c.innerHTML = `
+     c.innerHTML = `
       <p style="color:#64748b;font-size:.88rem;margin:0 0 12px;">Управление списком типов.</p>
       <table class="field-settings-table" id="equip-types-table">
        <thead>
           <tr>
             <th style="width:100px; text-align:center;">Порядок</th>
-            <th style="width:140px; text-align:center;">value</th>
-            <th style="text-align:center;">label</th>
-            <th style="width:80px; text-align:center;">prefix</th>
+            <th style="text-align:center;">Название</th>          
+            <th style="width:100px; text-align:center;">Префикс</th> 
             <th style="width:100px; text-align:center;">МПИ (мес.)</th>
             <th style="width:200px; text-align:center;">Место поверки</th>
             <th style="width:90px; text-align:center;">Замена</th>
@@ -686,14 +685,16 @@ async function renderEquipmentSettings() {
 function renderEquipmentTypesTable() {
   const tbody = document.getElementById('equip-types-body');
   if (!tbody) return;
+  
   if (_equipmentTypesDraft.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
+    // 🆕 Изменили colspan с 8 на 7 (так как убрали одну колонку)
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
+  
   tbody.innerHTML = _equipmentTypesDraft.map((t, i) => `
   <tr>
     <td>${UI.moveBtns(i, _equipmentTypesDraft.length, 'moveEquipmentType')}</td>
-    <td><input type="text" value="${esc(t.value)}" readonly style="background:#f1f5f9;cursor:not-allowed;" title="value менять нельзя"></td>
     <td><input type="text" value="${esc(t.label)}" oninput="updateEquipmentType(${i}, 'label', this.value)"></td>
     <td><input type="text" value="${esc(t.prefix || '')}" maxlength="4" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())"></td>
     <td><input type="number" value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}" min="1" max="120" style="text-align:center;" oninput="updateEquipmentType(${i}, 'interval', this.value)"></td>
