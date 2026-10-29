@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Клинико-диагностическая лаборатория</title>
    <link rel="stylesheet" href="fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/vendor/jodit/jodit.min.css">
+  <script src="/vendor/jodit/jodit.min.js"></script>
   <link rel="stylesheet" href="style.css">
   <script src="js/00-constants.js" defer></script>
   <script src="js/01-config.js" defer></script>
@@ -1144,7 +1146,25 @@
     </div>
   </div>
 </div>
-  
+
+  <!-- 🆕 МОДАЛКА ВЫБОРА ИКОНКИ -->
+<div class="modal-overlay" id="fa-picker-modal">
+  <div class="modal modal-lg">
+    <h2><i class="fa-solid fa-icons"></i> Выбор иконки</h2>
+    <div class="form-group">
+      <input type="text" id="fa-search" placeholder="Поиск иконки (например: star, user, flask)..." oninput="filterIcons(this.value)">
+    </div>
+    <div id="fa-icons-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding: 10px; background: var(--card-alt); border-radius: 8px;">
+      <!-- Заполняется через JS -->
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeFaPicker()">Отмена</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 </body>
 </html>
+  
+
