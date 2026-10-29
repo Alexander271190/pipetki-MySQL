@@ -145,13 +145,60 @@ function ensureEditor() {
     }
   };
 
-  // 3. Инициализация Jodit
+  // 3. Кастомная кнопка: Экспорт в Word
+  Jodit.defaultOptions.controls.export_docx = {
+    icon: 'file-word',
+    tooltip: 'Экспорт в Word (.docx)',
+    exec: async function(editor) {
+      try {
+        const content = editor.value;
+        const title = document.getElementById('he-title').value || 'Справка';
+        
+        // Показываем индикатор загрузки прямо в кнопке
+        const btn = editor.container.querySelector('.jodit-toolbar-button_export_docx button');
+        const originalHtml = btn ? btn.innerHTML : '';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        const res = await fetch('/api/help/export-docx', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authToken
+          },
+          body: JSON.stringify({ title, htmlContent: content })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Ошибка сервера');
+        }
+        
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Справка_${title}.docx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('Документ Word сформирован', 'success');
+      } catch (e) {
+        showToast('Ошибка экспорта: ' + e.message, 'error');
+      } finally {
+        // Возвращаем иконку кнопки обратно
+        const btn = editor.container.querySelector('.jodit-toolbar-button_export_docx button');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-file-word"></i>';
+      }
+    }
+  };
+
+  // Инициализация Jodit
   helpEditor = Jodit.make('#he-content', {
     language: 'ru',
     theme: isDark ? 'dark' : 'default',
     minHeight: 420,
     maxHeight: 700,
-    toolbarAdaptive: false, // Отключает выпадающее меню с белым фоном
+    toolbarAdaptive: false,
     uploader: {
       url: '/api/help/images/upload',
       format: 'json',
@@ -167,7 +214,7 @@ function ensureEditor() {
       'brush', 'color', 'backgroundcolor', '|',
       'align', 'ul', 'ol', '|',
       'link', 'image', 'table', '|',
-      'fa_icon', 'myfile', '|',
+      'fa_icon', 'myfile', 'export_docx', '|',
       'eraser', 'fullsize', 'source'
     ]
   });
@@ -344,7 +391,6 @@ async function openHelpEditor(mode, slug) {
   
   ensureEditor();
 
-  // Обновляем токен в загрузчике Jodit на случай, если он изменился
   if (helpEditor) {
       helpEditor.uploader.options.headers = { 'Authorization': 'Bearer ' + authToken };
   }
