@@ -35,12 +35,12 @@ function renderDocsSidebar() {
     const fileUrl = s.filePath ? (s.filePath.startsWith('/') ? s.filePath : '/' + s.filePath) : '#';
     const isPdf = s.filePath && s.filePath.toLowerCase().endsWith('.pdf');
     const icon = isPdf ? 'fa-file-pdf' : 'fa-file-word';
-    const iconColor = isPdf ? '#dc2626' : '#0ea5e9'; // Красный для PDF, Синий для Word
+    const iconColor = isPdf ? '#dc2626' : '#2563eb'; // Красный для PDF, Синий для Word
     
     return `
-      <a href="${fileUrl}" target="_blank" class="docs-nav-item" style="display:flex; align-items:center; gap:12px; text-decoration:none; padding:12px; border-radius:8px; margin-bottom:4px; background:var(--card); border:1px solid var(--border);">
-        <i class="fa-solid ${icon}" style="font-size:1.4rem; color:${iconColor}; width: 24px; text-align: center;"></i>
-        <span style="font-weight:500; color:var(--text-strong);">${esc(cleanTitle)}</span>
+      <a href="${fileUrl}" target="_blank" class="help-link-item">
+        <i class="fa-solid ${icon}" style="font-size:1.3rem; color:${iconColor}; width: 20px; text-align: center;"></i>
+        <span style="font-weight:500; color:var(--text-strong); font-size: 0.95rem;">${esc(cleanTitle)}</span>
       </a>
     `;
   }).join('');
