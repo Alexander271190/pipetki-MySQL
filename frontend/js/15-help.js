@@ -45,7 +45,7 @@ function renderFaIcons(icons) {
   grid.innerHTML = icons.map(icon => `
     <button type="button" class="btn btn-secondary" style="padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%;" onclick="selectFaIcon('${icon}')" title="${icon}">
       <i class="fa-solid fa-${icon}" style="font-size: 1.2rem;"></i>
-      <span style="font-size: 0.65rem; color: #64748b; word-break: break-all; text-align: center; line-height: 1.1;">${icon}</span>
+      <span style="font-size: 0.65rem; color: var(--text-muted); word-break: break-all; text-align: center; line-height: 1.1;">${icon}</span>
     </button>
   `).join('');
 }
