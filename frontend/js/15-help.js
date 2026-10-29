@@ -24,27 +24,29 @@ const COMMON_ICONS = [
   'file-circle-check', 'file-circle-xmark', 'file-shield', 'clipboard', 'clipboard-list', 'clipboard-check',
   'clipboard-question', 'book', 'book-open', 'scroll', 'newspaper', 'address-book', 'id-card',
 
-  // --- Действия и статусы (Добавлены иконки из вашего проекта) ---
+  // --- Действия и статусы (ВСЕ иконки проекта) ---
   'star', 'heart', 'check', 'xmark', 'plus', 'minus', 'trash', 'pen', 'pen-nib', 'floppy-disk', 'rotate-left', 'rotate-right',
   'circle-check', 'circle-xmark', 'circle-exclamation', 'circle-info', 'circle-question', 'circle-plus', 'circle-minus',
   'circle-pause', 'triangle-exclamation', 'ban', 'lock', 'unlock', 'key', 'shield', 'shield-check', 'thumbs-up', 'thumbs-down',
   'magnifying-glass', 'search', 'eye', 'eye-slash', 'bell', 'flag', 'tag', 'tags', 'paperclip', 'link',
-  'spinner', 'hourglass-half', 'font', 'right-to-bracket', 'arrows-up-down', 'cube', 'table-list',
+  'spinner', 'hourglass', 'hourglass-start', 'hourglass-half', 'hourglass-end', 'font', 
+  'right-to-bracket', 'right-left', 'arrows-rotate', 'arrows-up-down', 'arrows-left-right', 
+  'cube', 'table-list', 'wand-magic-sparkles', 'list-check', 'calendar-days', 'clock-rotate-left',
+  'gear', 'screwdriver-wrench', 'wrench', 'hammer', 'moon', 'sun', 'ellipsis', 'ellipsis-vertical', 'caret-down',
 
   // --- Люди и роли ---
   'user', 'users', 'user-doctor', 'user-nurse', 'user-tie', 'user-gear', 'user-pen', 'user-clock',
   'stethoscope', 'hand-holding-medical', 'person-dots-from-line', 'id-badge', 'id-card-clip',
 
   // --- Навигация и время ---
-  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'arrows-left-right', 'right-left',
-  'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right', 'caret-up', 'caret-down',
-  'clock', 'clock-rotate-left', 'calendar', 'calendar-days', 'calendar-check', 'calendar-xmark',
-  'hourglass', 'hourglass-start', 'hourglass-end',
+  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 
+  'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right', 'caret-up', 
+  'clock', 'calendar', 'calendar-check', 'calendar-xmark',
 
   // --- Связь и IT ---
   'envelope', 'phone', 'mobile-screen', 'print', 'barcode', 'qrcode', 'wifi', 'network-wired',
-  'download', 'upload', 'cloud', 'cloud-arrow-down', 'cloud-arrow-up', 'database', 'server', 'gear',
-  'screwdriver-wrench', 'wrench', 'hammer', 'plug', 'power-off', 'circle-play',
+  'download', 'upload', 'cloud', 'cloud-arrow-down', 'cloud-arrow-up', 'database', 'server', 
+  'plug', 'power-off', 'circle-play',
 
   // --- Транспорт и место ---
   'box', 'box-open', 'truck', 'truck-fast', 'location-dot', 'map-location-dot', 'building', 'hospital',
@@ -199,17 +201,16 @@ function ensureEditor() {
     maxHeight: 700,
     toolbarAdaptive: false,
     
-    // 🆕 Убираем конфликт с модальным окном при полном экране
-    fullsize: false,
+    // 🆕 Отключаем глобальное изменение классов у родителей
     globalFullSize: false,
 
-    // 🆕 Запрещаем тянуть что-либо из интернета
+    // 🆕 Запрещаем Jodit тянуть что-либо из интернета
     sourceEditor: 'area',               
     sourceEditorCDNUrlsJS: [],          
     beautifyHTML: false,                
     beautifyHTMLCDNUrlsJS: [],          
     
-    plugins: 'print, search, copyformat, table, image, link, source',
+    plugins: 'print, search, copyformat, table, image, link, fullsize, source',
     
     uploader: {
       url: '/api/help/images/upload',
@@ -227,9 +228,34 @@ function ensureEditor() {
       'align', 'ul', 'ol', '|',
       'link', 'image', 'table', 'hr', '|',
       'fa_icon', 'myfile', 'export_docx', '|',
-      // 🆕 Убрали 'fullsize' из списка кнопок, чтобы не ломать модалку
-      'find', 'selectall', 'eraser', 'print', 'source'
+      'find', 'selectall', 'eraser', 'print', 'fullsize', 'source'
     ]
+  });
+
+  // 🆕 МАГИЯ: Синхронизация полноэкранного режима Jodit и модалки
+  helpEditor.e.on('toggleFullSize', (isFullSize) => {
+    const modal = document.querySelector('#help-editor-modal .modal');
+    if (!modal) return;
+
+    if (isFullSize) {
+      // Разворачиваем модалку на весь экран
+      modal.style.maxWidth = '100vw';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.maxHeight = '100vh';
+      modal.style.margin = '0';
+      modal.style.borderRadius = '0';
+      modal.style.clipPath = 'none';
+    } else {
+      // Возвращаем стандартные размеры
+      modal.style.maxWidth = '';
+      modal.style.width = '';
+      modal.style.height = '';
+      modal.style.maxHeight = '';
+      modal.style.margin = '';
+      modal.style.borderRadius = '';
+      modal.style.clipPath = '';
+    }
   });
 }
 
@@ -446,7 +472,13 @@ async function openHelpEditor(mode, slug) {
   }, 200);
 }
 
-function closeHelpEditor() { UI.modal.close('help-editor-modal'); }
+function closeHelpEditor() {
+  // 🆕 Если редактор был в полном экране, принудительно возвращаем модалку в нормальный вид
+  if (helpEditor && helpEditor.isFullSize) {
+    helpEditor.toggleFullSize(false);
+  }
+  UI.modal.close('help-editor-modal');
+}
 
 function renderHelpPermissions(selected) {
   const c = document.getElementById('he-permissions');
