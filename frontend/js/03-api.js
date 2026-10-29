@@ -10,14 +10,13 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 
   const response = await fetch(`${API_URL}${endpoint}`, options);
 
-     if (response.status === 401 && !endpoint.startsWith('/auth/login')) {
+  if (response.status === 401 && !endpoint.startsWith('/auth/login')) {
     clearSession();
     renderAuthUI();
     showToast('Сессия истекла, войдите заново', 'error');
     throw new Error('Неавторизован');
   }
 
-    // Обязательная смена/установка пароля: сервер вернул 403 с кодом
   if (response.status === 403 && !endpoint.startsWith('/auth/')) {
     let body = null;
     try { body = await response.clone().json(); } catch (e) { /* ignore */ }
@@ -31,26 +30,70 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
     }
   }
 
-  // Обновление прав с throttle (не чаще раза в 60 секунд)
   const now = Date.now();
   if (!endpoint.startsWith('/auth/') && now - _lastPermsCheck > 60_000) {
     _lastPermsCheck = now;
-    refreshCurrentUser();   // fire-and-forget
+    refreshCurrentUser();
   }
 
-    let result;
+  let result;
   try {
     result = await response.json();
   } catch (e) {
-    // 🆕 Сервер вернул не JSON (502 от прокси, пустой ответ, HTML)
     result = { error: `Ошибка ${response.status}: сервер вернул некорректный ответ` };
   }
 
-   if (!response.ok) {
+  if (!response.ok) {
     const error = new Error(result.error || 'Ошибка запроса');
     error.status = response.status;
-    error.response = result;   // 🆕 полный JSON-ответ сервера
+    error.response = result;
     throw error;
   }
   return result;
+}
+
+// 🆕 Универсальная функция скачивания файлов с обработкой 401
+async function downloadFile(url, options = {}, defaultFilename) {
+  const headers = { ...(options.headers || {}) };
+  if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+
+  try {
+    const response = await fetch(url, { ...options, headers });
+
+    // 🆕 Обработка истекшей сессии
+    if (response.status === 401) {
+      clearSession();
+      renderAuthUI();
+      showToast('Сессия истекла, войдите заново', 'error');
+      throw new Error('Неавторизован');
+    }
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Ошибка скачивания файла');
+    }
+
+    // Получаем имя файла из заголовка или используем дефолтное
+    const disposition = response.headers.get('Content-Disposition');
+    let filename = defaultFilename;
+    if (disposition && !defaultFilename) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match) filename = decodeURIComponent(match[1]);
+    }
+
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || 'download';
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+    
+    return true;
+  } catch (e) {
+    if (e.message !== 'Неавторизован') {
+      showToast(e.message || 'Ошибка скачивания', 'error');
+    }
+    throw e;
+  }
 }
