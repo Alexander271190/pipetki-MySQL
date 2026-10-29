@@ -200,7 +200,12 @@ function ensureEditor() {
     maxHeight: 700,
     toolbarAdaptive: false, // Отключает выпадающее меню с белым фоном
     
-    // 🆕 Явно указываем плагины, которые хотим использовать (на всякий случай)
+     // 🆕 Запрещаем Jodit тянуть что-либо из интернета
+    sourceEditor: 'area',               
+    sourceEditorCDNUrlsJS: [],          
+    beautifyHTML: false,                
+    beautifyHTMLCDNUrlsJS: [],          
+    
     plugins: 'print, search, copyformat, table, image, link, fullsize, source',
     
     uploader: {
