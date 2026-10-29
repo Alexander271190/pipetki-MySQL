@@ -139,7 +139,7 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-        await conn.query(`
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS app_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         level VARCHAR(20) NOT NULL DEFAULT 'error',
@@ -158,7 +158,7 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-        await conn.query(`
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS permission_presets (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL UNIQUE,
@@ -261,13 +261,14 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 🆕 Справка
+    // 🆕 Справка (ДОБАВЛЕНО file_path)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS help_docs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         slug VARCHAR(100) NOT NULL UNIQUE,
         title VARCHAR(255) NOT NULL,
-        content MEDIUMTEXT NOT NULL,
+        content MEDIUMTEXT NULL DEFAULT NULL,
+        file_path VARCHAR(255) DEFAULT NULL,
         required_permissions TEXT,
         sort_order INT DEFAULT 0,
         enabled TINYINT DEFAULT 1,
@@ -326,7 +327,11 @@ async function initSchema() {
       { name: 'view_template_id',    ddl: 'INT NULL DEFAULT NULL' },
     ]);
     
-        await ensureColumns(conn, 'audit_log', [
+    await ensureColumns(conn, 'help_docs', [
+      { name: 'file_path', ddl: 'VARCHAR(255) DEFAULT NULL' }
+    ]);
+
+    await ensureColumns(conn, 'audit_log', [
       { name: 'pipette_id', ddl: 'VARCHAR(255) DEFAULT NULL' },
       { name: 'category',   ddl: 'VARCHAR(50) DEFAULT NULL' }
     ]);
@@ -362,7 +367,7 @@ async function initSchema() {
       { name: 'idx_audit_log_timestamp', ddl: 'CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp DESC)' },
     ]);
 
-       // === Идемпотентное выравнивание длины barcode на существующих БД ===
+    // === Идемпотентное выравнивание длины barcode на существующих БД ===
     const [barcodeCol] = await conn.query(`
       SELECT CHARACTER_MAXIMUM_LENGTH AS len FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pipettes' AND COLUMN_NAME = 'barcode'
@@ -383,7 +388,6 @@ async function initSchema() {
     conn.release();
   }
 
-  
   return true;
 }
 
