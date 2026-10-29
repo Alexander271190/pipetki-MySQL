@@ -30,6 +30,10 @@ async function openHotkeysHelp() {
   loadDocFile(_docsCurrentSection);
 }
 
+function closeHotkeysHelp() {
+  UI.modal.close('hotkeys-modal');
+}
+
 function renderDocsSidebar() {
   const c = document.getElementById('docs-sidebar');
   if (!c) return;
