@@ -1232,5 +1232,189 @@ async function saveBulkIdentitySettings() {
     });
   } catch (e) {}
 }
+// ============================================================
+// РАЗДЕЛ: СПРАВКА
+// ============================================================
+async function renderHelpSettings() {
+  const c = document.getElementById('settings-section-content');
+  c.innerHTML = `<p style="color:#64748b;">Загрузка…</p>`;
 
+  try {
+    let sections = await apiRequest('/help');
+    if (!Array.isArray(sections)) sections = [];
+
+    let html = `
+      <p style="color:#64748b;font-size:.88rem;margin:0 0 14px;">
+        Загрузите документ Word (.docx) или PDF для каждого раздела. Пользователи увидят его в разделе «Справка».
+      </p>
+      <div class="help-actions-bar">
+        <button class="btn btn-primary btn-sm" onclick="openHelpFileUploadModal()">
+          <i class="fa-solid fa-plus"></i> Добавить раздел с файлом
+        </button>
+        <button class="btn btn-warning btn-sm" onclick="resetHelpToFactory()">
+          <i class="fa-solid fa-rotate-left"></i> Сбросить к заводской
+        </button>
+      </div>
+    `;
+
+    if (sections.length === 0) {
+      html += `<div class="help-empty">Разделов пока нет.</div>`;
+      c.innerHTML = html;
+      return;
+    }
+
+    html += `<table class="help-admin-table">
+      <thead>
+        <tr>
+          <th>Название раздела</th>
+          <th style="width: 200px;">Файл</th>
+          <th style="width: 80px;">Показ</th>
+          <th style="width: 80px;">Действия</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    sections.sort((a,b) => (a.sortOrder||0) - (b.sortOrder||0)).forEach(s => {
+      const fileName = s.filePath ? s.filePath.split('/').pop() : 'Нет файла';
+      html += `<tr>
+        <td><strong>${esc(s.title)}</strong><br><small style="color:#94a3b8;">${esc(s.slug)}</small></td>
+        <td><span style="font-size:.8rem;color:#0369a1;"><i class="fa-solid fa-file"></i> ${esc(fileName)}</span></td>
+        <td style="text-align:center;">${s.enabled ? '✅' : '❌'}</td>
+        <td class="help-admin-actions">
+          <button class="row-actions-btn" onclick="openHelpAdminActions(event, '${esc(s.slug)}')" title="Действия">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
+        </td>
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    c.innerHTML = html;
+
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+function openHelpAdminActions(ev, slug) {
+  ev.stopPropagation();
+  const items = [
+    { label: '<i class="fa-solid fa-pen"></i> Заменить файл / Изменить', action: () => openHelpFileUploadModal(slug) },
+    { label: '<i class="fa-solid fa-trash"></i> Удалить раздел', class: 'item-danger', action: () => deleteHelpSection(slug) }
+  ];
+  renderRowActionsMenu(ev.currentTarget, items);
+}
+
+async function openHelpFileUploadModal(slug = null) {
+  const isEdit = !!slug;
+  let sec = null;
+  
+  if (isEdit) {
+    const sections = await apiRequest('/help');
+    sec = sections.find(x => x.slug === slug);
+  }
+
+  const modalHtml = `
+    <div class="modal-overlay active" id="help-upload-modal" style="z-index:1000;">
+      <div class="modal" style="max-width: 500px;">
+        <h2><i class="fa-solid fa-upload"></i> ${isEdit ? 'Изменить раздел' : 'Новый раздел справки'}</h2>
+        
+        <div class="form-group">
+          <label>Название (видно пользователям) *</label>
+          <input type="text" id="hup-title" value="${isEdit ? esc(sec.title) : ''}" placeholder="Например: Начало работы">
+        </div>
+        <div class="form-group">
+          <label>Внутренний код (латиницей) *</label>
+          <input type="text" id="hup-slug" value="${isEdit ? esc(sec.slug) : ''}" ${isEdit ? 'readonly style="background:#f1f5f9;"' : ''} placeholder="Например: intro">
+        </div>
+        <div class="form-group">
+          <label>Документ (PDF или DOCX) *</label>
+          <input type="file" id="hup-file" accept=".pdf,.docx,.doc" ${isEdit ? '' : 'required'}>
+          ${isEdit ? '<small style="color:#64748b;">Оставьте пустым, чтобы сохранить текущий файл</small>' : ''}
+        </div>
+        <div class="form-group">
+          <label>Права доступа (кто увидит)</label>
+          <select id="hup-permissions" multiple style="height: 100px; width: 100%; padding: 5px;">
+            <option value="">— Видят ВСЕ —</option>
+            ${ALL_PERMISSIONS.map(p => `<option value="${p.key}">${p.label.replace(/<[^>]+>/g, '')}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="document.getElementById('help-upload-modal').remove()">Отмена</button>
+          <button class="btn btn-success" onclick="uploadHelpFile('${slug || ''}')"><i class="fa-solid fa-upload"></i> Сохранить</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  if (isEdit && sec.requiredPermissions) {
+    const sel = document.getElementById('hup-permissions');
+    Array.from(sel.options).forEach(opt => {
+      if (sec.requiredPermissions.includes(opt.value)) opt.selected = true;
+    });
+  }
+}
+
+async function uploadHelpFile(slug) {
+  const title = document.getElementById('hup-title').value.trim();
+  const slugVal = document.getElementById('hup-slug').value.trim();
+  const fileInput = document.getElementById('hup-file');
+  const sel = document.getElementById('hup-permissions');
+  
+  const perms = Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean);
+
+  if (!title || !slugVal) { showToast('Заполните название и код', 'error'); return; }
+  if (!slug && (!fileInput.files || !fileInput.files[0])) { showToast('Выберите файл', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('slug', slugVal);
+  fd.append('requiredPermissions', JSON.stringify(perms));
+  fd.append('enabled', 'true');
+  if (fileInput.files[0]) fd.append('file', fileInput.files[0]);
+
+  try {
+    const btn = document.querySelector('#help-upload-modal .btn-success');
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
+    
+    const res = await fetch('/api/help/upload', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken },
+      body: fd
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error || 'Ошибка сервера');
+    }
+
+    showToast('Раздел сохранен', 'success');
+    document.getElementById('help-upload-modal').remove();
+    renderHelpSettings();
+  } catch (e) {
+    showToast(e.message, 'error');
+    const btn = document.querySelector('#help-upload-modal .btn-success');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-upload"></i> Сохранить'; }
+  }
+}
+
+async function deleteHelpSection(slug) {
+  const ok = await showConfirm('Удалить раздел справки?', { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
+  if (!ok) return;
+  try {
+    await apiRequest('/help/' + slug, 'DELETE');
+    showToast('Удален', 'success');
+    renderHelpSettings();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function resetHelpToFactory() {
+  const ok = await showConfirm('Сбросить справку к заводской? Все загруженные файлы будут заменены.', { icon: '⚠️', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' });
+  if (!ok) return;
+  try {
+    await apiRequest('/help/reset', 'POST', {});
+    showToast('Справка восстановлена', 'success');
+    renderHelpSettings();
+  } catch (e) { showToast(e.message, 'error'); }
+}
 
