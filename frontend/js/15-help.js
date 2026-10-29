@@ -13,17 +13,41 @@ let helpEditor = null;
 let _faPickerCallback = null;
 
 const COMMON_ICONS = [
-  'star', 'heart', 'check', 'xmark', 'plus', 'minus', 'trash', 'pen', 'floppy-disk', 'rotate-left', 'rotate-right',
-  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right',
-  'circle-check', 'circle-xmark', 'circle-exclamation', 'circle-info', 'circle-question',
-  'triangle-exclamation', 'bell', 'user', 'users', 'gear', 'wrench', 'screwdriver-wrench',
-  'flask', 'flask-vial', 'vial', 'microscope', 'eye-dropper', 'syringe', 'pills', 'tablets',
-  'file', 'file-lines', 'file-pdf', 'file-excel', 'file-word', 'folder', 'folder-open',
-  'image', 'camera', 'video', 'print', 'barcode', 'qrcode', 'tag', 'tags',
-  'box', 'box-open', 'truck', 'clipboard', 'clipboard-list', 'clipboard-check',
-  'lock', 'unlock', 'key', 'shield', 'clock', 'calendar', 'calendar-days', 'magnifying-glass',
-  'filter', 'list', 'list-check', 'ellipsis', 'ellipsis-vertical', 'download', 'upload',
-  'right-left', 'arrows-rotate', 'link', 'paperclip', 'thumbtack', 'book', 'book-open', 'scroll'
+  // --- Оборудование и наука ---
+  'flask', 'flask-vial', 'vial', 'vials', 'microscope', 'eye-dropper', 'syringe', 'pills', 'tablets',
+  'capsules', 'dna', 'bacteria', 'virus', 'radiation', 'biohazard', 'temperature-high', 'temperature-low',
+  'droplet', 'test-tube', 'mortar-pestle', 'atom', 'wind', 'scale-balanced', 'filter', 'chart-line',
+  'chart-pie', 'chart-bar', 'calculator', 'ruler', 'ruler-combined', 'thermometer', 'weight-hanging',
+  
+  // --- Документы и папки ---
+  'file', 'file-lines', 'file-pdf', 'file-excel', 'file-word', 'file-image', 'file-zipper', 'folder', 'folder-open',
+  'file-circle-check', 'file-circle-xmark', 'file-shield', 'clipboard', 'clipboard-list', 'clipboard-check',
+  'clipboard-question', 'book', 'book-open', 'scroll', 'newspaper', 'address-book', 'id-card',
+
+  // --- Действия и статусы ---
+  'star', 'heart', 'check', 'xmark', 'plus', 'minus', 'trash', 'pen', 'pen-nib', 'floppy-disk', 'rotate-left', 'rotate-right',
+  'circle-check', 'circle-xmark', 'circle-exclamation', 'circle-info', 'circle-question', 'circle-plus', 'circle-minus',
+  'triangle-exclamation', 'ban', 'lock', 'unlock', 'key', 'shield', 'shield-check', 'thumbs-up', 'thumbs-down',
+  'magnifying-glass', 'search', 'eye', 'eye-slash', 'bell', 'flag', 'tag', 'tags', 'paperclip', 'link',
+
+  // --- Люди и роли ---
+  'user', 'users', 'user-doctor', 'user-nurse', 'user-tie', 'user-gear', 'user-pen', 'user-clock',
+  'stethoscope', 'hand-holding-medical', 'person-dots-from-line', 'id-badge', 'id-card-clip',
+
+  // --- Навигация и время ---
+  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'arrows-up-down', 'arrows-left-right',
+  'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right', 'caret-up', 'caret-down',
+  'clock', 'clock-rotate-left', 'calendar', 'calendar-days', 'calendar-check', 'calendar-xmark',
+  'hourglass', 'hourglass-start', 'hourglass-half', 'hourglass-end',
+
+  // --- Связь и IT ---
+  'envelope', 'phone', 'mobile-screen', 'print', 'barcode', 'qrcode', 'wifi', 'network-wired',
+  'download', 'upload', 'cloud', 'cloud-arrow-down', 'cloud-arrow-up', 'database', 'server', 'gear',
+  'screwdriver-wrench', 'wrench', 'hammer', 'plug', 'power-off', 'circle-play', 'circle-pause',
+
+  // --- Транспорт и место ---
+  'box', 'box-open', 'truck', 'truck-fast', 'location-dot', 'map-location-dot', 'building', 'hospital',
+  'house', 'warehouse', 'dolly', 'cart-shopping', 'boxes-stacked'
 ];
 
 function openFaPicker(callback) {
