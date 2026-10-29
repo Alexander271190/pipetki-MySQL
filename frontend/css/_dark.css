@@ -541,3 +541,38 @@ html[data-theme="dark"] .tox .tox-collection__item-checkmark svg,
 html[data-theme="dark"] .tox .tox-collection__item-checkmark svg * {
   fill: #16a34a !important; /* Оставляем зеленой, как в оригинале, но яркой */
 }
+
+
+/* ============================================================
+   TinyMCE — ЖЕСТКИЙ ФИКС БЕЛЫХ ПОЛОС В ПАНЕЛИ ИНСТРУМЕНТОВ
+   ============================================================ */
+
+/* 1. Перекрашиваем оверлоад и основную панель */
+html[data-theme="dark"] .tox .tox-toolbar-overlord,
+html[data-theme="dark"] .tox .tox-toolbar-overlord .tox-toolbar__primary,
+html[data-theme="dark"] .tox .tox-toolbar-overlord .tox-toolbar__overflow {
+    background-color: #1e293b !important; /* Ваш тёмный цвет */
+    background-image: none !important;
+    border-color: #334155 !important;
+}
+
+/* 2. Убираем возможные артефакты у групп кнопок */
+html[data-theme="dark"] .tox .tox-toolbar__group {
+    background-color: transparent !important;
+    border-color: #334155 !important;
+}
+
+/* 3. Перекрашиваем скроллбары в редакторе, которые тоже могут быть белыми */
+html[data-theme="dark"] .tox .tox-toolbar-overlord::-webkit-scrollbar {
+    background-color: #1e293b !important;
+}
+html[data-theme="dark"] .tox .tox-toolbar-overlord::-webkit-scrollbar-thumb {
+    background-color: #475569 !important;
+    border-radius: 4px;
+}
+
+/* 4. Если белая полоса всё ещё видна, возможно, это псевдоэлемент.
+      Заливаем его основным цветом фона */
+html[data-theme="dark"] .tox-tinymce {
+    background-color: #1e293b !important;
+}
