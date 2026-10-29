@@ -657,7 +657,7 @@ function printHelpSection() {
     <head>
       <meta charset="UTF-8">
       <title>Справка: ${cleanTitle}</title>
-      <link rel="stylesheet" href="fontawesome/css/all.min.css">
+      <link rel="stylesheet" href="/fontawesome/css/all.min.css">
       <link rel="stylesheet" href="style.css">
       <style>
         body { background: #fff !important; padding: 20px; font-size: 12pt; }
