@@ -24,26 +24,27 @@ const COMMON_ICONS = [
   'file-circle-check', 'file-circle-xmark', 'file-shield', 'clipboard', 'clipboard-list', 'clipboard-check',
   'clipboard-question', 'book', 'book-open', 'scroll', 'newspaper', 'address-book', 'id-card',
 
-  // --- Действия и статусы ---
+  // --- Действия и статусы (Добавлены иконки из вашего проекта) ---
   'star', 'heart', 'check', 'xmark', 'plus', 'minus', 'trash', 'pen', 'pen-nib', 'floppy-disk', 'rotate-left', 'rotate-right',
   'circle-check', 'circle-xmark', 'circle-exclamation', 'circle-info', 'circle-question', 'circle-plus', 'circle-minus',
-  'triangle-exclamation', 'ban', 'lock', 'unlock', 'key', 'shield', 'shield-check', 'thumbs-up', 'thumbs-down',
+  'circle-pause', 'triangle-exclamation', 'ban', 'lock', 'unlock', 'key', 'shield', 'shield-check', 'thumbs-up', 'thumbs-down',
   'magnifying-glass', 'search', 'eye', 'eye-slash', 'bell', 'flag', 'tag', 'tags', 'paperclip', 'link',
+  'spinner', 'hourglass-half', 'font', 'right-to-bracket', 'arrows-up-down', 'cube', 'table-list',
 
   // --- Люди и роли ---
   'user', 'users', 'user-doctor', 'user-nurse', 'user-tie', 'user-gear', 'user-pen', 'user-clock',
   'stethoscope', 'hand-holding-medical', 'person-dots-from-line', 'id-badge', 'id-card-clip',
 
   // --- Навигация и время ---
-  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'arrows-up-down', 'arrows-left-right',
+  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'arrows-left-right', 'right-left',
   'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right', 'caret-up', 'caret-down',
   'clock', 'clock-rotate-left', 'calendar', 'calendar-days', 'calendar-check', 'calendar-xmark',
-  'hourglass', 'hourglass-start', 'hourglass-half', 'hourglass-end',
+  'hourglass', 'hourglass-start', 'hourglass-end',
 
   // --- Связь и IT ---
   'envelope', 'phone', 'mobile-screen', 'print', 'barcode', 'qrcode', 'wifi', 'network-wired',
   'download', 'upload', 'cloud', 'cloud-arrow-down', 'cloud-arrow-up', 'database', 'server', 'gear',
-  'screwdriver-wrench', 'wrench', 'hammer', 'plug', 'power-off', 'circle-play', 'circle-pause',
+  'screwdriver-wrench', 'wrench', 'hammer', 'plug', 'power-off', 'circle-play',
 
   // --- Транспорт и место ---
   'box', 'box-open', 'truck', 'truck-fast', 'location-dot', 'map-location-dot', 'building', 'hospital',
@@ -154,7 +155,6 @@ function ensureEditor() {
         const content = editor.value;
         const title = document.getElementById('he-title').value || 'Справка';
         
-        // Показываем индикатор загрузки прямо в кнопке
         const btn = editor.container.querySelector('.jodit-toolbar-button_export_docx button');
         const originalHtml = btn ? btn.innerHTML : '';
         if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -185,7 +185,6 @@ function ensureEditor() {
       } catch (e) {
         showToast('Ошибка экспорта: ' + e.message, 'error');
       } finally {
-        // Возвращаем иконку кнопки обратно
         const btn = editor.container.querySelector('.jodit-toolbar-button_export_docx button');
         if (btn) btn.innerHTML = '<i class="fa-solid fa-file-word"></i>';
       }
@@ -198,15 +197,19 @@ function ensureEditor() {
     theme: isDark ? 'dark' : 'default',
     minHeight: 420,
     maxHeight: 700,
-    toolbarAdaptive: false, // Отключает выпадающее меню с белым фоном
+    toolbarAdaptive: false,
     
-     // 🆕 Запрещаем Jodit тянуть что-либо из интернета
+    // 🆕 Убираем конфликт с модальным окном при полном экране
+    fullsize: false,
+    globalFullSize: false,
+
+    // 🆕 Запрещаем тянуть что-либо из интернета
     sourceEditor: 'area',               
     sourceEditorCDNUrlsJS: [],          
     beautifyHTML: false,                
     beautifyHTMLCDNUrlsJS: [],          
     
-    plugins: 'print, search, copyformat, table, image, link, fullsize, source',
+    plugins: 'print, search, copyformat, table, image, link, source',
     
     uploader: {
       url: '/api/help/images/upload',
@@ -219,15 +222,13 @@ function ensureEditor() {
     buttons: [
       'undo', 'redo', '|',
       'paragraph', 'font', 'fontsize', '|',
-      // 🆕 Добавили 'copyformat' (копировать формат)
       'bold', 'italic', 'underline', 'strikethrough', 'copyformat', '|',
       'brush', 'color', 'backgroundcolor', '|',
       'align', 'ul', 'ol', '|',
-      // 🆕 Добавили 'video' и 'hr' (горизонтальная линия)
       'link', 'image', 'table', 'hr', '|',
       'fa_icon', 'myfile', 'export_docx', '|',
-      // 🆕 Добавили 'find' (поиск), 'selectall' (выделить всё) и 'print' (печать)
-      'find', 'selectall', 'eraser', 'print', 'fullsize', 'source'
+      // 🆕 Убрали 'fullsize' из списка кнопок, чтобы не ломать модалку
+      'find', 'selectall', 'eraser', 'print', 'source'
     ]
   });
 }
