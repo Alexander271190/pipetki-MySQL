@@ -570,8 +570,6 @@ router.post('/reset-data', authenticate, requireRole(['admin']), async (req, res
 });
 
 // POST /api/settings/apply-fields-to-all
-// Применяет указанный набор полей ко ВСЕМ пользователям,
-// у которых нет персональных настроек или которые явно отмечены.
 router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     const { visibleFields, mode } = req.body || {};
@@ -580,17 +578,12 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
       return res.status(400).json({ error: 'Ожидается массив visibleFields' });
     }
 
-    // 🆕 ЗАЩИТА ОТ ПУСТОГО МАССИВА
     if (visibleFields.length === 0) {
       return res.status(400).json({
         error: 'Список полей пуст. Выберите хотя бы одно поле.'
       });
     }
 
-    // Режимы:
-    //   'missing' — только тем, у кого настроек НЕТ (не создавать лишние записи)
-    //   'all'     — всем без исключения (перезаписать настройки)
-    //   'add'     — добавить указанные поля ко всем, не трогая остальные
     const m = mode || 'missing';
     if (!['missing', 'add', 'all'].includes(m)) {
       return res.status(400).json({ error: 'Неизвестный mode' });
@@ -604,8 +597,10 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
       catch { prefsByUser[r.user_id] = {}; }
     }
 
-        let updated = 0;
+    let updated = 0;
     await withTransaction(async (conn) => {
+      const values = []; 
+
       for (const u of users) {
         const cur = prefsByUser[u.id] || {};
         let nextVisibleFields;
@@ -629,12 +624,16 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
           _virtualsInitialized: true,
         };
 
+        values.push([u.id, JSON.stringify(merged)]);
+      }
+
+      if (values.length > 0) {
         await conn.query(
-          `INSERT INTO user_preferences (user_id, preferences) VALUES (?, ?)
+          `INSERT INTO user_preferences (user_id, preferences) VALUES ?
            ON DUPLICATE KEY UPDATE preferences = VALUES(preferences), updated_at = CURRENT_TIMESTAMP`,
-          [u.id, JSON.stringify(merged)]
+          [values]
         );
-        updated++;
+        updated = values.length;
       }
     });
 
@@ -651,7 +650,6 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
     res.status(500).json({ error: 'Ошибка применения настроек' });
   }
 });
-
 router.post('/reset-help', authenticate, requireRole(['admin']), async (req, res) => {
   try {
     await withTransaction(async (conn) => {
