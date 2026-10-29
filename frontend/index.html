@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Клинико-диагностическая лаборатория</title>
    <link rel="stylesheet" href="fontawesome/css/all.min.css">
-  <link rel="stylesheet" href="/vendor/jodit/jodit.min.css">
-  <script src="/vendor/jodit/jodit.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/jszip/dist/jszip.min.js"></script>
+  <script src="https://unpkg.com/docx-preview/dist/docx-preview.min.js"></script>
+   <link rel="stylesheet" href="style.css">
   <script src="js/00-constants.js" defer></script>
   <script src="js/01-config.js" defer></script>
   <script src="js/02-utils.js" defer></script>
@@ -1076,94 +1076,38 @@
   </div>
 </div>
   
-  <!-- МОДАЛКА СПРАВКИ -->
+  <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
 <div class="modal-overlay" id="hotkeys-modal">
-  <div class="modal modal-xl">
+  <div class="modal modal-xl" style="height: 90vh; display: flex; flex-direction: column;">
     <h2><i class="fa-solid fa-book-open"></i> Инструкция по работе с системой</h2>
 
-    <div class="docs-layout">
-      <aside class="docs-sidebar" id="docs-sidebar"></aside>
-      <main class="docs-content" id="docs-content"></main>
+    <div class="docs-layout" style="flex: 1; display: flex; gap: 20px; overflow: hidden; min-height: 0;">
+      
+      <!-- Сайдбар слева -->
+      <aside class="docs-sidebar" id="docs-sidebar" style="width: 260px; overflow-y: auto; border-right: 1px solid #e2e8f0; padding-right: 10px; flex-shrink: 0;"></aside>
+      
+      <!-- Предпросмотр документа справа -->
+      <main style="flex: 1; display: flex; flex-direction: column; background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+        
+        <div id="doc-preview-container" style="flex: 1; overflow: auto; padding: 20px; display: flex; justify-content: center;">
+          <p style="color: #94a3b8; margin-top: 50px;">Выберите раздел слева</p>
+        </div>
+        
+        <!-- Кнопки действий внизу -->
+        <div style="padding: 10px 20px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end; display: none;" id="doc-actions">
+          <button type="button" class="btn btn-info" onclick="printCurrentDoc()"><i class="fa-solid fa-print"></i> Печать</button>
+          <a id="doc-download-link" class="btn btn-secondary" download><i class="fa-solid fa-download"></i> Скачать файл</a>
+        </div>
+      </main>
     </div>
 
-    <div class="form-actions">
-      <button type="button" class="btn btn-info" onclick="printHelpSection()">
-        <i class="fa-solid fa-print"></i> Распечатать раздел
-      </button>
-      <button type="button" class="btn btn-secondary" onclick="closeHotkeysHelp()">Закрыть</button>
-    </div>
-  </div>
-</div>
-
-<!-- МОДАЛКА РЕДАКТОРА СПРАВКИ -->
-<div class="modal-overlay" id="help-editor-modal">
-  <div class="modal modal-lg">
-    <h2 id="help-editor-title"><i class="fa-solid fa-pen"></i> Редактирование</h2>
-
-    <input type="hidden" id="he-slug" value="">
-
-    <div class="form-row">
-      <div class="form-group" style="flex:1;">
-        <label>Название раздела *</label>
-        <input type="text" id="he-title" placeholder="Например: Вход в систему">
-      </div>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group" style="flex:0 0 120px;">
-        <label>Порядок</label>
-        <input type="number" id="he-sort-order" value="0" min="0">
-      </div>
-      <div class="form-group" style="flex:0 0 160px;">
-        <label>Включён</label>
-        <label class="bc-fallback-line" style="height:36px;">
-          <input type="checkbox" id="he-enabled" checked>
-          <span>Показывать</span>
-        </label>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Права (видимость)</label>
-      <small style="color:#64748b;display:block;margin-bottom:6px;font-size:.78rem;">
-        Если ничего не отмечено — раздел видят все. Если отмечены — только те, у кого есть любое из них, либо админ.
-      </small>
-      <div id="he-permissions" class="help-perms-grid"></div>
-    </div>
-
-    <div class="form-group help-editor-content-group">
-      <label>Содержимое раздела</label>
-      <textarea id="he-content" rows="14"></textarea>
-    </div>
-
-    <div id="he-error" class="auth-error" style="margin-top:8px;"></div>
-
-    <div class="form-actions">
-      <button type="button" class="btn btn-secondary" onclick="closeHelpEditor()">Отмена</button>
-      <button type="button" class="btn btn-primary" onclick="saveHelpEditor()">
-        <i class="fa-solid fa-floppy-disk"></i> Сохранить
-      </button>
+    <div class="form-actions" style="margin-top: 15px; justify-content: flex-end;">
+      <button type="button" class="btn btn-secondary" onclick="UI.modal.close('hotkeys-modal')">Закрыть</button>
     </div>
   </div>
 </div>
 
-  <!-- 🆕 МОДАЛКА ВЫБОРА ИКОНКИ -->
-<div class="modal-overlay" id="fa-picker-modal">
-  <div class="modal modal-lg">
-    <h2><i class="fa-solid fa-icons"></i> Выбор иконки</h2>
-    <div class="form-group">
-      <input type="text" id="fa-search" placeholder="Поиск иконки (например: star, user, flask)..." oninput="filterIcons(this.value)">
-    </div>
-    <div id="fa-icons-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding: 10px; background: var(--card-alt); border-radius: 8px;">
-      <!-- Заполняется через JS -->
-    </div>
-    <div class="form-actions">
-      <button type="button" class="btn btn-secondary" onclick="closeFaPicker()">Отмена</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div>  
 </body>
 </html>
   
