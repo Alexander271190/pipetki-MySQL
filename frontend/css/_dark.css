@@ -382,5 +382,49 @@ html[data-theme="dark"] .jodit-toolbar__box {
   border-bottom: 1px solid #334155 !important;
 }
 
+/* ============================================================
+   РЕДАКТОР СПРАВКИ — НА ВЕСЬ ЭКРАН
+   ============================================================ */
+
+/* Растягиваем саму модалку */
+#help-editor-modal .modal {
+  width: 96vw;
+  max-width: 96vw;
+  height: 92vh;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Группа с редактором забирает всё свободное пространство */
+#help-editor-modal .help-editor-content-group {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+/* Контейнер Jodit */
+#help-editor-modal .jodit-container {
+  flex: 1 1 auto;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Рабочая область (куда пишется текст) */
+#help-editor-modal .jodit-workplace {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+}
+
+/* Само поле ввода */
+#help-editor-modal .jodit-wysiwyg {
+  height: 100% !important;
+  min-height: 0 !important;
+}
 
 
