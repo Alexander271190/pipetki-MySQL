@@ -99,16 +99,37 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
+// 🆕 Вспомогательная функция транслитерации для авто-генерации кода
+function slugifyTitle(text) {
+  const ru = { 'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya' };
+  let res = text.toLowerCase().split('').map(ch => ru[ch] !== undefined ? ru[ch] : ch).join('');
+  res = res.replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  return res || 'doc_' + Date.now().toString(36);
+}
+
 router.post('/upload', authenticate, requireRole(['admin']), upload.single('file'), async (req, res) => {
   try {
-    const { slug, title, requiredPermissions, sortOrder, enabled } = req.body;
-    if (!slug || !/^[a-z][a-z0-9_-]*$/.test(slug)) return res.status(400).json({ error: 'Некорректный код' });
+    let { slug, title, requiredPermissions, sortOrder, enabled } = req.body;
     if (!title) return res.status(400).json({ error: 'Заполните заголовок' });
+
+    // 🆕 АВТО-ГЕНЕРАЦИЯ SLUG (если его нет, например, при создании нового)
+    if (!slug) {
+      const baseSlug = slugifyTitle(title);
+      let finalSlug = baseSlug;
+      let counter = 1;
+      // Проверяем на дубликаты в базе
+      while (true) {
+        const [ex] = await db.query('SELECT id FROM help_docs WHERE slug = ?', [finalSlug]);
+        if (ex.length === 0) break;
+        finalSlug = `${baseSlug}_${counter++}`;
+      }
+      slug = finalSlug;
+    }
 
     const [ex] = await db.query('SELECT id, file_path FROM help_docs WHERE slug = ?', [slug]);
     let filePath = ex.length ? ex[0].file_path : null;
     if (req.file) filePath = `uploads/help/${req.file.filename}`;
-    else if (!ex.length) return res.status(400).json({ error: 'Файл обязателен' });
+    else if (!ex.length) return res.status(400).json({ error: 'Файл обязателен для нового раздела' });
 
     const permsJson = requiredPermissions || '[]';
     const isEnabled = enabled === 'true' ? 1 : 0;
