@@ -477,3 +477,46 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
 [data-theme="dark"] .audit-tab-btn:hover {
   background: #273449;
 }
+
+
+/* ============================================================
+   🆕 ФИКС ПОЛНОЭКРАННОГО РЕЖИМА JODIT
+   ============================================================ */
+
+.modal-overlay.jodit-fullscreen-modal {
+  padding: 0 !important;
+}
+
+.modal-overlay.jodit-fullscreen-modal .modal {
+  max-width: 100vw !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  padding: 0 !important;
+}
+
+/* Внутри полноэкранной модалки возвращаем отступы для контента */
+.modal-overlay.jodit-fullscreen-modal .modal > h2,
+.modal-overlay.jodit-fullscreen-modal .modal > .form-row,
+.modal-overlay.jodit-fullscreen-modal .modal > .form-group,
+.modal-overlay.jodit-fullscreen-modal .modal > .form-actions,
+.modal-overlay.jodit-fullscreen-modal .modal > #he-error,
+.modal-overlay.jodit-fullscreen-modal .modal > #he-permissions {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.modal-overlay.jodit-fullscreen-modal .modal > h2 {
+  padding-top: 20px;
+}
+
+.modal-overlay.jodit-fullscreen-modal .jodit-container {
+  height: calc(100vh - 200px) !important;
+  max-height: calc(100vh - 200px) !important;
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+}
