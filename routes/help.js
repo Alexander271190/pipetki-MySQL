@@ -87,13 +87,21 @@ function canSeeSection(user, row) {
   return req.some(p => perms.includes(p));
 }
 
+// Получить видимые разделы для пользователя (с файлами)
 router.get('/visible', authenticate, async (req, res) => {
   try {
     const rows = await getHelpDocsCached();
     const visible = rows
       .filter(r => r.enabled)
       .filter(r => canSeeSection(req.user, r));
-    res.json(visible.map(r => ({ id: r.id, slug: r.slug, title: r.title, content: r.content })));
+      
+    // 🆕 Отдаем filePath вместо старого content
+    res.json(visible.map(r => ({ 
+      id: r.id, 
+      slug: r.slug, 
+      title: r.title, 
+      filePath: r.file_path 
+    })));
   } catch (e) {
     console.error('GET /help/visible:', e);
     res.status(500).json({ error: 'Ошибка загрузки' });
