@@ -198,7 +198,11 @@ function ensureEditor() {
     theme: isDark ? 'dark' : 'default',
     minHeight: 420,
     maxHeight: 700,
-    toolbarAdaptive: false,
+    toolbarAdaptive: false, // Отключает выпадающее меню с белым фоном
+    
+    // 🆕 Явно указываем плагины, которые хотим использовать (на всякий случай)
+    plugins: 'print, search, copyformat, table, image, link, fullsize, source',
+    
     uploader: {
       url: '/api/help/images/upload',
       format: 'json',
@@ -210,12 +214,15 @@ function ensureEditor() {
     buttons: [
       'undo', 'redo', '|',
       'paragraph', 'font', 'fontsize', '|',
-      'bold', 'italic', 'underline', 'strikethrough', '|',
+      // 🆕 Добавили 'copyformat' (копировать формат)
+      'bold', 'italic', 'underline', 'strikethrough', 'copyformat', '|',
       'brush', 'color', 'backgroundcolor', '|',
       'align', 'ul', 'ol', '|',
-      'link', 'image', 'table', '|',
+      // 🆕 Добавили 'video' и 'hr' (горизонтальная линия)
+      'link', 'image', 'table', 'hr', '|',
       'fa_icon', 'myfile', 'export_docx', '|',
-      'eraser', 'fullsize', 'source'
+      // 🆕 Добавили 'find' (поиск), 'selectall' (выделить всё) и 'print' (печать)
+      'find', 'selectall', 'eraser', 'print', 'fullsize', 'source'
     ]
   });
 }
