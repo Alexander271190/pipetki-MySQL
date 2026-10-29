@@ -383,48 +383,88 @@ html[data-theme="dark"] .jodit-toolbar__box {
 }
 
 /* ============================================================
-   РЕДАКТОР СПРАВКИ — НА ВЕСЬ ЭКРАН
+   РЕДАКТОР СПРАВКИ — НА ВЕСЬ ЭКРАН + ВИДИМЫЙ ЯКОРЬ (ТОЛЬКО ЗДЕСЬ)
    ============================================================ */
 
-/* Растягиваем саму модалку */
+/* 1. Сама модалка редактора */
 #help-editor-modal .modal {
   width: 96vw;
   max-width: 96vw;
   height: 92vh;
   max-height: 92vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important; /* Скрываем скролл у самой модалки */
+  padding-bottom: 12px !important; /* Немного места снизу */
 }
 
-/* Группа с редактором забирает всё свободное пространство */
+/* 2. Запрещаем верхним элементам (заголовок, права) сжиматься */
+#help-editor-modal .modal > * {
+  flex-shrink: 0;
+}
+
+/* 3. Группа с редактором забирает ВСЁ оставшееся место */
 #help-editor-modal .help-editor-content-group {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 0;
+  flex: 1 1 0% !important; /* Критически важно: 0% заставляет занять ровно оставшееся место */
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
 }
 
-/* Контейнер Jodit */
+/* 4. Сам Jodit тоже делаем флекс-колонкой */
 #help-editor-modal .jodit-container {
-  flex: 1 1 auto;
+  flex: 1 1 auto !important;
   height: 100% !important;
   min-height: 0 !important;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
-/* Рабочая область (куда пишется текст) */
+/* 5. Рабочая область Jodit (куда пишется текст) */
 #help-editor-modal .jodit-workplace {
-  flex: 1 1 auto;
-  min-height: 0 !important;
-}
-
-/* Само поле ввода */
-#help-editor-modal .jodit-wysiwyg {
+  flex: 1 1 auto !important;
   height: 100% !important;
   min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* 6. Само поле ввода */
+#help-editor-modal .jodit-wysiwyg {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+
+/* ============================================================
+   🆕 ВИДИМЫЙ ЯКОРЬ (ТОЛЬКО ДЛЯ ОКНА РЕДАКТОРА)
+   ============================================================ */
+#help-editor-modal .modal::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  /* Рисуем красивый уголок */
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.3) 50%);
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 99999 !important; /* Поднимаем ВЫШЕ Jodit, чтобы его было видно */
+  border-bottom-right-radius: 14px;
+}
+
+/* В темной теме уголок светлый */
+html[data-theme="dark"] #help-editor-modal .modal::after {
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.4) 50%);
+}
+
+/* Если открыт полноэкранный режим (квадратик в Jodit) — якорь прячем */
+#help-editor-modal.jodit-fullscreen-modal .modal::after {
+  display: none !important;
 }
 
 
