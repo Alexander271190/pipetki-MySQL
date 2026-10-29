@@ -383,7 +383,7 @@ html[data-theme="dark"] .jodit-toolbar__box {
 }
 
 /* ============================================================
-   РЕДАКТОР СПРАВКИ — ФИНАЛЬНЫЙ ФИКС ВЫСОТЫ
+   РЕДАКТОР СПРАВКИ — ОБЫЧНЫЙ РЕЖИМ
    ============================================================ */
 
 #help-editor-modal .modal {
@@ -397,47 +397,91 @@ html[data-theme="dark"] .jodit-toolbar__box {
   padding-bottom: 12px !important;
 }
 
-/* Запрещаем верхним элементам (заголовок, права) сжиматься */
+/* Запрещаем верхним элементам сжиматься */
 #help-editor-modal .modal > * {
   flex-shrink: 0;
 }
 
-/* Группа с редактором забирает ВСЁ оставшееся место */
+/* Группа с редактором */
 #help-editor-modal .help-editor-content-group {
   flex: 1 1 0% !important; 
   display: flex !important;
   flex-direction: column !important;
   min-height: 0 !important;
   margin-bottom: 0 !important;
+  overflow: hidden !important;
 }
 
-/* Контейнер Jodit */
-#help-editor-modal .jodit-container {
-  flex: 1 1 auto !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* Рабочая область (куда пишется текст) */
+/* Контейнеры Jodit */
+#help-editor-modal .jodit-container,
 #help-editor-modal .jodit-workplace {
   flex: 1 1 auto !important;
-  height: 100% !important;
   min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
-/* Само поле ввода — заставляем тянуться до самого низа */
+/* Поле ввода */
 #help-editor-modal .jodit-wysiwyg {
   flex: 1 1 auto !important;
-  height: 100% !important;
   min-height: 0 !important;
   overflow-y: auto !important;
 }
 
-/* УБИРАЕМ мой кастомный уголок, чтобы работал стандартный из _modals.css */
+/* Убираем кастомный уголок, чтобы работал стандартный из _modals.css */
 #help-editor-modal .modal::after {
   display: none !important;
+}
+
+/* ============================================================
+   РЕДАКТОР СПРАВКИ — ПОЛНОЭКРАННЫЙ РЕЖИМ (КВАДРАТИК В JODIT)
+   ============================================================ */
+
+#help-editor-modal.jodit-fullscreen-modal .modal {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Группа с редактором — жестко на 100% */
+#help-editor-modal.jodit-fullscreen-modal .help-editor-content-group {
+  flex: 1 1 auto !important;
+  height: 100% !important; 
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Контейнер Jodit — жестко на 100% */
+#help-editor-modal.jodit-fullscreen-modal .jodit-container {
+  flex: 1 1 auto !important;
+  height: 100% !important; 
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Рабочая область Jodit — жестко на 100% */
+#help-editor-modal.jodit-fullscreen-modal .jodit-workplace {
+  flex: 1 1 auto !important;
+  height: 100% !important; 
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Само поле ввода — жестко на 100% */
+#help-editor-modal.jodit-fullscreen-modal .jodit-wysiwyg {
+  flex: 1 1 auto !important;
+  height: 100% !important; 
+  min-height: 0 !important;
+  overflow-y: auto !important;
 }
