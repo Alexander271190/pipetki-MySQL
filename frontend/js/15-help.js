@@ -193,7 +193,7 @@ function ensureEditor() {
     }
   };
 
-  // Инициализация Jodit
+    // Инициализация Jodit
   helpEditor = Jodit.make('#he-content', {
     language: 'ru',
     theme: isDark ? 'dark' : 'default',
@@ -204,6 +204,18 @@ function ensureEditor() {
     
     // Отключаем глобальное изменение классов у родителей
     globalFullSize: false,
+
+    // 🆕 ВАЖНО: Отключаем iframe, чтобы стили FontAwesome с главной страницы работали внутри редактора
+    iframe: false, 
+
+    // 🆕 Разрешаем Jodit сохранять теги <i> и <span> (для иконок)
+    allowTags: false,
+    
+    // 🆕 Отключаем агрессивную очистку пустых тегов
+    cleanHTML: {
+      fillEmptyParagraph: false,
+      removeEmptyElements: false
+    },
 
     // Запрещаем Jodit тянуть что-либо из интернета
     sourceEditor: 'area',               
@@ -232,7 +244,7 @@ function ensureEditor() {
       'find', 'selectall', 'eraser', 'print', 'fullsize', 'source'
     ]
   });
-
+  
   // 🆕 МАГИЯ: Синхронизация полноэкранного режима Jodit и модалки
   // ✅ Только этот блок, никакого старого кода с "modal.style..." здесь быть не должно
   helpEditor.e.on('toggleFullSize', (isFullSize) => {
