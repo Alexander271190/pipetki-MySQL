@@ -201,10 +201,10 @@ function ensureEditor() {
     maxHeight: 700,
     toolbarAdaptive: false,
     
-    // 🆕 Отключаем глобальное изменение классов у родителей
+    // Отключаем глобальное изменение классов у родителей
     globalFullSize: false,
 
-    // 🆕 Запрещаем Jodit тянуть что-либо из интернета
+    // Запрещаем Jodit тянуть что-либо из интернета
     sourceEditor: 'area',               
     sourceEditorCDNUrlsJS: [],          
     beautifyHTML: false,                
@@ -233,28 +233,15 @@ function ensureEditor() {
   });
 
   // 🆕 МАГИЯ: Синхронизация полноэкранного режима Jodit и модалки
+  // ✅ Только этот блок, никакого старого кода с "modal.style..." здесь быть не должно
   helpEditor.e.on('toggleFullSize', (isFullSize) => {
-    const modal = document.querySelector('#help-editor-modal .modal');
-    if (!modal) return;
+    const overlay = document.getElementById('help-editor-modal');
+    if (!overlay) return;
 
     if (isFullSize) {
-      // Разворачиваем модалку на весь экран
-      modal.style.maxWidth = '100vw';
-      modal.style.width = '100vw';
-      modal.style.height = '100vh';
-      modal.style.maxHeight = '100vh';
-      modal.style.margin = '0';
-      modal.style.borderRadius = '0';
-      modal.style.clipPath = 'none';
+      overlay.classList.add('jodit-fullscreen-modal');
     } else {
-      // Возвращаем стандартные размеры
-      modal.style.maxWidth = '';
-      modal.style.width = '';
-      modal.style.height = '';
-      modal.style.maxHeight = '';
-      modal.style.margin = '';
-      modal.style.borderRadius = '';
-      modal.style.clipPath = '';
+      overlay.classList.remove('jodit-fullscreen-modal');
     }
   });
 }
@@ -473,7 +460,7 @@ async function openHelpEditor(mode, slug) {
 }
 
 function closeHelpEditor() {
-  // 🆕 Если редактор был в полном экране, принудительно возвращаем модалку в нормальный вид
+  // Если редактор был в полном экране, принудительно возвращаем модалку в нормальный вид
   if (helpEditor && helpEditor.isFullSize) {
     helpEditor.toggleFullSize(false);
   }
