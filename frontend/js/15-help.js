@@ -7,126 +7,154 @@ let _helpEditorMode = 'create';
 let _helpEditorSlug = null;
 
 // ============================================================
-// 🆕 TinyMCE
+// 🆕 Jodit Editor + Кастомные кнопки
 // ============================================================
-let _tinymceReadyPromise = null;
+let helpEditor = null;
+let _faPickerCallback = null;
 
-function ensureTinyMCE() {
-  if (_tinymceReadyPromise) return _tinymceReadyPromise;
-  
-  _tinymceReadyPromise = new Promise((resolve) => {
-    if (typeof tinymce === 'undefined') {
-      console.error('TinyMCE не загружен. Проверьте /vendor/tinymce/tinymce.min.js');
-      resolve(false);
-      return;
-    }
-   
-    const _origAdd = EventTarget.prototype.addEventListener;
-    EventTarget.prototype.addEventListener = function(type, listener, options) {
-      if (type === 'touchstart' || type === 'touchmove') {
-        if (typeof options === 'boolean') {
-          options = { capture: options, passive: true };
-        } else if (options && typeof options === 'object') {
-          options = { ...options, passive: true };
-        } else {
-          options = { passive: true };
-        }
-      }
-      return _origAdd.call(this, type, listener, options);
-    };
-   
-    setTimeout(() => {
-      EventTarget.prototype.addEventListener = _origAdd;
-    }, 3000);
+const COMMON_ICONS = [
+  'star', 'heart', 'check', 'xmark', 'plus', 'minus', 'trash', 'pen', 'floppy-disk', 'rotate-left', 'rotate-right',
+  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'chevron-up', 'chevron-down', 'chevron-left', 'chevron-right',
+  'circle-check', 'circle-xmark', 'circle-exclamation', 'circle-info', 'circle-question',
+  'triangle-exclamation', 'bell', 'user', 'users', 'gear', 'wrench', 'screwdriver-wrench',
+  'flask', 'flask-vial', 'vial', 'microscope', 'eye-dropper', 'syringe', 'pills', 'tablets',
+  'file', 'file-lines', 'file-pdf', 'file-excel', 'file-word', 'folder', 'folder-open',
+  'image', 'camera', 'video', 'print', 'barcode', 'qrcode', 'tag', 'tags',
+  'box', 'box-open', 'truck', 'clipboard', 'clipboard-list', 'clipboard-check',
+  'lock', 'unlock', 'key', 'shield', 'clock', 'calendar', 'calendar-days', 'magnifying-glass',
+  'filter', 'list', 'list-check', 'ellipsis', 'ellipsis-vertical', 'download', 'upload',
+  'right-left', 'arrows-rotate', 'link', 'paperclip', 'thumbtack', 'book', 'book-open', 'scroll'
+];
 
-    // 🆕 Безопасная сборка стилей без вложенных бэктиков
-    let customStyle = 'body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.5; }';
-    
-    if (document.documentElement.getAttribute('data-theme') === 'dark') {
-      customStyle += ' body { background-color: #1e293b !important; color: #e2e8f0 !important; } ';
-      customStyle += ' a { color: #818cf8 !important; } ';
-      customStyle += ' table, th, td { border-color: #475569 !important; } ';
-      customStyle += ' th { background-color: #273449 !important; } ';
-    }
+function openFaPicker(callback) {
+  _faPickerCallback = callback;
+  const search = document.getElementById('fa-search');
+  if (search) search.value = '';
+  renderFaIcons(COMMON_ICONS);
+  UI.modal.open('fa-picker-modal');
+}
 
-    tinymce.init({
-      selector: '#he-content',
-      license_key: 'gpl',
-      min_height: 420,
-      max_height: 700,
-      branding: false,
-      promotion: false,
-      plugins: 'lists link image table code fullscreen searchreplace',
-      toolbar: [
-        'undo redo | styles fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor',
-        'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent',
-        'link table image myfile | removeformat code fullscreen'
-      ],
-      setup: (editor) => {
-        editor.ui.registry.addButton('myfile', {
-          text: 'Прикрепить файл',
-          tooltip: 'Загрузить PDF, DOCX, XLSX или ZIP',
-          onAction: () => {
-            const input = document.getElementById('he-file-input');
-            input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv';
-            input.value = '';
-            input.click();
-          }
-        });
-        editor.on('init', () => resolve(true));
-      },
-      images_upload_handler: async (blobInfo, progress) => {
+function closeFaPicker() {
+  UI.modal.close('fa-picker-modal');
+  _faPickerCallback = null;
+}
+
+function renderFaIcons(icons) {
+  const grid = document.getElementById('fa-icons-grid');
+  if (!grid) return;
+  grid.innerHTML = icons.map(icon => `
+    <button type="button" class="btn btn-secondary" style="padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%;" onclick="selectFaIcon('${icon}')" title="${icon}">
+      <i class="fa-solid fa-${icon}" style="font-size: 1.2rem;"></i>
+      <span style="font-size: 0.65rem; color: #64748b; word-break: break-all; text-align: center; line-height: 1.1;">${icon}</span>
+    </button>
+  `).join('');
+}
+
+function filterIcons(query) {
+  const q = query.toLowerCase();
+  const filtered = COMMON_ICONS.filter(icon => icon.includes(q));
+  renderFaIcons(filtered);
+}
+
+function selectFaIcon(icon) {
+  if (_faPickerCallback) _faPickerCallback(icon);
+  closeFaPicker();
+}
+
+function ensureEditor() {
+  if (helpEditor) return;
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  // 1. Кастомная кнопка: Прикрепить файл
+  Jodit.defaultOptions.controls.myfile = {
+    icon: 'file',
+    tooltip: 'Прикрепить файл',
+    exec: function(editor) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv';
+      input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
         const fd = new FormData();
-        fd.append('file', blobInfo.blob(), blobInfo.filename());
-        const res = await fetch('/api/help/files/upload', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + authToken },
-          body: fd
-        });
-        const data = await res.json();
-        return data.url;
-      },
-      paste_data_images: true,
-      automatic_uploads: true,
-      file_picker_types: 'image file',
-      file_picker_callback: (cb, value, meta) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = meta.filetype === 'image' ? 'image/*' : '.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt';
-        input.onchange = async () => {
-          const file = input.files[0];
-          const fd = new FormData();
-          fd.append('file', file);
+        fd.append('file', file);
+
+        try {
+          editor.busy = true;
           const res = await fetch('/api/help/files/upload', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + authToken },
             body: fd
           });
+          if (!res.ok) throw new Error((await res.json().catch(()=>({}))).error || 'Ошибка загрузки');
           const data = await res.json();
-          cb(data.url, { alt: file.name });
-        };
-        input.click();
-      },
-      extended_valid_elements: 'i[class|style]',
-      content_css: '/fontawesome/css/all.min.css',
-      skin: 'oxide',
-      content_style: customStyle
-    });
+
+          let insertHtml = '';
+          if (data.isImage) {
+            insertHtml = `<p><img src="${data.url}" alt="${esc(file.name)}" style="max-width:100%; border-radius:8px;"></p>`;
+          } else if (data.isPdf) {
+            insertHtml = `<p>📄 <a href="${data.url}" target="_blank" rel="noopener">Скачать: ${esc(file.name)} (PDF)</a></p>`;
+          } else {
+            const ext = file.name.split('.').pop().toUpperCase();
+            insertHtml = `<p>📎 <a href="${data.url}" target="_blank" rel="noopener">Скачать: ${esc(file.name)} (${ext})</a></p>`;
+          }
+          editor.selection.insertHTML(insertHtml);
+        } catch (e) {
+          showToast('Ошибка: ' + e.message, 'error');
+        } finally {
+          editor.busy = false;
+        }
+      };
+      input.click();
+    }
+  };
+
+  // 2. Кастомная кнопка: Вставить иконку
+  Jodit.defaultOptions.controls.fa_icon = {
+    icon: 'font',
+    tooltip: 'Вставить иконку (FontAwesome)',
+    exec: function(editor) {
+      openFaPicker((iconName) => {
+        editor.selection.insertHTML(`<i class="fa-solid fa-${iconName}"></i>&nbsp;`);
+      });
+    }
+  };
+
+  // 3. Инициализация Jodit
+  helpEditor = Jodit.make('#he-content', {
+    language: 'ru',
+    theme: isDark ? 'dark' : 'default',
+    minHeight: 420,
+    maxHeight: 700,
+    toolbarAdaptive: false, // Отключает выпадающее меню с белым фоном
+    uploader: {
+      url: '/api/help/images/upload',
+      format: 'json',
+      headers: { 'Authorization': 'Bearer ' + authToken },
+      process: function (response) {
+        return { success: true, files: [response.url] };
+      }
+    },
+    buttons: [
+      'undo', 'redo', '|',
+      'paragraph', 'font', 'fontsize', '|',
+      'bold', 'italic', 'underline', 'strikethrough', '|',
+      'brush', 'color', 'backgroundcolor', '|',
+      'align', 'ul', 'ol', '|',
+      'link', 'image', 'table', '|',
+      'fa_icon', 'myfile', '|',
+      'eraser', 'fullsize', 'source'
+    ]
   });
-  
-  return _tinymceReadyPromise;
 }
 
 function getEditorContent() {
-  const ed = tinymce.get('he-content');
-  if (ed && !ed.isHidden()) return ed.getContent();
-  return document.getElementById('he-content').value;
+  return helpEditor ? helpEditor.value : '';
 }
 
 function setEditorContent(html) {
-  const ed = tinymce.get('he-content');
-  if (ed && !ed.isHidden()) ed.setContent(html);
-  else document.getElementById('he-content').value = html;
+  if (helpEditor) helpEditor.value = html;
 }
 
 // ============================================================
@@ -197,7 +225,6 @@ function renderDocsContent() {
 
 function renderContent(content) {
   if (!content) return '';
-  // Текст из БД уже в HTML. Просто подставляем иконки.
   return content.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/gi, '<i class="fa-solid $1"></i>');
 }
 
@@ -290,7 +317,13 @@ async function openHelpEditor(mode, slug) {
 
   renderHelpPermissions([]);
   UI.modal.open('help-editor-modal');
-  await ensureTinyMCE();
+  
+  ensureEditor();
+
+  // Обновляем токен в загрузчике Jodit на случай, если он изменился
+  if (helpEditor) {
+      helpEditor.uploader.options.headers = { 'Authorization': 'Bearer ' + authToken };
+  }
 
   if (mode === 'edit' && slug) {
     const s = _helpSections.find(x => x.slug === slug);
@@ -326,8 +359,7 @@ async function openHelpEditor(mode, slug) {
   }
 
   setTimeout(() => {
-    const ed = tinymce.get('he-content');
-    if (ed) ed.focus();
+    if (helpEditor) helpEditor.selection.focus();
   }, 200);
 }
 
@@ -474,41 +506,6 @@ function openHelpActions(ev, slug) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const fileInput = document.getElementById('he-file-input');
-  if (fileInput) {
-    fileInput.addEventListener('change', async () => {
-      const file = fileInput.files[0];
-      if (!file) return;
-
-      const fd = new FormData();
-      fd.append('file', file);
-
-      try {
-        showToast('Загрузка файла...', 'success');
-        const res = await fetch('/api/help/files/upload', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + authToken },
-          body: fd
-        });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).error || 'Ошибка');
-        const data = await res.json();
-
-        const ed = tinymce.get('he-content');
-        let insertHtml = '';
-        if (data.isImage) {
-          insertHtml = `<p><img src="${data.url}" alt="${esc(file.name)}" style="max-width:100%; border-radius:8px;"></p>`;
-        } else if (data.isPdf) {
-          insertHtml = `<p>📄 <a href="${data.url}" target="_blank" rel="noopener">Скачать: ${esc(file.name)} (PDF)</a></p>`;
-        } else {
-          const ext = file.name.split('.').pop().toUpperCase();
-          insertHtml = `<p>📎 <a href="${data.url}" target="_blank" rel="noopener">Скачать: ${esc(file.name)} (${ext})</a></p>`;
-        }
-        if (ed) ed.insertContent(insertHtml);
-        showToast('Файл прикреплён!', 'success');
-      } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
-    });
-  }
-
   const importInput = document.getElementById('help-import-input');
   if (importInput) {
     importInput.addEventListener('change', async () => {
