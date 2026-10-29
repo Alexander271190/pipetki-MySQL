@@ -1276,8 +1276,10 @@ async function renderHelpSettings() {
 
     sections.sort((a,b) => (a.sortOrder||0) - (b.sortOrder||0)).forEach(s => {
       const fileName = s.filePath ? s.filePath.split('/').pop() : 'Нет файла';
+      
+      // 🆕 УБРАЛИ вывод s.slug из таблицы
       html += `<tr>
-        <td><strong>${esc(s.title)}</strong><br><small style="color:#94a3b8;">${esc(s.slug)}</small></td>
+        <td><strong>${esc(s.title)}</strong></td> 
         <td><span style="font-size:.8rem;color:#0369a1;"><i class="fa-solid fa-file"></i> ${esc(fileName)}</span></td>
         <td style="text-align:center;">${s.enabled ? '✅' : '❌'}</td>
         <td class="help-admin-actions">
@@ -1305,13 +1307,37 @@ function openHelpAdminActions(ev, slug) {
   renderRowActionsMenu(ev.currentTarget, items);
 }
 
+// 🆕 Добавьте глобальную переменную для хранения выбранных прав
+let _hupSelectedPerms = [];
+
 async function openHelpFileUploadModal(slug = null) {
   const isEdit = !!slug;
   let sec = null;
+  _hupSelectedPerms = []; // Сбрасываем выбор
   
   if (isEdit) {
     const sections = await apiRequest('/help');
     sec = sections.find(x => x.slug === slug);
+    if (sec && sec.requiredPermissions) _hupSelectedPerms = [...sec.requiredPermissions];
+  }
+
+  const groups = {};
+  ALL_PERMISSIONS.forEach(p => {
+    if (!groups[p.group]) groups[p.group] = [];
+    groups[p.group].push(p);
+  });
+
+  let permsHtml = '';
+  for (const [group, items] of Object.entries(groups)) {
+    permsHtml += `<div style="font-size:.7rem;font-weight:700;color:#94a3b8;margin:8px 0 4px 4px;text-transform:uppercase;">${group}</div>`;
+    
+    // 🆕 Убрали невалидный инлайн-стиль hover:background, добавили класс hup-menu-item
+    permsHtml += items.map(p => `
+      <label class="hup-menu-item" style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:4px;">
+        <input type="checkbox" value="${p.key}" class="hup-perm-cb" ${_hupSelectedPerms.includes(p.key) ? 'checked' : ''} onchange="updateHupPermCount()">
+        <span style="font-size:.85rem;color:var(--text-strong);">${p.label.replace(/<[^>]+>/g, '')}</span>
+      </label>
+    `).join('');
   }
 
   const modalHtml = `
@@ -1321,24 +1347,29 @@ async function openHelpFileUploadModal(slug = null) {
         
         <div class="form-group">
           <label>Название (видно пользователям) *</label>
-          <input type="text" id="hup-title" value="${isEdit ? esc(sec.title) : ''}" placeholder="Например: Начало работы">
+          <input type="text" id="hup-title" value="${isEdit ? esc(sec.title) : ''}" placeholder="Например: Вход в систему">
         </div>
-        <div class="form-group">
-          <label>Внутренний код (латиницей) *</label>
-          <input type="text" id="hup-slug" value="${isEdit ? esc(sec.slug) : ''}" ${isEdit ? 'readonly style="background:#f1f5f9;"' : ''} placeholder="Например: intro">
-        </div>
+        
         <div class="form-group">
           <label>Документ (PDF или DOCX) *</label>
           <input type="file" id="hup-file" accept=".pdf,.docx,.doc" ${isEdit ? '' : 'required'}>
           ${isEdit ? '<small style="color:#64748b;">Оставьте пустым, чтобы сохранить текущий файл</small>' : ''}
         </div>
+
         <div class="form-group">
           <label>Права доступа (кто увидит)</label>
-          <select id="hup-permissions" multiple style="height: 100px; width: 100%; padding: 5px;">
-            <option value="">— Видят ВСЕ —</option>
-            ${ALL_PERMISSIONS.map(p => `<option value="${p.key}">${p.label.replace(/<[^>]+>/g, '')}</option>`).join('')}
-          </select>
+          <div class="hup-multiselect-wrap">
+            <div class="hup-multiselect-trigger" onclick="toggleHupDropdown(event)">
+              <span id="hup-perm-text">Выбрано: ${_hupSelectedPerms.length} прав</span>
+              <i class="fa-solid fa-caret-down"></i>
+            </div>
+            <div class="hup-multiselect-menu" id="hup-perm-menu">
+              ${permsHtml}
+            </div>
+          </div>
+          <small style="color:#64748b;margin-top:6px;display:block;">Если ничего не выбрано — раздел видят все.</small>
         </div>
+
         <div class="form-actions">
           <button class="btn btn-secondary" onclick="document.getElementById('help-upload-modal').remove()">Отмена</button>
           <button class="btn btn-success" onclick="uploadHelpFile('${slug || ''}')"><i class="fa-solid fa-upload"></i> Сохранить</button>
@@ -1347,30 +1378,43 @@ async function openHelpFileUploadModal(slug = null) {
     </div>
   `;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
+  updateHupPermCount();
+}
 
-  if (isEdit && sec.requiredPermissions) {
-    const sel = document.getElementById('hup-permissions');
-    Array.from(sel.options).forEach(opt => {
-      if (sec.requiredPermissions.includes(opt.value)) opt.selected = true;
-    });
+// 🆕 Управление выпадающим списком
+function toggleHupDropdown(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('hup-perm-menu');
+  menu.classList.toggle('show');
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('hup-perm-menu');
+  if (menu && !e.target.closest('.hup-multiselect-wrap')) {
+    menu.classList.remove('show');
   }
+});
+
+function updateHupPermCount() {
+  const cbs = document.querySelectorAll('.hup-perm-cb:checked');
+  const txt = document.getElementById('hup-perm-text');
+  if (txt) txt.textContent = `Выбрано: ${cbs.length} прав`;
 }
 
 async function uploadHelpFile(slug) {
   const title = document.getElementById('hup-title').value.trim();
-  const slugVal = document.getElementById('hup-slug').value.trim();
   const fileInput = document.getElementById('hup-file');
-  const sel = document.getElementById('hup-permissions');
   
-  const perms = Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean);
+  // Собираем права
+  _hupSelectedPerms = Array.from(document.querySelectorAll('.hup-perm-cb:checked')).map(cb => cb.value);
 
-  if (!title || !slugVal) { showToast('Заполните название и код', 'error'); return; }
+  if (!title) { showToast('Заполните название', 'error'); return; }
   if (!slug && (!fileInput.files || !fileInput.files[0])) { showToast('Выберите файл', 'error'); return; }
 
   const fd = new FormData();
   fd.append('title', title);
-  fd.append('slug', slugVal);
-  fd.append('requiredPermissions', JSON.stringify(perms));
+  if (slug) fd.append('slug', slug); // Если редактируем, передаем старый slug
+  fd.append('requiredPermissions', JSON.stringify(_hupSelectedPerms));
   fd.append('enabled', 'true');
   if (fileInput.files[0]) fd.append('file', fileInput.files[0]);
 
@@ -1383,10 +1427,7 @@ async function uploadHelpFile(slug) {
       headers: { 'Authorization': 'Bearer ' + authToken },
       body: fd
     });
-    if (!res.ok) {
-      const err = await res.json().catch(()=>({}));
-      throw new Error(err.error || 'Ошибка сервера');
-    }
+    if (!res.ok) throw new Error((await res.json()).error || 'Ошибка сервера');
 
     showToast('Раздел сохранен', 'success');
     document.getElementById('help-upload-modal').remove();
