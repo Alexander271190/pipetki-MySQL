@@ -360,5 +360,27 @@ html[data-theme="dark"] .stat-tooltip {
   color: var(--text); /* Делает весь текст тултипа светлым */
 }
 
+/* ============================================================
+   Кастомизация Jodit Editor под нашу тему
+   ============================================================ */
+html[data-theme="dark"] .jodit-container {
+  --jd-color-background-default: #1e293b;
+  --jd-color-border: #334155;
+  --jd-color-panel: #1e293b;
+  --jd-color-icon: #e2e8f0;
+  --jd-color-text: #e2e8f0;
+  --jd-color-background-hover: #334155;
+  --jd-color-background-active: #475569;
+}
+html[data-theme="dark"] .jodit-wysiwyg {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+/* Фикс чтобы не было белых полос в панели */
+html[data-theme="dark"] .jodit-toolbar__box {
+  background-color: #1e293b !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
 
 
