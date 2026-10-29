@@ -58,24 +58,34 @@ function switchDocSection(slug) {
   loadDocFile(slug);
 }
 
+let _docPages = [];
+let _currentPageIndex = 0;
+let _docScale = 1;
+
 async function loadDocFile(slug) {
   const sec = _docsSections.find(s => s.slug === slug);
   const container = document.getElementById('doc-preview-container');
   const actions = document.getElementById('doc-actions');
   const downloadLink = document.getElementById('doc-download-link');
+  const indicator = document.getElementById('doc-page-indicator');
+  const btnPrev = document.getElementById('doc-btn-prev');
+  const btnNext = document.getElementById('doc-btn-next');
 
-  container.innerHTML = '<div class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:#4f46e5; margin-top:50px;"></div>';
+  _docPages = [];
+  _currentPageIndex = 0;
+  container.innerHTML = '<div class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:#fff;"></div>';
   actions.style.display = 'none';
+  if (indicator) indicator.style.display = 'none';
+  if (btnPrev) btnPrev.style.display = 'none';
+  if (btnNext) btnNext.style.display = 'none';
 
   if (!sec || !sec.filePath) {
-    container.innerHTML = '<p style="color:#dc2626;">Файл для этого раздела не прикреплен.</p>';
+    container.innerHTML = '<p style="color:#dc2626; font-weight:600;">Файл для этого раздела не прикреплен.</p>';
     return;
   }
 
-  // Добавляем слеш в начало, если его нет
   const fileUrl = sec.filePath.startsWith('/') ? sec.filePath : '/' + sec.filePath;
   downloadLink.href = fileUrl;
-
   const ext = sec.filePath.split('.').pop().toLowerCase();
 
   if (ext === 'pdf') {
@@ -87,32 +97,102 @@ async function loadDocFile(slug) {
     _currentDocType = 'docx';
     try {
       const response = await fetch(fileUrl);
-      if (!response.ok) throw new Error('Файл не найден на сервере');
+      if (!response.ok) throw new Error('Файл не найден');
       const blob = await response.blob();
       
-      container.innerHTML = '<div id="docx-render-area" style="width:100%; background:#fff; padding:30px; box-shadow: 0 4px 12px rgba(0,0,0,.1);"></div>';
+      container.innerHTML = '<div id="docx-render-area" style="width:100%; height:100%; display:flex; justify-content:center; align-items:center;"></div>';
+      const renderArea = document.getElementById('docx-render-area');
       
-      // Рендерим Word в HTML
-      await window.docx.renderAsync(blob, document.getElementById('docx-render-area'), null, {
-        className: "docx-preview",
-        inWrapper: true,
-        ignoreWidth: false,
-        ignoreHeight: false,
-        renderHeaders: true,
-        renderFooters: true
+      await window.docx.renderAsync(blob, renderArea, null, {
+        className: "docx", inWrapper: true, ignoreWidth: false, ignoreHeight: false, renderHeaders: true, renderFooters: true, breakPages: true 
       });
+
+      setTimeout(() => {
+        _docPages = renderArea.querySelectorAll('section.docx');
+        if (_docPages.length > 0) {
+          _currentPageIndex = 0;
+          _docPages[0].classList.add('active-page');
+          fitPagesToContainer();
+
+          if (_docPages.length > 1) {
+            if (indicator) indicator.style.display = 'block';
+            if (btnPrev) btnPrev.style.display = 'block';
+            if (btnNext) btnNext.style.display = 'block';
+            updateDocIndicator();
+          }
+        }
+      }, 150);
       actions.style.display = 'flex';
     } catch (e) {
-      console.error(e);
-      container.innerHTML = `<div style="text-align:center; margin-top:50px; color:#dc2626;">
-        <p>Ошибка чтения Word файла.</p>
-        <a href="${fileUrl}" download class="btn btn-secondary">Скачать оригинал</a>
-      </div>`;
+      container.innerHTML = `<div style="text-align:center; color:#dc2626;"><p>Ошибка чтения файла.</p><a href="${fileUrl}" download class="btn btn-secondary">Скачать оригинал</a></div>`;
     }
-  } else {
-    container.innerHTML = `<p style="color:#dc2626;">Формат файла не поддерживается для предпросмотра. <br><br> <a href="${fileUrl}" download class="btn btn-secondary">Скачать файл</a></p>`;
   }
 }
+
+function fitPagesToContainer() {
+  const container = document.getElementById('doc-preview-container');
+  if (!_docPages.length || !container) return;
+  const containerW = container.clientWidth - 120;
+  const containerH = container.clientHeight - 40;
+  const scaleW = containerW / 794; // А4 ширина
+  const scaleH = containerH / 1123; // А4 высота
+  _docScale = Math.min(scaleW, scaleH, 1.5);
+  _docPages.forEach(page => { page.style.transform = `scale(${_docScale})`; });
+}
+
+function changeDocPage(delta) {
+  if (_docPages.length === 0) return;
+  const newIndex = _currentPageIndex + delta;
+  if (newIndex < 0 || newIndex >= _docPages.length) return;
+  _docPages[_currentPageIndex].classList.remove('active-page');
+  _currentPageIndex = newIndex;
+  _docPages[_currentPageIndex].classList.add('active-page');
+  updateDocIndicator();
+}
+
+function updateDocIndicator() {
+  const indicator = document.getElementById('doc-page-indicator');
+  const btnPrev = document.getElementById('doc-btn-prev');
+  const btnNext = document.getElementById('doc-btn-next');
+  if (indicator) indicator.textContent = `${_currentPageIndex + 1} / ${_docPages.length}`;
+  if (btnPrev) btnPrev.style.opacity = _currentPageIndex === 0 ? '0.3' : '1';
+  if (btnNext) btnNext.style.opacity = _currentPageIndex === _docPages.length - 1 ? '0.3' : '1';
+}
+
+// Управление колесиком, клавиатурой и свайпами
+document.addEventListener('wheel', (e) => {
+  const modal = document.getElementById('hotkeys-modal');
+  if (!modal || !modal.classList.contains('active')) return;
+  if (_currentDocType !== 'docx' || _docPages.length <= 1) return;
+  if (e.deltaY > 30) changeDocPage(1);
+  else if (e.deltaY < -30) changeDocPage(-1);
+}, { passive: true });
+
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('hotkeys-modal');
+  if (!modal || !modal.classList.contains('active')) return;
+  if (_currentDocType !== 'docx' || _docPages.length <= 1) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') changeDocPage(1);
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') changeDocPage(-1);
+});
+
+let _touchStartX = 0;
+document.addEventListener('touchstart', (e) => {
+  const modal = document.getElementById('hotkeys-modal');
+  if (modal && modal.classList.contains('active')) _touchStartX = e.touches[0].clientX;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  const modal = document.getElementById('hotkeys-modal');
+  if (!modal || !modal.classList.contains('active') || _currentDocType !== 'docx' || _docPages.length <= 1) return;
+  const diff = _touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) { if (diff > 0) changeDocPage(1); else changeDocPage(-1); }
+}, { passive: true });
+
+window.addEventListener('resize', () => {
+  const modal = document.getElementById('hotkeys-modal');
+  if (modal && modal.classList.contains('active') && _currentDocType === 'docx') fitPagesToContainer();
+});
 
 function printCurrentDoc() {
   if (_currentDocType === 'pdf') {
