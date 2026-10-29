@@ -237,7 +237,7 @@ async function openHistoryExportModal() {
 
       document.getElementById('he-from').value = '';
       document.getElementById('he-to').value = '';
-      document.getElementById('he-error').textContent = '';
+      document.getElementById('history-export-error').textContent = '';
 
       UI.modal.open('history-export-modal');
     }
