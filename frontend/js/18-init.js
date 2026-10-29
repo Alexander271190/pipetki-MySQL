@@ -237,12 +237,8 @@ function applyTheme(theme) {
       ? '<i class="fa-solid fa-sun"></i>'
       : '<i class="fa-solid fa-moon"></i>';
   }
-
-  // 🆕 Синхронизация темы Jodit, если редактор открыт
-  if (typeof helpEditor !== 'undefined' && helpEditor) {
-    helpEditor.setTheme(theme === 'dark' ? 'dark' : 'default');
-  }
 }
+
 
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'light';
@@ -427,7 +423,6 @@ const modalCloseMap = {
   'temp-password-modal':    closeTempPasswordModal,
   'user-view-modal':        closeUserViewModal,
   'hotkeys-modal':          closeHotkeysHelp,
-  'help-editor-modal':      closeHelpEditor,
   'audit-modal':            closeAuditModal,
   'equipment-audit-modal':  closeEquipmentAuditModal,
 };
