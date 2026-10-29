@@ -648,22 +648,17 @@ function printHelpSection() {
   if (!sec) return;
 
   const cleanTitle = sec.title.replace(/\{icon:.*?\}/g, '').replace(/<[^>]+>/g, '').trim();
-  const printWindow = window.open('', '_blank');
+  const baseUrl = window.location.origin;
 
-  // 🆕 Получаем базовый URL (например, https://5.189.243.15/)
-  const baseUrl = window.location.origin; 
-
-  printWindow.document.write(`
+  // 🆕 Формируем HTML как строку
+  const htmlContent = `
     <!DOCTYPE html>
     <html lang="ru">
     <head>
       <meta charset="UTF-8">
       <title>Справка: ${cleanTitle}</title>
-      
-      <!-- 🆕 Подключаем CSS и шрифты по АБСОЛЮТНОМУ пути -->
       <link rel="stylesheet" href="${baseUrl}/fontawesome/css/all.min.css">
       <link rel="stylesheet" href="${baseUrl}/style.css">
-      
       <style>
         body { background: #fff !important; padding: 20px; font-size: 12pt; }
         .docs-content { overflow: visible !important; max-height: none !important; color: #000 !important; }
@@ -672,7 +667,7 @@ function printHelpSection() {
         .docs-table th, .docs-table td { border: 1px solid #999 !important; color: #000 !important; }
         .docs-table th { background: #f1f5f9 !important; }
         
-        /* 🆕 Жестко задаем шрифт для иконок */
+        /* Жестко задаем шрифт для иконок */
         .docs-content i, .docs-content .fa-solid {
           font-family: "Font Awesome 6 Free", sans-serif !important;
           font-weight: 900 !important;
@@ -689,22 +684,28 @@ function printHelpSection() {
     <body>
       <div class="docs-content">${renderContent(sec.content)}</div>
       <script>
-        // 🆕 Ждем, пока браузер загрузит ВСЕ шрифты (включая FontAwesome)
         window.onload = async () => { 
           try {
-            // document.fonts.ready — это встроенный API браузера, который ждет загрузки шрифтов
             await document.fonts.ready; 
-            // Небольшая дополнительная пауза на всякий случай
-            await new Promise(r => setTimeout(r, 200)); 
+            await new Promise(r => setTimeout(r, 500)); 
           } catch (e) {
             console.warn('Ошибка ожидания шрифтов:', e);
           }
           window.print(); 
-          window.close(); 
+          // window.close(); // Не закрываем, чтобы можно было сохранить PDF
         };
       <\/script>
     </body>
     </html>
-  `);
-  printWindow.document.close();
+  `;
+
+  // 🆕 Создаем Blob и открываем в новом окне (обходим блокировку about:blank)
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  
+  const printWindow = window.open(url, '_blank');
+  if (!printWindow) {
+    showToast('Разрешите всплывающие окна для печати', 'error');
+    return;
+  }
 }
