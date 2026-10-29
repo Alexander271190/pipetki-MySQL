@@ -38,7 +38,7 @@ async function getHelpDocsCached() {
   const now = Date.now();
   if (_helpCache && now - _helpCacheTime < HELP_CACHE_TTL) return _helpCache;
   
-  // 🆕 Убедимся, что выбираем file_path
+  // 🆕 ОБРАТИТЕ ВНИМАНИЕ: выбираем file_path
   const [rows] = await db.query(
     'SELECT id, slug, title, file_path, required_permissions, sort_order, enabled FROM help_docs ORDER BY sort_order ASC, id ASC'
   );
