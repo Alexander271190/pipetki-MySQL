@@ -1,5 +1,8 @@
 'use strict';
 const { pool } = require('./pool');
+const fs = require('fs');
+const path = require('path');
+const HTMLtoDOCX = require('html-to-docx');
 
 // ============================================================
 // ГЕНЕРАЦИЯ ID
@@ -8,7 +11,6 @@ async function generatePipetteId(prefix = 'P', conn = null) {
   const executor = conn || pool;
   const safePrefix = String(prefix).replace(/[%_\\]/g, '\\$&');
 
-  // FOR UPDATE внутри транзакции сериализует генерацию между параллельными запросами
   const sql = `SELECT id FROM pipettes
                WHERE id LIKE ?
                ORDER BY id
@@ -28,31 +30,86 @@ async function generatePipetteId(prefix = 'P', conn = null) {
 }
 
 // ============================================================
-// СПРАВКА
+// ХЕЛПЕР: Замена иконок на эмодзи
+// ============================================================
+function replaceIcons(html) {
+  const emojiMap = {
+    'fa-thumbtack': '📌', 'fa-key': '🔑', 'fa-desktop': '🖥️', 'fa-users': '👥',
+    'fa-box': '📦', 'fa-magnifying-glass': '🔍', 'fa-plus': '➕', 'fa-clipboard-list': '📋',
+    'fa-pen': '✏️', 'fa-trash': '🗑️', 'fa-clipboard-check': '✅', 'fa-clock-rotate-left': '🕒',
+    'fa-box-open': '📥', 'fa-right-left': '↔️', 'fa-user-pen': '👤', 'fa-barcode': '🔲',
+    'fa-tag': '🏷️', 'fa-upload': '📤', 'fa-keyboard': '⌨️', 'fa-palette': '🌙',
+    'fa-book-open': '📖', 'fa-circle-question': '❓', 'fa-check': '✅', 'fa-xmark': '❌',
+    'fa-hourglass-half': '⏳', 'fa-circle-pause': '⏸️', 'fa-circle-info': 'ℹ️', 'fa-triangle-exclamation': '⚠️'
+  };
+  return html.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/gi, (match, iconName) => emojiMap[iconName] || '🔹');
+}
+
+// ============================================================
+// СПРАВКА (Генерация файлов и обновление БД)
 // ============================================================
 async function seedHelpDocs(conn) {
   const executor = conn || pool;
   let sections = [];
-    try {
+  try {
     sections = require('../help-seed');
   } catch (e) {
     console.error('❌ Не удалось загрузить help-seed.js:', e.message);
-    sections = [];
+    return;
   }
 
+  const UPLOAD_DIR = path.join(__dirname, '..', 'frontend', 'uploads', 'help', 'seed');
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+  let generatedCount = 0;
+
   for (const s of sections) {
+    const cleanTitle = replaceIcons(s.title);
+    const fileName = `${s.slug}.docx`;
+    const filePath = path.join(UPLOAD_DIR, fileName);
+    const dbPath = `uploads/help/seed/${fileName}`;
+
+    // Генерируем файл, если его нет
+    if (!fs.existsSync(filePath)) {
+      const cleanContent = replaceIcons(s.content);
+      const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+        body { font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.5; }
+        h1 { font-size: 18pt; text-align: center; }
+        h2 { font-size: 16pt; margin-top: 20px; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #666; padding: 6px 10px; }
+        th { background-color: #f1f5f9; }
+      </style></head><body><h1>${cleanTitle}</h1>${cleanContent}</body></html>`;
+
+      try {
+        const docxBuffer = await HTMLtoDOCX(fullHtml, null, { table: { row: { cantSplit: true } } });
+        fs.writeFileSync(filePath, docxBuffer);
+        generatedCount++;
+      } catch (err) {
+        console.error(`❌ Ошибка генерации ${fileName}:`, err.message);
+      }
+    }
+
+    // Вставляем или обновляем запись в БД
     await executor.query(
-      `INSERT IGNORE INTO help_docs
-         (slug, title, content, required_permissions, sort_order, enabled)
-       VALUES (?, ?, ?, ?, ?, 1)`,
+      `INSERT INTO help_docs
+         (slug, title, file_path, required_permissions, sort_order, enabled)
+       VALUES (?, ?, ?, ?, ?, 1)
+       ON DUPLICATE KEY UPDATE
+         file_path = IF(file_path IS NULL OR file_path = '', VALUES(file_path), file_path),
+         title = IF(title LIKE '{icon:%', VALUES(title), title)`,
       [
         s.slug,
-        s.title,
-        s.content,
+        cleanTitle,
+        dbPath,
         JSON.stringify(s.requiredPermissions || []),
         s.sortOrder || 0,
       ]
     );
+  }
+  
+  if (generatedCount > 0) {
+    console.log(`📄 Сгенерировано документов справки: ${generatedCount}`);
   }
 }
 
@@ -78,21 +135,16 @@ async function seedInitialData() {
 
     console.log('👤 Создана учётная запись администратора.');
     console.log('   Логин: admin');
-    console.log('   Пароль: не задан. При первом входе система попросит установить пароль. Остальных пользователей создайте через «Настройки → Пользователи».');
+    console.log('   Пароль: не задан. При первом входе система попросит установить пароль.');
   }
 
   // --- Отделы ---
   const [dc] = await pool.query('SELECT COUNT(*) AS c FROM departments');
   if (dc[0].c === 0) {
     const deps = [
-      'Гематологический отдел',
-      'Биохимический отдел',
-      'Коагулогический отдел',
-      'Экспресс отдел',
-      'Изосерологический отдел',
-      'Серологический отдел',
-      'ГИМИ',
-      'Бактериологический отдел'
+      'Гематологический отдел', 'Биохимический отдел', 'Коагулогический отдел',
+      'Экспресс отдел', 'Изосерологический отдел', 'Серологический отдел',
+      'ГИМИ', 'Бактериологический отдел'
     ];
     for (const d of deps) {
       await pool.query('INSERT INTO departments (name) VALUES (?)', [d]);
@@ -105,23 +157,15 @@ async function seedInitialData() {
     [JSON.stringify(['id', 'model', 'serial', 'department'])]);
 
   const bcDefaults = {
-    barcode_mode: 'pdf-zebra',
-    barcode_label_size: '58x40',
-    barcode_fallback_to_pdf: '1',
-    barcode_default_copies: '1',
-    barcode_zebra_language: 'zpl',
-    barcode_agent_port: '9200',
-    barcode_max_length: '255',
-    barcode_font: 'dejavu',
+    barcode_mode: 'pdf-zebra', barcode_label_size: '58x40', barcode_fallback_to_pdf: '1',
+    barcode_default_copies: '1', barcode_zebra_language: 'zpl', barcode_agent_port: '9200',
+    barcode_max_length: '255', barcode_font: 'dejavu',
   };
   for (const [k, v] of Object.entries(bcDefaults)) {
     await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES (?, ?)`, [k, v]);
   }
 
-  // 🆕 Порог предупреждения о поверке — дефолт 30 дней
-  await pool.query(
-    `INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`
-  );
+  await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`);
 
   // Дефолтные типы оборудования
   const defaultTypes = [
@@ -143,22 +187,22 @@ async function seedInitialData() {
     const ins = `INSERT INTO field_config (id, label, type, required, enabled, options, default_value, field_order)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
     const fields = [
-      ['id',              'Внутренний номер',              'text',     1, 1, '[]',                     '',       1],
-      ['serial',          'Серийный номер',                'text',     0, 1, '[]',                     '',       2],
-      ['barcode',         'Штрихкод',                      'text',     0, 1, '[]',                     '',       3],
-      ['manufacturer',    'Производитель',                 'text',     0, 1, '[]',                     '',       4],
-      ['model',           'Модель',                        'text',     1, 1, '[]',                     '',       5],
-      ['equipmentType',   'Тип оборудования',              'select',   1, 1, '[]',                     'pipette', 6],
-      ['volume',          'Объём (мкл)',                   'text',     0, 1, '[]',                     '',       7],
-      ['department',      'Отдел',                         'select',   0, 1, '[]',                     '',       8],
-      ['interval',        'Межповерочный интервал (мес.)', 'number',   1, 1, '[]',                     '12',     9],
-      ['lastCalibration', 'Дата последней поверки',        'date',     1, 1, '[]',                     '',       10],
-      ['cert',            'Номер свидетельства',           'text',     0, 1, '[]',                     '',       11],
-      ['result',          'Результат поверки',             'select',   0, 1, '["pass","fail","wip"]', 'pass',   12],
-      ['active',          'Статус эксплуатации',           'select',   0, 1, '["true","false"]',       'true',   13],
-      ['responsible',     'Ответственный сотрудник',       'select',   0, 1, '[]',                     '',       14],
-      ['location',        'Место хранения',                'text',     0, 1, '[]',                     '',       15],
-      ['notes',           'Примечание',                    'textarea', 0, 1, '[]',                     '',       16]
+      ['id', 'Внутренний номер', 'text', 1, 1, '[]', '', 1],
+      ['serial', 'Серийный номер', 'text', 0, 1, '[]', '', 2],
+      ['barcode', 'Штрихкод', 'text', 0, 1, '[]', '', 3],
+      ['manufacturer', 'Производитель', 'text', 0, 1, '[]', '', 4],
+      ['model', 'Модель', 'text', 1, 1, '[]', '', 5],
+      ['equipmentType', 'Тип оборудования', 'select', 1, 1, '[]', 'pipette', 6],
+      ['volume', 'Объём (мкл)', 'text', 0, 1, '[]', '', 7],
+      ['department', 'Отдел', 'select', 0, 1, '[]', '', 8],
+      ['interval', 'Межповерочный интервал (мес.)', 'number', 1, 1, '[]', '12', 9],
+      ['lastCalibration', 'Дата последней поверки', 'date', 1, 1, '[]', '', 10],
+      ['cert', 'Номер свидетельства', 'text', 0, 1, '[]', '', 11],
+      ['result', 'Результат поверки', 'select', 0, 1, '["pass","fail","wip"]', 'pass', 12],
+      ['active', 'Статус эксплуатации', 'select', 0, 1, '["true","false"]', 'true', 13],
+      ['responsible', 'Ответственный сотрудник', 'select', 0, 1, '[]', '', 14],
+      ['location', 'Место хранения', 'text', 0, 1, '[]', '', 15],
+      ['notes', 'Примечание', 'textarea', 0, 1, '[]', '', 16]
     ];
     for (const f of fields) await pool.query(ins, f);
   }
@@ -174,7 +218,7 @@ async function seedInitialData() {
     await pool.query('INSERT INTO export_settings (id, fields) VALUES (1, ?)', [JSON.stringify(defaultExport)]);
   }
 
-  // --- Демо-пипетки (только один раз за всю жизнь БД) ---
+  // --- Демо-пипетки ---
   const [demoFlag] = await pool.query(
     "SELECT setting_value FROM system_settings WHERE setting_key = 'demo_seeded'"
   );
@@ -185,8 +229,7 @@ async function seedInitialData() {
     if (pc[0].c === 0) {
       const today = new Date();
       const ago = (m) => {
-        const d = new Date(today);
-        d.setMonth(d.getMonth() - m);
+        const d = new Date(today); d.setMonth(d.getMonth() - m);
         return d.toISOString().slice(0, 10);
       };
 
@@ -196,24 +239,15 @@ async function seedInitialData() {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
       await pool.query(insPip, ['P-001', 'EP2024001', 'Eppendorf', 'Research Plus', 'pipette', '1000', 'Гематологический отдел',
-        12, ago(11), 'С-АБ-1234567/2025', 'pass', 1,
-        'Иванова М.С.', 'Лаб. 201, шкаф 3', '']);
-
+        12, ago(11), 'С-АБ-1234567/2025', 'pass', 1, 'Иванова М.С.', 'Лаб. 201, шкаф 3', '']);
       await pool.query(insPip, ['P-002', 'EP2024002', 'Eppendorf', 'Research Plus', 'pipette', '100', 'Биохимический отдел',
-        12, ago(10), 'С-АБ-1234568/2025', 'pass', 1,
-        'Петров А.В.', 'Лаб. 201, шкаф 3', '']);
-
+        12, ago(10), 'С-АБ-1234568/2025', 'pass', 1, 'Петров А.В.', 'Лаб. 201, шкаф 3', '']);
       await pool.query(insPip, ['P-003', 'GT2023005', 'Gilson', 'Pipetman L', 'pipette', '5000', 'Коагулогический отдел',
-        6, ago(7), 'С-АБ-1234569/2025', 'pass', 1,
-        'Иванова М.С.', 'Лаб. 105', 'Требует внеочередной проверки']);
-
+        6, ago(7), 'С-АБ-1234569/2025', 'pass', 1, 'Иванова М.С.', 'Лаб. 105', 'Требует внеочередной проверки']);
       await pool.query(insPip, ['A-001', 'AN2022001', 'Mindray', 'BC-5150', 'analyzer', '', 'Гематологический отдел',
-        12, ago(14), 'С-АБ-9876546/2024', 'pass', 1,
-        'Сидорова Е.К.', 'Лаб. 302', 'Гематологический анализатор']);
-
+        12, ago(14), 'С-АБ-9876546/2024', 'pass', 1, 'Сидорова Е.К.', 'Лаб. 302', 'Гематологический анализатор']);
       await pool.query(insPip, ['M-001', 'MI2023010', 'Olympus', 'CX23', 'microscope', '', 'Биохимический отдел',
-        12, ago(2), 'С-АБ-1234570/2025', 'pass', 0,
-        'Петров А.В.', 'Склад', 'Микроскоп в резерве']);
+        12, ago(2), 'С-АБ-1234570/2025', 'pass', 0, 'Петров А.В.', 'Склад', 'Микроскоп в резерве']);
 
       const insHist = `INSERT INTO calibration_history (pipette_id, \`date\`, cert, result, org, note)
                        VALUES (?, ?, ?, ?, ?, ?)`;
@@ -235,22 +269,19 @@ async function seedInitialData() {
       (id, label, type, field_id, enabled, options_source, filter_order)
       VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-    await pool.query(insF, ['status',        'Статус',           'select',      'status',           1, 'status_list',         1]);
-    await pool.query(insF, ['equipmentType', 'Тип оборудования', 'select',      'equipment_type',   1, 'equipment_type_list', 2]);
-    await pool.query(insF, ['department',    'Отдел',            'select',      'department',       1, 'departments',         3]);
-    await pool.query(insF, ['responsible',   'Ответственный',    'text',        'responsible',      1, '',                    4]);
-    await pool.query(insF, ['model',         'Модель',           'text',        'model',            1, '',                    5]);
-    await pool.query(insF, ['manufacturer',  'Производитель',    'text',        'manufacturer',     1, '',                    6]);
-    await pool.query(insF, ['active',        'Активность',       'select',      'active',           1, 'active_list',         7]);
-    await pool.query(insF, ['calPeriod',     'Дата поверки',     'date-period', 'last_calibration', 1, '',                    8]);
+    await pool.query(insF, ['status', 'Статус', 'select', 'status', 1, 'status_list', 1]);
+    await pool.query(insF, ['equipmentType', 'Тип оборудования', 'select', 'equipment_type', 1, 'equipment_type_list', 2]);
+    await pool.query(insF, ['department', 'Отдел', 'select', 'department', 1, 'departments', 3]);
+    await pool.query(insF, ['responsible', 'Ответственный', 'text', 'responsible', 1, '', 4]);
+    await pool.query(insF, ['model', 'Модель', 'text', 'model', 1, '', 5]);
+    await pool.query(insF, ['manufacturer', 'Производитель', 'text', 'manufacturer', 1, '', 6]);
+    await pool.query(insF, ['active', 'Активность', 'select', 'active', 1, 'active_list', 7]);
+    await pool.query(insF, ['calPeriod', 'Дата поверки', 'date-period', 'last_calibration', 1, '', 8]);
   }
 
-  // 🆕 Справка
-  const [hc] = await pool.query('SELECT COUNT(*) AS c FROM help_docs');
-  if (hc[0].c === 0) {
-    await seedHelpDocs();
-    console.log('📖 Справка инициализирована');
-  }
+  // 🆕 Справка (вызывается всегда — внутри есть проверки и генерация файлов)
+  await seedHelpDocs();
+  console.log('📖 Справка проверена и инициализирована');
 
   return seededAny;
 }
