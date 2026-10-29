@@ -267,7 +267,7 @@ async function initSchema() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         slug VARCHAR(100) NOT NULL UNIQUE,
         title VARCHAR(255) NOT NULL,
-        content MEDIUMTEXT NULL DEFAULT NULL,
+        content MEDIUMTEXT NULL DEFAULT NULL,  
         file_path VARCHAR(255) DEFAULT NULL,
         required_permissions TEXT,
         sort_order INT DEFAULT 0,
@@ -278,7 +278,7 @@ async function initSchema() {
         INDEX idx_help_sort (sort_order)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-
+    
     await conn.query(`
       CREATE TABLE IF NOT EXISTS help_images (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -330,6 +330,15 @@ async function initSchema() {
     await ensureColumns(conn, 'help_docs', [
       { name: 'file_path', ddl: 'VARCHAR(255) DEFAULT NULL' }
     ]);
+        // 🆕 Принудительно делаем content nullable на существующей БД
+    const [contentCol] = await conn.query(`
+      SELECT IS_NULLABLE FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'help_docs' AND COLUMN_NAME = 'content'
+    `);
+    if (contentCol.length && contentCol[0].IS_NULLABLE === 'NO') {
+      await conn.query('ALTER TABLE help_docs MODIFY COLUMN content MEDIUMTEXT NULL DEFAULT NULL');
+      console.log('🔄 help_docs.content сделан nullable');
+    }
 
     await ensureColumns(conn, 'audit_log', [
       { name: 'pipette_id', ddl: 'VARCHAR(255) DEFAULT NULL' },
