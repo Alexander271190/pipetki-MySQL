@@ -39,13 +39,16 @@ function renderDocsSidebar() {
   if (!c) return;
   c.innerHTML = `
     <div class="docs-sidebar-title" style="font-size:.75rem; font-weight:700; color:#64748b; margin-bottom:8px;">РАЗДЕЛЫ</div>
-    ${_docsSections.map(s => `
+    ${_docsSections.map(s => {
+      // 🆕 Очищаем название от тегов {icon:...}, если они остались в БД
+      const cleanTitle = s.title.replace(/\{icon:.*?\}/g, '').trim();
+      return `
       <button class="docs-nav-item ${s.slug === _docsCurrentSection ? 'active' : ''}"
               style="display:block; width:100%; text-align:left; padding:10px; border-radius:6px; border:none; background:${s.slug === _docsCurrentSection ? '#eef2ff' : 'transparent'}; color:${s.slug === _docsCurrentSection ? '#4f46e5' : '#334155'}; font-weight:${s.slug === _docsCurrentSection ? '600' : '400'}; cursor:pointer; margin-bottom:4px; transition: background .15s;"
               onclick="switchDocSection('${esc(s.slug)}')">
-        ${esc(s.title)}
+        ${esc(cleanTitle)}
       </button>
-    `).join('')}
+    `}).join('')}
   `;
 }
 
