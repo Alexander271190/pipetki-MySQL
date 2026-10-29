@@ -7,6 +7,7 @@ const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
 const { withTransaction } = require('../utils/db-helper');
+const HTMLtoDOCX = require('html-to-docx');
 
 const router = express.Router();
 
@@ -279,6 +280,44 @@ router.post('/images/upload', authenticate, requireRole(['admin']), upload.singl
     );
     res.json({ url: '/uploads/help/' + f.filename, filename: f.filename });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Ошибка загрузки' }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// ЭКСПОРТ В WORD (.docx)
+// ═══════════════════════════════════════════════════════════
+router.post('/export-docx', authenticate, requireRole(['admin']), async (req, res) => {
+  try {
+    const { title, htmlContent } = req.body;
+    if (!htmlContent) return res.status(400).json({ error: 'Нет содержимого' });
+
+    // 1. Санитизируем HTML
+    let cleanHtml = sanitizeHtml(htmlContent);
+
+    // 2. 🆕 Превращаем относительные пути картинок в абсолютные
+    // Берем протокол из заголовков (для работы за Nginx/HTTPS)
+    const proto = req.headers['x-forwarded-proto'] || req.protocol;
+    const baseUrl = `${proto}://${req.get('host')}`;
+    cleanHtml = cleanHtml.replace(/src="(\/uploads\/[^"]+)"/g, `src="${baseUrl}$1"`);
+
+    // 3. Оборачиваем в минимальный HTML-каркас
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>${cleanHtml}</body></html>`;
+
+    // 4. Конвертируем
+    const buffer = await HTMLtoDOCX(fullHtml, null, {
+      table: { row: { cantSplit: true } },
+      footer: true,
+      pageNumber: true,
+    });
+
+    const filename = encodeURIComponent(`Справка_${title || 'Раздел'}.docx`);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (e) {
+    console.error('DOCX Export error:', e);
+    res.status(500).json({ error: 'Ошибка экспорта в Word' });
+  }
 });
 
 module.exports = router;
