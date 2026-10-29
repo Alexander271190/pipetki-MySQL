@@ -1073,24 +1073,13 @@
   </div>
 </div>
   
-    <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
+      <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
 <div class="modal-overlay" id="hotkeys-modal">
-  <div class="modal modal-xl" style="height: 90vh; display: flex; flex-direction: column;">
+  <div class="modal modal-compact" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
     <h2><i class="fa-solid fa-book-open"></i> Инструкция по работе с системой</h2>
-
-    <div class="docs-layout" style="flex: 1; display: flex; gap: 20px; overflow: hidden; min-height: 0;">
-      
-      <!-- Сайдбар слева -->
-      <aside class="docs-sidebar" id="docs-sidebar" style="width: 260px; overflow-y: auto; border-right: 1px solid var(--border); padding-right: 10px; flex-shrink: 0;"></aside>
-      
-      <!-- Предпросмотр документа справа (КАРТОЧКА) -->
-      <main style="flex: 1; display: flex; flex-direction: column; background: #f8fafc; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative;">
-        
-        <div id="doc-preview-container" style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px;">
-          <p style="color: #94a3b8;">Выберите раздел слева</p>
-        </div>
-        
-      </main>
+    
+    <div class="docs-sidebar" id="docs-sidebar" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+      <p style="color: #94a3b8;">Загрузка…</p>
     </div>
 
     <div class="form-actions" style="margin-top: 15px; justify-content: flex-end;">
