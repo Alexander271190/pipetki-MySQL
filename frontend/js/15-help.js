@@ -657,8 +657,9 @@ function printHelpSection() {
     <head>
       <meta charset="UTF-8">
       <title>Справка: ${cleanTitle}</title>
+      <!-- Путь к CSS со слешем в начале -->
       <link rel="stylesheet" href="/fontawesome/css/all.min.css">
-      <link rel="stylesheet" href="style.css">
+      <link rel="stylesheet" href="/style.css">
       <style>
         body { background: #fff !important; padding: 20px; font-size: 12pt; }
         .docs-content { overflow: visible !important; max-height: none !important; color: #000 !important; }
@@ -666,12 +667,32 @@ function printHelpSection() {
         .docs-hint { background: #f0f9ff !important; color: #000 !important; border-left: 3px solid #0ea5e9; }
         .docs-table th, .docs-table td { border: 1px solid #999 !important; color: #000 !important; }
         .docs-table th { background: #f1f5f9 !important; }
-        @media print { @page { size: A4 portrait; margin: 15mm; } .docs-content { padding: 0 !important; } }
+        
+        /* 🆕 Жестко задаем шрифт для иконок при печати */
+        .docs-content i, .docs-content .fa-solid {
+          font-family: "Font Awesome 6 Free", sans-serif !important;
+          font-weight: 900 !important;
+          font-style: normal !important;
+          display: inline-block !important;
+        }
+
+        @media print { 
+          @page { size: A4 portrait; margin: 15mm; } 
+          .docs-content { padding: 0 !important; } 
+        }
       </style>
     </head>
     <body>
       <div class="docs-content">${renderContent(sec.content)}</div>
-      <script>window.onload = () => { window.print(); window.close(); };<\/script>
+      <script>
+        // 🆕 Ждем 800 мс, чтобы шрифты FontAwesome успели загрузиться, и только потом печатаем
+        window.onload = () => { 
+          setTimeout(() => {
+            window.print(); 
+            window.close(); 
+          }, 800);
+        };
+      <\/script>
     </body>
     </html>
   `);
