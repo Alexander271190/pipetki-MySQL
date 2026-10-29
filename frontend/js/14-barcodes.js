@@ -330,22 +330,12 @@ async function submitBarcodePrint(ev) {
 }
 
 async function downloadBarcodePdf(ids, copies, layout) {
-  const sess = sessionStorage.getItem('pipette_session');
-  if (!sess) throw new Error('Сессия истекла');
-  const token = JSON.parse(sess).token;
   const url = `/api/barcodes/labels.pdf?ids=${encodeURIComponent(ids.join(','))}&copies=${copies}&layout=${layout}`;
-  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Ошибка генерации PDF');
-  }
-  const blob = await res.blob();
-  const blobUrl = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = blobUrl;
-  a.download = `labels_${layout}_${todayStr()}.pdf`;
-  a.click();
-  URL.revokeObjectURL(blobUrl);
+  const defaultFilename = `labels_${layout}_${todayStr()}.pdf`;
+  
+  // 🆕 Используем новую безопасную функцию скачивания
+  await downloadFile(url, {}, defaultFilename);
+  
   showToast(`PDF: ${ids.length} × ${copies} = ${ids.length * copies} этикеток`, 'success');
 }
 
