@@ -1073,12 +1073,13 @@
   </div>
 </div>
   
-       <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
+        <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
 <div class="modal-overlay" id="hotkeys-modal">
-  <div class="modal modal-compact" style="max-width: 420px; height: 75vh; display: flex; flex-direction: column; padding: 20px;">
-    <h2 style="margin-bottom: 15px;"><i class="fa-solid fa-book-open"></i> Инструкция</h2>
+  <div class="modal modal-compact" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
+    <h2><i class="fa-solid fa-book-open"></i> Инструкция по работе с системой</h2>
     
-    <div class="docs-sidebar" id="docs-sidebar" style="flex: 1; overflow-y: auto; padding-right: 5px;">
+    <!-- 🆕 Убрали класс docs-sidebar и добавили width: 100% -->
+    <div id="docs-sidebar" style="flex: 1; overflow-y: auto; width: 100%; padding-right: 5px;">
       <p style="color: #94a3b8;">Загрузка…</p>
     </div>
 
