@@ -135,15 +135,22 @@ function ensureEditor() {
       };
       input.click();
     }
-  };
+    };
 
   // 2. Кастомная кнопка: Вставить иконку
   Jodit.defaultOptions.controls.fa_icon = {
     icon: 'font',
     tooltip: 'Вставить иконку (FontAwesome)',
     exec: function(editor) {
+      // 🆕 СОХРАНЯЕМ ПОЗИЦИЮ КУРСОРА перед открытием модалки
+      const selection = editor.selection.save(); 
+      
       openFaPicker((iconName) => {
-        editor.selection.insertHTML(`<i class="fa-solid fa-${iconName}"></i>&nbsp;`);
+        // 🆕 ВОССТАНАВЛИВАЕМ КУРСОР и вставляем
+        editor.selection.restore(selection); 
+        
+        // 🆕 Используем <span> вместо <i>, чтобы Jodit не удалял его
+        editor.selection.insertHTML(`<span class="fa-solid fa-${iconName}"></span>&nbsp;`);
       });
     }
   };
