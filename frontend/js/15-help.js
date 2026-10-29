@@ -197,8 +197,9 @@ function ensureEditor() {
   helpEditor = Jodit.make('#he-content', {
     language: 'ru',
     theme: isDark ? 'dark' : 'default',
-    minHeight: 420,
-    maxHeight: 700,
+    height: '100%',
+    minHeight: 0,
+    maxHeight: null,
     toolbarAdaptive: false,
     
     // Отключаем глобальное изменение классов у родителей
