@@ -201,21 +201,13 @@ function ensureEditor() {
     minHeight: 0,
     maxHeight: null,
     toolbarAdaptive: false,
-    
-    // Отключаем глобальное изменение классов у родителей
     globalFullSize: false,
-
-    // 🆕 ВАЖНО: Отключаем iframe, чтобы стили FontAwesome с главной страницы работали внутри редактора
     iframe: false, 
-
-    // 🆕 Разрешаем Jodit сохранять теги <i> и <span> (для иконок)
     allowTags: false,
     
-    // 🆕 Отключаем агрессивную очистку пустых тегов
-    cleanHTML: {
-      fillEmptyParagraph: false,
-      removeEmptyElements: false
-    },
+    
+    replaceI: false,         
+    cleanHTML: false,        
 
     // Запрещаем Jodit тянуть что-либо из интернета
     sourceEditor: 'area',               
