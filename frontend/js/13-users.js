@@ -2,7 +2,46 @@
 
 let _cachedPresets = [];
 let _userViewActiveTab = 'fields';
-let _userViewPrintDocs = { export: true, actSend: true, actReturn: true, history: true };
+let _userViewPrintDocs = {
+  useIndividual: false,
+  export: { enabled: true, fields: [] },
+  actSend: { enabled: true, fields: [] },
+  actReturn: { enabled: true, fields: [] },
+  history: { enabled: true, fields: [] }
+};
+
+// ── Поля для каждого печатного документа ──
+const PRINT_DOC_FIELDS = {
+  export: [
+    { id: 'id', label: 'Внутренний номер' }, { id: 'serial', label: 'Серийный номер' },
+    { id: 'manufacturer', label: 'Производитель' }, { id: 'model', label: 'Модель' },
+    { id: 'equipmentType', label: 'Тип оборудования' }, { id: 'volume', label: 'Объём (мкл)' },
+    { id: 'department', label: 'Отдел' }, { id: 'lastCalibration', label: 'Дата поверки' },
+    { id: 'nextCalibration', label: 'Следующая поверка' }, { id: 'interval', label: 'МПИ (мес.)' },
+    { id: 'daysLeft', label: 'Дней до поверки' }, { id: 'responsible', label: 'Ответственный' },
+    { id: 'location', label: 'Место хранения' }, { id: 'status', label: 'Статус' },
+    { id: 'cert', label: 'Свидетельство' }, { id: 'notes', label: 'Примечание' }
+  ],
+  actSend: [
+    { id: 'id', label: 'Внутренний номер' }, { id: 'model', label: 'Модель' },
+    { id: 'manufacturer', label: 'Производитель' }, { id: 'serial', label: 'Серийный номер' },
+    { id: 'volume', label: 'Объём' }, { id: 'department', label: 'Отдел' },
+    { id: 'responsible', label: 'Ответственный' }, { id: 'location', label: 'Место хранения' },
+    { id: 'cert', label: 'Свидетельство' }, { id: 'notes', label: 'Примечание' },
+  ],
+  actReturn: [
+    { id: 'id', label: 'Внутренний номер' }, { id: 'model', label: 'Модель' },
+    { id: 'manufacturer', label: 'Производитель' }, { id: 'serial', label: 'Серийный номер' },
+    { id: 'volume', label: 'Объём' }, { id: 'department', label: 'Отдел' },
+    { id: 'responsible', label: 'Ответственный' }, { id: 'cert', label: 'Свидетельство' },
+    { id: 'result', label: 'Результат поверки' }, { id: 'notes', label: 'Примечание' },
+  ],
+  history: [
+    { id: 'date', label: 'Дата поверки' }, { id: 'cert', label: 'Свидетельство' },
+    { id: 'result', label: 'Результат' }, { id: 'org', label: 'Организация' },
+    { id: 'note', label: 'Примечание' },
+  ]
+};
 
 // ============================================================
 // ПОЛЬЗОВАТЕЛИ — СПИСОК И ФОРМА
@@ -623,15 +662,26 @@ async function openUserViewModal(userId, userName) {
     if (prefs.visibleFields && Array.isArray(prefs.visibleFields)) {
       _userViewVisibleFields = [...prefs.visibleFields];
     }
-    if (prefs.printDocuments && typeof prefs.printDocuments === 'object') {
-      _userViewPrintDocs = {
-        export:    prefs.printDocuments.export    !== false,
-        actSend:   prefs.printDocuments.actSend   !== false,
-        actReturn: prefs.printDocuments.actReturn !== false,
-        history:   prefs.printDocuments.history   !== false,
-      };
+              if (prefs.printDocuments && prefs.printDocuments.useIndividual !== undefined) {
+      _userViewPrintDocs = JSON.parse(JSON.stringify(prefs.printDocuments));
+      for (const key of ['export', 'actSend', 'actReturn', 'history']) {
+        if (!_userViewPrintDocs[key] || typeof _userViewPrintDocs[key] !== 'object') {
+          _userViewPrintDocs[key] = { enabled: true, fields: [] };
+        } else {
+          _userViewPrintDocs[key] = {
+            enabled: _userViewPrintDocs[key].enabled !== false,
+            fields: Array.isArray(_userViewPrintDocs[key].fields) ? _userViewPrintDocs[key].fields : []
+          };
+        }
+      }
     } else {
-      _userViewPrintDocs = { export: true, actSend: true, actReturn: true, history: true };
+      _userViewPrintDocs = {
+        useIndividual: false,
+        export: { enabled: true, fields: [] },
+        actSend: { enabled: true, fields: [] },
+        actReturn: { enabled: true, fields: [] },
+        history: { enabled: true, fields: [] }
+      };
     }
   } catch (e) {}
   try {
@@ -676,7 +726,13 @@ function closeUserViewModal() {
   _userViewUserId = null;
   _userViewVisibleFields = [];
   _userViewActiveTab = 'fields';
-  _userViewPrintDocs = { export: true, actSend: true, actReturn: true, history: true };
+  _userViewPrintDocs = {
+    useIndividual: false,
+    export: { enabled: true, fields: [] },
+    actSend: { enabled: true, fields: [] },
+    actReturn: { enabled: true, fields: [] },
+    history: { enabled: true, fields: [] }
+  };
 }
 
 function renderUserViewContent() {
@@ -1153,7 +1209,7 @@ async function renderUserViewDocuments() {
   try {
     const users = await getCachedUsers();
     user = users.find(u => u.id === _userViewUserId) || null;
-  } catch (e) { /* fallback ниже */ }
+  } catch (e) {}
 
   const hasPerm = user && (user.role === 'admin' || (user.extraPermissions || []).includes('export_data'));
 
@@ -1167,48 +1223,105 @@ async function renderUserViewDocuments() {
     return;
   }
 
+  let global = {};
   try {
-    const global = await apiRequest('/settings/export');
+    global = await apiRequest('/settings/export');
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка загрузки глобальных настроек: ${esc(e.message)}</p>`;
+    return;
+  }
 
-    const docs = [
-      { key: 'export',    label: 'Экспорт реестра',        globalOn: global.exportEnabled !== false,    icon: 'fa-file-excel' },
-      { key: 'actSend',   label: 'Акт отправки на поверку', globalOn: global.actSendEnabled !== false,   icon: 'fa-box' },
-      { key: 'actReturn', label: 'Акт возврата с поверки',  globalOn: global.actReturnEnabled !== false, icon: 'fa-box-open' },
-      { key: 'history',   label: 'Экспорт истории поверок', globalOn: global.historyEnabled !== false,   icon: 'fa-clock-rotate-left' },
-    ];
+  // Системные поля экспорта + кастомные поля из field_config
+  const allExportFields = [...PRINT_DOC_FIELDS.export];
+  const systemIds = new Set(PRINT_DOC_FIELDS.export.map(f => f.id));
+  const customFields = (_cachedFields || []).filter(f => f.enabled && !systemIds.has(f.id));
+  for (const f of customFields) {
+    allExportFields.push({ id: f.id, label: f.label });
+  }
 
-    let html = `
-      <div class="info-block" style="margin-bottom:14px;">
-        <i class="fa-solid fa-circle-info"></i>
-        Поля документов настраиваются глобально: «Настройки → Печать документов».<br>
-        Здесь — только видимость документов для этого пользователя.
+  const docConfigs = [
+    { key: 'export',    title: 'Экспорт реестра', globalEnabled: global.exportEnabled    !== false, fields: allExportFields },
+    { key: 'actSend',   title: 'Акт отправки',    globalEnabled: global.actSendEnabled   !== false, fields: PRINT_DOC_FIELDS.actSend },
+    { key: 'actReturn', title: 'Акт возврата',    globalEnabled: global.actReturnEnabled !== false, fields: PRINT_DOC_FIELDS.actReturn },
+    { key: 'history',   title: 'История поверок', globalEnabled: global.historyEnabled   !== false, fields: PRINT_DOC_FIELDS.history },
+  ];
+
+  let html = `
+    <div style="margin-bottom:16px; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+      <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600;">
+        <input type="checkbox" id="user-print-use-individual" ${_userViewPrintDocs.useIndividual ? 'checked' : ''} onchange="toggleUserPrintIndividual(this.checked)" style="width:18px; height:18px;">
+        Использовать индивидуальные настройки печати
+      </label>
+      <small style="display:block; margin-top:6px; color:#64748b; margin-left:26px;">
+        Если выключено — используются стандартные настройки системы (только для просмотра).
+      </small>
+    </div>
+    <div class="prefs-tabs" id="user-print-tabs" style="margin-bottom:16px;">
+      ${docConfigs.map((d, i) => `
+        <button class="prefs-tab ${i === 0 ? 'active' : ''}" data-doc="${d.key}" onclick="switchUserPrintTab('${d.key}', this)">
+          ${esc(d.title)}
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  for (const d of docConfigs) {
+    const isIndividual = _userViewPrintDocs.useIndividual;
+    const docState = _userViewPrintDocs[d.key] || { enabled: true, fields: [] };
+    const enabled = docState.enabled;
+    const selectedFields = new Set(docState.fields || []);
+
+    html += `<div class="user-print-tab-content" id="user-print-tab-${d.key}" style="display:${d.key === 'export' ? 'block' : 'none'}; ${!isIndividual ? 'opacity:0.6; pointer-events:none;' : ''}">`;
+    html += `
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+          <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleUserPrintDocEnabled('${d.key}', this.checked)" style="width:16px;height:16px;">
+          Разрешить печать этого документа
+        </label>
       </div>
+      <div style="font-weight:600; font-size:.85rem; margin-bottom:8px; color:#475569;">Поля в документе:</div>
+      <div class="export-fields-grid" style="grid-template-columns:1fr 1fr; max-height:300px; overflow-y:auto; padding:4px;">
     `;
-
-    for (const d of docs) {
-      const userHas = _userViewPrintDocs[d.key] !== false;
-      const checked = d.globalOn && userHas;
-      const disabled = !d.globalOn;
+    for (const f of d.fields) {
+      const checked = selectedFields.has(f.id) ? 'checked' : '';
       html += `
-        <label class="prefs-item" style="padding:10px 12px;${disabled ? 'opacity:0.5;' : ''}">
-          <input type="checkbox" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}
-                 onchange="toggleUserViewDocument('${d.key}', this.checked)">
-          <span class="prefs-label">
-            <i class="fa-solid ${d.icon}"></i> ${esc(d.label)}
-          </span>
-          <span style="font-size:.75rem;color:${d.globalOn ? '#16a34a' : '#dc2626'};">
-            ${d.globalOn ? '✅ глобально вкл.' : '❌ глобально выкл.'}
-          </span>
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:4px 6px; border-radius:4px;">
+          <input type="checkbox" class="user-print-field-cb" data-doc="${d.key}" value="${f.id}" ${checked} onchange="toggleUserPrintField('${d.key}', '${f.id}', this.checked)">
+          ${esc(f.label)}
         </label>
       `;
     }
-
-    c.innerHTML = html;
-  } catch (e) {
-    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+    html += `</div>`;
+    if (!isIndividual) {
+      html += `<div style="margin-top:8px; font-size:.8rem; color:#94a3b8;"><i class="fa-solid fa-lock"></i> Включите индивидуальные настройки, чтобы редактировать</div>`;
+    }
+    html += `</div>`;
   }
+
+  c.innerHTML = html;
 }
 
-function toggleUserViewDocument(docKey, checked) {
-  _userViewPrintDocs[docKey] = checked;
+function toggleUserPrintIndividual(checked) {
+  _userViewPrintDocs.useIndividual = checked;
+  renderUserViewDocuments();
+}
+
+function switchUserPrintTab(docKey, btn) {
+  document.querySelectorAll('#user-print-tabs .prefs-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.user-print-tab-content').forEach(el => el.style.display = 'none');
+  document.getElementById(`user-print-tab-${docKey}`).style.display = 'block';
+}
+
+function toggleUserPrintDocEnabled(docKey, checked) {
+  if (!_userViewPrintDocs[docKey]) _userViewPrintDocs[docKey] = { enabled: true, fields: [] };
+  _userViewPrintDocs[docKey].enabled = checked;
+}
+
+function toggleUserPrintField(docKey, fieldId, checked) {
+  if (!_userViewPrintDocs[docKey]) _userViewPrintDocs[docKey] = { enabled: true, fields: [] };
+  const set = new Set(_userViewPrintDocs[docKey].fields || []);
+  if (checked) set.add(fieldId);
+  else set.delete(fieldId);
+  _userViewPrintDocs[docKey].fields = [...set];
 }
