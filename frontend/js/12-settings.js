@@ -623,8 +623,18 @@ const _printDefaults = {
   historyFields:   ['date','cert','result','org','note'],
 };
 for (const key of Object.keys(_printDefaults)) {
-  if (!Array.isArray(window._printSettingsDraft[key]) || window._printSettingsDraft[key].length === 0) {
+  const arr = window._printSettingsDraft[key];
+  if (!Array.isArray(arr) || arr.length === 0) {
     window._printSettingsDraft[key] = [..._printDefaults[key]];
+  } else if (customIds.length > 0 && key === 'fields') {
+    // 🆕 Добавляем кастомные поля в «Экспорт реестра», если их ещё нет
+    // (в актах они уже включены — туда попадают через renderPrintTab)
+    const set = new Set(arr);
+    let added = false;
+    for (const id of customIds) {
+      if (!set.has(id)) { set.add(id); added = true; }
+    }
+    if (added) window._printSettingsDraft[key] = [...set];
   }
 }
 if (typeof window._printSettingsDraft.exportEnabled !== 'boolean') {
