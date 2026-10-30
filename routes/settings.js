@@ -268,24 +268,117 @@ router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => 
 // ============================================================
 router.get('/export', authenticate, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT fields FROM export_settings WHERE id = 1');
-    if (!rows.length) return res.json([]);
-    res.json(db.safeParse(rows[0].fields, []));
-  } catch (e) {
-    console.error('GET /export:', e);
-    res.status(500).json({ error: 'Ошибка загрузки настроек экспорта' });
-  }
+    const [rows] = await db.query('SELECT * FROM export_settings WHERE id = 1');
+    if (!rows.length) {
+      return res.json({
+        fields: [], exportEnabled: true,
+        actSendEnabled: true,   actSendFields: [],
+        actReturnEnabled: true, actReturnFields: [],
+        historyEnabled: true,   historyFields: [],
+      });
+    }
+    const r = rows[0];
+    res.json({
+      fields:           db.safeParse(r.fields, []),
+      exportEnabled:    r.export_enabled !== 0,
+      actSendEnabled:   r.act_send_enabled !== 0,
+      actSendFields:    db.safeParse(r.act_send_fields, []),
+      actReturnEnabled: r.act_return_enabled !== 0,
+      actReturnFields:  db.safeParse(r.act_return_fields, []),
+      historyEnabled:   r.history_enabled !== 0,
+      historyFields:    db.safeParse(r.history_fields, []),
+    });
+  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
 router.put('/export', authenticate, requireRole(['admin']), async (req, res) => {
-  const fields = req.body;
-  if (!Array.isArray(fields)) return res.status(400).json({ error: 'Ожидается массив' });
-  await db.query(
-    `INSERT INTO export_settings (id, fields) VALUES (1, ?)
-     ON DUPLICATE KEY UPDATE fields = VALUES(fields), updated_at = CURRENT_TIMESTAMP`,
-    [JSON.stringify(fields)]
-  );
-  res.json({ message: 'Настройки экспорта обновлены' });
+  try {
+    const b = req.body;
+    if (Array.isArray(b)) {
+      await db.query('UPDATE export_settings SET fields = ? WHERE id = 1', [JSON.stringify(b)]);
+      return res.json({ message: 'Поля экспорта обновлены' });
+    }
+    await db.query(
+      `UPDATE export_settings SET
+         fields              = COALESCE(?, fields),
+         export_enabled      = COALESCE(?, export_enabled),
+         act_send_enabled    = COALESCE(?, act_send_enabled),
+         act_send_fields     = COALESCE(?, act_send_fields),
+         act_return_enabled  = COALESCE(?, act_return_enabled),
+         act_return_fields   = COALESCE(?, act_return_fields),
+         history_enabled     = COALESCE(?, history_enabled),
+         history_fields      = COALESCE(?, history_fields),
+         updated_at          = CURRENT_TIMESTAMP
+       WHERE id = 1`,
+      [
+        b.fields           ? JSON.stringify(b.fields)           : null,
+        b.exportEnabled    != null ? (b.exportEnabled ? 1 : 0)  : null,
+        b.actSendEnabled   != null ? (b.actSendEnabled ? 1 : 0) : null,
+        b.actSendFields    ? JSON.stringify(b.actSendFields)    : null,
+        b.actReturnEnabled != null ? (b.actReturnEnabled ? 1 : 0) : null,
+        b.actReturnFields  ? JSON.stringify(b.actReturnFields)  : null,
+        b.historyEnabled   != null ? (b.historyEnabled ? 1 : 0) : null,
+        b.historyFields    ? JSON.stringify(b.historyFields)    : null,
+      ]
+    );
+    res.json({ message: 'Настройки печати обновлены' });
+  } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
+});
+
+router.get('/print-documents/effective', authenticate, async (req, res) => {
+  try {
+    const user = req.user;
+    const hasPermission = user.role === 'admin'
+      || (user._perms || []).includes('export_data');
+
+    if (!hasPermission) {
+      return res.json({
+        hasPermission: false,
+        export: false, actSend: false, actReturn: false, history: false,
+        source: 'no_permission',
+      });
+    }
+
+    const [er] = await db.query('SELECT * FROM export_settings WHERE id = 1');
+    const g = er[0] || {};
+    const globalConf = {
+      export:    g.export_enabled !== 0,
+      actSend:   g.act_send_enabled !== 0,
+      actReturn: g.act_return_enabled !== 0,
+      history:   g.history_enabled !== 0,
+    };
+
+    const [pr] = await db.query(
+      'SELECT preferences FROM user_preferences WHERE user_id = ?', [user.id]
+    );
+    let prefs = {};
+    try { prefs = JSON.parse(pr[0]?.preferences || '{}'); } catch {}
+
+    const hasIndividual = prefs.printDocuments != null
+      && typeof prefs.printDocuments === 'object';
+
+    const effective = hasIndividual
+      ? {
+          export:    globalConf.export    && prefs.printDocuments.export    !== false,
+          actSend:   globalConf.actSend   && prefs.printDocuments.actSend   !== false,
+          actReturn: globalConf.actReturn && prefs.printDocuments.actReturn !== false,
+          history:   globalConf.history   && prefs.printDocuments.history   !== false,
+        }
+      : globalConf;
+
+    res.json({
+      hasPermission: true,
+      ...effective,
+      exportFields:    db.safeParse(g.fields, []),
+      actSendFields:   db.safeParse(g.act_send_fields, []),
+      actReturnFields: db.safeParse(g.act_return_fields, []),
+      historyFields:   db.safeParse(g.history_fields, []),
+      source: hasIndividual ? 'individual' : 'global',
+    });
+  } catch (e) {
+    console.error('GET /settings/print-documents/effective:', e);
+    res.status(500).json({ error: 'Ошибка' });
+  }
 });
 
 // ============================================================
