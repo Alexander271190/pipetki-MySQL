@@ -345,6 +345,16 @@ async function initSchema() {
       { name: 'category',   ddl: 'VARCHAR(50) DEFAULT NULL' }
     ]);
 
+    await ensureColumns(conn, 'export_settings', [
+  { name: 'export_enabled',     ddl: 'TINYINT DEFAULT 1' },
+  { name: 'act_send_enabled',   ddl: 'TINYINT DEFAULT 1' },
+  { name: 'act_send_fields',    ddl: 'JSON DEFAULT NULL' },
+  { name: 'act_return_enabled', ddl: 'TINYINT DEFAULT 1' },
+  { name: 'act_return_fields',  ddl: 'JSON DEFAULT NULL' },
+  { name: 'history_enabled',    ddl: 'TINYINT DEFAULT 1' },
+  { name: 'history_fields',     ddl: 'JSON DEFAULT NULL' },
+]);
+
     try {
       await conn.query('CREATE INDEX idx_audit_pipette ON audit_log(pipette_id)');
     } catch (e) {}
