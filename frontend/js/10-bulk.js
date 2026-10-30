@@ -48,6 +48,8 @@ async function openBulkSendModal() {
 
       // 🆕 Модалка — сразу
       UI.modal.open('bulk-send-modal');
+      const btnAct = document.querySelector('#bulk-send-modal [onclick="printSendAct()"]');
+      if (btnAct) btnAct.style.display = settings.printDocs?.actSend === false ? 'none' : '';
 
       // 🆕 Блокировки — один запрос, в фоне
       (async () => {
@@ -238,122 +240,104 @@ async function saveBulkSend(e) {
 // ПЕЧАТЬ АКТА ОТПРАВКИ
 // ============================================================
 async function printSendAct() {
-  await refreshCurrentUser();  
-  if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
-  const sendItems = _bulkSendIds.filter(id => {
-  const p = pipettes.find(x => x.id === id);
-  return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
-});
-
-  if (sendItems.length === 0) {
-    showToast('Нет единиц для печати', 'error');
+  await refreshCurrentUser();
+  if (!canManagePipettes()) return;
+  if (settings.printDocs?.actSend === false) {
+    showToast('Печать акта отправки отключена администратором', 'error');
     return;
   }
 
-  const sentDate = document.getElementById('bulk-send-date').value
-    || todayStr();
+  const sendItems = _bulkSendIds.filter(id => {
+    const p = pipettes.find(x => x.id === id);
+    return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
+  });
+  if (sendItems.length === 0) { showToast('Нет единиц для печати', 'error'); return; }
+
+  const sentDate = document.getElementById('bulk-send-date').value || todayStr();
   const note = (document.getElementById('bulk-send-note').value || '').trim();
   const today = new Date().toLocaleDateString('ru-RU');
   const user = currentUser ? currentUser.fullName : '';
   const userPosition = currentUser ? (currentUser.position || '') : '';
 
-  const rows = sendItems.map((id, index) => {
+  const fields = settings.printDocs?.actSendFields?.length
+    ? settings.printDocs.actSendFields
+    : ['id', 'model', 'manufacturer', 'serial', 'volume', 'department', 'responsible'];
+
+  const fieldLabels = {
+    id: 'Внутр. №', model: 'Модель', manufacturer: 'Производитель',
+    serial: 'Серийный №', volume: 'Объём', department: 'Отдел',
+    responsible: 'Ответственный', location: 'Место',
+    cert: 'Свидетельство', notes: 'Примечание',
+  };
+
+  const renderCell = (p, field) => {
+    switch (field) {
+      case 'id':           return `<strong>${esc(p.id)}</strong>`;
+      case 'volume':       return p.volume ? esc(p.volume) + ' мкл' : '—';
+      case 'model':        return esc(p.model);
+      default:             return esc(p[field] || '—');
+    }
+  };
+
+  const headerCells = fields.map(f => `<th>${esc(fieldLabels[f] || f)}</th>`).join('');
+  const rows = sendItems.map((id, i) => {
     const p = pipettes.find(x => x.id === id);
     if (!p) return '';
-    return `
-      <tr>
-        <td style="text-align:center;">${index + 1}</td>
-        <td><strong>${esc(p.id)}</strong></td>
-        <td>${esc(p.model)}${p.manufacturer ? '<br><small>' + esc(p.manufacturer) + '</small>' : ''}</td>
-        <td>${esc(p.serial || '—')}</td>
-        <td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>
-        <td>${esc(p.department || '—')}</td>
-        <td>${esc(p.responsible || '—')}</td>
-        <td style="width:50px;"></td>
-      </tr>
-    `;
+    const cells = fields.map(f => `<td>${renderCell(p, f)}</td>`).join('');
+    return `<tr><td style="text-align:center;">${i + 1}</td>${cells}<td style="width:50px;"></td></tr>`;
   }).join('');
 
-const win = window.open('', '_blank');
-  if (!win) {
-    showToast('Разрешите всплывающие окна для печати акта', 'error');
-    return;
-  }
+  const win = window.open('', '_blank');
+  if (!win) { showToast('Разрешите всплывающие окна', 'error'); return; }
   win.document.write(`
     <!DOCTYPE html>
     <html lang="ru">
     <head>
       <meta charset="UTF-8">
-      <title>Акт отправки на поверку — ${today}</title>
+      <title>Акт отправки — ${today}</title>
       <style>
-        @page { size: A4 portrait; margin: 15mm 12mm; }
+        @page { size: A4 landscape; margin: 15mm 12mm; }
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; line-height: 1.5; }
-        h1 { font-size: 15pt; margin: 0 0 6px; text-align: center; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; }
+        h1 { font-size: 15pt; text-align: center; margin: 0 0 6px; }
         .subtitle { font-size: 10pt; text-align: center; color: #64748b; margin-bottom: 20px; }
-        .meta { margin-bottom: 15px; padding: 10px 12px; background: #f8fafc; border-radius: 6px; font-size: 9.5pt; }
+        .meta { padding: 10px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 15px; font-size: 9.5pt; }
         .meta div { margin-bottom: 3px; }
-        .meta b { color: #1e293b; }
         table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; }
-        th { background: #1e293b; color: #fff; padding: 8px 6px; text-align: left; font-size: 8.5pt;
-             text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        th { background: #1e293b; color: #fff; padding: 8px 6px; text-align: left; font-size: 8.5pt; text-transform: uppercase; -webkit-print-color-adjust: exact; }
         td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
         tr:nth-child(even) td { background: #f8fafc; }
         small { color: #94a3b8; font-size: 8pt; }
-        .note-block { margin-top: 20px; padding: 10px 12px; background: #fef9c3;
-                      border-left: 3px solid #eab308; border-radius: 6px; font-size: 9.5pt; color: #854d0e; }
+        .footer { margin-top: 30px; font-size: 9.5pt; }
         .signatures { margin-top: 40px; display: flex; justify-content: space-between; }
         .sig-block { width: 45%; }
         .sig-line { border-bottom: 1px solid #000; height: 30px; margin-bottom: 5px; }
         .sig-label { font-size: 8.5pt; color: #64748b; text-align: center; }
-        .footer { margin-top: 30px; font-size: 8pt; color: #94a3b8; text-align: center; }
       </style>
     </head>
     <body>
       <h1>АКТ ОТПРАВКИ НА ПОВЕРКУ</h1>
       <div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
-
-     <div class="meta">
+      <div class="meta">
         <div>Дата отправки: <b>${formatDate(sentDate)}</b></div>
         <div>Количество приборов: <b>${sendItems.length}</b></div>
-        <div>Организация, производящая поверку: <b>ФБУ «Красноярский ЦСМ»</b></div>
-       <div>Дата печати: <b>${today}</b></div>
+        <div>Организация: <b>ФБУ «Красноярский ЦСМ»</b></div>
+        <div>Дата печати: <b>${today}</b></div>
       </div>
-
       <table>
-        <thead>
-          <tr>
-            <th style="width:5%; text-align:center;">№</th>
-            <th style="width:11%;">Внутр. №</th>
-            <th style="width:22%;">Модель / Произв.</th>
-            <th style="width:13%;">Серийный №</th>
-            <th style="width:10%;">Объём</th>
-            <th style="width:15%;">Отдел</th>
-            <th style="width:14%;">Ответственный</th>
-            <th style="width:10%;">Прим.</th>
-          </tr>
-        </thead>
+        <thead><tr><th style="width:5%;text-align:center;">№</th>${headerCells}<th style="width:10%;">Прим.</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-
-      ${note ? `<div class="note-block"><b>Примечание:</b> ${esc(note)}</div>` : ''}
-
-           <div style="margin-top:30px;font-size:9.5pt;">
+      ${note ? `<div class="meta" style="margin-top:15px;"><b>Примечание:</b> ${esc(note)}</div>` : ''}
+      <div class="footer">
         <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
         <div style="margin-top:6px;">Подпись: _______________</div>
       </div>
-
       <div class="signatures">
-        <div class="sig-block">
-          <div class="sig-line"></div>
-          <div class="sig-label">Сдал (ФИО, подпись)</div>
-        </div>
-        <div class="sig-block">
-          <div class="sig-line"></div>
-          <div class="sig-label">Принял (ФИО, подпись)</div>
-        </div>
+        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Сдал (ФИО, подпись)</div></div>
+        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Принял (ФИО, подпись)</div></div>
       </div>
-      </body>
+    </body>
     </html>
   `);
   win.document.close();
@@ -433,6 +417,9 @@ async function openBulkReturnModal() {
         renderReturnReplacements(sentItems);
 
         UI.modal.open('bulk-return-modal');
+
+      const btnAct = document.querySelector('#bulk-return-modal [onclick="printReturnAct()"]');
+      if (btnAct) btnAct.style.display = settings.printDocs?.actReturn === false ? 'none' : '';
 
         // 🆕 Блокировки — один запрос, в фоне
         (async () => {
@@ -736,4 +723,119 @@ async function saveBulkResponsible(e) {
     if (e.status === 409) { return; }
     errEl.textContent = e.message || 'Ошибка';
    }
+}
+
+async function printReturnAct() {
+  await refreshCurrentUser();
+  if (!canManagePipettes()) return;
+  if (settings.printDocs?.actReturn === false) {
+    showToast('Печать акта возврата отключена администратором', 'error');
+    return;
+  }
+
+  if (!_bulkReturnIds || _bulkReturnIds.length === 0) {
+    showToast('Нет единиц для печати', 'error');
+    return;
+  }
+
+  const returnDate = document.getElementById('bulk-return-date').value || todayStr();
+  const org = (document.getElementById('bulk-return-org').value || '').trim() || 'ФБУ «Красноярский ЦСМ»';
+  const singleCert = document.getElementById('bulk-return-single-cert').checked;
+  const commonCert = (document.getElementById('bulk-return-cert').value || '').trim();
+  const today = new Date().toLocaleDateString('ru-RU');
+  const user = currentUser ? currentUser.fullName : '';
+  const userPosition = currentUser ? (currentUser.position || '') : '';
+  const note = (document.getElementById('bulk-return-note').value || '').trim();
+
+  const fields = settings.printDocs?.actReturnFields?.length
+    ? settings.printDocs.actReturnFields
+    : ['id', 'model', 'manufacturer', 'serial', 'volume', 'department', 'cert', 'result'];
+
+  const fieldLabels = {
+    id: 'Внутр. №', model: 'Модель', manufacturer: 'Производитель',
+    serial: 'Серийный №', volume: 'Объём', department: 'Отдел',
+    responsible: 'Ответственный', cert: 'Свидетельство',
+    result: 'Результат', notes: 'Примечание',
+  };
+
+  const renderCell = (id, field) => {
+    const p = pipettes.find(x => x.id === id);
+    if (!p) return '—';
+    if (field === 'id') return `<strong>${esc(id)}</strong>`;
+    if (field === 'volume') return p.volume ? esc(p.volume) + ' мкл' : '—';
+    if (field === 'model') return esc(p.model);
+    if (field === 'cert') {
+      const ci = document.querySelector(`.bulk-return-cert-input[data-id="${id}"]`);
+      const v = singleCert ? commonCert : (ci ? ci.value.trim() : '');
+      return esc(v || '—');
+    }
+    if (field === 'result') {
+      const rs = document.querySelector(`.bulk-return-result-input[data-id="${id}"]`);
+      const v = rs ? rs.value : 'pass';
+      return v === 'pass' ? 'Годен' : v === 'fail' ? 'Брак' : 'В процессе';
+    }
+    return esc(p[field] || '—');
+  };
+
+  const headerCells = fields.map(f => `<th>${esc(fieldLabels[f] || f)}</th>`).join('');
+  const rows = _bulkReturnIds.map((id, i) => {
+    const cells = fields.map(f => `<td>${renderCell(id, f)}</td>`).join('');
+    return `<tr><td style="text-align:center;">${i + 1}</td>${cells}</tr>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  if (!win) { showToast('Разрешите всплывающие окна', 'error'); return; }
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+      <meta charset="UTF-8">
+      <title>Акт возврата — ${today}</title>
+      <style>
+        @page { size: A4 landscape; margin: 15mm 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; }
+        h1 { font-size: 15pt; text-align: center; margin: 0 0 6px; }
+        .subtitle { font-size: 10pt; text-align: center; color: #64748b; margin-bottom: 20px; }
+        .meta { padding: 10px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 15px; font-size: 9.5pt; }
+        .meta div { margin-bottom: 3px; }
+        table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; }
+        th { background: #1e293b; color: #fff; padding: 8px 6px; text-align: left; font-size: 8.5pt; text-transform: uppercase; -webkit-print-color-adjust: exact; }
+        td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+        tr:nth-child(even) td { background: #f8fafc; }
+        small { color: #94a3b8; font-size: 8pt; }
+        .footer { margin-top: 30px; font-size: 9.5pt; }
+        .signatures { margin-top: 40px; display: flex; justify-content: space-between; }
+        .sig-block { width: 45%; }
+        .sig-line { border-bottom: 1px solid #000; height: 30px; margin-bottom: 5px; }
+        .sig-label { font-size: 8.5pt; color: #64748b; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <h1>АКТ ВОЗВРАТА С ПОВЕРКИ</h1>
+      <div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
+      <div class="meta">
+        <div>Дата поверки: <b>${formatDate(returnDate)}</b></div>
+        <div>Количество приборов: <b>${_bulkReturnIds.length}</b></div>
+        <div>Поверяющая организация: <b>${esc(org)}</b></div>
+        <div>Дата печати: <b>${today}</b></div>
+      </div>
+      <table>
+        <thead><tr><th style="width:5%;text-align:center;">№</th>${headerCells}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${note ? `<div class="meta" style="margin-top:15px;"><b>Примечание:</b> ${esc(note)}</div>` : ''}
+      <div class="footer">
+        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+        <div style="margin-top:6px;">Подпись: _______________</div>
+      </div>
+      <div class="signatures">
+        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Сдал (ФИО, подпись)</div></div>
+        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Принял (ФИО, подпись)</div></div>
+      </div>
+    </body>
+    </html>
+  `);
+  win.document.close();
+  showToast('Окно печати открыто', 'success');
 }
