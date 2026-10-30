@@ -2,7 +2,6 @@
 const { pool } = require('./pool');
 const fs = require('fs');
 const path = require('path');
-const HTMLtoDOCX = require('html-to-docx');
 
 // ============================================================
 // ГЕНЕРАЦИЯ ID
@@ -29,90 +28,99 @@ async function generatePipetteId(prefix = 'P', conn = null) {
   return `${prefix}-${String(maxNum + 1).padStart(3, '0')}`;
 }
 
-// ============================================================
-// ХЕЛПЕР: Замена иконок на эмодзи
-// ============================================================
-function replaceIcons(html) {
-  const emojiMap = {
-    'fa-thumbtack': '📌', 'fa-key': '🔑', 'fa-desktop': '🖥️', 'fa-users': '👥',
-    'fa-box': '📦', 'fa-magnifying-glass': '🔍', 'fa-plus': '➕', 'fa-clipboard-list': '📋',
-    'fa-pen': '✏️', 'fa-trash': '🗑️', 'fa-clipboard-check': '✅', 'fa-clock-rotate-left': '🕒',
-    'fa-box-open': '📥', 'fa-right-left': '↔️', 'fa-user-pen': '👤', 'fa-barcode': '🔲',
-    'fa-tag': '🏷️', 'fa-upload': '📤', 'fa-keyboard': '⌨️', 'fa-palette': '🌙',
-    'fa-book-open': '📖', 'fa-circle-question': '❓', 'fa-check': '✅', 'fa-xmark': '❌',
-    'fa-hourglass-half': '⏳', 'fa-circle-pause': '⏸️', 'fa-circle-info': 'ℹ️', 'fa-triangle-exclamation': '⚠️'
-  };
-  return html.replace(/\{icon:\s*([a-z0-9-]+)\s*\}/gi, (match, iconName) => emojiMap[iconName] || '🔹');
-}
 
 // ============================================================
-// СПРАВКА (Генерация файлов и обновление БД)
+// СПРАВКА — русские названия разделов по slug
+// ============================================================
+const HELP_TITLES = {
+  'intro':            'Начало работы',
+  'login':            'Вход в систему',
+  'screen':           'Что на экране',
+  'roles':            'Роли и права',
+  'view':             'Просмотр таблицы',
+  'search':           'Поиск и фильтры',
+  'add-single':       'Добавить одну единицу',
+  'add-batch':        'Добавить партию',
+  'edit':             'Редактирование',
+  'delete':           'Удаление',
+  'quickcal':         'Быстрая поверка',
+  'history':          'История поверок',
+  'send':             'Отправка на поверку',
+  'return':           'Возврат с поверки',
+  'transfer':         'Передача в отдел',
+  'bulk-responsible': 'Массовая смена ответственного',
+  'scan':             'Сканирование штрихкодов',
+  'print':            'Печать этикеток',
+  'export':           'Экспорт данных',
+  'hotkeys':          'Горячие клавиши',
+  'theme':            'Тёмная тема',
+  'help-admin':       'Редактирование справки',
+  'faq':              'Частые вопросы',
+  'print-docs':       'Печать документов',
+};
+
+// ============================================================
+// СПРАВКА — сканирование frontend/help-defaults/
+// Файлы .docx / .pdf лежат в репозитории, имя файла = slug.
+// Пример: frontend/help-defaults/intro.docx → slug='intro'
 // ============================================================
 async function seedHelpDocs(conn) {
   const executor = conn || pool;
-  let sections = [];
-  try {
-    sections = require('../help-seed');
-  } catch (e) {
-    console.error('❌ Не удалось загрузить help-seed.js:', e.message);
+  const DEFAULTS_DIR = path.join(__dirname, '..', 'frontend', 'help-defaults');
+
+  if (!fs.existsSync(DEFAULTS_DIR)) {
+    console.log('📖 seedHelpDocs: папка frontend/help-defaults/ отсутствует — пропуск');
     return;
   }
 
-  const UPLOAD_DIR = path.join(__dirname, '..', 'frontend', 'uploads', 'help', 'seed');
-  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  const files = fs.readdirSync(DEFAULTS_DIR).filter(f => /\.(pdf|docx|doc)$/i.test(f));
+  if (files.length === 0) {
+    console.log('📖 seedHelpDocs: в frontend/help-defaults/ нет файлов — пропуск');
+    return;
+  }
 
-  let generatedCount = 0;
+  // Сортируем по алфавиту, чтобы sort_order был стабильным
+  files.sort();
 
-  for (const s of sections) {
-    const cleanTitle = replaceIcons(s.title);
-    const fileName = `${s.slug}.docx`;
-    const filePath = path.join(UPLOAD_DIR, fileName);
-    const dbPath = `uploads/help/seed/${fileName}`;
+  let added = 0;
+  let updated = 0;
+  let sortIdx = 1;
 
-    // Генерируем файл, если его нет
-    if (!fs.existsSync(filePath)) {
-      const cleanContent = replaceIcons(s.content);
-      const fullHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-        body { font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.5; }
-        h1 { font-size: 18pt; text-align: center; }
-        h2 { font-size: 16pt; margin-top: 20px; }
-        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-        th, td { border: 1px solid #666; padding: 6px 10px; }
-        th { background-color: #f1f5f9; }
-      </style></head><body><h1>${cleanTitle}</h1>${cleanContent}</body></html>`;
+  for (const fileName of files) {
+    const slug = path.parse(fileName).name;
+    const dbPath = `help-defaults/${fileName}`;
+    const fallbackTitle = HELP_TITLES[slug] || slug.replace(/[_-]/g, ' ').replace(/^\w/, c => c.toUpperCase());
 
-      try {
-        const docxBuffer = await HTMLtoDOCX(fullHtml, null, { table: { row: { cantSplit: true } } });
-        fs.writeFileSync(filePath, docxBuffer);
-        generatedCount++;
-      } catch (err) {
-        console.error(`❌ Ошибка генерации ${fileName}:`, err.message);
+    const [existing] = await executor.query(
+      'SELECT id, file_path, title FROM help_docs WHERE slug = ?', [slug]
+    );
+
+    if (existing.length === 0) {
+      await executor.query(
+        `INSERT INTO help_docs (slug, title, file_path, required_permissions, sort_order, enabled)
+         VALUES (?, ?, ?, '[]', ?, 1)`,
+        [slug, fallbackTitle, dbPath, sortIdx]
+      );
+      added++;
+    } else {
+      // Обновляем только если file_path пустой (не перезаписываем загруженное админом)
+      if (!existing[0].file_path) {
+        await executor.query(
+          'UPDATE help_docs SET file_path = ?, title = COALESCE(NULLIF(title, \'\'), ?) WHERE slug = ?',
+          [dbPath, fallbackTitle, slug]
+        );
+        updated++;
       }
     }
-
-    // Вставляем или обновляем запись в БД
-    await executor.query(
-      `INSERT INTO help_docs
-         (slug, title, file_path, required_permissions, sort_order, enabled)
-       VALUES (?, ?, ?, ?, ?, 1)
-       ON DUPLICATE KEY UPDATE
-         file_path = IF(file_path IS NULL OR file_path = '', VALUES(file_path), file_path),
-         title = IF(title LIKE '{icon:%', VALUES(title), title)`,
-      [
-        s.slug,
-        cleanTitle,
-        dbPath,
-        JSON.stringify(s.requiredPermissions || []),
-        s.sortOrder || 0,
-      ]
-    );
+    sortIdx++;
   }
-  
-  if (generatedCount > 0) {
-    console.log(`📄 Сгенерировано документов справки: ${generatedCount}`);
+
+  if (added > 0 || updated > 0) {
+    console.log(`📖 seedHelpDocs: ${added} добавлено, ${updated} обновлено (файлов: ${files.length})`);
+  } else {
+    console.log(`📖 seedHelpDocs: всё актуально (файлов: ${files.length})`);
   }
 }
-
 // ============================================================
 // НАЧАЛЬНЫЕ ДАННЫЕ
 // ============================================================
