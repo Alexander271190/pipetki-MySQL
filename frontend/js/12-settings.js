@@ -551,7 +551,7 @@ async function saveFilters() {
 }
 
 // ============================================================
-// ВКЛАДКА: ЭКСПОРТ
+// ВКЛАДКА: ПЕЧАТЬ ДОКУМЕНТОВ
 // ============================================================
 const SYSTEM_EXPORT_FIELDS = [
   { id: 'id', label: 'Внутренний номер' }, { id: 'serial', label: 'Серийный номер' },
@@ -591,10 +591,10 @@ async function renderExportSettings() {
         Настройте, какие документы доступны пользователям и какие поля в них попадут.
       </p>
       <div class="prefs-tabs" style="margin-bottom:16px;">
-        <button class="prefs-tab active" onclick="switchPrintTab('export', this)">📄 Экспорт реестра</button>
-        <button class="prefs-tab" onclick="switchPrintTab('actSend', this)">📤 Акт отправки</button>
-        <button class="prefs-tab" onclick="switchPrintTab('actReturn', this)">📥 Акт возврата</button>
-        <button class="prefs-tab" onclick="switchPrintTab('history', this)">📜 История поверок</button>
+        <button class="prefs-tab active" onclick="switchPrintTab('export', this)">📄 Печать реестра</button>
+        <button class="prefs-tab" onclick="switchPrintTab('actSend', this)">📤 Печать акта отправки</button>
+        <button class="prefs-tab" onclick="switchPrintTab('actReturn', this)">📥 Печать акта возврата</button>
+        <button class="prefs-tab" onclick="switchPrintTab('history', this)">📜 Печать истории поверок</button>
       </div>
       <div id="print-tab-export" class="print-tab"></div>
       <div id="print-tab-actSend" class="print-tab" style="display:none;"></div>
@@ -608,8 +608,30 @@ async function renderExportSettings() {
       </div>
     `;
 
-    window._printSettingsDraft = JSON.parse(JSON.stringify(settings));
-    renderPrintTab('export');
+   window._printSettingsDraft = JSON.parse(JSON.stringify(settings));
+
+// 🆕 Если поля не настроены (пусто в БД) — предзаполняем дефолтами,
+// чтобы «из коробки» все галочки уже стояли.
+const customIds = (_cachedFields || [])
+  .filter(f => f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id))
+  .map(f => f.id);
+
+const _printDefaults = {
+  fields:          [...SYSTEM_EXPORT_FIELDS.map(f => f.id), ...customIds],
+  actSendFields:   ['id','model','manufacturer','serial','volume','department','responsible','location','cert','notes'],
+  actReturnFields: ['id','model','manufacturer','serial','volume','department','responsible','cert','result','notes'],
+  historyFields:   ['date','cert','result','org','note'],
+};
+for (const key of Object.keys(_printDefaults)) {
+  if (!Array.isArray(window._printSettingsDraft[key]) || window._printSettingsDraft[key].length === 0) {
+    window._printSettingsDraft[key] = [..._printDefaults[key]];
+  }
+}
+if (typeof window._printSettingsDraft.exportEnabled !== 'boolean') {
+  window._printSettingsDraft.exportEnabled = true;
+}
+
+renderPrintTab('export');
   } catch (e) {
     c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
   }
@@ -627,11 +649,11 @@ function renderPrintTab(tab) {
   const c = document.getElementById(`print-tab-${tab}`);
   const s = window._printSettingsDraft;
 
-  const configs = {
-    export: {
-      enabledKey: null, fieldsKey: 'fields',
-      title: 'Экспорт реестра оборудования',
-      hint: 'Документ при нажатии «Экспорт в Excel» / «Экспорт в PDF»',
+    const configs = {
+      export: {
+      enabledKey: 'exportEnabled', fieldsKey: 'fields',
+      title: 'Реестр оборудования',
+      hint: 'Документ при нажатии «Печать в Excel» / «Печать в PDF»',
       fields: SYSTEM_EXPORT_FIELDS,
     },
     actSend: {
@@ -670,8 +692,8 @@ function renderPrintTab(tab) {
     },
     history: {
       enabledKey: 'historyEnabled', fieldsKey: 'historyFields',
-      title: 'Экспорт истории поверок',
-      hint: 'Документ при нажатии «Экспорт истории» в модалке истории прибора',
+      title: 'Печать истории поверок',
+      hint: 'Документ при нажатии «Печать истории» в модалке истории прибора',
       fields: [
         { id: 'date', label: 'Дата поверки' },
         { id: 'cert', label: 'Свидетельство' },
