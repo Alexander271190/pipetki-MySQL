@@ -1,7 +1,7 @@
 'use strict';
 
 // ============================================================
-// ЭКСПОРТ
+// ПЕЧАТЬ
 // ============================================================
 const SYSTEM_EXPORT_FIELD_MAP = {
   id: { label: 'ID', get: p => p.id },
@@ -71,14 +71,14 @@ function getActiveExportFields() {
 
 async function exportToXlsx() {
   await UI.guard(
-    { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
+    { permission: 'export_data', errorMsg: 'Нет прав на печать' },
     async () => {
       if (settings.printDocs?.export === false) {
-        showToast('Экспорт реестра отключён администратором', 'error');
+        showToast('Печать реестра отключена администратором', 'error');
         return;
       }
       const data = await loadAllForExport();
-      if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
+      if (data.length === 0) { showToast('Нет данных для печати', 'error'); return; }
 
       const fields = getActiveExportFields();
       const headers = fields.map(f => {
@@ -94,7 +94,7 @@ async function exportToXlsx() {
         return obj;
       });
 
-      showToast('Формирование Excel…', 'success');
+      showToast('Формирование файла…', 'success');
 
       try {
         const defaultFilename = `pipettes_${todayStr()}.xlsx`;
@@ -117,7 +117,7 @@ async function exportToXlsx() {
           })
         }, defaultFilename);
 
-        showToast(`Экспортировано: ${data.length} записей`, 'success');
+        showToast(`Напечатано: ${data.length} записей`, 'success');
       } catch (e) {
         // Ошибка 401 уже обработана в downloadFile, здесь только остальные
         if (e.message !== 'Неавторизован') {
@@ -130,15 +130,15 @@ async function exportToXlsx() {
 
 async function exportToPDF() {
   await UI.guard(
-    { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
+    { permission: 'export_data', errorMsg: 'Нет прав на печать' },
     async () => {
       if (settings.printDocs?.export === false) {
-        showToast('Экспорт реестра отключён администратором', 'error');
+        showToast('Печать реестра отключена администратором', 'error');
         return;
       }
       
       const data = await loadAllForExport();
-      if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
+      if (data.length === 0) { showToast('Нет данных для печати', 'error'); return; }
 
       const fields = getActiveExportFields();
       const today = new Date().toLocaleDateString('ru-RU');
@@ -185,7 +185,7 @@ async function exportToPDF() {
 
       const win = window.open('', '_blank');
       if (!win) {
-        showToast('Разрешите всплывающие окна для экспорта в PDF', 'error');
+        showToast('Разрешите всплывающие окна для печати в PDF', 'error');
         return;
       }
       win.document.write(`
@@ -228,20 +228,20 @@ async function exportToPDF() {
         </div>
         </body></html>`);
       win.document.close();
-      showToast(`PDF: ${fields.length} полей, ${data.length} записей`, 'success');
+      showToast(`PDF готов: ${fields.length} полей, ${data.length} записей`, 'success');
     }
   );
 }
 
 // ============================================================
-// ЭКСПОРТ ИСТОРИИ ПОВЕРОК КОНКРЕТНОГО ОБОРУДОВАНИЯ
+// ПЕЧАТЬ ИСТОРИИ ПОВЕРОК КОНКРЕТНОГО ОБОРУДОВАНИЯ
 // ============================================================
 async function openHistoryExportModal() {
   await UI.guard(
-    { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
+    { permission: 'export_data', errorMsg: 'Нет прав на печать' },
     async () => {
       if (settings.printDocs?.history === false) {
-        showToast('Экспорт истории отключён администратором', 'error');
+        showToast('Печать истории отключена администратором', 'error');
         return;
       }
       if (!currentHistoryId) {
@@ -349,10 +349,10 @@ async function exportHistoryToXlsx() {
     }, defaultFilename);
 
     closeHistoryExportModal();
-    showToast(`Экспортировано: ${history.length} записей`, 'success');
+    showToast(`Напечатано: ${history.length} записей`, 'success');
   } catch (e) {
     if (e.message !== 'Неавторизован') {
-      errEl.textContent = e.message || 'Ошибка экспорта';
+      errEl.textContent = e.message || 'Ошибка печати';
     }
   }
 } // 🆕 ИСПРАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
@@ -458,11 +458,11 @@ async function exportHistoryToPDF() {
   const win = window.open(url, '_blank');
   if (!win) {
     URL.revokeObjectURL(url);
-    showToast('Разрешите всплывающие окна для экспорта в PDF', 'error');
+    showToast('Разрешите всплывающие окна для печати в PDF', 'error');
     return;
   }
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 
   closeHistoryExportModal();
-  showToast(`PDF: ${history.length} записей`, 'success');
+  showToast(`PDF готов: ${history.length} записей`, 'success');
 }
