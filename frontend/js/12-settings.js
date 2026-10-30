@@ -573,23 +573,211 @@ function getExportFields() {
 
 async function renderExportSettings() {
   const c = document.getElementById('settings-section-content');
+  c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
   try {
     _cachedFields = await apiRequest('/settings/fields');
-    const selected = await apiRequest('/settings/export');
-    let html = `<h3>Настройки экспорта</h3>
-      <p style="color:#64748b;margin-bottom:12px;">Выберите поля для PDF/Excel</p>
-      <div class="export-fields-grid">`;
-    getExportFields().forEach(f => {
-      html += `<label><input type="checkbox" value="${esc(f.id)}" ${selected.includes(f.id) ? 'checked' : ''} class="exp-field-cb"> ${esc(f.label)}</label>`;
-    });
-    
-    html += `</div>
-      <div class="form-actions">
+    const data = await apiRequest('/settings/export');
+
+    const settings = Array.isArray(data)
+      ? { fields: data, exportEnabled: true,
+          actSendEnabled: true, actSendFields: [],
+          actReturnEnabled: true, actReturnFields: [],
+          historyEnabled: true, historyFields: [] }
+      : data;
+
+    c.innerHTML = `
+      <h3>Печать документов</h3>
+      <p style="color:#64748b;font-size:.88rem;margin:0 0 14px;">
+        Настройте, какие документы доступны пользователям и какие поля в них попадут.
+      </p>
+      <div class="prefs-tabs" style="margin-bottom:16px;">
+        <button class="prefs-tab active" onclick="switchPrintTab('export', this)">📄 Экспорт реестра</button>
+        <button class="prefs-tab" onclick="switchPrintTab('actSend', this)">📤 Акт отправки</button>
+        <button class="prefs-tab" onclick="switchPrintTab('actReturn', this)">📥 Акт возврата</button>
+        <button class="prefs-tab" onclick="switchPrintTab('history', this)">📜 История поверок</button>
+      </div>
+      <div id="print-tab-export" class="print-tab"></div>
+      <div id="print-tab-actSend" class="print-tab" style="display:none;"></div>
+      <div id="print-tab-actReturn" class="print-tab" style="display:none;"></div>
+      <div id="print-tab-history" class="print-tab" style="display:none;"></div>
+      <div class="form-actions" style="margin-top:20px;">
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
-        <button class="btn btn-success" onclick="saveExportSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
-      </div>`;
-    c.innerHTML = html;
-  } catch (e) { c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>'; }
+        <button class="btn btn-success" onclick="savePrintSettings()">
+          <i class="fa-solid fa-floppy-disk"></i> Сохранить
+        </button>
+      </div>
+    `;
+
+    window._printSettingsDraft = JSON.parse(JSON.stringify(settings));
+    renderPrintTab('export');
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+function switchPrintTab(tab, btn) {
+  document.querySelectorAll('#settings-section-content .prefs-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#settings-section-content .print-tab').forEach(el => el.style.display = 'none');
+  document.getElementById(`print-tab-${tab}`).style.display = '';
+  renderPrintTab(tab);
+}
+
+function renderPrintTab(tab) {
+  const c = document.getElementById(`print-tab-${tab}`);
+  const s = window._printSettingsDraft;
+
+  const configs = {
+    export: {
+      enabledKey: null, fieldsKey: 'fields',
+      title: 'Экспорт реестра оборудования',
+      hint: 'Документ при нажатии «Экспорт в Excel» / «Экспорт в PDF»',
+      fields: SYSTEM_EXPORT_FIELDS,
+    },
+    actSend: {
+      enabledKey: 'actSendEnabled', fieldsKey: 'actSendFields',
+      title: 'Акт отправки на поверку',
+      hint: 'Печатный документ при отправке на поверку',
+      fields: [
+        { id: 'id', label: 'Внутренний номер' },
+        { id: 'model', label: 'Модель' },
+        { id: 'manufacturer', label: 'Производитель' },
+        { id: 'serial', label: 'Серийный номер' },
+        { id: 'volume', label: 'Объём' },
+        { id: 'department', label: 'Отдел' },
+        { id: 'responsible', label: 'Ответственный' },
+        { id: 'location', label: 'Место хранения' },
+        { id: 'cert', label: 'Свидетельство' },
+        { id: 'notes', label: 'Примечание' },
+      ],
+    },
+    actReturn: {
+      enabledKey: 'actReturnEnabled', fieldsKey: 'actReturnFields',
+      title: 'Акт возврата с поверки',
+      hint: 'Печатный документ при возврате с поверки',
+      fields: [
+        { id: 'id', label: 'Внутренний номер' },
+        { id: 'model', label: 'Модель' },
+        { id: 'manufacturer', label: 'Производитель' },
+        { id: 'serial', label: 'Серийный номер' },
+        { id: 'volume', label: 'Объём' },
+        { id: 'department', label: 'Отдел' },
+        { id: 'responsible', label: 'Ответственный' },
+        { id: 'cert', label: 'Свидетельство' },
+        { id: 'result', label: 'Результат поверки' },
+        { id: 'notes', label: 'Примечание' },
+      ],
+    },
+    history: {
+      enabledKey: 'historyEnabled', fieldsKey: 'historyFields',
+      title: 'Экспорт истории поверок',
+      hint: 'Документ при нажатии «Экспорт истории» в модалке истории прибора',
+      fields: [
+        { id: 'date', label: 'Дата поверки' },
+        { id: 'cert', label: 'Свидетельство' },
+        { id: 'result', label: 'Результат' },
+        { id: 'org', label: 'Организация' },
+        { id: 'note', label: 'Примечание' },
+      ],
+    },
+  };
+
+  const conf = configs[tab];
+  const selected = new Set(s[conf.fieldsKey] || []);
+
+  let html = `
+    <div class="info-block" style="margin-bottom:14px;">
+      <strong>${esc(conf.title)}</strong><br>
+      <small>${esc(conf.hint)}</small>
+    </div>
+  `;
+
+  if (conf.enabledKey) {
+    const isOn = !!s[conf.enabledKey];
+    html += `
+      <div class="form-group" style="margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;">
+          <input type="checkbox" id="print-enabled-${tab}"
+                 ${isOn ? 'checked' : ''}
+                 onchange="togglePrintEnabled('${tab}', this.checked)"
+                 style="width:18px;height:18px;">
+          Включить печать «${esc(conf.title)}»
+        </label>
+      </div>
+      <div id="print-hint-${tab}" style="margin-bottom:14px;${isOn ? 'display:none;' : ''}">
+        <div class="warning-block" style="margin:0;">
+          ⚠️ Печать отключена. Поля заблокированы. Включите печать, чтобы настроить содержимое.
+        </div>
+      </div>
+    `;
+  }
+
+  html += `<div class="section-title" style="margin-top:14px;">Поля в документе:</div>
+    <div class="export-fields-grid" id="print-fields-${tab}"
+         style="${conf.enabledKey && !s[conf.enabledKey] ? 'opacity:.45;pointer-events:none;user-select:none;' : ''}">`;
+
+  const allFields = [...conf.fields];
+  const custom = (_cachedFields || []).filter(x => x.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(x.id));
+  for (const f of custom) allFields.push(f);
+
+  for (const f of allFields) {
+    const checked = selected.has(f.id);
+    html += `
+      <label>
+        <input type="checkbox" class="print-field-cb"
+               data-tab="${tab}" data-field="${esc(f.id)}"
+               ${checked ? 'checked' : ''}
+               onchange="onPrintFieldChange('${tab}', '${f.id}', this.checked)">
+        ${esc(f.label)}
+      </label>
+    `;
+  }
+
+  html += `</div>`;
+  c.innerHTML = html;
+}
+
+function togglePrintEnabled(tab, checked) {
+  const s = window._printSettingsDraft;
+  s[`${tab}Enabled`] = checked;
+  const block = document.getElementById(`print-fields-${tab}`);
+  const hint = document.getElementById(`print-hint-${tab}`);
+  if (block) {
+    if (checked) {
+      block.style.opacity = '';
+      block.style.pointerEvents = '';
+      block.style.userSelect = '';
+    } else {
+      block.style.opacity = '.45';
+      block.style.pointerEvents = 'none';
+      block.style.userSelect = 'none';
+    }
+  }
+  if (hint) hint.style.display = checked ? 'none' : '';
+}
+
+function onPrintFieldChange(tab, fieldId, checked) {
+  const s = window._printSettingsDraft;
+  const keyMap = {
+    export: 'fields', actSend: 'actSendFields',
+    actReturn: 'actReturnFields', history: 'historyFields',
+  };
+  const key = keyMap[tab];
+  if (!Array.isArray(s[key])) s[key] = [];
+  const set = new Set(s[key]);
+  checked ? set.add(fieldId) : set.delete(fieldId);
+  s[key] = [...set];
+}
+
+async function savePrintSettings() {
+  const s = window._printSettingsDraft;
+  try {
+    await UI.saveAction({
+      successMsg: 'Настройки печати сохранены',
+      closeFn: closeSettingsModal,
+      reload: false,
+    }, () => apiRequest('/settings/export', 'PUT', s));
+  } catch (e) {}
 }
 
 async function saveExportSettings() {
