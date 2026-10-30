@@ -62,13 +62,8 @@ async function loadPipetteData() {
         canTransferPipette() ||
         canBulkChangeResponsible();
 
-      const [
-        settingsData,
-        typesResult,
-        exportResult,
-        fieldsResult,
-        responsiblesResult,
-        departmentsResult,
+         const [
+        settingsData, typesResult, exportResult, fieldsResult, responsiblesResult, departmentsResult,
       ] = await Promise.all([
         apiRequest('/settings/system').catch(() => null),
         apiRequest('/settings/equipment-types').catch(() => null),
@@ -83,15 +78,32 @@ async function loadPipetteData() {
         apiRequest('/settings/departments').catch(() => []),
       ]);
 
+      // ── Собираем settings из system ──
       let bulkFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
       if (settingsData?.bulk_identity_fields) {
         try { bulkFields = JSON.parse(settingsData.bulk_identity_fields); } catch (e) {}
       }
-      settings = { 
+      settings = {
         warnDays: parseInt(settingsData?.warn_days) || 30,
-        bulkIdentityFields: bulkFields 
+        bulkIdentityFields: bulkFields
       };
 
+      // ── Поля экспорта (бэк может вернуть массив — для обратной совместимости) ──
+      exportFields = Array.isArray(exportResult)
+        ? exportResult
+        : (exportResult?.fields || null);
+
+      // ── Эффективные настройки печати для текущего пользователя ──
+      try {
+        settings.printDocs = await apiRequest('/settings/print-documents/effective');
+      } catch (e) {
+        settings.printDocs = {
+          hasPermission: false,
+          export: false, actSend: false, actReturn: false, history: false,
+        };
+      }
+
+      // ── Кэши ──
       if (Array.isArray(typesResult) && typesResult.length > 0) {
         _equipmentTypes = typesResult;
       } else {
@@ -105,11 +117,10 @@ async function loadPipetteData() {
         ];
       }
 
-      exportFields = exportResult;
-      _cachedFields = Array.isArray(fieldsResult) ? fieldsResult : [];
-      _responsibles = Array.isArray(responsiblesResult) ? responsiblesResult : [];
-      departmentsList = Array.isArray(departmentsResult) ? departmentsResult : [];
-
+      _cachedFields    = Array.isArray(fieldsResult) ? fieldsResult : [];
+      _responsibles    = Array.isArray(responsiblesResult) ? responsiblesResult : [];
+      departmentsList  = Array.isArray(departmentsResult) ? departmentsResult : [];
+      
       // ── 3) Синхронизация visibleFields с активными полями field_config ──
       if (Array.isArray(_cachedFields) && _cachedFields.length > 0) {
         const activeFieldIds = _cachedFields
