@@ -1453,13 +1453,40 @@ async function renderHelpSettings() {
       </thead>
       <tbody>`;
 
+          // 🆕 Проверяем наличие файлов (до сортировки, чтобы индексы совпадали)
+    const fileExistsMap = new Map();
+    await Promise.all(sections.map(async (s) => {
+      if (!s.filePath) {
+        fileExistsMap.set(s.slug, null);
+        return;
+      }
+      try {
+        const r = await fetch('/' + s.filePath, { method: 'HEAD' });
+        fileExistsMap.set(s.slug, r.ok);
+      } catch {
+        fileExistsMap.set(s.slug, false);
+      }
+    }));
+
     sections.sort((a,b) => (a.sortOrder||0) - (b.sortOrder||0)).forEach(s => {
       const fileName = s.filePath ? s.filePath.split('/').pop() : 'Нет файла';
+      const exists = fileExistsMap.get(s.slug);
       
-      // 🆕 УБРАЛИ вывод s.slug из таблицы
+      // 🆕 Бейдж файла
+      let fileCell;
+      if (!s.filePath) {
+        fileCell = `<span style="font-size:.8rem;color:#94a3b8;">— нет файла —</span>`;
+      } else if (exists) {
+        fileCell = `<span style="font-size:.8rem;color:#0369a1;"><i class="fa-solid fa-file"></i> ${esc(fileName)}</span>`;
+      } else {
+        fileCell = `<span style="font-size:.8rem;color:#dc2626;font-weight:600;" title="Файл в БД прописан, но физически отсутствует на сервере">
+          <i class="fa-solid fa-triangle-exclamation"></i> ${esc(fileName)} — ОТСУТСТВУЕТ
+        </span>`;
+      }
+
       html += `<tr>
         <td><strong>${esc(s.title)}</strong></td> 
-        <td><span style="font-size:.8rem;color:#0369a1;"><i class="fa-solid fa-file"></i> ${esc(fileName)}</span></td>
+        <td>${fileCell}</td>
         <td style="text-align:center;">${s.enabled ? '✅' : '❌'}</td>
         <td class="help-admin-actions">
           <button class="row-actions-btn" onclick="openHelpAdminActions(event, '${esc(s.slug)}')" title="Действия">
