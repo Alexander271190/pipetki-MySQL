@@ -1,5 +1,6 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
+const db = require('../db');  
 const { authenticate, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
@@ -16,6 +17,19 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
 
     if (!Array.isArray(headers) || !Array.isArray(rows)) {
       return res.status(400).json({ error: 'Ожидается headers[] и rows[]' });
+    }
+
+    // 🆕 Глобальные флаги — если админ отключил экспорт, отдаём 403
+    const [er] = await db.query(
+      'SELECT export_enabled, history_enabled FROM export_settings WHERE id = 1'
+    );
+    if (er.length) {
+      if (mode === 'history' && er[0].history_enabled === 0) {
+        return res.status(403).json({ error: 'Экспорт истории отключён администратором' });
+      }
+      if (mode !== 'history' && er[0].export_enabled === 0) {
+        return res.status(403).json({ error: 'Экспорт реестра отключён администратором' });
+      }
     }
 
     const workbook = new ExcelJS.Workbook();
