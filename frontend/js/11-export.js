@@ -57,9 +57,15 @@ function getExportField(id) {
 }
 
 function getActiveExportFields() {
+  // Приоритет 1: индивидуальные/эффективные настройки для текущего пользователя
+  if (settings.printDocs?.exportFields && Array.isArray(settings.printDocs.exportFields) && settings.printDocs.exportFields.length > 0) {
+    return settings.printDocs.exportFields.filter(f => !!getExportField(f));
+  }
+  // Приоритет 2: глобальные настройки из exportFields
   if (exportFields && Array.isArray(exportFields) && exportFields.length > 0) {
     return exportFields.filter(f => !!getExportField(f));
   }
+  // Фолбэк: все доступные поля
   return getExportFields().map(f => f.id);
 }
 
