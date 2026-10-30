@@ -67,6 +67,10 @@ async function exportToXlsx() {
   await UI.guard(
     { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
     async () => {
+      if (settings.printDocs?.export === false) {
+        showToast('Экспорт реестра отключён администратором', 'error');
+        return;
+      }
       const data = await loadAllForExport();
       if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
@@ -122,6 +126,11 @@ async function exportToPDF() {
   await UI.guard(
     { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
     async () => {
+      if (settings.printDocs?.export === false) {
+        showToast('Экспорт реестра отключён администратором', 'error');
+        return;
+      }
+      
       const data = await loadAllForExport();
       if (data.length === 0) { showToast('Нет данных для экспорта', 'error'); return; }
 
@@ -145,11 +154,11 @@ async function exportToPDF() {
             const st = calcStatus(p);
             return `<td><span class="status-${st}">${esc(val)}</span></td>`;
           }
-          if (f === 'model' && p.manufacturer) {
-            return `<td>${esc(p.model)}<br><small>${esc(p.manufacturer)}</small></td>`;
+          if (f === 'model') {
+            return `<td>${esc(p.model)}</td>`;
           }
-          if (f === 'responsible' && p.location) {
-            return `<td>${esc(p.responsible || '—')}<br><small>${esc(p.location)}</small></td>`;
+           if (f === 'responsible') {
+            return `<td>${esc(p.responsible || '—')}</td>`;
           }
           if (f === 'nextCalibration') {
             const st = calcStatus(p);
@@ -225,6 +234,10 @@ async function openHistoryExportModal() {
   await UI.guard(
     { permission: 'export_data', errorMsg: 'Нет прав на экспорт' },
     async () => {
+      if (settings.printDocs?.history === false) {
+        showToast('Экспорт истории отключён администратором', 'error');
+        return;
+      }
       if (!currentHistoryId) {
         showToast('Сначала откройте историю оборудования', 'error');
         return;
@@ -285,15 +298,28 @@ async function exportHistoryToXlsx() {
   const from = document.getElementById('he-from').value;
   const to   = document.getElementById('he-to').value;
  
-  const headers = ['Дата поверки', 'Свидетельство', 'Результат', 'Организация', 'Примечание'];
-  const rows = history.map(h => ({
-    'Дата поверки':   h.date ? formatDate(h.date) : '',
-    'Свидетельство':  h.cert || '',
-    'Результат':      RESULT_LABELS[h.result] || h.result || '',
-    'Организация':    h.org || '',
-    'Примечание':     h.note || ''
-  }));
+    const HISTORY_LABELS = {
+    date: 'Дата поверки', cert: 'Свидетельство', result: 'Результат',
+    org: 'Организация', note: 'Примечание',
+  };
 
+  const activeFields = settings.printDocs?.historyFields?.length
+    ? settings.printDocs.historyFields
+    : ['date', 'cert', 'result', 'org', 'note'];
+
+  const headers = activeFields.map(f => HISTORY_LABELS[f] || f);
+  const rows = history.map(h => {
+    const obj = {};
+    for (const f of activeFields) {
+      if (f === 'date')        obj[HISTORY_LABELS.date]   = h.date ? formatDate(h.date) : '';
+      else if (f === 'cert')   obj[HISTORY_LABELS.cert]   = h.cert || '';
+      else if (f === 'result') obj[HISTORY_LABELS.result] = RESULT_LABELS[h.result] || h.result || '';
+      else if (f === 'org')    obj[HISTORY_LABELS.org]    = h.org || '';
+      else if (f === 'note')   obj[HISTORY_LABELS.note]   = h.note || '';
+    }
+    return obj;
+  });
+  
    const meta = {
     title: 'История поверок оборудования',
     equipmentId: p.id,
@@ -348,17 +374,29 @@ async function exportHistoryToPDF() {
   const userPosition = currentUser ? (currentUser.position || '') : '';
   const today = new Date().toLocaleDateString('ru-RU');
   
-  const rows = history.map((h, i) => `
-    <tr>
-      <td style="text-align:center;">${i + 1}</td>
-      <td>${esc(formatDate(h.date))}</td>
-      <td>${esc(h.cert || '—')}</td>
-      <td>${esc(RESULT_LABELS[h.result] || h.result || '—')}</td>
-      <td>${esc(h.org || '—')}</td>
-      <td>${esc(h.note || '')}</td>
-    </tr>
-  `).join('');
+    const HISTORY_LABELS = {
+    date: 'Дата', cert: 'Свидетельство', result: 'Результат',
+    org: 'Организация', note: 'Примечание',
+  };
 
+  const activeFields = settings.printDocs?.historyFields?.length
+    ? settings.printDocs.historyFields
+    : ['date', 'cert', 'result', 'org', 'note'];
+
+  const headerCells = activeFields.map(f => `<th>${esc(HISTORY_LABELS[f] || f)}</th>`).join('');
+
+  const rows = history.map((h, i) => {
+    const cells = activeFields.map(f => {
+      if (f === 'date')        return `<td>${esc(formatDate(h.date))}</td>`;
+      if (f === 'cert')        return `<td>${esc(h.cert || '—')}</td>`;
+      if (f === 'result')      return `<td>${esc(RESULT_LABELS[h.result] || h.result || '—')}</td>`;
+      if (f === 'org')         return `<td>${esc(h.org || '—')}</td>`;
+      if (f === 'note')        return `<td>${esc(h.note || '')}</td>`;
+      return '<td></td>';
+    }).join('');
+    return `<tr><td style="text-align:center;">${i + 1}</td>${cells}</tr>`;
+  }).join('');
+  
   const html = `
     <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
     <title>История поверок — ${esc(p.id)}</title>
@@ -396,11 +434,7 @@ async function exportHistoryToPDF() {
       <thead>
         <tr>
           <th style="width:5%;text-align:center;">№</th>
-          <th style="width:15%;">Дата</th>
-          <th style="width:20%;">Свидетельство</th>
-          <th style="width:12%;">Результат</th>
-          <th style="width:20%;">Организация</th>
-          <th>Примечание</th>
+          ${headerCells}
         </tr>
       </thead>
       <tbody>${rows}</tbody>
