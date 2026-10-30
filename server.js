@@ -66,7 +66,15 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found' });
 });
 
-// SPA-fallback — всё остальное отдаём как index.html
+// SPA-fallback — всё остальное отдаём как index.html,
+// КРОМЕ /help-defaults/ — для файлов справки отдаём честный 404
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/help-defaults/')) {
+    return res.status(404).send('File not found');
+  }
+  next();
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
