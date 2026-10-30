@@ -155,10 +155,10 @@
       </button>
       <div class="dropdown-divider"></div>
       <button class="dropdown-item btn-export" onclick="exportToXlsx(); closeMoreMenu();">
-         <i class="fa-solid fa-file-excel"></i> Экспорт в Excel
+         <i class="fa-solid fa-file-excel"></i> Печать в Excel
       </button>
-      <button class="dropdown-item btn-export" onclick="exportToPDF(); closeMoreMenu();">
-        <i class="fa-solid fa-print"></i> Экспорт в PDF
+       <button class="dropdown-item btn-export" onclick="exportToPDF(); closeMoreMenu();">
+        <i class="fa-solid fa-print"></i> Печать в PDF
       </button>
       <div class="dropdown-divider"></div>
       <button class="dropdown-item btn-print-labels" onclick="openBarcodePrintModal(); closeMoreMenu();">
@@ -530,7 +530,7 @@
     <h2 id="history-title"><i class="fa-solid fa-clock-rotate-left"></i> История поверок</h2>
     <div id="history-content"></div>
         <div class="form-actions">
-  <button type="button" class="btn btn-warning" onclick="openHistoryExportModal()"><i class="fa-solid fa-upload"></i> Экспорт истории</button>
+  <button type="button" class="btn btn-warning" onclick="openHistoryExportModal()"><i class="fa-solid fa-print"></i> Печать истории</button>
   <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Закрыть</button>
   <button class="btn btn-info admin-only senior-only" onclick="openCalibrationForm()"><i class="fa-solid fa-plus"></i> Добавить поверку</button>
 </div>
@@ -764,10 +764,10 @@
     </div>
   </div>
 </div>
-  <!-- МОДАЛКА ЭКСПОРТА ИСТОРИИ ПОВЕРОК -->
+  <!-- МОДАЛКА ПЕЧАТИ ИСТОРИИ ПОВЕРОК -->
 <div class="modal-overlay" id="history-export-modal">
   <div class="modal">
-    <h2><i class="fa-solid fa-upload"></i> Экспорт истории поверок</h2>
+    <h2><i class="fa-solid fa-print"></i> Печать истории поверок</h2>
     <p id="history-export-target" style="color:#64748b;margin-bottom:16px;font-size:.9rem;"></p>
 
     <form id="history-export-form" onsubmit="event.preventDefault();" novalidate>
