@@ -1240,10 +1240,10 @@ async function renderUserViewDocuments() {
   }
 
   const docConfigs = [
-    { key: 'export',    title: 'Экспорт реестра', globalEnabled: global.exportEnabled    !== false, fields: allExportFields },
-    { key: 'actSend',   title: 'Акт отправки',    globalEnabled: global.actSendEnabled   !== false, fields: PRINT_DOC_FIELDS.actSend },
-    { key: 'actReturn', title: 'Акт возврата',    globalEnabled: global.actReturnEnabled !== false, fields: PRINT_DOC_FIELDS.actReturn },
-    { key: 'history',   title: 'История поверок', globalEnabled: global.historyEnabled   !== false, fields: PRINT_DOC_FIELDS.history },
+    { key: 'export',    title: 'Печать реестра',        globalEnabled: global.exportEnabled    !== false, fields: allExportFields },
+    { key: 'actSend',   title: 'Печать акта отправки',   globalEnabled: global.actSendEnabled   !== false, fields: PRINT_DOC_FIELDS.actSend },
+    { key: 'actReturn', title: 'Печать акта возврата',   globalEnabled: global.actReturnEnabled !== false, fields: PRINT_DOC_FIELDS.actReturn },
+    { key: 'history',   title: 'Печать истории поверок', globalEnabled: global.historyEnabled   !== false, fields: PRINT_DOC_FIELDS.history },
   ];
 
   let html = `
