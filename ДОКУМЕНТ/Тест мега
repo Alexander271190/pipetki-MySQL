@@ -1,7 +1,7 @@
 /* ============================================================
- * МЕГА-АВТОТЕСТ v2.0 — Полная проверка всех правок
- * Проверяет: API, bulk-lock, slugify, getDeviceIdentityHtml,
- * таймеры, модалки, CSS-классы, исходники функций.
+ * МЕГА-АВТОТЕСТ v3.1 — Полная проверка всех правок
+ * + фича «Печать документов» (глобальные + индивидуальные)
+ * + rename «Экспорт → Печать»
  * ============================================================ */
 (async function runMegaTest() {
   'use strict';
@@ -21,7 +21,7 @@
     const headers = { 'Content-Type': 'application/json' };
     if (customToken) headers['Authorization'] = 'Bearer ' + customToken;
     else if (token) headers['Authorization'] = 'Bearer ' + token;
-    
+
     const opts = { method: m, headers };
     if (b) opts.body = JSON.stringify(b);
     const r = await fetch('/api' + ep, opts);
@@ -34,8 +34,7 @@
   const today = new Date().toISOString().slice(0, 10);
   const uid = Date.now();
   const testIds = [];
-  const createdUsers = [];
-  
+
   const _origConfirm = window.showConfirm;
   const _origPrompt = window.showPrompt;
   const _origLockW = window.showLockWarning;
@@ -43,7 +42,7 @@
   window.showPrompt = async () => 'AutoTest-' + uid;
   window.showLockWarning = async () => true;
 
-  console.log('%c🤖 МЕГА-АВТОТЕСТ v2.0', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
+  console.log('%c🤖 МЕГА-АВТОТЕСТ v3.1', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
 
   if (!currentUser || currentUser.role !== 'admin') {
     console.error('❌ Требуется вход под администратором.');
@@ -52,7 +51,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * ЧАСТЬ 1: Проверка API (SELECT * заменен на явные колонки)
+   * ЧАСТЬ 1: API
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c📦 ЧАСТЬ 1: API и явные колонки', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
 
@@ -74,9 +73,7 @@
   }
   {
     const r = await api('/log/errors?limit=1');
-    if (r.ok) {
-      log('API', 'log/errors (доступ)', 'PASS');
-    }
+    if (r.ok) log('API', 'log/errors (доступ)', 'PASS');
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -100,33 +97,30 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * ЧАСТЬ 3: Идентификация прибора (getDeviceIdentityHtml)
+   * ЧАСТЬ 3: Отображение прибора (getDeviceIdentityHtml)
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🪪 ЧАСТЬ 3: Отображение прибора', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
 
   if (typeof window.getDeviceIdentityHtml === 'function') {
     const mockPipette = { id: 'P-999', model: 'Test', serial: 'SN-123', inventorynumber: 'INV-456', department: 'Лаб', responsible: 'Иванов' };
-    
-    // Тест 1: Дефолтные поля
+
     settings.bulkIdentityFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
     const html1 = window.getDeviceIdentityHtml(mockPipette);
     const ok1 = html1.includes('P-999') && html1.includes('Test') && html1.includes('SN-123') && html1.includes('INV-456');
     log('IDENTITY', 'Дефолтные поля', ok1 ? 'PASS' : 'FAIL', html1.replace(/<[^>]+>/g, ' '));
 
-    // Тест 2: Измененный набор (без инвентарного)
     settings.bulkIdentityFields = ['id', 'model', 'serial', 'department', 'responsible'];
     const html2 = window.getDeviceIdentityHtml(mockPipette);
     const ok2 = !html2.includes('INV-456') && html2.includes('Иванов');
     log('IDENTITY', 'Кастомные поля (без Инв.)', ok2 ? 'PASS' : 'FAIL', html2.replace(/<[^>]+>/g, ' '));
-    
-    // Восстановить
+
     settings.bulkIdentityFields = ['id', 'model', 'serial', 'inventorynumber', 'department'];
   } else {
     log('IDENTITY', 'Функция getDeviceIdentityHtml', 'FAIL', 'не найдена');
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * ЧАСТЬ 4: Массовые блокировки (bulk-lock / bulk-unlock)
+   * ЧАСТЬ 4: Массовые блокировки
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🔒 ЧАСТЬ 4: Массовые блокировки', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
 
@@ -142,11 +136,9 @@
   log('BULK', 'Создано 3 тестовых прибора', bulkIds.length === 3 ? 'PASS' : 'FAIL');
 
   if (bulkIds.length > 0) {
-    // Блокировка
     const rLock = await api('/pipettes/bulk-lock', 'POST', { ids: bulkIds });
     log('BULK', 'POST /bulk-lock (200)', rLock.ok ? 'PASS' : 'FAIL', `status: ${rLock.status}`);
-    
-    // Проверка что заблокированы
+
     let lockCount = 0;
     for (const id of bulkIds) {
       const r = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
@@ -154,14 +146,12 @@
     }
     log('BULK', 'Все приборы заблокированы', lockCount === 3 ? 'PASS' : 'FAIL', `${lockCount}/3`);
 
-    // Защита от неавторизованного доступа
     const rNoAuth = await api('/pipettes/bulk-lock', 'POST', { ids: [bulkIds[0]] }, 'invalid-token');
     log('BULK', 'bulk-lock без токена → 401', rNoAuth.status === 401 ? 'PASS' : 'FAIL', `status: ${rNoAuth.status}`);
 
-    // Разблокировка
     const rUnlock = await api('/pipettes/bulk-unlock', 'POST', { ids: bulkIds });
     log('BULK', 'POST /bulk-unlock (200)', rUnlock.ok ? 'PASS' : 'FAIL');
-    
+
     let freeCount = 0;
     for (const id of bulkIds) {
       const r = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
@@ -171,36 +161,31 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * ЧАСТЬ 5: Таймеры (утечка при открытии/закрытии)
+   * ЧАСТЬ 5: Таймеры
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c⏱ ЧАСТЬ 5: Таймеры модалок', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
 
   if (bulkIds.length > 0) {
-    // Перезагружаем pipettes, чтобы модалки нашли прибор
     const all = await api('/pipettes/all?limit=5000');
     if (all.ok) pipettes = all.body.items;
 
     const testId = bulkIds[0];
     if (pipettes.find(p => p.id === testId)) {
-      // openModal
       await openModal(testId);
       await sleep(300);
       const t1 = _lockCheckTimer;
       await closeModal();
       await sleep(100);
       const t1c = _lockCheckTimer;
-      
       log('TIMER', 'openModal: таймер создан', t1 !== null ? 'PASS' : 'FAIL');
       log('TIMER', 'closeModal: таймер очищен', t1c === null ? 'PASS' : 'FAIL');
 
-      // openQuickCalModal
       await openQuickCalModal(testId);
       await sleep(300);
       const t2 = _calLockTimer;
       await closeQuickCalModal();
       await sleep(100);
       const t2c = _calLockTimer;
-
       log('TIMER', 'openQuickCal: таймер создан', t2 !== null ? 'PASS' : 'FAIL');
       log('TIMER', 'closeQuickCal: таймер очищен', t2c === null ? 'PASS' : 'FAIL');
     } else {
@@ -209,7 +194,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * ЧАСТЬ 6: Проверка исходного кода функций
+   * ЧАСТЬ 6: Исходный код функций
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🔍 ЧАСТЬ 6: Исходный код функций', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
 
@@ -220,7 +205,6 @@
     log('CODE', `${fnName}: ${expectPresent ? 'содержит' : 'НЕ содержит'} "${searchStr}"`, ok ? 'PASS' : 'FAIL');
   };
 
-  // bulk-lock / bulk-unlock
   checkSource('openBulkSendModal', 'bulk-lock');
   checkSource('openBulkReturnModal', 'bulk-lock');
   checkSource('openBulkResponsibleModal', 'bulk-lock');
@@ -228,7 +212,6 @@
   checkSource('closeBulkReturnModal', 'bulk-unlock');
   checkSource('closeBulkResponsibleModal', 'bulk-unlock');
 
-  // loadStats
   checkSource('saveBulkSend', 'loadStats');
   checkSource('saveBulkReturn', 'loadStats');
   checkSource('saveQuickCalibration', 'loadStats');
@@ -236,11 +219,9 @@
   checkSource('deletePipette', 'loadStats');
   checkSource('addCalibrationRecord', 'loadStats');
 
-  // Таймеры (сброс в начале)
   checkSource('openModal', 'if (_lockCheckTimer)');
   checkSource('openQuickCalModal', 'if (_calLockTimer)');
 
-  // Перенос Identity Settings
   checkSource('renderIdentitySettingsInline', 'renderFieldsSettings(true)');
   checkSource('renderFieldsSettings', 'renderIdentitySettingsInline');
 
@@ -268,19 +249,256 @@
   checkCSS('tooltip-row', 'display');
 
   /* ═══════════════════════════════════════════════════════════
-   * ЧАСТЬ 8: Очистка (Cleanup)
+   * ЧАСТЬ 8: Глобальные настройки печати
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c🧹 ЧАСТЬ 8: Очистка тестовых данных', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  console.log('\n%c🖨 ЧАСТЬ 8: Глобальные настройки печати', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  {
+    const r = await api('/settings/print-documents/effective');
+    if (r.ok && r.body && typeof r.body === 'object') {
+      const b = r.body;
+      const hasFields = ['hasPermission', 'export', 'actSend', 'actReturn', 'history',
+                         'exportFields', 'actSendFields', 'actReturnFields', 'historyFields', 'source']
+                         .every(k => k in b);
+      log('PRINT', 'API /print-documents/effective (структура)', hasFields ? 'PASS' : 'FAIL', `source: ${b.source}`);
+      if (b.hasPermission) {
+        log('PRINT', `source: '${b.source}'`, ['global','individual'].includes(b.source) ? 'PASS' : 'FAIL');
+      }
+    } else {
+      log('PRINT', 'API /print-documents/effective', 'FAIL', `status: ${r.status}`);
+    }
+  }
+
+  {
+    const r = await api('/settings/export');
+    if (r.ok && r.body) {
+      const b = r.body;
+      log('PRINT', 'GET /settings/export (ключи)',
+        ['fields','exportEnabled','actSendEnabled','actSendFields','actReturnEnabled','actReturnFields','historyEnabled','historyFields']
+          .every(k => k in b) ? 'PASS' : 'FAIL');
+      log('PRINT', `fields: ${(b.fields||[]).length}, actSend: ${(b.actSendFields||[]).length}, actReturn: ${(b.actReturnFields||[]).length}, history: ${(b.historyFields||[]).length}`,
+        (b.fields||[]).length > 0 && (b.actSendFields||[]).length > 0 ? 'PASS' : 'SKIP', 'пусто в БД — фронт подставит дефолт');
+    }
+  }
+
+  const printFns = ['renderExportSettings', 'renderPrintTab', 'switchPrintTab', 'togglePrintEnabled',
+                    'onPrintFieldChange', 'savePrintSettings', 'getActiveExportFields'];
+  printFns.forEach(fn => log('PRINT', `window.${fn}`, typeof window[fn] === 'function' ? 'PASS' : 'FAIL'));
+
+  log('PRINT', 'SYSTEM_EXPORT_FIELDS', typeof SYSTEM_EXPORT_FIELDS !== 'undefined' && SYSTEM_EXPORT_FIELDS.length > 0 ? 'PASS' : 'FAIL');
+  log('PRINT', 'SYSTEM_FIELD_IDS_IN_CONFIG', typeof SYSTEM_FIELD_IDS_IN_CONFIG !== 'undefined' ? 'PASS' : 'FAIL');
+
+  log('PRINT', 'settings.printDocs (загружен при loadPipetteData)',
+    settings && settings.printDocs && typeof settings.printDocs === 'object' ? 'PASS' : 'FAIL');
+
+  try {
+    await openSettingsModal();
+    await sleep(400);
+    const btn = [...document.querySelectorAll('#settings-list .settings-item')]
+      .find(b => /печать документов/i.test(b.textContent));
+    if (btn) {
+      btn.click();
+      await sleep(800);
+      const tabs = [...document.querySelectorAll('#settings-section-content .prefs-tab')];
+      log('PRINT', 'UI: 4 вкладки настроек', tabs.length === 4 ? 'PASS' : 'FAIL', tabs.map(t => t.textContent.trim().split(' ').slice(-2).join(' ')).join(' | '));
+
+      const allHavePrint = tabs.every(t => /печать/i.test(t.textContent));
+      log('PRINT', 'UI: все вкладки содержат «Печать»', allHavePrint ? 'PASS' : 'FAIL');
+
+      const cbs = [...document.querySelectorAll('#print-tab-export .print-field-cb')];
+      const checked = cbs.filter(c => c.checked).length;
+      log('PRINT', `UI: экспорт ${checked}/${cbs.length} отмечено`, checked === cbs.length && cbs.length > 0 ? 'PASS' : 'FAIL');
+
+      const tgl = document.getElementById('print-enabled-export');
+      log('PRINT', 'UI: тумблер exportEnabled существует', tgl ? 'PASS' : 'FAIL');
+      if (tgl) log('PRINT', `UI: exportEnabled = ${tgl.checked}`, tgl.checked === true ? 'PASS' : 'SKIP', 'должен быть true по умолчанию');
+
+      const d = window._printSettingsDraft;
+      const draftOk = d && typeof d.exportEnabled === 'boolean' &&
+        (d.fields||[]).length > 0 && (d.actSendFields||[]).length > 0 &&
+        (d.actReturnFields||[]).length > 0 && (d.historyFields||[]).length > 0;
+      log('PRINT', '_printSettingsDraft (все ключи заполнены)', draftOk ? 'PASS' : 'FAIL');
+      if (d) console.table({
+        exportEnabled: d.exportEnabled, actSendEnabled: d.actSendEnabled,
+        actReturnEnabled: d.actReturnEnabled, historyEnabled: d.historyEnabled,
+        fields: (d.fields||[]).length, actSendFields: (d.actSendFields||[]).length,
+        actReturnFields: (d.actReturnFields||[]).length, historyFields: (d.historyFields||[]).length
+      });
+
+      closeSettingsModal();
+    } else {
+      log('PRINT', 'UI: пункт «Печать документов» в списке настроек', 'FAIL', 'не найден');
+    }
+  } catch (e) {
+    log('PRINT', 'UI: настройки печати', 'FAIL', e.message);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 9: Индивидуальные настройки пользователя
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c👤 ЧАСТЬ 9: Индивидуальные настройки пользователя', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  const userPrintFns = ['openUserViewModal', 'renderUserViewDocuments', 'toggleUserPrintIndividual',
+                        'switchUserPrintTab', 'toggleUserPrintDocEnabled', 'toggleUserPrintField',
+                        'switchUserViewTab', 'saveUserView'];
+  userPrintFns.forEach(fn => log('INDIV', `window.${fn}`, typeof window[fn] === 'function' ? 'PASS' : 'FAIL'));
+
+  log('INDIV', 'PRINT_DOC_FIELDS', typeof PRINT_DOC_FIELDS !== 'undefined' && PRINT_DOC_FIELDS.export ? 'PASS' : 'FAIL');
+  if (typeof PRINT_DOC_FIELDS !== 'undefined') {
+    const keys = ['export','actSend','actReturn','history'];
+    const ok = keys.every(k => Array.isArray(PRINT_DOC_FIELDS[k]) && PRINT_DOC_FIELDS[k].length > 0);
+    log('INDIV', 'PRINT_DOC_FIELDS: 4 документа с полями', ok ? 'PASS' : 'FAIL');
+  }
+
+  // 🆕 v3.1: обращаемся к _userViewPrintDocs напрямую (let, не window.*)
+  let uvd = null;
+  try { uvd = (typeof _userViewPrintDocs !== 'undefined') ? _userViewPrintDocs : null; } catch (e) { uvd = null; }
+  const uvdOk = uvd && typeof uvd === 'object' && 'useIndividual' in uvd &&
+    ['export','actSend','actReturn','history'].every(k => uvd[k] && typeof uvd[k] === 'object' &&
+      'enabled' in uvd[k] && Array.isArray(uvd[k].fields));
+  log('INDIV', '_userViewPrintDocs (структура: useIndividual + 4 документа)', uvdOk ? 'PASS' : 'FAIL', uvdOk ? '' : `uvd=${JSON.stringify(uvd)}`);
+  if (uvd) console.log('  _userViewPrintDocs:', JSON.parse(JSON.stringify(uvd)));
+
+  if (typeof window.renderUserViewDocuments === 'function') {
+    const src = window.renderUserViewDocuments.toString();
+    log('INDIV', 'renderUserViewDocuments содержит user-print-use-individual',
+      src.includes('user-print-use-individual') ? 'PASS' : 'FAIL');
+    log('INDIV', 'renderUserViewDocuments содержит toggleUserPrintIndividual',
+      src.includes('toggleUserPrintIndividual') ? 'PASS' : 'FAIL');
+    log('INDIV', 'renderUserViewDocuments содержит printDocuments',
+      src.includes('printDocuments') ? 'SKIP' : 'PASS', 'ключ может быть в saveUserView');
+  }
+
+  if (typeof window.saveUserView === 'function') {
+    const src = window.saveUserView.toString();
+    log('INDIV', 'saveUserView сохраняет printDocuments',
+      src.includes('printDocuments') ? 'PASS' : 'FAIL');
+  }
+
+  try {
+    const users = await api('/users');
+    const target = users.ok ? users.body.find(u => u.role !== 'admin' && (u.extraPermissions||[]).includes('export_data')) : null;
+    if (!target) {
+      log('INDIV', 'UI: тестовый пользователь', 'SKIP', 'нет не-админа с export_data');
+    } else {
+      await openUserViewModal(target.id, target.fullName);
+      await sleep(500);
+
+      const docTab = document.querySelector('#user-view-modal [data-view-tab="documents"]');
+      if (!docTab) { log('INDIV', 'UI: вкладка «Документы для печати»', 'FAIL', 'не найдена'); }
+      else {
+        docTab.click();
+        await sleep(800);
+        log('INDIV', 'UI: вкладка «Документы для печати»', 'PASS');
+
+        const tgl = document.getElementById('user-print-use-individual');
+        log('INDIV', 'UI: тумблер «Использовать индивидуальные настройки»', tgl ? 'PASS' : 'FAIL');
+
+        const tabs = [...document.querySelectorAll('#user-print-tabs .prefs-tab')];
+        log('INDIV', 'UI: 4 вкладки документов', tabs.length === 4 ? 'PASS' : 'FAIL', tabs.length);
+
+        if (tgl) {
+          const content = document.querySelector('.user-print-tab-content');
+          const op = content ? getComputedStyle(content).opacity : null;
+          if (!tgl.checked) {
+            log('INDIV', `UI: затемнение при выкл. (opacity=${op})`, op === '0.6' ? 'PASS' : 'SKIP', 'если тумблер был выкл');
+          }
+        }
+
+        if (tgl && !tgl.checked) {
+          tgl.click();
+          await sleep(800);
+          const cbs = [...document.querySelectorAll('#user-print-tab-export .user-print-field-cb')];
+          const checked = cbs.filter(c => c.checked).length;
+          log('INDIV', `UI: после вкл. тумблера ${checked}/${cbs.length} полей отмечено`,
+            checked > 0 && checked === cbs.length ? 'PASS' : 'FAIL');
+        }
+      }
+      closeUserViewModal();
+    }
+  } catch (e) {
+    log('INDIV', 'UI: модалка пользователя', 'FAIL', e.message);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 10: Rename «Экспорт → Печать»
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🔁 ЧАСТЬ 10: Rename «Экспорт → Печать»', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+
+  {
+    const dropdown = document.getElementById('more-menu');
+    if (dropdown) {
+      const txt = dropdown.textContent;
+      log('RENAME', 'HTML: «Печать в Excel» в dropdown', /Печать в Excel/.test(txt) ? 'PASS' : 'FAIL');
+      log('RENAME', 'HTML: «Печать в PDF» в dropdown', /Печать в PDF/.test(txt) ? 'PASS' : 'FAIL');
+      log('RENAME', 'HTML: «Экспорт в Excel» больше нет', !/Экспорт в Excel/.test(txt) ? 'PASS' : 'FAIL');
+      log('RENAME', 'HTML: «Экспорт в PDF» больше нет', !/Экспорт в PDF/.test(txt) ? 'PASS' : 'FAIL');
+    }
+  }
+
+  {
+    const h2 = document.querySelector('#history-export-modal h2');
+    if (h2) log('RENAME', 'HTML: заголовок «Печать истории поверок»', /Печать истории/.test(h2.textContent) ? 'PASS' : 'FAIL', h2.textContent.trim());
+  }
+
+  log('RENAME', 'exportToXlsx (внутреннее имя сохранено)', typeof window.exportToXlsx === 'function' ? 'PASS' : 'FAIL');
+  log('RENAME', 'exportToPDF (внутреннее имя сохранено)', typeof window.exportToPDF === 'function' ? 'PASS' : 'FAIL');
+  log('RENAME', 'exportHistoryToXlsx (внутреннее имя сохранено)', typeof window.exportHistoryToXlsx === 'function' ? 'PASS' : 'FAIL');
+  log('RENAME', 'exportHistoryToPDF (внутреннее имя сохранено)', typeof window.exportHistoryToPDF === 'function' ? 'PASS' : 'FAIL');
+  log('RENAME', 'printSendAct (акт отправки)', typeof window.printSendAct === 'function' ? 'PASS' : 'FAIL');
+  log('RENAME', 'printReturnAct (акт возврата)', typeof window.printReturnAct === 'function' ? 'PASS' : 'FAIL');
+
+  if (typeof window.exportToXlsx === 'function') {
+    const src = window.exportToXlsx.toString();
+    log('RENAME', 'exportToXlsx: тост «Печать реестра отключена»',
+      src.includes('Печать реестра отключена') ? 'PASS' : 'FAIL');
+    log('RENAME', 'exportToXlsx: тост «Нет данных для печати»',
+      src.includes('Нет данных для печати') ? 'PASS' : 'FAIL');
+    log('RENAME', 'exportToXlsx: тост «Напечатано:» (бэктики)',
+      src.includes('`Напечатано:') ? 'PASS' : 'FAIL');
+  }
+  // 🆕 v3.1: тост «Печать истории отключена» находится в openHistoryExportModal, а не в exportHistoryToXlsx
+  if (typeof window.openHistoryExportModal === 'function') {
+    const src = window.openHistoryExportModal.toString();
+    log('RENAME', 'openHistoryExportModal: тост «Печать истории отключена»',
+      src.includes('Печать истории отключена') ? 'PASS' : 'FAIL');
+  }
+  if (typeof window.exportHistoryToXlsx === 'function') {
+    const src = window.exportHistoryToXlsx.toString();
+    log('RENAME', 'exportHistoryToXlsx: тост «Ошибка печати»',
+      src.includes('Ошибка печати') ? 'PASS' : 'FAIL');
+  }
+  if (typeof window.printSendAct === 'function') {
+    const src = window.printSendAct.toString();
+    log('RENAME', 'printSendAct: гвард actSend === false',
+      src.includes('actSend === false') ? 'PASS' : 'FAIL');
+    log('RENAME', 'printSendAct: actSendFields',
+      src.includes('actSendFields') ? 'PASS' : 'FAIL');
+  }
+  if (typeof window.printReturnAct === 'function') {
+    const src = window.printReturnAct.toString();
+    log('RENAME', 'printReturnAct: гвард actReturn === false',
+      src.includes('actReturn === false') ? 'PASS' : 'FAIL');
+    log('RENAME', 'printReturnAct: actReturnFields',
+      src.includes('actReturnFields') ? 'PASS' : 'FAIL');
+  }
+
+  if (typeof window.getActiveExportFields === 'function') {
+    const src = window.getActiveExportFields.toString();
+    log('RENAME', 'getActiveExportFields: приоритет settings.printDocs.exportFields',
+      src.includes('settings.printDocs') && src.includes('exportFields') ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * ЧАСТЬ 11: Очистка
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🧹 ЧАСТЬ 11: Очистка тестовых данных', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
 
   for (const id of testIds) {
     try {
       await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE').catch(() => {});
       const r = await api(`/pipettes/${encodeURIComponent(id)}`, 'DELETE');
-      if (r.ok || r.status === 404) {
-        log('CLEAN', `Удален ${id}`, 'PASS');
-      } else {
-        log('CLEAN', `Удален ${id}`, 'FAIL', `status: ${r.status}`);
-      }
+      log('CLEAN', `Удален ${id}`, (r.ok || r.status === 404) ? 'PASS' : 'FAIL');
     } catch (e) {
       log('CLEAN', `Удален ${id}`, 'FAIL', e.message);
     }
