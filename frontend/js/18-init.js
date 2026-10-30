@@ -31,7 +31,7 @@ function renderAuthUI() {
     const admin           = isAdmin();
     const canAdd          = canAddPipette();
     const canImportData   = canImport();
-    const canExportData   = canExport();
+    const canExportData = canExport() && (settings.printDocs?.export !== false);
     const canSettings     = canManageSettings();
     const canScan         = canScanBarcode() && !isMobileDevice();
     const canPrint        = canPrintLabels();
