@@ -482,10 +482,11 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeBulkReturnModal()">
-          Отмена
-        </button>
-        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Применить ко всем</button>
+          <button type="button" class="btn btn-secondary" onclick="closeBulkReturnModal()">Отмена</button>
+          <button type="button" class="btn btn-info" onclick="printReturnAct()">
+          <i class="fa-solid fa-print"></i> Распечатать акт
+         </button>
+          <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Применить ко всем</button>
       </div>
     </form>
   </div>
@@ -873,44 +874,57 @@
   </div>
 </div>
   
-  <div class="modal-overlay" id="user-view-modal">
+<div class="modal-overlay" id="user-view-modal">
   <div class="modal">
-    <h2><i class="fa-solid fa-list-check"></i> Поля формы пользователя</h2>
+    <h2><i class="fa-solid fa-sliders"></i> Настройки пользователя</h2>
     <p id="user-view-target" style="color:#64748b;margin-bottom:16px;font-size:.9rem;"></p>
 
-    <!-- 🆕 Блок «Скопировать вид с другого пользователя» -->
-    <div class="copy-view-block">
-      <label class="copy-view-label">
-        <i class="fa-solid fa-copy"></i> Скопировать вид с другого пользователя:
-      </label>
-      <div class="copy-view-controls">
-        <select id="copy-view-user-select">
-          <option value="">— загрузка —</option>
-        </select>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="copyViewFromUser()">
-          <i class="fa-solid fa-clipboard"></i> Скопировать
-        </button>
-      </div>
-      <small class="copy-view-hint">
-        Заполнит галочки ниже <strong>текущим видом</strong> выбранного пользователя.
-        Перед сохранением ничего не меняется — просто копия в форму.
-      </small>
+    <div class="prefs-tabs" style="margin-bottom:16px;">
+      <button class="prefs-tab active" data-view-tab="fields"
+              onclick="switchUserViewTab('fields', this)">
+        <i class="fa-solid fa-list-check"></i> Поля формы
+      </button>
+      <button class="prefs-tab" data-view-tab="documents"
+              onclick="switchUserViewTab('documents', this)">
+        <i class="fa-solid fa-print"></i> Документы для печати
+      </button>
     </div>
 
-    <div id="user-view-content"></div>
+    <div id="user-view-tab-fields">
+      <div class="copy-view-block">
+        <label class="copy-view-label">
+          <i class="fa-solid fa-copy"></i> Скопировать вид с другого пользователя:
+        </label>
+        <div class="copy-view-controls">
+          <select id="copy-view-user-select">
+            <option value="">— загрузка —</option>
+          </select>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="copyViewFromUser()">
+            <i class="fa-solid fa-clipboard"></i> Скопировать
+          </button>
+        </div>
+        <small class="copy-view-hint">
+          Заполнит галочки ниже <strong>текущим видом</strong> выбранного пользователя.
+        </small>
+      </div>
+      <div id="user-view-content"></div>
+    </div>
 
-<div class="form-actions">
-  <button type="button" class="btn btn-secondary btn-sm" onclick="resetUserView()">
-    <i class="fa-solid fa-rotate-left"></i> Сбросить
-  </button>
-  <button type="button" class="btn btn-secondary btn-sm" onclick="closeUserViewModal()">Закрыть</button>
-  <button type="button" class="btn btn-success btn-sm" onclick="saveUserView()">
-    <i class="fa-solid fa-floppy-disk"></i> Сохранить
-  </button>
+    <div id="user-view-tab-documents" style="display:none;">
+      <div id="user-view-documents"></div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="resetUserView()">
+        <i class="fa-solid fa-rotate-left"></i> Сбросить
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeUserViewModal()">Закрыть</button>
+      <button type="button" class="btn btn-success btn-sm" onclick="saveUserView()">
+        <i class="fa-solid fa-floppy-disk"></i> Сохранить
+      </button>
+    </div>
   </div>
- </div>
 </div>
-
   <div class="modal-overlay" id="audit-modal">
   <div class="modal modal-lg">
     <h2><i class="fa-solid fa-clipboard-list"></i> Журнал действий</h2>
