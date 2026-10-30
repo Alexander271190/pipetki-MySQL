@@ -32,7 +32,7 @@ const SETTINGS_SECTIONS = [
     { id: 'fields',          label: 'Поля формы' },
     { id: 'departments',     label: 'Отделы' },
     { id: 'filters',         label: 'Фильтры' },
-    { id: 'export',          label: 'Экспорт' },
+    { id: 'export', label: 'Печать документов' },
     { id: 'equipment',       label: 'Типы оборудования' },
     { id: 'view-templates',  label: 'Шаблоны вида' },
   ]
@@ -75,7 +75,7 @@ const SETTINGS_SECTIONS = [
   { key: 'bulk_return',       group: 'Поверки',      label: '<i class="fa-solid fa-box-open"></i> Возврат с поверки' },
 
   { key: 'import_data',       group: 'Данные',       label: '<i class="fa-solid fa-download"></i> Импорт данных' },
-  { key: 'export_data',       group: 'Данные',       label: '<i class="fa-solid fa-upload"></i> Экспорт данных' },
+  { key: 'export_data', group: 'Данные', label: '<i class="fa-solid fa-print"></i> Печать документов' },
 
   { key: 'scan_barcode',      group: 'Штрихкоды',    label: '<i class="fa-solid fa-barcode"></i> Сканирование штрихкодов' },
   { key: 'print_labels',      group: 'Штрихкоды',    label: '<i class="fa-solid fa-tag"></i> Печать этикеток' },
