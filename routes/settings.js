@@ -335,6 +335,7 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
       return res.json({
         hasPermission: false,
         export: false, actSend: false, actReturn: false, history: false,
+        exportFields: [], actSendFields: [], actReturnFields: [], historyFields: [],
         source: 'no_permission',
       });
     }
@@ -347,32 +348,47 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
       actReturn: g.act_return_enabled !== 0,
       history:   g.history_enabled !== 0,
     };
+    const globalFields = {
+      exportFields: db.safeParse(g.fields, []),
+      actSendFields: db.safeParse(g.act_send_fields, []),
+      actReturnFields: db.safeParse(g.act_return_fields, []),
+      historyFields: db.safeParse(g.history_fields, []),
+    };
 
     const [pr] = await db.query(
       'SELECT preferences FROM user_preferences WHERE user_id = ?', [user.id]
     );
     let prefs = {};
-    try { prefs = JSON.parse(pr[0]?.preferences || '{}'); } catch {}
+    try { prefs = JSON.parse(pr[0]?.preferences || '{}'); } catch (e) {}
 
-    const hasIndividual = prefs.printDocuments != null
-      && typeof prefs.printDocuments === 'object';
+    const pd = prefs.printDocuments;
+    const hasIndividual = pd && pd.useIndividual === true;
 
-    const effective = hasIndividual
-      ? {
-          export:    globalConf.export    && prefs.printDocuments.export    !== false,
-          actSend:   globalConf.actSend   && prefs.printDocuments.actSend   !== false,
-          actReturn: globalConf.actReturn && prefs.printDocuments.actReturn !== false,
-          history:   globalConf.history   && prefs.printDocuments.history   !== false,
-        }
-      : globalConf;
+    let effective = {};
+    let fieldsSource = {};
+
+    if (hasIndividual) {
+      effective = {
+        export:    pd.export?.enabled !== false,
+        actSend:   pd.actSend?.enabled !== false,
+        actReturn: pd.actReturn?.enabled !== false,
+        history:   pd.history?.enabled !== false,
+      };
+      fieldsSource = {
+        exportFields: pd.export?.fields || [],
+        actSendFields: pd.actSend?.fields || [],
+        actReturnFields: pd.actReturn?.fields || [],
+        historyFields: pd.history?.fields || [],
+      };
+    } else {
+      effective = globalConf;
+      fieldsSource = globalFields;
+    }
 
     res.json({
       hasPermission: true,
       ...effective,
-      exportFields:    db.safeParse(g.fields, []),
-      actSendFields:   db.safeParse(g.act_send_fields, []),
-      actReturnFields: db.safeParse(g.act_return_fields, []),
-      historyFields:   db.safeParse(g.history_fields, []),
+      ...fieldsSource,
       source: hasIndividual ? 'individual' : 'global',
     });
   } catch (e) {
@@ -380,7 +396,6 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Ошибка' });
   }
 });
-
 // ============================================================
 // СИСТЕМНЫЕ НАСТРОЙКИ
 // ============================================================
