@@ -780,16 +780,6 @@ async function savePrintSettings() {
   } catch (e) {}
 }
 
-async function saveExportSettings() {
-  const selected = Array.from(document.querySelectorAll('.exp-field-cb:checked')).map(cb => cb.value);
-  try {
-    await UI.saveAction({ successMsg: 'Настройки экспорта сохранены', closeFn: closeSettingsModal, reload: false }, async () => {
-      await apiRequest('/settings/export', 'PUT', selected);
-      exportFields = selected;
-    });
-  } catch (e) {}
-}
-
 // ============================================================
 // РАЗДЕЛ: ОБЩИЕ
 // ============================================================
@@ -1639,7 +1629,7 @@ async function deleteHelpSection(slug) {
 }
 
 async function resetHelpToFactory() {
-  const ok = await showConfirm('Сбросить справку к заводской? Все загруженные файлы будут заменены.', { icon: '⚠️', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' });
+  const ok = await showConfirm('Сбросить справку к заводской? Все изменения названий и добавленные разделы будут потеряны.', { icon: '⚠️', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' });
   if (!ok) return;
   try {
     await apiRequest('/help/reset', 'POST', {});
