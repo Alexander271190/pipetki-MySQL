@@ -382,6 +382,10 @@ async function openHistoryModal(id) {
       `<i class="fa-solid fa-clock-rotate-left"></i> История поверок — ${esc(p.id)}`;
     await renderHistoryContent(p);
     closeCalibrationForm();
+    const btnHistExport = document.querySelector('#history-modal [onclick="openHistoryExportModal()"]');
+   if (btnHistExport) {
+   btnHistExport.style.display = settings.printDocs?.history === false ? 'none' : '';
+}
     UI.modal.open('history-modal');
   });
 }
