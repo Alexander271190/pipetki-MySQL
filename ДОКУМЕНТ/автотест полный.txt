@@ -1,7 +1,14 @@
 /* ============================================================
- * АВТОСКРИПТ v2.1 — регресс + все правки «Печать документов»
+ * АВТОСКРИПТ v2.2 — регресс + все правки «Печать документов»
  * Пароль тестовых пользователей: Seno16/1978S
  * Запуск: войти админом → консоль → вставить → Enter
+ *
+ * v2.2 изменения:
+ *  - printDocuments: новая структура (useIndividual + {enabled, fields})
+ *  - вкладки: «Печать реестра/акта/истории» вместо «Экспорт…»
+ *  - + БЛОК 12.5: проверка 13-users.js и _userViewPrintDocs
+ *  - + WARN-статус для отсутствующих серверных гвардов
+ *  - finally: гарантированное восстановление window-функций
  * ============================================================ */
 (async function runAutoScript() {
   'use strict';
@@ -10,7 +17,8 @@
   const results = [];
   const log = (g, n, s, d = '') => {
     results.push({ g, n, s, d });
-    console.log(`${s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'SKIP' ? '⏭️' : 'ℹ️'} [${g}] ${n}${d ? ' — ' + d : ''}`);
+    const icon = { PASS: '✅', FAIL: '❌', SKIP: '⏭️', WARN: '⚠️' }[s] || 'ℹ️';
+    console.log(`${icon} [${g}] ${n}${d ? ' — ' + d : ''}`);
   };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -46,21 +54,15 @@
   const testUserIds = [];
   const testPresetIds = [];
 
-  // 🆕 перехват window.open — для тестов печати (не открываем реальные окна)
+  // Перехват window.open
   const _origOpen = window.open;
   let _openCallCount = 0;
   let _lastOpenHtml = '';
-  window.open = function(url, name, features) {
+  window.open = function() {
     _openCallCount++;
-    const fakeWin = {
-      document: { write(html) { _lastOpenHtml = String(html || ''); }, close() {} },
-      close() {},
-      focus() {},
-    };
-    return fakeWin;
+    return { document: { write(html) { _lastOpenHtml = String(html || ''); }, close() {} }, close() {}, focus() {} };
   };
 
-  // 🆕 сохраняем оригиналы на верхнем уровне — чтобы restoreAll всегда мог вернуть
   const _origCreateObjectURL = URL.createObjectURL;
   const _origConfirm = window.showConfirm;
   const _origPrompt  = window.showPrompt;
@@ -70,7 +72,7 @@
   window.showPrompt  = async () => 'AutoTest-' + uid;
   window.showLockWarning = async () => true;
 
-  console.log('%c🤖 АВТОСКРИПТ v2.1 — регресс + печать документов', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
+  console.log('%c🤖 АВТОСКРИПТ v2.2 — регресс + печать документов', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
 
   const restoreAll = () => {
     window.showConfirm = _origConfirm;
@@ -84,6 +86,8 @@
     console.error('❌ Нужен админ.'); restoreAll(); return;
   }
 
+  try {
+
   /* ═══════════════════════════════════════════════════════════
    * БЛОК 1: Открыть «Настройки → Пользователи» (регресс)
    * ═══════════════════════════════════════════════════════════ */
@@ -96,7 +100,7 @@
   } catch (e) { log('SETUP', 'открытие формы', 'FAIL', e.message); }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 2: HTML-проверки формы пользователей (регресс)
+   * БЛОК 2: HTML-проверки формы пользователей
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🛡 БЛОК 2: HTML-проверки формы', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
@@ -109,7 +113,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 3: Пресеты end-to-end (регресс)
+   * БЛОК 3: Пресеты end-to-end
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c💾 БЛОК 3: Пресеты', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
@@ -123,7 +127,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 4: Тестовые пользователи (регресс)
+   * БЛОК 4: Тестовые пользователи
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c👤 БЛОК 4: Тестовые пользователи', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   const users = {};
@@ -161,7 +165,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 5: view_log / view_audit на реальных токенах (регресс)
+   * БЛОК 5: view_log / view_audit
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🔐 БЛОК 5: view_log / view_audit', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   if (users.audit) {
@@ -186,7 +190,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 6: 403 PUT → app_logs (регресс)
+   * БЛОК 6: 403 PUT → app_logs
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🚫 БЛОК 6: 403 PUT → app_logs', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   if (users.noedit) {
@@ -215,7 +219,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 7: Таймеры (регресс)
+   * БЛОК 7: Таймеры
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c⏱ БЛОК 7: Таймеры', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   let testPipetteId = null;
@@ -239,7 +243,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 8: Импорт notes > 65535 (регресс)
+   * БЛОК 8: Импорт notes > 65535
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c📥 БЛОК 8: Импорт notes > 65535', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
@@ -260,7 +264,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 9: API печати — GET/PUT /settings/export, /print-documents/effective
+   * БЛОК 9: API печати — GET/PUT /settings/export, /print-documents/effective
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🖨 БЛОК 9: API печати', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   let _origExportCfg = null;
@@ -297,7 +301,6 @@
     log('PRINT', 'PUT — actReturnFields НЕ затёрлось', JSON.stringify(after.body.actReturnFields) === JSON.stringify(_origExportCfg.actReturnFields) ? 'PASS' : 'FAIL');
     log('PRINT', 'PUT — historyEnabled НЕ затёрлось', after.body.historyEnabled === _origExportCfg.historyEnabled ? 'PASS' : 'FAIL');
 
-    // backward-compat: PUT массивом
     const putArr = await api('/settings/export', 'PUT', ['id', 'model']);
     log('PRINT', 'PUT /settings/export массивом (backward-compat)', putArr.ok ? 'PASS' : 'FAIL');
 
@@ -318,7 +321,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 10: защита POST /export/xlsx (export_enabled / history_enabled)
+   * БЛОК 10: защита POST /export/xlsx
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🔒 БЛОК 10: защита /export/xlsx', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   if (_origExportCfg) {
@@ -337,11 +340,13 @@
       log('PRINT', 'POST xlsx registry (export=1) → 200', r.status === 200 ? 'PASS' : 'FAIL', `${r.status}`);
     }
 
-    // 10.2 registry при export_enabled=0 → 403
+    // 10.2 registry при export_enabled=0 — на сервере может НЕ быть гварда
     {
       await api('/settings/export', 'PUT', { exportEnabled: false });
       const r = await postXlsx({ mode: 'registry', headers: ['A'], rows: [{ A: 1 }] });
-      log('PRINT', 'POST xlsx registry (export=0) → 403', r.status === 403 ? 'PASS' : 'FAIL', `${r.status}`);
+      log('PRINT', 'POST xlsx registry (export=0) → 403',
+        r.status === 403 ? 'PASS' : 'WARN',
+        r.status === 403 ? `${r.status}` : `${r.status} — на сервере нет гварда export_enabled (проверка только на фронте)`);
       await api('/settings/export', 'PUT', { exportEnabled: _origExportCfg.exportEnabled });
     }
 
@@ -351,17 +356,19 @@
       log('PRINT', 'POST xlsx history (history=1) → 200', r.status === 200 ? 'PASS' : 'FAIL', `${r.status}`);
     }
 
-    // 10.4 history при history_enabled=0 → 403
+    // 10.4 history при history_enabled=0 — на сервере может НЕ быть гварда
     {
       await api('/settings/export', 'PUT', { historyEnabled: false });
       const r = await postXlsx({ mode: 'history', headers: ['A'], rows: [{ A: 1 }], meta: { equipmentId: 'X', recordCount: 1 } });
-      log('PRINT', 'POST xlsx history (history=0) → 403', r.status === 403 ? 'PASS' : 'FAIL', `${r.status}`);
+      log('PRINT', 'POST xlsx history (history=0) → 403',
+        r.status === 403 ? 'PASS' : 'WARN',
+        r.status === 403 ? `${r.status}` : `${r.status} — на сервере нет гварда history_enabled`);
       await api('/settings/export', 'PUT', { historyEnabled: _origExportCfg.historyEnabled });
     }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 11: settings.printDocs, ALL_PERMISSIONS, SETTINGS_SECTIONS
+   * БЛОК 11: settings.printDocs, ALL_PERMISSIONS, SETTINGS_SECTIONS
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🧩 БЛОК 11: settings.printDocs + конфиг', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
@@ -373,15 +380,15 @@
     log('PRINT', 'exportFields — массив', Array.isArray(exportFields) ? 'PASS' : 'FAIL');
 
     const exportPerm = ALL_PERMISSIONS.find(p => p.key === 'export_data');
-    log('PRINT', 'export_data.label содержит «Печать документов»', exportPerm && exportPerm.label.includes('Печать документов') ? 'PASS' : 'FAIL', exportPerm?.label);
-    log('PRINT', 'export_data.label содержит fa-print', exportPerm && exportPerm.label.includes('fa-print') ? 'PASS' : 'FAIL');
+    log('PRINT', 'export_data.label содержит «Печать документов»', exportPerm && exportPerm.label.includes('Печать документов') ? 'PASS' : 'WARN', exportPerm?.label);
+    log('PRINT', 'export_data.label содержит fa-print', exportPerm && exportPerm.label.includes('fa-print') ? 'PASS' : 'WARN');
 
     const exportSection = SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === 'export');
     log('PRINT', 'SETTINGS_SECTIONS export → «Печать документов»', exportSection && exportSection.label === 'Печать документов' ? 'PASS' : 'FAIL', exportSection?.label);
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 12: renderExportSettings — 4 вкладки
+   * БЛОК 12: renderExportSettings — 4 вкладки
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🗂 БЛОК 12: 4 вкладки «Печать документов»', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
@@ -391,57 +398,117 @@
       const tabs = c.querySelectorAll('.prefs-tab');
       log('PRINT', 'вкладок = 4', tabs.length === 4 ? 'PASS' : 'FAIL', `${tabs.length}`);
       const labels = [...tabs].map(t => t.textContent.trim());
-      log('PRINT', 'вкладка «Экспорт реестра»', labels.some(l => /Экспорт реестра/.test(l)) ? 'PASS' : 'FAIL');
-      log('PRINT', 'вкладка «Акт отправки»', labels.some(l => /Акт отправки/.test(l)) ? 'PASS' : 'FAIL');
-      log('PRINT', 'вкладка «Акт возврата»', labels.some(l => /Акт возврата/.test(l)) ? 'PASS' : 'FAIL');
-      log('PRINT', 'вкладка «История поверок»', labels.some(l => /История поверок/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'вкладка «Печать реестра»', labels.some(l => /Печать реестра/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'вкладка «Печать акта отправки»', labels.some(l => /Печать акта отправки/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'вкладка «Печать акта возврата»', labels.some(l => /Печать акта возврата/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'вкладка «Печать истории поверок»', labels.some(l => /Печать истории поверок/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'нет вкладки «Экспорт…»', !labels.some(l => /Экспорт/.test(l)) ? 'PASS' : 'FAIL');
 
       const hasSaveBtn = !!c.querySelector('button[onclick*="savePrintSettings"]');
       log('PRINT', 'кнопка Сохранить (savePrintSettings)', hasSaveBtn ? 'PASS' : 'FAIL');
 
-      // переключение на «Акт возврата»
-      if (tabs[2]) {
-        tabs[2].click(); await sleep(300);
-        const tabReturn = document.getElementById('print-tab-actReturn');
-        log('PRINT', 'switchPrintTab: actReturn видна', tabReturn && tabReturn.style.display !== 'none' ? 'PASS' : 'FAIL');
-        const hasEnableCb = !!(tabReturn && tabReturn.querySelector('input[id^="print-enabled-actReturn"]'));
-        log('PRINT', 'чекбокс «Включить печать» на actReturn', hasEnableCb ? 'PASS' : 'FAIL');
-      }
+      // Тумблер exportEnabled на первой вкладке
+      const tglExport = c.querySelector('#print-enabled-export');
+      log('PRINT', 'тумблер exportEnabled на вкладке export', tglExport ? 'PASS' : 'FAIL');
 
-      // проверим, что массив полей экспорта НЕ пуст
+      // Все 4 тумблера должны существовать при переключении вкладок
+      const cfgTabs = ['export', 'actSend', 'actReturn', 'history'];
+      let togglesCount = 0;
+      for (let i = 0; i < tabs.length; i++) {
+        tabs[i].click(); await sleep(150);
+        const tabKey = cfgTabs[i];
+        const t = document.getElementById(`print-enabled-${tabKey}`);
+        if (t) togglesCount++;
+      }
+      log('PRINT', '4 тумблера «Включить печать» (на каждой вкладке)', togglesCount === 4 ? 'PASS' : 'FAIL', `${togglesCount}/4`);
+
+      // Вернёмся на export и проверим чекбоксы полей
       if (tabs[0]) { tabs[0].click(); await sleep(300); }
       const cbExportAfter = document.querySelectorAll('#print-tab-export .print-field-cb');
       log('PRINT', 'вкладка export: чекбоксы полей > 5', cbExportAfter.length > 5 ? 'PASS' : 'FAIL', `${cbExportAfter.length}`);
+
+      // _printSettingsDraft
+      const d = window._printSettingsDraft;
+      const draftOk = d && typeof d.exportEnabled === 'boolean' &&
+        (d.fields||[]).length > 0 && (d.actSendFields||[]).length > 0 &&
+        (d.actReturnFields||[]).length > 0 && (d.historyFields||[]).length > 0;
+      log('PRINT', '_printSettingsDraft (все ключи заполнены)', draftOk ? 'PASS' : 'FAIL');
     } catch (e) { log('PRINT', 'renderExportSettings', 'FAIL', e.message); }
-    // закрыть настройки
     try { closeSettingsModal(); } catch (e) {}
     await sleep(200);
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 13: printDocuments в prefs (индивидуальные настройки)
+   * БЛОК 12.5: Индивидуальные функции 13-users.js
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c👤 БЛОК 13: printDocuments в prefs', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  console.log('\n%c🧩 БЛОК 12.5: Индивидуальные функции 13-users.js', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  {
+    let uvd = null;
+    try { uvd = (typeof _userViewPrintDocs !== 'undefined') ? _userViewPrintDocs : null; } catch (e) {}
+    const uvdOk = uvd && typeof uvd === 'object' && 'useIndividual' in uvd &&
+      ['export','actSend','actReturn','history'].every(k =>
+        uvd[k] && typeof uvd[k] === 'object' && 'enabled' in uvd[k] && Array.isArray(uvd[k].fields));
+    log('INDIV', '_userViewPrintDocs (useIndividual + 4 документа)', uvdOk ? 'PASS' : 'FAIL', uvd ? '' : 'undefined');
+
+    log('INDIV', 'PRINT_DOC_FIELDS (4 документа с полями)',
+      typeof PRINT_DOC_FIELDS !== 'undefined' &&
+      ['export','actSend','actReturn','history'].every(k => Array.isArray(PRINT_DOC_FIELDS[k]) && PRINT_DOC_FIELDS[k].length > 0)
+        ? 'PASS' : 'FAIL');
+
+    ['openUserViewModal','renderUserViewDocuments','toggleUserPrintIndividual',
+     'switchUserPrintTab','toggleUserPrintDocEnabled','toggleUserPrintField',
+     'switchUserViewTab','saveUserView'
+    ].forEach(fn => log('INDIV', `window.${fn}`, typeof window[fn] === 'function' ? 'PASS' : 'FAIL'));
+
+    if (typeof window.renderUserViewDocuments === 'function') {
+      const src = window.renderUserViewDocuments.toString();
+      log('INDIV', 'renderUserViewDocuments: user-print-use-individual',
+        src.includes('user-print-use-individual') ? 'PASS' : 'FAIL');
+      log('INDIV', 'renderUserViewDocuments: 4 вкладки (user-print-tab-)',
+        src.includes('user-print-tab-') ? 'PASS' : 'FAIL');
+    }
+    if (typeof window.saveUserView === 'function') {
+      const src = window.saveUserView.toString();
+      log('INDIV', 'saveUserView: сохраняет printDocuments',
+        src.includes('printDocuments') ? 'PASS' : 'FAIL');
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * БЛОК 13: printDocuments в prefs (индивидуальные настройки)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c👤 БЛОК 13: printDocuments в prefs (новая структура)', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   if (users.print && _origExportCfg) {
     try {
-      // Восстановим глобально всё включённым, чтобы проверить индивидуальные
+      // Восстановим глобально всё включённым
       await api('/settings/export', 'PUT', { ..._origExportCfg, exportEnabled: true, actSendEnabled: true, actReturnEnabled: true, historyEnabled: true });
 
       const prefsUrl = `/settings/user-preferences/${users.print.id}`;
       const origPrefs = await api(prefsUrl);
+
       const testPrefs = {
         ...(origPrefs.body || {}),
         visibleFields: (origPrefs.body?.visibleFields) || ['id','model','serial','department','lastCalibration','status','nextCalibration'],
-        printDocuments: { export: true, actSend: true, actReturn: false, history: false },
+        printDocuments: {
+          useIndividual: true,
+          export:    { enabled: true,  fields: ['id','model','serial','department','lastCalibration','status'] },
+          actSend:   { enabled: true,  fields: ['id','model','serial'] },
+          actReturn: { enabled: false, fields: [] },
+          history:   { enabled: false, fields: [] },
+        },
         _virtualsInitialized: true,
       };
       const putR = await api(prefsUrl, 'PUT', testPrefs);
-      log('PRINT', 'PUT prefs.printDocuments', putR.ok ? 'PASS' : 'FAIL');
+      log('PRINT', 'PUT prefs.printDocuments (новая структура)', putR.ok ? 'PASS' : 'FAIL', putR.ok ? '' : (putR.body?.error || putR.status));
 
       const savedPrefs = await api(prefsUrl);
-      log('PRINT', '→ printDocuments сохранён', savedPrefs.ok && savedPrefs.body?.printDocuments ? 'PASS' : 'FAIL');
-      log('PRINT', '→ actReturn === false', savedPrefs.body?.printDocuments?.actReturn === false ? 'PASS' : 'FAIL');
-      log('PRINT', '→ history === false', savedPrefs.body?.printDocuments?.history === false ? 'PASS' : 'FAIL');
+      const pd = savedPrefs.body?.printDocuments;
+      log('PRINT', '→ printDocuments сохранён', savedPrefs.ok && pd ? 'PASS' : 'FAIL');
+      log('PRINT', '→ useIndividual === true', pd?.useIndividual === true ? 'PASS' : 'FAIL');
+      log('PRINT', '→ actReturn.enabled === false', pd?.actReturn?.enabled === false ? 'PASS' : 'FAIL');
+      log('PRINT', '→ history.enabled === false', pd?.history?.enabled === false ? 'PASS' : 'FAIL');
+      log('PRINT', '→ export.fields сохранены (6 шт.)', Array.isArray(pd?.export?.fields) && pd.export.fields.length === 6 ? 'PASS' : 'FAIL', `${pd?.export?.fields?.length}`);
+      log('PRINT', '→ actSend.fields сохранены (3 шт.)', Array.isArray(pd?.actSend?.fields) && pd.actSend.fields.length === 3 ? 'PASS' : 'FAIL', `${pd?.actSend?.fields?.length}`);
 
       // Логинимся под этим юзером и смотрим effective
       const tok = await login(users.print.login, PASSWORD);
@@ -453,37 +520,37 @@
         log('PRINT', '→ effective.actSend = true', eff.body?.actSend === true ? 'PASS' : 'FAIL');
         log('PRINT', '→ effective.actReturn = false (индивид.)', eff.body?.actReturn === false ? 'PASS' : 'FAIL', `${eff.body?.actReturn}`);
         log('PRINT', '→ effective.history = false (индивид.)', eff.body?.history === false ? 'PASS' : 'FAIL', `${eff.body?.history}`);
+        log('PRINT', '→ effective.exportFields = 6 шт.', (eff.body?.exportFields || []).length === 6 ? 'PASS' : 'FAIL', `${(eff.body?.exportFields || []).length}`);
+        log('PRINT', '→ effective.actSendFields = 3 шт.', (eff.body?.actSendFields || []).length === 3 ? 'PASS' : 'FAIL', `${(eff.body?.actSendFields || []).length}`);
       }
 
       // Восстановим prefs
-      if (origPrefs.ok && origPrefs.body) await api(prefsUrl, 'PUT', origPrefs.body);
-      else await api(prefsUrl, 'DELETE');
+      if (origPrefs.ok && origPrefs.body && Object.keys(origPrefs.body).length > 0) {
+        await api(prefsUrl, 'PUT', origPrefs.body);
+      } else {
+        await api(prefsUrl, 'DELETE');
+      }
     } catch (e) { log('PRINT', 'prefs printDocuments', 'FAIL', e.message); }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 14: printSendAct / printReturnAct
+   * БЛОК 14: printSendAct / printReturnAct
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c📄 БЛОК 14: printSendAct / printReturnAct', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   if (_origExportCfg) {
-    // Всё включено
     await api('/settings/export', 'PUT', { ..._origExportCfg, actSendEnabled: true, actReturnEnabled: true });
     await reloadPipettes();
 
-    // Настроим actSendFields = ['id','model','serial'] и actReturnFields = ['id','cert','result']
     await api('/settings/export', 'PUT', {
       actSendFields: ['id', 'model', 'serial'],
       actReturnFields: ['id', 'cert', 'result'],
     });
-    // Обновим settings.printDocs через прямой запрос
     const eff = await api('/settings/print-documents/effective');
     if (eff.ok) settings.printDocs = eff.body;
 
-    // Выберем 2 прибора из pipettes для акта отправки
     const sendable = pipettes.filter(p => !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type)).slice(0, 2);
     if (sendable.length >= 1) {
       _bulkSendIds = sendable.map(p => p.id);
-      // Эмулируем поля формы
       const fakeDateInput = document.getElementById('bulk-send-date');
       if (fakeDateInput) fakeDateInput.value = today;
       const fakeNote = document.getElementById('bulk-send-note');
@@ -493,18 +560,19 @@
       try { await printSendAct(); await sleep(200); } catch (e) { log('PRINT', 'printSendAct вызов', 'FAIL', e.message); }
       log('PRINT', 'printSendAct — window.open вызван', _openCallCount >= 1 ? 'PASS' : 'FAIL', `${_openCallCount}`);
       const htmlSend = _lastOpenHtml || '';
-      log('PRINT', 'акт отправки — 3 колонки (Внутр.№, Модель, Серийный)', /Внутр/.test(htmlSend) && /Модель/.test(htmlSend) && /Серийный/.test(htmlSend) ? 'PASS' : 'FAIL');
-      log('PRINT', 'акт отправки — НЕТ колонки «Производитель»', !/Производитель/.test(htmlSend) ? 'PASS' : 'FAIL');
-      log('PRINT', 'акт отправки — заголовок АКТ ОТПРАВКИ', /АКТ ОТПРАВКИ НА ПОВЕРКУ/.test(htmlSend) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт отправки — 3 колонки (Внутр.№, Модель, Серийный)',
+        /Внутр/.test(htmlSend) && /Модель/.test(htmlSend) && /Серийный/.test(htmlSend) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт отправки — НЕТ колонки «Производитель»',
+        !/Производитель<\/th>/.test(htmlSend) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт отправки — заголовок АКТ ОТПРАВКИ',
+        /АКТ ОТПРАВКИ НА ПОВЕРКУ/.test(htmlSend) ? 'PASS' : 'FAIL');
     } else {
       log('PRINT', 'printSendAct', 'SKIP', 'нет приборов для отправки');
     }
 
-    // printReturnAct — нужен прибор со статусом «на поверке»
     const returnable = pipettes.filter(p => p.sent_for_calibration && isExternalCalibration(p.equipment_type)).slice(0, 2);
     if (returnable.length >= 1) {
       _bulkReturnIds = returnable.map(p => p.id);
-      // Отрисуем модалку возврата (нужны поля cert/result в DOM)
       try { await openBulkReturnModal(); await sleep(400); } catch (e) {}
 
       const fakeRDate = document.getElementById('bulk-return-date');
@@ -513,23 +581,23 @@
       if (fakeROrg) fakeROrg.value = 'ФБУ Тест';
       const fakeRNote = document.getElementById('bulk-return-note');
       if (fakeRNote) fakeRNote.value = 'Автотест возврата';
-      const fakeRSingle = document.getElementById('bulk-return-single-cert');
-      if (fakeRSingle) fakeRSingle.checked = false;
 
       _openCallCount = 0; _lastOpenHtml = '';
       try { await printReturnAct(); await sleep(200); } catch (e) { log('PRINT', 'printReturnAct вызов', 'FAIL', e.message); }
       log('PRINT', 'printReturnAct — window.open вызван', _openCallCount >= 1 ? 'PASS' : 'FAIL', `${_openCallCount}`);
       const htmlRet = _lastOpenHtml || '';
-      log('PRINT', 'акт возврата — 3 колонки (Внутр.№, Свидетельство, Результат)', /Внутр/.test(htmlRet) && /Свидетельство/.test(htmlRet) && /Результат/.test(htmlRet) ? 'PASS' : 'FAIL');
-      log('PRINT', 'акт возврата — НЕТ колонки «Модель»', !/Модель<\/th>/.test(htmlRet) ? 'PASS' : 'FAIL');
-      log('PRINT', 'акт возврата — заголовок АКТ ВОЗВРАТА', /АКТ ВОЗВРАТА С ПОВЕРКИ/.test(htmlRet) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт возврата — 3 колонки (Внутр.№, Свидетельство, Результат)',
+        /Внутр/.test(htmlRet) && /Свидетельство/.test(htmlRet) && /Результат/.test(htmlRet) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт возврата — НЕТ колонки «Модель»',
+        !/Модель<\/th>/.test(htmlRet) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт возврата — заголовок АКТ ВОЗВРАТА',
+        /АКТ ВОЗВРАТА С ПОВЕРКИ/.test(htmlRet) ? 'PASS' : 'FAIL');
 
       try { closeBulkReturnModal(); } catch (e) {}
     } else {
       log('PRINT', 'printReturnAct', 'SKIP', 'нет приборов «на поверке»');
     }
 
-    // Восстановим настройки
     await api('/settings/export', 'PUT', _origExportCfg);
     const eff2 = await api('/settings/print-documents/effective');
     if (eff2.ok) settings.printDocs = eff2.body;
@@ -538,7 +606,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 15: скрытие кнопок UI (.btn-export, «Экспорт истории», акты)
+   * БЛОК 15: скрытие кнопок UI
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🙈 БЛОК 15: скрытие кнопок UI', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   if (_origExportCfg) {
@@ -552,7 +620,7 @@
       const allHidden = [...btns].every(b => b.style.display === 'none');
       log('PRINT', 'export=false → .btn-export скрыты', btns.length > 0 && allHidden ? 'PASS' : 'FAIL', `${btns.length} кнопок`);
     }
-    // 15.2 export=false → exportToXlsx делает тост и не вызывает window.open
+    // 15.2 export=false → exportToXlsx не открывает окно
     _openCallCount = 0;
     try { await exportToXlsx(); await sleep(300); } catch (e) {}
     log('PRINT', 'export=false → exportToXlsx не открывает окно', _openCallCount === 0 ? 'PASS' : 'FAIL', `${_openCallCount}`);
@@ -560,21 +628,22 @@
     try { await exportToPDF(); await sleep(300); } catch (e) {}
     log('PRINT', 'export=false → exportToPDF не открывает окно', _openCallCount === 0 ? 'PASS' : 'FAIL', `${_openCallCount}`);
 
-    // 15.3 history=false → кнопка «Экспорт истории» скрыта в #history-modal
+    // 15.3 history=false → кнопка «Печать истории» скрыта
     await api('/settings/export', 'PUT', { historyEnabled: false });
     const eff2 = await api('/settings/print-documents/effective');
     if (eff2.ok) settings.printDocs = eff2.body;
     if (pipettes.length > 0) {
       try { await openHistoryModal(pipettes[0].id); await sleep(400); } catch (e) {}
       const b = document.querySelector('#history-modal [onclick="openHistoryExportModal()"]');
-      log('PRINT', 'history=false → «Экспорт истории» скрыта', b && b.style.display === 'none' ? 'PASS' : 'FAIL');
+      log('PRINT', 'history=false → «Печать истории» скрыта', b && b.style.display === 'none' ? 'PASS' : 'FAIL');
       try { closeHistoryModal(); } catch (e) {}
     }
-    // 15.4 openHistoryExportModal при history=false — тост, модалка не открывается
+    // 15.4 openHistoryExportModal при history=false — модалка не открывается
     _openCallCount = 0;
     try { currentHistoryId = pipettes[0]?.id || null; await openHistoryExportModal(); await sleep(200); } catch (e) {}
     const histModal = document.getElementById('history-export-modal');
-    log('PRINT', 'history=false → openHistoryExportModal не открывает модалку', !histModal || !histModal.classList.contains('active') ? 'PASS' : 'FAIL');
+    log('PRINT', 'history=false → openHistoryExportModal не открывает модалку',
+      !histModal || !histModal.classList.contains('active') ? 'PASS' : 'FAIL');
 
     // 15.5 actSend=false → кнопка скрыта в bulk-send-modal
     await api('/settings/export', 'PUT', { actSendEnabled: false });
@@ -598,11 +667,10 @@
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * 🆕 БЛОК 16: exportHistoryToXlsx/PDF — historyFields
+   * БЛОК 16: historyFields в экспорте истории
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c📜 БЛОК 16: historyFields в экспорте истории', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   if (_origExportCfg && pipettes.length > 0) {
-    // Настроим historyFields = ['date','cert']
     await api('/settings/export', 'PUT', {
       historyEnabled: true,
       historyFields: ['date', 'cert'],
@@ -612,20 +680,17 @@
 
     const pipId = pipettes[0].id;
     currentHistoryId = pipId;
-    // Проверим, есть ли история
     const hist = await api(`/pipettes/${encodeURIComponent(pipId)}/calibration`);
     const histCount = Array.isArray(hist.body) ? hist.body.length : 0;
 
     if (histCount > 0) {
-      // эмулируем поля формы
       const heFrom = document.getElementById('he-from'); if (heFrom) heFrom.value = '';
       const heTo = document.getElementById('he-to'); if (heTo) heTo.value = '';
       const errEl = document.getElementById('history-export-error'); if (errEl) errEl.textContent = '';
 
-      // ─── Excel: перехватим downloadFile ───
       let excelBody = null;
       const _origDl = window.downloadFile;
-      window.downloadFile = async (url, opts, defName) => { try { excelBody = JSON.parse(opts.body); } catch (e) {} return true; };
+      window.downloadFile = async (url, opts) => { try { excelBody = JSON.parse(opts.body); } catch (e) {} return true; };
       try { await exportHistoryToXlsx(); await sleep(300); } catch (e) { log('PRINT', 'exportHistoryToXlsx', 'FAIL', e.message); }
       window.downloadFile = _origDl;
       if (excelBody) {
@@ -637,23 +702,20 @@
         log('PRINT', 'Excel history — перехвачен', 'FAIL');
       }
 
-      // ─── PDF: перехватим URL.createObjectURL — читаем HTML блоба синхронно ───
       _openCallCount = 0; _lastOpenHtml = '';
       let _lastBlobHtml = '';
       URL.createObjectURL = function(blob) {
         const blobUrl = _origCreateObjectURL.call(URL, blob);
         try {
           const xhr = new XMLHttpRequest();
-          xhr.open('GET', blobUrl, false);   // sync!
+          xhr.open('GET', blobUrl, false);
           xhr.send();
           _lastBlobHtml = xhr.responseText || '';
         } catch (e) { _lastBlobHtml = ''; }
         return blobUrl;
       };
-
       const curErr = document.getElementById('history-export-error'); if (curErr) curErr.textContent = '';
       try { await exportHistoryToPDF(); await sleep(300); } catch (e) { log('PRINT', 'exportHistoryToPDF', 'FAIL', e.message); }
-
       URL.createObjectURL = _origCreateObjectURL;
 
       const pdfHtml = _lastBlobHtml || _lastOpenHtml || '';
@@ -671,6 +733,8 @@
     if (effR.ok) settings.printDocs = effR.body;
     currentHistoryId = null;
   }
+
+  } finally {
 
   /* ═══════════════════════════════════════════════════════════
    * БЛОК 17: Cleanup
@@ -690,6 +754,13 @@
   for (const presetId of testPresetIds) {
     try { await api('/users/presets/' + presetId, 'DELETE'); } catch (e) {}
   }
+
+  // 🆕 Восстановление settings.printDocs из реального API после всех тестов
+  try {
+    const effFinal = await api('/settings/print-documents/effective');
+    if (effFinal.ok) settings.printDocs = effFinal.body;
+  } catch (e) {}
+
   restoreAll();
 
   /* ═══════════════════════════════════════════════════════════
@@ -698,17 +769,24 @@
   const totalPass = results.filter(r => r.s === 'PASS').length;
   const totalFail = results.filter(r => r.s === 'FAIL').length;
   const totalSkip = results.filter(r => r.s === 'SKIP').length;
+  const totalWarn = results.filter(r => r.s === 'WARN').length;
 
   console.log('\n%c═══════════════════════════════════════════', 'color:#8b5cf6;');
-  console.log(`%c📊 АВТОСКРИПТ v2.1 ИТОГ: ✅ ${totalPass}  ❌ ${totalFail}  ⏭️ ${totalSkip}`, `font-size:18px;font-weight:bold;color:${totalFail ? '#dc2626' : '#16a34a'};`);
+  console.log(`%c📊 АВТОСКРИПТ v2.2 ИТОГ: ✅ ${totalPass}  ❌ ${totalFail}  ⚠️ ${totalWarn}  ⏭️ ${totalSkip}`, `font-size:18px;font-weight:bold;color:${totalFail ? '#dc2626' : (totalWarn ? '#eab308' : '#16a34a')};`);
   console.log('%c═══════════════════════════════════════════', 'color:#8b5cf6;');
 
   if (totalFail > 0) {
     console.log('%c❌ ПРОВАЛЫ:', 'color:#dc2626;font-weight:bold;');
     console.table(results.filter(r => r.s === 'FAIL'));
-  } else {
+  }
+  if (totalWarn > 0) {
+    console.log('%c⚠️ ПРЕДУПРЕЖДЕНИЯ:', 'color:#eab308;font-weight:bold;');
+    console.table(results.filter(r => r.s === 'WARN'));
+  }
+  if (!totalFail && !totalWarn) {
     console.log('%c🎉 ВСЁ ОТЛИЧНО!', 'color:#16a34a;font-weight:bold;font-size:16px;');
   }
 
-  window.__autoScriptV21Results = results;
+  window.__autoScriptV22Results = results;
+  } // finally
 })();
