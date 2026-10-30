@@ -1301,7 +1301,24 @@ async function renderUserViewDocuments() {
   c.innerHTML = html;
 }
 
-function toggleUserPrintIndividual(checked) {
+async function toggleUserPrintIndividual(checked) {
+  if (checked) {
+    // Предзаполняем пустые списки глобальными, чтобы «индивидуальные = глобальные» было видно сразу
+    try {
+      const global = await apiRequest('/settings/export');
+      const g = {
+        export:    global.fields           || [],
+        actSend:   global.actSendFields    || [],
+        actReturn: global.actReturnFields  || [],
+        history:   global.historyFields    || []
+      };
+      for (const key of ['export', 'actSend', 'actReturn', 'history']) {
+        if (!_userViewPrintDocs[key].fields?.length) {
+          _userViewPrintDocs[key].fields = [...g[key]];
+        }
+      }
+    } catch (e) { /* если не удалось — оставляем как есть */ }
+  }
   _userViewPrintDocs.useIndividual = checked;
   renderUserViewDocuments();
 }
