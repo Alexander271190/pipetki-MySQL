@@ -1,6 +1,8 @@
 'use strict';
 
 let _cachedPresets = [];
+let _userViewActiveTab = 'fields';
+let _userViewPrintDocs = { export: true, actSend: true, actReturn: true, history: true };
 
 // ============================================================
 // ПОЛЬЗОВАТЕЛИ — СПИСОК И ФОРМА
@@ -615,14 +617,23 @@ async function openUserViewModal(userId, userName) {
   document.getElementById('user-view-target').innerHTML =
     `Настройка полей формы для: <strong>${esc(userName || userId)}</strong>`;
 
-  let prefs = {};
+ let prefs = {};
   try {
     prefs = await apiRequest(`/settings/user-preferences/${userId}`);
     if (prefs.visibleFields && Array.isArray(prefs.visibleFields)) {
       _userViewVisibleFields = [...prefs.visibleFields];
     }
+    if (prefs.printDocuments && typeof prefs.printDocuments === 'object') {
+      _userViewPrintDocs = {
+        export:    prefs.printDocuments.export    !== false,
+        actSend:   prefs.printDocuments.actSend   !== false,
+        actReturn: prefs.printDocuments.actReturn !== false,
+        history:   prefs.printDocuments.history   !== false,
+      };
+    } else {
+      _userViewPrintDocs = { export: true, actSend: true, actReturn: true, history: true };
+    }
   } catch (e) {}
-
   try {
     _cachedFields = await apiRequest('/settings/fields');
   } catch (e) {
@@ -651,6 +662,11 @@ async function openUserViewModal(userId, userName) {
   }
 
   renderUserViewContent();
+  document.querySelectorAll('#user-view-modal .prefs-tab').forEach((b, i) => {
+  b.classList.toggle('active', i === 0);
+});
+document.getElementById('user-view-tab-fields').style.display = '';
+document.getElementById('user-view-tab-documents').style.display = 'none';
   UI.modal.open('user-view-modal');
   loadCopyViewUserList(userId);
 }
@@ -659,6 +675,8 @@ function closeUserViewModal() {
   UI.modal.close('user-view-modal');
   _userViewUserId = null;
   _userViewVisibleFields = [];
+  _userViewActiveTab = 'fields';
+  _userViewPrintDocs = { export: true, actSend: true, actReturn: true, history: true };
 }
 
 function renderUserViewContent() {
@@ -860,6 +878,7 @@ async function saveUserView() {
   const merged = {
     ...existing,
     visibleFields: savedFields,
+    printDocuments: { ..._userViewPrintDocs },
     _virtualsInitialized: true,
   };
 
@@ -882,7 +901,7 @@ async function saveUserView() {
 async function resetUserView() {
   if (!_userViewUserId) return;
   const ok = await showConfirm(
-    'Сбросить настройки полей формы к стандартным (показывать все включённые)?',
+    'Сбросить настройки полей и документов к стандартным?',
     { icon: '↩️', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' }
   );
   if (!ok) return;
@@ -1115,4 +1134,81 @@ async function copyTempPassword() {
   } catch (e) {
     showToast('Не удалось скопировать. Скопируйте вручную.', 'error');
   }
+}
+
+function switchUserViewTab(tab, btn) {
+  _userViewActiveTab = tab;
+  document.querySelectorAll('#user-view-modal .prefs-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('user-view-tab-fields').style.display = tab === 'fields' ? '' : 'none';
+  document.getElementById('user-view-tab-documents').style.display = tab === 'documents' ? '' : 'none';
+  if (tab === 'documents') renderUserViewDocuments();
+}
+
+async function renderUserViewDocuments() {
+  const c = document.getElementById('user-view-documents');
+  c.innerHTML = '<p style="color:#94a3b8;">Загрузка…</p>';
+
+  let user = null;
+  try {
+    const users = await getCachedUsers();
+    user = users.find(u => u.id === _userViewUserId) || null;
+  } catch (e) { /* fallback ниже */ }
+
+  const hasPerm = user && (user.role === 'admin' || (user.extraPermissions || []).includes('export_data'));
+
+  if (!hasPerm) {
+    c.innerHTML = `
+      <div class="warning-block" style="margin:0;">
+        ⚠️ У пользователя нет права «Печать документов».<br>
+        Сначала выдайте это право в блоке «Права доступа» выше, затем настраивайте документы.
+      </div>
+    `;
+    return;
+  }
+
+  try {
+    const global = await apiRequest('/settings/export');
+
+    const docs = [
+      { key: 'export',    label: 'Экспорт реестра',        globalOn: global.exportEnabled !== false,    icon: 'fa-file-excel' },
+      { key: 'actSend',   label: 'Акт отправки на поверку', globalOn: global.actSendEnabled !== false,   icon: 'fa-box' },
+      { key: 'actReturn', label: 'Акт возврата с поверки',  globalOn: global.actReturnEnabled !== false, icon: 'fa-box-open' },
+      { key: 'history',   label: 'Экспорт истории поверок', globalOn: global.historyEnabled !== false,   icon: 'fa-clock-rotate-left' },
+    ];
+
+    let html = `
+      <div class="info-block" style="margin-bottom:14px;">
+        <i class="fa-solid fa-circle-info"></i>
+        Поля документов настраиваются глобально: «Настройки → Печать документов».<br>
+        Здесь — только видимость документов для этого пользователя.
+      </div>
+    `;
+
+    for (const d of docs) {
+      const userHas = _userViewPrintDocs[d.key] !== false;
+      const checked = d.globalOn && userHas;
+      const disabled = !d.globalOn;
+      html += `
+        <label class="prefs-item" style="padding:10px 12px;${disabled ? 'opacity:0.5;' : ''}">
+          <input type="checkbox" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}
+                 onchange="toggleUserViewDocument('${d.key}', this.checked)">
+          <span class="prefs-label">
+            <i class="fa-solid ${d.icon}"></i> ${esc(d.label)}
+          </span>
+          <span style="font-size:.75rem;color:${d.globalOn ? '#16a34a' : '#dc2626'};">
+            ${d.globalOn ? '✅ глобально вкл.' : '❌ глобально выкл.'}
+          </span>
+        </label>
+      `;
+    }
+
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+function toggleUserViewDocument(docKey, checked) {
+  _userViewPrintDocs[docKey] = checked;
 }
