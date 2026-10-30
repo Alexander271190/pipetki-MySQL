@@ -743,19 +743,6 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
     res.status(500).json({ error: 'Ошибка применения настроек' });
   }
 });
-router.post('/reset-help', authenticate, requireRole(['admin']), async (req, res) => {
-  try {
-    await withTransaction(async (conn) => {
-      await conn.query('DELETE FROM help_docs');
-      await db.seedHelpDocs(conn);
-    });
-    await logAction(req, 'Сброс справки к заводской', '');
-    res.json({ message: 'Справка восстановлена к заводской' });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Ошибка сброса' });
-  }
-});
 
 // ============================================================
 // GET /api/settings/user-preferences/:userId/effective
