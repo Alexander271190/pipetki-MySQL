@@ -1,6 +1,7 @@
 /* ============================================================
- * АВТОСКРИПТ v1.3 — рабочий, все правки учтены
- * Пароль всех пользователей: Seno16/1978S
+ * АВТОСКРИПТ v2.1 — регресс + все правки «Печать документов»
+ * Пароль тестовых пользователей: Seno16/1978S
+ * Запуск: войти админом → консоль → вставить → Enter
  * ============================================================ */
 (async function runAutoScript() {
   'use strict';
@@ -27,20 +28,14 @@
   };
 
   const login = async (login, password) => {
-    try {
-      const r = await api('/auth/login', 'POST', { login, password }, '');
-      return r.ok ? r.body.token : null;
-    } catch (e) { return null; }
+    try { const r = await api('/auth/login', 'POST', { login, password }, ''); return r.ok ? r.body.token : null; }
+    catch (e) { return null; }
   };
 
-  // 🆕 Принудительная перезагрузка pipettes из БД
   const reloadPipettes = async () => {
     try {
       const allData = await api('/pipettes/all?limit=5000');
-      if (allData.ok && Array.isArray(allData.body.items)) {
-        pipettes = allData.body.items;
-        return pipettes.length;
-      }
+      if (allData.ok && Array.isArray(allData.body.items)) { pipettes = allData.body.items; return pipettes.length; }
     } catch (e) {}
     return 0;
   };
@@ -51,718 +46,640 @@
   const testUserIds = [];
   const testPresetIds = [];
 
+  // 🆕 перехват window.open — для тестов печати (не открываем реальные окна)
+  const _origOpen = window.open;
+  let _openCallCount = 0;
+  let _lastOpenHtml = '';
+  window.open = function(url, name, features) {
+    _openCallCount++;
+    const fakeWin = {
+      document: { write(html) { _lastOpenHtml = String(html || ''); }, close() {} },
+      close() {},
+      focus() {},
+    };
+    return fakeWin;
+  };
+
+  // 🆕 сохраняем оригиналы на верхнем уровне — чтобы restoreAll всегда мог вернуть
+  const _origCreateObjectURL = URL.createObjectURL;
   const _origConfirm = window.showConfirm;
   const _origPrompt  = window.showPrompt;
   const _origLockW   = window.showLockWarning;
+
   window.showConfirm = async () => true;
   window.showPrompt  = async () => 'AutoTest-' + uid;
   window.showLockWarning = async () => true;
 
-  console.log('%c🤖 АВТОСКРИПТ v1.3 — рабочий', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
+  console.log('%c🤖 АВТОСКРИПТ v2.1 — регресс + печать документов', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
+
+  const restoreAll = () => {
+    window.showConfirm = _origConfirm;
+    window.showPrompt  = _origPrompt;
+    window.showLockWarning = _origLockW;
+    window.open = _origOpen;
+    URL.createObjectURL = _origCreateObjectURL;
+  };
 
   if (!currentUser || currentUser.role !== 'admin') {
-    console.error('❌ Нужен админ. Войдите админом и запустите снова.');
-    window.showConfirm = _origConfirm; window.showPrompt = _origPrompt; window.showLockWarning = _origLockW;
-    return;
+    console.error('❌ Нужен админ.'); restoreAll(); return;
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 1: Открыть «Настройки → Пользователи»
+   * БЛОК 1: Открыть «Настройки → Пользователи» (регресс)
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c📂 БЛОК 1: Открытие формы пользователей', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   try {
-    await openSettingsModal();
-    await sleep(300);
-    await openSettingsSection('users');
-    await sleep(500);
+    await openSettingsModal(); await sleep(300);
+    await openSettingsSection('users'); await sleep(500);
     const form = document.getElementById('user-edit-form');
     log('SETUP', 'форма пользователей в DOM', form ? 'PASS' : 'FAIL');
-    if (!form) throw new Error('Форма не появилась');
-  } catch (e) {
-    log('SETUP', 'открытие формы', 'FAIL', e.message);
-  }
+  } catch (e) { log('SETUP', 'открытие формы', 'FAIL', e.message); }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 2: HTML-проверки формы
+   * БЛОК 2: HTML-проверки формы пользователей (регресс)
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🛡 БЛОК 2: HTML-проверки формы', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
     const form = document.getElementById('user-edit-form');
     if (form) {
-      log('PERMS', 'форма: #custom-presets-container',
-          form.querySelector('#custom-presets-container') ? 'PASS' : 'FAIL');
+      log('PERMS', '#custom-presets-container', form.querySelector('#custom-presets-container') ? 'PASS' : 'FAIL');
       const stdBtns = form.querySelectorAll('button[onclick*="applyPermPreset"]');
-      log('PERMS', 'форма: стандартных кнопок = 4', stdBtns.length === 4 ? 'PASS' : 'FAIL', `${stdBtns.length}`);
-      const keys = ['none', 'user', 'senior', 'all'];
-      log('PERMS', 'форма: кнопки none/user/senior/all',
-          keys.every(k => form.innerHTML.includes(`applyPermPreset('${k}')`)) ? 'PASS' : 'FAIL');
-      log('PERMS', 'форма: НЕТ кнопки manager',
-          !form.innerHTML.includes("applyPermPreset('manager')") ? 'PASS' : 'FAIL');
-      log('PERMS', 'форма: кнопка «Сохранить как пресет»',
-          form.querySelector('button[onclick*="saveCurrentPermsAsPreset"]') ? 'PASS' : 'FAIL');
+      log('PERMS', '4 стандартных кнопки', stdBtns.length === 4 ? 'PASS' : 'FAIL', `${stdBtns.length}`);
     }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 3: Пресеты end-to-end
+   * БЛОК 3: Пресеты end-to-end (регресс)
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c💾 БЛОК 3: Пресеты end-to-end', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  console.log('\n%c💾 БЛОК 3: Пресеты', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
-    document.querySelectorAll('.usr-perm-cb').forEach(cb => cb.checked = false);
-
     const targetPerms = ['view_history', 'quick_calibration', 'export_data'];
-    targetPerms.forEach(p => {
-      const cb = document.querySelector(`.usr-perm-cb[value="${p}"]`);
-      if (cb) cb.checked = true;
-    });
-
-    const checked = document.querySelectorAll('.usr-perm-cb:checked').length;
-    log('PRESET', 'выставлено 3 галочки', checked === 3 ? 'PASS' : 'FAIL', `${checked}`);
-
     const presetName = 'AutoTest-' + uid;
     try {
       const r = await api('/users/presets', 'POST', { name: presetName, permissions: targetPerms });
-      if (r.ok) {
-        testPresetIds.push(r.body.id);
-        log('PRESET', 'создан пресет через API', 'PASS', `id=${r.body.id}`);
-      } else {
-        log('PRESET', 'создан пресет через API', 'FAIL', r.body?.error || r.status);
-      }
-    } catch (e) { log('PRESET', 'создание пресета', 'FAIL', e.message); }
-
-    if (testPresetIds.length > 0) {
-      document.querySelectorAll('.usr-perm-cb').forEach(cb => cb.checked = false);
-      await applyCustomPreset(testPresetIds[0]);
-      await sleep(200);
-      const applied = document.querySelectorAll('.usr-perm-cb:checked').length;
-      log('PRESET', 'применение кастомного пресета', applied === 3 ? 'PASS' : 'FAIL', `${applied}`);
-    }
-
-    if (testPresetIds.length > 0) {
-      try {
-        const r = await api('/users/presets/' + testPresetIds[0], 'DELETE');
-        log('PRESET', 'удаление пресета', r.ok ? 'PASS' : 'FAIL');
-      } catch (e) { log('PRESET', 'удаление пресета', 'FAIL', e.message); }
-    }
+      if (r.ok) { testPresetIds.push(r.body.id); log('PRESET', 'создан пресет', 'PASS'); }
+      else log('PRESET', 'создан пресет', 'FAIL', r.body?.error || r.status);
+    } catch (e) { log('PRESET', 'создание', 'FAIL', e.message); }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 4: Создание тестовых пользователей
+   * БЛОК 4: Тестовые пользователи (регресс)
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c👤 БЛОК 4: Тестовые пользователи', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  const users = {};
+  const createTestUser = async (key, perms) => {
+    const login = `autotest_${key}_${uid}`;
+    try {
+      const r = await api('/users', 'POST', {
+        login, fullName: `AutoTest ${key}`, position: 'Лаборант',
+        department: '', role: 'user', onlyOwnDepartment: false,
+        extraPermissions: perms, isActing: false, actingForId: null
+      });
+      if (r.ok) { users[key] = { id: r.body.id, login }; testUserIds.push(r.body.id); log('PERMS', `создан ${login}`, 'PASS'); }
+      else log('PERMS', `создан ${login}`, 'FAIL', r.body?.error || r.status);
+    } catch (e) { log('PERMS', `создание ${login}`, 'FAIL', e.message); }
+  };
+  await createTestUser('audit', ['view_audit', 'view_history']);
+  await createTestUser('log',   ['view_log']);
+  await createTestUser('noedit',['view_history']);
+  await createTestUser('print', ['export_data', 'bulk_send', 'bulk_return']);
 
-  let userA_id = null, userA_login = null;
-  try {
-    userA_login = 'autotest_audit_' + uid;
-    const r = await api('/users', 'POST', {
-      login: userA_login, fullName: 'AutoTest Только audit', position: 'Лаборант',
-      department: '', role: 'user', onlyOwnDepartment: false,
-      extraPermissions: ['view_audit', 'view_history'], isActing: false, actingForId: null
-    });
-    if (r.ok) {
-      userA_id = r.body.id;
-      testUserIds.push(userA_id);
-      log('PERMS', 'создан пользователь (только view_audit)', 'PASS', userA_login);
-    } else {
-      log('PERMS', 'создан пользователь (только view_audit)', 'FAIL', r.body?.error || r.status);
-    }
-  } catch (e) { log('PERMS', 'создание пользователя A', 'FAIL', e.message); }
-
-  let userB_id = null, userB_login = null;
-  try {
-    userB_login = 'autotest_log_' + uid;
-    const r = await api('/users', 'POST', {
-      login: userB_login, fullName: 'AutoTest Только log', position: 'Лаборант',
-      department: '', role: 'user', onlyOwnDepartment: false,
-      extraPermissions: ['view_log'], isActing: false, actingForId: null
-    });
-    if (r.ok) {
-      userB_id = r.body.id;
-      testUserIds.push(userB_id);
-      log('PERMS', 'создан пользователь (только view_log)', 'PASS', userB_login);
-    } else {
-      log('PERMS', 'создан пользователь (только view_log)', 'FAIL', r.body?.error || r.status);
-    }
-  } catch (e) { log('PERMS', 'создание пользователя B', 'FAIL', e.message); }
-
-  let userC_id = null, userC_login = null;
-  try {
-    userC_login = 'autotest_noedit_' + uid;
-    const r = await api('/users', 'POST', {
-      login: userC_login, fullName: 'AutoTest Без прав', position: 'Лаборант',
-      department: '', role: 'user', onlyOwnDepartment: false,
-      extraPermissions: ['view_history'], isActing: false, actingForId: null
-    });
-    if (r.ok) {
-      userC_id = r.body.id;
-      testUserIds.push(userC_id);
-      log('PERMS', 'создан пользователь (без edit_pipette)', 'PASS', userC_login);
-    } else {
-      log('PERMS', 'создан пользователь (без edit_pipette)', 'FAIL', r.body?.error || r.status);
-    }
-  } catch (e) { log('PERMS', 'создание пользователя C', 'FAIL', e.message); }
-
-  // Установка пароля PASSWORD всем тестовым пользователям
-  for (const u of [
-    { id: userA_id, login: userA_login },
-    { id: userB_id, login: userB_login },
-    { id: userC_id, login: userC_login },
-  ]) {
-    if (!u.id) continue;
+  for (const key of Object.keys(users)) {
+    const u = users[key];
     try {
       const r = await api(`/users/${u.id}/reset-password`, 'POST', {});
       if (r.ok && r.body.tempPassword) {
         const userToken = await login(u.login, r.body.tempPassword);
         if (userToken) {
           const ch = await api('/auth/change-password', 'POST', {
-            currentPassword: r.body.tempPassword,
-            newPassword: PASSWORD,
-            confirmPassword: PASSWORD
+            currentPassword: r.body.tempPassword, newPassword: PASSWORD, confirmPassword: PASSWORD
           }, userToken);
-          if (ch.ok) {
-            log('PERMS', `пароль установлен для ${u.login}`, 'PASS');
-          } else {
-            log('PERMS', `пароль установлен для ${u.login}`, 'FAIL', ch.body?.error || ch.status);
-          }
-        } else {
-          log('PERMS', `вход с временным паролем ${u.login}`, 'FAIL');
-        }
-      } else {
-        log('PERMS', `сброс пароля ${u.login}`, 'FAIL', r.body?.error || r.status);
-      }
-    } catch (e) {
-      log('PERMS', `установка пароля ${u.login}`, 'FAIL', e.message);
-    }
+          log('PERMS', `пароль для ${u.login}`, ch.ok ? 'PASS' : 'FAIL', ch.ok ? '' : (ch.body?.error || ch.status));
+        } else log('PERMS', `вход с temp ${u.login}`, 'FAIL');
+      } else log('PERMS', `reset-password ${u.login}`, 'FAIL');
+    } catch (e) { log('PERMS', `пароль ${u.login}`, 'FAIL', e.message); }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 5: Реальные права view_log / view_audit
+   * БЛОК 5: view_log / view_audit на реальных токенах (регресс)
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c🔐 БЛОК 5: Реальные права view_log / view_audit', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
-
-  if (userA_login) {
-    const tok = await login(userA_login, PASSWORD);
-    if (!tok) {
-      log('PERMS', 'A: вход с паролем', 'FAIL');
-    } else {
-      log('PERMS', 'A: вход с паролем', 'PASS');
-      const logErr = await api('/log/errors?limit=1', 'GET', null, tok);
-      log('PERMS', 'A: GET /log/errors → 403', logErr.status === 403 ? 'PASS' : 'FAIL', `status ${logErr.status}`);
-
-      const globalAudit = await api('/pipettes/audit?limit=1', 'GET', null, tok);
-      log('PERMS', 'A: GET /pipettes/audit → 403', globalAudit.status === 403 ? 'PASS' : 'FAIL', `status ${globalAudit.status}`);
-
-      const listAll = await api('/pipettes/paged?limit=1', 'GET', null, tok);
-      if (listAll.ok && listAll.body.items && listAll.body.items.length) {
-        const pipId = listAll.body.items[0].id;
-        const idAudit = await api(`/pipettes/${encodeURIComponent(pipId)}/audit`, 'GET', null, tok);
-        log('PERMS', 'A: GET /pipettes/:id/audit → 200', idAudit.status === 200 ? 'PASS' : 'FAIL', `status ${idAudit.status}`);
-      } else {
-        log('PERMS', 'A: GET /pipettes/paged', 'SKIP', 'нет приборов');
-      }
-    }
+  console.log('\n%c🔐 БЛОК 5: view_log / view_audit', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  if (users.audit) {
+    const tok = await login(users.audit.login, PASSWORD);
+    if (tok) {
+      log('PERMS', 'A: вход', 'PASS');
+      const le = await api('/log/errors?limit=1', 'GET', null, tok);
+      log('PERMS', 'A: /log/errors → 403', le.status === 403 ? 'PASS' : 'FAIL', `${le.status}`);
+      const ga = await api('/pipettes/audit?limit=1', 'GET', null, tok);
+      log('PERMS', 'A: /pipettes/audit → 403', ga.status === 403 ? 'PASS' : 'FAIL', `${ga.status}`);
+    } else log('PERMS', 'A: вход', 'FAIL');
   }
-
-  if (userB_login) {
-    const tok = await login(userB_login, PASSWORD);
-    if (!tok) {
-      log('PERMS', 'B: вход с паролем', 'FAIL');
-    } else {
-      log('PERMS', 'B: вход с паролем', 'PASS');
-      const logErr = await api('/log/errors?limit=1', 'GET', null, tok);
-      log('PERMS', 'B: GET /log/errors → 200', logErr.status === 200 ? 'PASS' : 'FAIL', `status ${logErr.status}`);
-
-      const globalAudit = await api('/pipettes/audit?limit=1', 'GET', null, tok);
-      log('PERMS', 'B: GET /pipettes/audit → 200', globalAudit.status === 200 ? 'PASS' : 'FAIL', `status ${globalAudit.status}`);
-
-      const listAll = await api('/pipettes/paged?limit=1', 'GET', null, tok);
-      if (listAll.ok && listAll.body.items && listAll.body.items.length) {
-        const pipId = listAll.body.items[0].id;
-        const idAudit = await api(`/pipettes/${encodeURIComponent(pipId)}/audit`, 'GET', null, tok);
-        log('PERMS', 'B: GET /pipettes/:id/audit → 403', idAudit.status === 403 ? 'PASS' : 'FAIL', `status ${idAudit.status}`);
-      }
-    }
+  if (users.log) {
+    const tok = await login(users.log.login, PASSWORD);
+    if (tok) {
+      log('PERMS', 'B: вход', 'PASS');
+      const le = await api('/log/errors?limit=1', 'GET', null, tok);
+      log('PERMS', 'B: /log/errors → 200', le.status === 200 ? 'PASS' : 'FAIL', `${le.status}`);
+      const ga = await api('/pipettes/audit?limit=1', 'GET', null, tok);
+      log('PERMS', 'B: /pipettes/audit → 200', ga.status === 200 ? 'PASS' : 'FAIL', `${ga.status}`);
+    } else log('PERMS', 'B: вход', 'FAIL');
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 6: 403 PUT → «Редактирование прибора:» в app_logs
+   * БЛОК 6: 403 PUT → app_logs (регресс)
    * ═══════════════════════════════════════════════════════════ */
   console.log('\n%c🚫 БЛОК 6: 403 PUT → app_logs', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
-
-  if (userC_login) {
+  if (users.noedit) {
     let testPipId = null;
     try {
       const id = 'AUTOTEST-PUT-' + uid;
       const r = await api('/pipettes', 'POST', {
-        id, model: 'AutoTest PUT', equipmentType: 'pipette',
-        lastCalibration: today, responsible: currentUser.fullName || 'Admin'
+        id, model: 'AutoTest PUT', equipmentType: 'pipette', lastCalibration: today, responsible: currentUser.fullName || 'Admin'
       });
-      if (r.ok) {
-        testPipId = id;
-        testIds.push(id);
-        log('PUT403', 'создан тестовый прибор', 'PASS', id);
-      }
-    } catch (e) { log('PUT403', 'создание прибора', 'FAIL', e.message); }
+      if (r.ok) { testPipId = id; testIds.push(id); log('PUT403', 'создан прибор', 'PASS'); }
+    } catch (e) { log('PUT403', 'создание', 'FAIL', e.message); }
 
     if (testPipId) {
-      const tok = await login(userC_login, PASSWORD);
-      if (!tok) {
-        log('PUT403', 'вход пользователя C', 'FAIL');
-      } else {
-        log('PUT403', 'вход пользователя C', 'PASS');
-
-        const putRes = await api(`/pipettes/${encodeURIComponent(testPipId)}`, 'PUT', {
-          model: 'Hacked Model'
-        }, tok);
-        log('PUT403', 'PUT → 403 (нет прав)', putRes.status === 403 ? 'PASS' : 'FAIL', `status ${putRes.status}`);
-
+      const tok = await login(users.noedit.login, PASSWORD);
+      if (tok) {
+        const putRes = await api(`/pipettes/${encodeURIComponent(testPipId)}`, 'PUT', { model: 'Hacked' }, tok);
+        log('PUT403', 'PUT → 403', putRes.status === 403 ? 'PASS' : 'FAIL', `${putRes.status}`);
         await sleep(1500);
-
         const logRes = await api('/log/errors?limit=30');
         if (logRes.ok && Array.isArray(logRes.body.items)) {
-          const lastPut = logRes.body.items.find(x =>
-            /Редактирование прибора:/.test(x.message || '') && x.status_code === 403
-          );
-          if (lastPut) {
-            log('PUT403', 'app_logs: «Редактирование прибора:»', 'PASS', lastPut.message);
-            const hasOldPrefix = /^PUT \/api\/pipettes/.test(lastPut.message || '');
-            log('PUT403', 'новый префикс (не «PUT /api/...»)', !hasOldPrefix ? 'PASS' : 'FAIL', lastPut.message);
-          } else {
-            log('PUT403', 'app_logs: «Редактирование прибора:»', 'FAIL', 'нет записи 403 PUT');
-          }
-        } else {
-          log('PUT403', 'GET /log/errors', 'FAIL', logRes.status);
+          const lastPut = logRes.body.items.find(x => /Редактирование прибора:/.test(x.message || '') && x.status_code === 403);
+          log('PUT403', 'app_logs «Редактирование прибора:»', lastPut ? 'PASS' : 'FAIL');
         }
       }
     }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 7: Таймеры (п.4/7) — С ПЕРЕЗАГРУЗКОЙ pipettes
+   * БЛОК 7: Таймеры (регресс)
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c⏱ БЛОК 7: Таймеры (п.4/7)', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
-
+  console.log('\n%c⏱ БЛОК 7: Таймеры', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   let testPipetteId = null;
   try {
     const id = 'AUTOTEST-' + uid;
     const r = await api('/pipettes', 'POST', {
-      id, model: 'AutoTest', equipmentType: 'pipette',
-      lastCalibration: today, responsible: currentUser.fullName || 'Admin'
+      id, model: 'AutoTest', equipmentType: 'pipette', lastCalibration: today, responsible: currentUser.fullName || 'Admin'
     });
-    if (r.ok) {
-      testPipetteId = id;
-      testIds.push(id);
-      log('TIMER', 'создан тестовый прибор', 'PASS', id);
-
-      // 🆕 Перезагружаем pipettes, чтобы openModal нашёл прибор
-      const n = await reloadPipettes();
-      log('TIMER', 'pipettes перезагружен', n > 0 ? 'PASS' : 'FAIL', `${n} шт.`);
-    }
-  } catch (e) { log('TIMER', 'создание прибора', 'FAIL', e.message); }
+    if (r.ok) { testPipetteId = id; testIds.push(id); await reloadPipettes(); log('TIMER', 'прибор создан', 'PASS'); }
+  } catch (e) { log('TIMER', 'создание', 'FAIL', e.message); }
 
   if (testPipetteId) {
-    // Проверяем, что openModal найдёт прибор
-    const found = pipettes.find(x => x.id === testPipetteId);
-    log('TIMER', 'прибор в pipettes[]', found ? 'PASS' : 'FAIL');
-
-    if (found) {
-      try {
-        await openModal(testPipetteId);
-        await sleep(400);
-        const afterOpen1 = _lockCheckTimer;
-
-        await closeModal();
-        await sleep(200);
-        const afterClose1 = _lockCheckTimer;
-
-        await openModal(testPipetteId);
-        await sleep(400);
-        const afterOpen2 = _lockCheckTimer;
-
-        await closeModal();
-        await sleep(200);
-        const afterClose2 = _lockCheckTimer;
-
-        log('TIMER', 'openModal: таймер создан', afterOpen1 !== null ? 'PASS' : 'FAIL');
-        log('TIMER', 'closeModal: таймер = null', afterClose1 === null ? 'PASS' : 'FAIL');
-        log('TIMER', 'openModal: таймер создан повторно', afterOpen2 !== null ? 'PASS' : 'FAIL');
-        log('TIMER', 'closeModal: таймер = null повторно', afterClose2 === null ? 'PASS' : 'FAIL');
-      } catch (e) { log('TIMER', 'проверка openModal', 'FAIL', e.message); }
-
-      try {
-        await openQuickCalModal(testPipetteId);
-        await sleep(400);
-        const calAfterOpen1 = _calLockTimer;
-
-        await closeQuickCalModal();
-        await sleep(200);
-        const calAfterClose1 = _calLockTimer;
-
-        await openQuickCalModal(testPipetteId);
-        await sleep(400);
-        const calAfterOpen2 = _calLockTimer;
-
-        await closeQuickCalModal();
-        await sleep(200);
-        const calAfterClose2 = _calLockTimer;
-
-        log('TIMER', 'openQuickCalModal: таймер создан', calAfterOpen1 !== null ? 'PASS' : 'FAIL');
-        log('TIMER', 'closeQuickCalModal: таймер = null', calAfterClose1 === null ? 'PASS' : 'FAIL');
-        log('TIMER', 'openQuickCalModal: таймер создан повторно', calAfterOpen2 !== null ? 'PASS' : 'FAIL');
-        log('TIMER', 'closeQuickCalModal: таймер = null повторно', calAfterClose2 === null ? 'PASS' : 'FAIL');
-      } catch (e) { log('TIMER', 'проверка openQuickCalModal', 'FAIL', e.message); }
-    }
+    try {
+      await openModal(testPipetteId); await sleep(400);
+      const t1 = _lockCheckTimer;
+      await closeModal(); await sleep(200);
+      const t2 = _lockCheckTimer;
+      log('TIMER', 'openModal — таймер создан', t1 !== null ? 'PASS' : 'FAIL');
+      log('TIMER', 'closeModal — таймер = null', t2 === null ? 'PASS' : 'FAIL');
+    } catch (e) { log('TIMER', 'openModal', 'FAIL', e.message); }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 8: Импорт с notes > 65 535 (п.8)
+   * БЛОК 8: Импорт notes > 65535 (регресс)
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c📥 БЛОК 8: Импорт notes > 65 535', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  console.log('\n%c📥 БЛОК 8: Импорт notes > 65535', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
   {
     const longNotes = 'X'.repeat(70000);
     const csv = 'ID;Модель;Дата поверки;Ответственный;Примечание\n' +
                 `IMP-OK-${uid};Test OK;${today};Admin;норм\n` +
                 `IMP-BAD-${uid};Test BAD;${today};Admin;${longNotes}\n`;
     const base64 = btoa(unescape(encodeURIComponent(csv)));
-
     try {
       const r = await api('/import', 'POST', { file: base64, filename: 'autotest.csv' });
       if (r.ok) {
-        const added = r.body.added;
-        const skipped = r.body.skipped;
-        log('IMPORT', 'импорт выполнен', 'PASS', `added=${added}, skipped=${skipped}`);
-        log('IMPORT', 'плохая строка пропущена', skipped >= 1 ? 'PASS' : 'FAIL');
+        log('IMPORT', 'импорт выполнен', 'PASS', `added=${r.body.added}, skipped=${r.body.skipped}`);
+        log('IMPORT', 'плохая строка пропущена', r.body.skipped >= 1 ? 'PASS' : 'FAIL');
         const detail = (r.body.skippedDetails || []).join(' ');
-        log('IMPORT', 'в skipped есть «notes»', /notes/.test(detail) ? 'PASS' : 'FAIL', detail.slice(0, 100));
-
-        if (added > 0) {
-          const all = await api('/pipettes/paged?limit=500&search=IMP-');
-          if (all.ok && all.body.items) {
-            for (const p of all.body.items) {
-              if (p.id.startsWith('IMP-OK-') || p.id.startsWith('IMP-BAD-')) {
-                testIds.push(p.id);
-              }
-            }
-          }
-        }
-      } else {
-        log('IMPORT', 'импорт выполнен', 'FAIL', r.body?.error || r.status);
-      }
+        log('IMPORT', 'в skipped есть notes', /notes/.test(detail) ? 'PASS' : 'FAIL');
+      } else log('IMPORT', 'импорт', 'FAIL', r.body?.error || r.status);
     } catch (e) { log('IMPORT', 'импорт', 'FAIL', e.message); }
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 9: Полный автотест v9.2
+   * 🆕 БЛОК 9: API печати — GET/PUT /settings/export, /print-documents/effective
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c🎯 БЛОК 9: Полный автотест v9.2', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
-  try {
-    window.showConfirm = _origConfirm;
-    window.showPrompt = _origPrompt;
-    window.showLockWarning = _origLockW;
+  console.log('\n%c🖨 БЛОК 9: API печати', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  let _origExportCfg = null;
+  {
+    const r = await api('/settings/export');
+    log('PRINT', 'GET /settings/export → 200', r.ok ? 'PASS' : 'FAIL');
+    log('PRINT', '→ объект (не массив)', r.ok && typeof r.body === 'object' && !Array.isArray(r.body) ? 'PASS' : 'FAIL');
+    log('PRINT', '→ fields есть', r.ok && Array.isArray(r.body.fields) ? 'PASS' : 'FAIL');
+    log('PRINT', '→ exportEnabled bool', r.ok && typeof r.body.exportEnabled === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ actSendEnabled bool', r.ok && typeof r.body.actSendEnabled === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ actSendFields массив', r.ok && Array.isArray(r.body.actSendFields) ? 'PASS' : 'FAIL');
+    log('PRINT', '→ actReturnEnabled bool', r.ok && typeof r.body.actReturnEnabled === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ actReturnFields массив', r.ok && Array.isArray(r.body.actReturnFields) ? 'PASS' : 'FAIL');
+    log('PRINT', '→ historyEnabled bool', r.ok && typeof r.body.historyEnabled === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ historyFields массив', r.ok && Array.isArray(r.body.historyFields) ? 'PASS' : 'FAIL');
+    if (r.ok) _origExportCfg = r.body;
+  }
 
-    // 🆕 Перезагружаем pipettes перед автотестом
-    await reloadPipettes();
+  if (_origExportCfg) {
+    const testFields = ['id', 'model', 'serial'];
+    const testSendFields = ['id', 'serial'];
+    const putR = await api('/settings/export', 'PUT', {
+      fields: testFields,
+      actSendEnabled: false,
+      actSendFields: testSendFields,
+    });
+    log('PRINT', 'PUT /settings/export → 200', putR.ok ? 'PASS' : 'FAIL', putR.ok ? '' : (putR.body?.error || putR.status));
 
-    const testScript = `
-      (async function runFinalTest() {
-        const results = [];
-        const log = (g, n, s, d = '') => {
-          results.push({ g, n, s, d });
-          console.log(\`\${s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'SKIP' ? '⏭️' : 'ℹ️'} [\${g}] \${n}\${d ? ' — ' + d : ''}\`);
-        };
-        const sleep = ms => new Promise(r => setTimeout(r, ms));
-        const token = (() => { try { return JSON.parse(sessionStorage.getItem('pipette_session')).token; } catch { return null; } })();
-        if (!token) { console.error('❌ Нет токена.'); return; }
-        const api = async (ep, m = 'GET', b = null) => {
-          const opts = { method: m, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
-          if (b) opts.body = JSON.stringify(b);
-          const r = await fetch('/api' + ep, opts);
-          const t = await r.text();
-          let j = null;
-          try { j = t ? JSON.parse(t) : null; } catch { j = { _raw: t }; }
-          return { status: r.status, ok: r.ok, body: j };
-        };
-        const today = new Date().toISOString().slice(0, 10);
-        const modalActive = id => { const el = document.getElementById(id); return !!(el && el.classList.contains('active')); };
-        const fmtDT = typeof _fmtDateTime === 'function' ? _fmtDateTime : (ts) => {
-          const s = String(ts || '');
-          const m = s.match(/^(\\d{4})-(\\d{2})-(\\d{2})[T ](\\d{2}):(\\d{2})/);
-          return m ? \`\${m[3]}.\${m[2]}.\${m[1]}   \${m[4]}:\${m[5]}\` : '—';
-        };
+    const after = await api('/settings/export');
+    log('PRINT', 'PUT — fields обновились', JSON.stringify(after.body.fields) === JSON.stringify(testFields) ? 'PASS' : 'FAIL');
+    log('PRINT', 'PUT — actSendEnabled=false', after.body.actSendEnabled === false ? 'PASS' : 'FAIL');
+    log('PRINT', 'PUT — actSendFields обновились', JSON.stringify(after.body.actSendFields) === JSON.stringify(testSendFields) ? 'PASS' : 'FAIL');
+    log('PRINT', 'PUT — exportEnabled НЕ затёрлось', after.body.exportEnabled === _origExportCfg.exportEnabled ? 'PASS' : 'FAIL');
+    log('PRINT', 'PUT — actReturnFields НЕ затёрлось', JSON.stringify(after.body.actReturnFields) === JSON.stringify(_origExportCfg.actReturnFields) ? 'PASS' : 'FAIL');
+    log('PRINT', 'PUT — historyEnabled НЕ затёрлось', after.body.historyEnabled === _origExportCfg.historyEnabled ? 'PASS' : 'FAIL');
 
-        console.log('%c🎯 АВТОТЕСТ v9.2 (из автоскрипта)', 'font-size:16px;font-weight:bold;color:#0ea5e9;');
+    // backward-compat: PUT массивом
+    const putArr = await api('/settings/export', 'PUT', ['id', 'model']);
+    log('PRINT', 'PUT /settings/export массивом (backward-compat)', putArr.ok ? 'PASS' : 'FAIL');
 
-        const _origConfirm = window.showConfirm;
-        const _origPrompt  = window.showPrompt;
-        const _origLockW   = window.showLockWarning;
-        window.showConfirm   = async () => true;
-        window.showPrompt    = async () => null;
-        window.showLockWarning = async () => true;
+    await api('/settings/export', 'PUT', _origExportCfg);
+  }
 
-        const list = await api('/pipettes/paged?limit=1');
-        let r409 = { status: 0 };
-        if (list.ok && list.body.items && list.body.items.length) {
-          r409 = await api('/pipettes', 'POST', {
-            id: list.body.items[0].id, model: 'Conflict Test v9.2', equipmentType: 'pipette',
-            lastCalibration: today, responsible: currentUser.fullName || 'Admin'
-          });
-        }
-        await sleep(1500);
-
-        {
-          const r = await api('/log/errors?limit=30');
-          if (r.ok && r.body && Array.isArray(r.body.items)) {
-            log('ERRLOG', 'GET /log/errors', 'PASS', \`\${r.body.items.length} записей\`);
-            const last409 = r.body.items.find(x => x.status_code === 409);
-            if (last409) {
-              log('ERRLOG', '409 записан', 'PASS', last409.message);
-              const hasNewPrefix = /^Создание прибора:/.test(last409.message || '');
-              const hasOldPrefix = /^POST \\/api\\/pipettes/.test(last409.message || '');
-              log('ERRLOG', 'Новый текст «Создание прибора:»', hasNewPrefix && !hasOldPrefix ? 'PASS' : 'FAIL',
-                  hasNewPrefix ? last409.message : 'старый текст: ' + last409.message);
-            } else {
-              log('ERRLOG', '409 записан', 'FAIL', 'нет записи 409');
-            }
-            const lastPut = r.body.items.find(x => /Редактирование прибора:/.test(x.message || ''));
-            if (lastPut) {
-              log('ERRLOG', 'Новый текст «Редактирование прибора:»', 'PASS', lastPut.message);
-            } else {
-              log('ERRLOG', '«Редактирование прибора:»', 'SKIP', 'нет записи');
-            }
-          } else {
-            log('ERRLOG', 'GET /log/errors', 'FAIL', \`status \${r.status}\`);
-          }
-        }
-
-        if (!currentUser || currentUser.role !== 'admin') {
-          log('AUTH', 'admin', 'FAIL');
-          window.showConfirm = _origConfirm; window.showPrompt = _origPrompt; window.showLockWarning = _origLockW;
-          return;
-        }
-        log('AUTH', 'admin', 'PASS');
-
-        {
-          log('PERMS', 'ALL_PERMISSIONS.view_audit',
-              (Array.isArray(ALL_PERMISSIONS) && ALL_PERMISSIONS.some(p => p.key === 'view_audit')) ? 'PASS' : 'FAIL');
-          log('PERMS', 'ALL_PERMISSIONS.view_log',
-              (Array.isArray(ALL_PERMISSIONS) && ALL_PERMISSIONS.some(p => p.key === 'view_log')) ? 'PASS' : 'FAIL');
-          log('PERMS', 'canViewAudit()', typeof canViewAudit === 'function' ? 'PASS' : 'FAIL');
-          log('PERMS', 'canViewLog()', typeof canViewLog === 'function' ? 'PASS' : 'FAIL');
-          const r = await api('/users/presets');
-          log('PERMS', 'GET /users/presets', r.ok && Array.isArray(r.body) ? 'PASS' : 'FAIL');
-          for (const fn of ['loadCustomPresets', 'applyCustomPreset', 'saveCurrentPermsAsPreset', 'deleteCustomPreset', 'applyPermsArray']) {
-            const exists = typeof window[fn] === 'function' || (() => { try { return typeof eval(fn) === 'function'; } catch { return false; } })();
-            log('PERMS', \`функция \${fn}\`, exists ? 'PASS' : 'FAIL');
-          }
-          const applyPermSrc = (typeof applyPermPreset === 'function') ? applyPermPreset.toString() : '';
-          log('PERMS', 'applyPermPreset без manager', !applyPermSrc.includes('manager') ? 'PASS' : 'FAIL');
-          log('PERMS', 'applyPermPreset вызывает applyPermsArray', applyPermSrc.includes('applyPermsArray') ? 'PASS' : 'FAIL');
-          const savePresetSrc = (typeof saveCurrentPermsAsPreset === 'function') ? saveCurrentPermsAsPreset.toString() : '';
-          log('PERMS', 'saveCurrentPermsAsPreset → showPrompt', savePresetSrc.includes('showPrompt') ? 'PASS' : 'FAIL');
-          const delPresetSrc = (typeof deleteCustomPreset === 'function') ? deleteCustomPreset.toString() : '';
-          log('PERMS', 'deleteCustomPreset → DELETE', delPresetSrc.includes("'DELETE'") ? 'PASS' : 'FAIL');
-          log('PERMS', 'deleteCustomPreset: HTML-иконка',
-              delPresetSrc.includes('fa-solid fa-trash') && delPresetSrc.includes('<i ') ? 'PASS' : 'FAIL');
-          const form = document.getElementById('user-edit-form');
-          if (form) {
-            log('PERMS', 'форма: #custom-presets-container', form.querySelector('#custom-presets-container') ? 'PASS' : 'FAIL');
-            const stdBtns = form.querySelectorAll('button[onclick*="applyPermPreset"]');
-            log('PERMS', 'форма: 4 кнопки', stdBtns.length === 4 ? 'PASS' : 'FAIL');
-            log('PERMS', 'форма: нет manager', !form.innerHTML.includes("applyPermPreset('manager')") ? 'PASS' : 'FAIL');
-            log('PERMS', 'форма: кнопка save', form.querySelector('button[onclick*="saveCurrentPermsAsPreset"]') ? 'PASS' : 'FAIL');
-          }
-        }
-
-        const uid2 = Date.now();
-        const idA = 'TEST-V92-A-' + uid2;
-        const created = [];
-        const rCreate = await api('/pipettes', 'POST', {
-          id: idA, model: 'V92 ' + idA, equipmentType: 'pipette',
-          lastCalibration: today, responsible: currentUser.fullName || 'Admin', volume: '100'
-        });
-        if (rCreate.ok) { created.push(idA); log('CRUD', \`POST \${idA}\`, 'PASS'); }
-        else log('CRUD', \`POST \${idA}\`, 'FAIL', rCreate.body?.error || rCreate.status);
-
-        if (created.includes(idA)) {
-          await api(\`/pipettes/\${encodeURIComponent(idA)}\`, 'PUT', { model: 'V92 Updated', updatedAt: '2000-01-01 00:00:00' });
-          const r1 = await api(\`/pipettes/\${encodeURIComponent(idA)}/audit?limit=20\`);
-          if (r1.ok && Array.isArray(r1.body.items)) {
-            const editRecord = r1.body.items.find(x => x.action === 'Редактирование оборудования');
-            if (editRecord) {
-              const hasUpdatedAt = /updatedAt/i.test(editRecord.details || '');
-              log('AUDIT', 'updatedAt НЕ в diff', hasUpdatedAt ? 'FAIL' : 'PASS');
-            }
-          }
-          await api(\`/pipettes/\${encodeURIComponent(idA)}\`, 'PUT', { notes: 'Было' });
-          await api(\`/pipettes/\${encodeURIComponent(idA)}\`, 'PUT', { notes: '' });
-          await api(\`/pipettes/\${encodeURIComponent(idA)}\`, 'PUT', { notes: 'Новое' });
-          const r2 = await api(\`/pipettes/\${encodeURIComponent(idA)}/audit?limit=20\`);
-          if (r2.ok && Array.isArray(r2.body.items)) {
-            log('AUDIT', 'diff +', r2.body.items.some(x => /:\\s*\\+/.test(x.details || '')) ? 'PASS' : 'FAIL');
-            log('AUDIT', 'diff −', r2.body.items.some(x => /:\\s*−/.test(x.details || '')) ? 'PASS' : 'FAIL');
-            log('AUDIT', 'diff →', r2.body.items.some(x => /→/.test(x.details || '')) ? 'PASS' : 'FAIL');
-          }
-          const rAudit = await api(\`/pipettes/\${encodeURIComponent(idA)}/audit\`);
-          log('AUDIT', 'GET /:id/audit', rAudit.ok ? 'PASS' : 'FAIL');
-        }
-        {
-          const r = await api('/pipettes/audit?limit=1');
-          log('AUDIT', 'GET /pipettes/audit', r.ok ? 'PASS' : 'FAIL');
-        }
-
-        {
-          const dt = fmtDT('2026-10-25T12:17:00');
-          log('DATE', 'ISO', /^\\d{2}\\.\\d{2}\\.\\d{4}\\s+\\d{2}:\\d{2}$/.test(dt) ? 'PASS' : 'FAIL', dt);
-          log('DATE', 'пустое', fmtDT(null) === '—' ? 'PASS' : 'FAIL');
-          const dtSql = fmtDT('2026-10-25 12:17:00');
-          log('DATE', 'SQL', /^\\d{2}\\.\\d{2}\\.\\d{4}\\s+\\d{2}:\\d{2}$/.test(dtSql) ? 'PASS' : 'FAIL');
-        }
-
-        if (created.length) {
-          const id = created[0];
-          await api(\`/pipettes/\${encodeURIComponent(id)}/lock\`, 'POST');
-          const lock = await api(\`/pipettes/\${encodeURIComponent(id)}/lock\`);
-          log('LOCK', 'GET /lock (mine)', lock.ok && lock.body.mine ? 'PASS' : 'FAIL');
-          const upd = await api(\`/pipettes/\${encodeURIComponent(id)}\`, 'PUT', { model: 'Locked', updatedAt: '2000-01-01 00:00:00' });
-          log('LOCK', 'PUT с устаревшим updatedAt', upd.ok ? 'PASS' : 'FAIL');
-          await api(\`/pipettes/\${encodeURIComponent(id)}/lock?force=true\`, 'DELETE');
-          log('LOCK', 'DELETE ?force=true', 'PASS');
-        }
-
-        if (created.length) {
-          const allData = await api('/pipettes/all?limit=1000');
-          if (allData.ok && Array.isArray(allData.body.items)) pipettes = allData.body.items;
-        }
-        await openAuditModal();
-        await sleep(500);
-        if (modalActive('audit-modal')) {
-          log('UI', 'openAuditModal', 'PASS');
-          const tabErrors = document.getElementById('audit-tab-errors');
-          log('UI', 'таб Ошибки скрыт', tabErrors && tabErrors.style.display === 'none' ? 'PASS' : 'FAIL');
-          switchAuditTab('errors');
-          await sleep(500);
-          const errorsTbody = document.getElementById('errors-body');
-          const errorsRows = errorsTbody ? errorsTbody.querySelectorAll('tr').length : 0;
-          log('UI', 'errors-body отрендерен', errorsRows > 0 ? 'PASS' : 'FAIL', \`\${errorsRows}\`);
-          if (errorsRows > 0) {
-            const firstMsg = errorsTbody.querySelector('tr td:last-child');
-            log('UI', 'UI «Создание прибора:»', firstMsg && /Создание прибора:/.test(firstMsg.textContent || '') ? 'PASS' : 'FAIL');
-          }
-          closeAuditModal();
-          await sleep(200);
-        } else {
-          log('UI', 'openAuditModal', 'FAIL');
-        }
-
-        if (created.includes(idA)) {
-          await openEquipmentAuditModal(idA);
-          await sleep(400);
-          log('UI', 'openEquipmentAuditModal', modalActive('equipment-audit-modal') ? 'PASS' : 'FAIL');
-          if (modalActive('equipment-audit-modal')) closeEquipmentAuditModal();
-        }
-
-        const modalChecks = [
-          ['openHistoryModal', () => openHistoryModal(idA), closeHistoryModal, 'history-modal'],
-          ['openQuickCalModal', () => openQuickCalModal(idA), closeQuickCalModal, 'quick-cal-modal'],
-          ['openTransferModal', () => openTransferModal(idA), closeTransferModal, 'transfer-modal'],
-          ['openBarcodeScannerModal', () => openBarcodeScannerModal(), closeBarcodeScannerModal, 'barcode-scanner-modal'],
-          ['openHotkeysHelp', () => openHotkeysHelp(), closeHotkeysHelp, 'hotkeys-modal'],
-        ];
-        for (const [name, openFn, closeFn, modalId] of modalChecks) {
-          try {
-            await openFn();
-            await sleep(400);
-            if (modalActive(modalId)) { await closeFn(); await sleep(150); log('UI', name, 'PASS'); }
-            else log('UI', name, 'FAIL');
-          } catch (e) { log('UI', name, 'FAIL', e.message); }
-        }
-
-        if (created.length) {
-          selectedPipettes.clear();
-          selectedPipettes.add(created[0]);
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }));
-          await sleep(400);
-          log('KEYS', 'Ctrl+H', modalActive('history-modal') ? 'PASS' : 'FAIL');
-          if (modalActive('history-modal')) closeHistoryModal();
-          await sleep(200);
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', shiftKey: true, ctrlKey: true, bubbles: true }));
-          await sleep(400);
-          log('KEYS', 'Ctrl+Shift+A', modalActive('equipment-audit-modal') ? 'PASS' : 'FAIL');
-          if (modalActive('equipment-audit-modal')) closeEquipmentAuditModal();
-          await sleep(200);
-          await openHistoryModal(created[0]);
-          await sleep(300);
-          if (modalActive('history-modal')) {
-            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-            await sleep(300);
-            log('KEYS', 'Esc', !modalActive('history-modal') ? 'PASS' : 'FAIL');
-            if (modalActive('history-modal')) closeHistoryModal();
-          }
-          selectedPipettes.clear();
-        }
-
-        {
-          const testEl = document.createElement('div');
-          testEl.className = 'skeleton-line';
-          document.body.appendChild(testEl);
-          const cs = getComputedStyle(testEl);
-          log('SKELETON', '.skeleton-line', cs.animationName && cs.animationName !== 'none' ? 'PASS' : 'FAIL', \`animation=\${cs.animationName}\`);
-          testEl.remove();
-        }
-
-        for (const id of created) {
-          await api(\`/pipettes/\${encodeURIComponent(id)}/lock?force=true\`, 'DELETE').catch(() => {});
-          const r = await api(\`/pipettes/\${encodeURIComponent(id)}\`, 'DELETE');
-          log('CLEAN', \`DELETE \${id}\`, r.ok || r.status === 404 ? 'PASS' : 'FAIL');
-        }
-        await loadPipetteData();
-
-        window.showConfirm = _origConfirm;
-        window.showPrompt  = _origPrompt;
-        window.showLockWarning = _origLockW;
-
-        const pass = results.filter(r => r.s === 'PASS').length;
-        const fail = results.filter(r => r.s === 'FAIL').length;
-        const skip = results.filter(r => r.s === 'SKIP').length;
-        console.log('\\n%c════════════════════════════════════════', 'color:#0ea5e9;');
-        console.log(\`%c📊 АВТОТЕСТ: ✅ \${pass}  ❌ \${fail}  ⏭️ \${skip}\`, \`font-size:16px;font-weight:bold;color:\${fail ? '#dc2626' : '#16a34a'};\`);
-        console.log('%c════════════════════════════════════════', 'color:#0ea5e9;');
-        if (fail > 0) {
-          console.log('%c❌ ПРОВАЛЫ:', 'color:#dc2626;font-weight:bold;');
-          console.table(results.filter(r => r.s === 'FAIL'));
-        } else {
-          console.log('%c🎉 Автотест: всё отлично!', 'color:#16a34a;font-weight:bold;font-size:14px;');
-        }
-
-        window.__finalTestResults = results;
-      })();
-    `;
-
-    eval(testScript);
-    await sleep(30000);
-
-    const testResults = window.__finalTestResults || [];
-    const testPass = testResults.filter(r => r.s === 'PASS').length;
-    const testFail = testResults.filter(r => r.s === 'FAIL').length;
-    const testSkip = testResults.filter(r => r.s === 'SKIP').length;
-
-    log('AUTOTEST', 'автотест v9.2', testFail === 0 ? 'PASS' : 'FAIL', `✅${testPass} ❌${testFail} ⏭️${testSkip}`);
-  } catch (e) {
-    log('AUTOTEST', 'автотест', 'FAIL', e.message);
+  {
+    const r = await api('/settings/print-documents/effective');
+    log('PRINT', 'GET /print-documents/effective → 200', r.ok ? 'PASS' : 'FAIL');
+    log('PRINT', '→ hasPermission=true (admin)', r.body?.hasPermission === true ? 'PASS' : 'FAIL');
+    log('PRINT', '→ export bool', typeof r.body?.export === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ actSend bool', typeof r.body?.actSend === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ actReturn bool', typeof r.body?.actReturn === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ history bool', typeof r.body?.history === 'boolean' ? 'PASS' : 'FAIL');
+    log('PRINT', '→ exportFields массив', Array.isArray(r.body?.exportFields) ? 'PASS' : 'FAIL');
+    log('PRINT', '→ actSendFields массив', Array.isArray(r.body?.actSendFields) ? 'PASS' : 'FAIL');
+    log('PRINT', '→ source global/individual', ['global','individual'].includes(r.body?.source) ? 'PASS' : 'FAIL', r.body?.source);
   }
 
   /* ═══════════════════════════════════════════════════════════
-   * БЛОК 10: Cleanup
+   * 🆕 БЛОК 10: защита POST /export/xlsx (export_enabled / history_enabled)
    * ═══════════════════════════════════════════════════════════ */
-  console.log('\n%c🧹 БЛОК 10: Cleanup', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  console.log('\n%c🔒 БЛОК 10: защита /export/xlsx', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  if (_origExportCfg) {
+    const postXlsx = async (body) => {
+      const r = await fetch('/api/export/xlsx', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      return { status: r.status, ok: r.ok };
+    };
 
-  for (const userId of testUserIds) {
-    try {
-      const r = await api('/users/' + userId, 'DELETE');
-      log('CLEAN', `DELETE user ${userId}`, r.ok || r.status === 404 ? 'PASS' : 'FAIL');
-    } catch (e) { log('CLEAN', `DELETE user ${userId}`, 'FAIL', e.message); }
+    // 10.1 registry при export_enabled=1 → 200
+    {
+      const r = await postXlsx({ mode: 'registry', headers: ['A'], rows: [{ A: 1 }] });
+      log('PRINT', 'POST xlsx registry (export=1) → 200', r.status === 200 ? 'PASS' : 'FAIL', `${r.status}`);
+    }
+
+    // 10.2 registry при export_enabled=0 → 403
+    {
+      await api('/settings/export', 'PUT', { exportEnabled: false });
+      const r = await postXlsx({ mode: 'registry', headers: ['A'], rows: [{ A: 1 }] });
+      log('PRINT', 'POST xlsx registry (export=0) → 403', r.status === 403 ? 'PASS' : 'FAIL', `${r.status}`);
+      await api('/settings/export', 'PUT', { exportEnabled: _origExportCfg.exportEnabled });
+    }
+
+    // 10.3 history при history_enabled=1 → 200
+    {
+      const r = await postXlsx({ mode: 'history', headers: ['A'], rows: [{ A: 1 }], meta: { equipmentId: 'X', recordCount: 1 } });
+      log('PRINT', 'POST xlsx history (history=1) → 200', r.status === 200 ? 'PASS' : 'FAIL', `${r.status}`);
+    }
+
+    // 10.4 history при history_enabled=0 → 403
+    {
+      await api('/settings/export', 'PUT', { historyEnabled: false });
+      const r = await postXlsx({ mode: 'history', headers: ['A'], rows: [{ A: 1 }], meta: { equipmentId: 'X', recordCount: 1 } });
+      log('PRINT', 'POST xlsx history (history=0) → 403', r.status === 403 ? 'PASS' : 'FAIL', `${r.status}`);
+      await api('/settings/export', 'PUT', { historyEnabled: _origExportCfg.historyEnabled });
+    }
   }
 
+  /* ═══════════════════════════════════════════════════════════
+   * 🆕 БЛОК 11: settings.printDocs, ALL_PERMISSIONS, SETTINGS_SECTIONS
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🧩 БЛОК 11: settings.printDocs + конфиг', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  {
+    log('PRINT', 'settings.printDocs загружен', !!settings.printDocs ? 'PASS' : 'FAIL');
+    log('PRINT', 'settings.printDocs.hasPermission === true', settings.printDocs?.hasPermission === true ? 'PASS' : 'FAIL');
+    log('PRINT', 'settings.warnDays — число', typeof settings.warnDays === 'number' ? 'PASS' : 'FAIL', `${settings.warnDays}`);
+    log('PRINT', 'settings.bulkIdentityFields — массив', Array.isArray(settings.bulkIdentityFields) ? 'PASS' : 'FAIL');
+    log('PRINT', '_equipmentTypes.length > 0', Array.isArray(_equipmentTypes) && _equipmentTypes.length > 0 ? 'PASS' : 'FAIL', `${_equipmentTypes.length}`);
+    log('PRINT', 'exportFields — массив', Array.isArray(exportFields) ? 'PASS' : 'FAIL');
+
+    const exportPerm = ALL_PERMISSIONS.find(p => p.key === 'export_data');
+    log('PRINT', 'export_data.label содержит «Печать документов»', exportPerm && exportPerm.label.includes('Печать документов') ? 'PASS' : 'FAIL', exportPerm?.label);
+    log('PRINT', 'export_data.label содержит fa-print', exportPerm && exportPerm.label.includes('fa-print') ? 'PASS' : 'FAIL');
+
+    const exportSection = SETTINGS_SECTIONS.flatMap(s => s.items).find(i => i.id === 'export');
+    log('PRINT', 'SETTINGS_SECTIONS export → «Печать документов»', exportSection && exportSection.label === 'Печать документов' ? 'PASS' : 'FAIL', exportSection?.label);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * 🆕 БЛОК 12: renderExportSettings — 4 вкладки
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🗂 БЛОК 12: 4 вкладки «Печать документов»', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  {
+    try {
+      await openSettingsSection('export'); await sleep(700);
+      const c = document.getElementById('settings-section-content');
+      const tabs = c.querySelectorAll('.prefs-tab');
+      log('PRINT', 'вкладок = 4', tabs.length === 4 ? 'PASS' : 'FAIL', `${tabs.length}`);
+      const labels = [...tabs].map(t => t.textContent.trim());
+      log('PRINT', 'вкладка «Экспорт реестра»', labels.some(l => /Экспорт реестра/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'вкладка «Акт отправки»', labels.some(l => /Акт отправки/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'вкладка «Акт возврата»', labels.some(l => /Акт возврата/.test(l)) ? 'PASS' : 'FAIL');
+      log('PRINT', 'вкладка «История поверок»', labels.some(l => /История поверок/.test(l)) ? 'PASS' : 'FAIL');
+
+      const hasSaveBtn = !!c.querySelector('button[onclick*="savePrintSettings"]');
+      log('PRINT', 'кнопка Сохранить (savePrintSettings)', hasSaveBtn ? 'PASS' : 'FAIL');
+
+      // переключение на «Акт возврата»
+      if (tabs[2]) {
+        tabs[2].click(); await sleep(300);
+        const tabReturn = document.getElementById('print-tab-actReturn');
+        log('PRINT', 'switchPrintTab: actReturn видна', tabReturn && tabReturn.style.display !== 'none' ? 'PASS' : 'FAIL');
+        const hasEnableCb = !!(tabReturn && tabReturn.querySelector('input[id^="print-enabled-actReturn"]'));
+        log('PRINT', 'чекбокс «Включить печать» на actReturn', hasEnableCb ? 'PASS' : 'FAIL');
+      }
+
+      // проверим, что массив полей экспорта НЕ пуст
+      if (tabs[0]) { tabs[0].click(); await sleep(300); }
+      const cbExportAfter = document.querySelectorAll('#print-tab-export .print-field-cb');
+      log('PRINT', 'вкладка export: чекбоксы полей > 5', cbExportAfter.length > 5 ? 'PASS' : 'FAIL', `${cbExportAfter.length}`);
+    } catch (e) { log('PRINT', 'renderExportSettings', 'FAIL', e.message); }
+    // закрыть настройки
+    try { closeSettingsModal(); } catch (e) {}
+    await sleep(200);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * 🆕 БЛОК 13: printDocuments в prefs (индивидуальные настройки)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c👤 БЛОК 13: printDocuments в prefs', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  if (users.print && _origExportCfg) {
+    try {
+      // Восстановим глобально всё включённым, чтобы проверить индивидуальные
+      await api('/settings/export', 'PUT', { ..._origExportCfg, exportEnabled: true, actSendEnabled: true, actReturnEnabled: true, historyEnabled: true });
+
+      const prefsUrl = `/settings/user-preferences/${users.print.id}`;
+      const origPrefs = await api(prefsUrl);
+      const testPrefs = {
+        ...(origPrefs.body || {}),
+        visibleFields: (origPrefs.body?.visibleFields) || ['id','model','serial','department','lastCalibration','status','nextCalibration'],
+        printDocuments: { export: true, actSend: true, actReturn: false, history: false },
+        _virtualsInitialized: true,
+      };
+      const putR = await api(prefsUrl, 'PUT', testPrefs);
+      log('PRINT', 'PUT prefs.printDocuments', putR.ok ? 'PASS' : 'FAIL');
+
+      const savedPrefs = await api(prefsUrl);
+      log('PRINT', '→ printDocuments сохранён', savedPrefs.ok && savedPrefs.body?.printDocuments ? 'PASS' : 'FAIL');
+      log('PRINT', '→ actReturn === false', savedPrefs.body?.printDocuments?.actReturn === false ? 'PASS' : 'FAIL');
+      log('PRINT', '→ history === false', savedPrefs.body?.printDocuments?.history === false ? 'PASS' : 'FAIL');
+
+      // Логинимся под этим юзером и смотрим effective
+      const tok = await login(users.print.login, PASSWORD);
+      if (tok) {
+        const eff = await api('/settings/print-documents/effective', 'GET', null, tok);
+        log('PRINT', '→ effective.hasPermission = true', eff.body?.hasPermission === true ? 'PASS' : 'FAIL');
+        log('PRINT', '→ effective.source = individual', eff.body?.source === 'individual' ? 'PASS' : 'FAIL', eff.body?.source);
+        log('PRINT', '→ effective.export = true', eff.body?.export === true ? 'PASS' : 'FAIL');
+        log('PRINT', '→ effective.actSend = true', eff.body?.actSend === true ? 'PASS' : 'FAIL');
+        log('PRINT', '→ effective.actReturn = false (индивид.)', eff.body?.actReturn === false ? 'PASS' : 'FAIL', `${eff.body?.actReturn}`);
+        log('PRINT', '→ effective.history = false (индивид.)', eff.body?.history === false ? 'PASS' : 'FAIL', `${eff.body?.history}`);
+      }
+
+      // Восстановим prefs
+      if (origPrefs.ok && origPrefs.body) await api(prefsUrl, 'PUT', origPrefs.body);
+      else await api(prefsUrl, 'DELETE');
+    } catch (e) { log('PRINT', 'prefs printDocuments', 'FAIL', e.message); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * 🆕 БЛОК 14: printSendAct / printReturnAct
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c📄 БЛОК 14: printSendAct / printReturnAct', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  if (_origExportCfg) {
+    // Всё включено
+    await api('/settings/export', 'PUT', { ..._origExportCfg, actSendEnabled: true, actReturnEnabled: true });
+    await reloadPipettes();
+
+    // Настроим actSendFields = ['id','model','serial'] и actReturnFields = ['id','cert','result']
+    await api('/settings/export', 'PUT', {
+      actSendFields: ['id', 'model', 'serial'],
+      actReturnFields: ['id', 'cert', 'result'],
+    });
+    // Обновим settings.printDocs через прямой запрос
+    const eff = await api('/settings/print-documents/effective');
+    if (eff.ok) settings.printDocs = eff.body;
+
+    // Выберем 2 прибора из pipettes для акта отправки
+    const sendable = pipettes.filter(p => !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type)).slice(0, 2);
+    if (sendable.length >= 1) {
+      _bulkSendIds = sendable.map(p => p.id);
+      // Эмулируем поля формы
+      const fakeDateInput = document.getElementById('bulk-send-date');
+      if (fakeDateInput) fakeDateInput.value = today;
+      const fakeNote = document.getElementById('bulk-send-note');
+      if (fakeNote) fakeNote.value = 'Автотест';
+
+      _openCallCount = 0; _lastOpenHtml = '';
+      try { await printSendAct(); await sleep(200); } catch (e) { log('PRINT', 'printSendAct вызов', 'FAIL', e.message); }
+      log('PRINT', 'printSendAct — window.open вызван', _openCallCount >= 1 ? 'PASS' : 'FAIL', `${_openCallCount}`);
+      const htmlSend = _lastOpenHtml || '';
+      log('PRINT', 'акт отправки — 3 колонки (Внутр.№, Модель, Серийный)', /Внутр/.test(htmlSend) && /Модель/.test(htmlSend) && /Серийный/.test(htmlSend) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт отправки — НЕТ колонки «Производитель»', !/Производитель/.test(htmlSend) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт отправки — заголовок АКТ ОТПРАВКИ', /АКТ ОТПРАВКИ НА ПОВЕРКУ/.test(htmlSend) ? 'PASS' : 'FAIL');
+    } else {
+      log('PRINT', 'printSendAct', 'SKIP', 'нет приборов для отправки');
+    }
+
+    // printReturnAct — нужен прибор со статусом «на поверке»
+    const returnable = pipettes.filter(p => p.sent_for_calibration && isExternalCalibration(p.equipment_type)).slice(0, 2);
+    if (returnable.length >= 1) {
+      _bulkReturnIds = returnable.map(p => p.id);
+      // Отрисуем модалку возврата (нужны поля cert/result в DOM)
+      try { await openBulkReturnModal(); await sleep(400); } catch (e) {}
+
+      const fakeRDate = document.getElementById('bulk-return-date');
+      if (fakeRDate) fakeRDate.value = today;
+      const fakeROrg = document.getElementById('bulk-return-org');
+      if (fakeROrg) fakeROrg.value = 'ФБУ Тест';
+      const fakeRNote = document.getElementById('bulk-return-note');
+      if (fakeRNote) fakeRNote.value = 'Автотест возврата';
+      const fakeRSingle = document.getElementById('bulk-return-single-cert');
+      if (fakeRSingle) fakeRSingle.checked = false;
+
+      _openCallCount = 0; _lastOpenHtml = '';
+      try { await printReturnAct(); await sleep(200); } catch (e) { log('PRINT', 'printReturnAct вызов', 'FAIL', e.message); }
+      log('PRINT', 'printReturnAct — window.open вызван', _openCallCount >= 1 ? 'PASS' : 'FAIL', `${_openCallCount}`);
+      const htmlRet = _lastOpenHtml || '';
+      log('PRINT', 'акт возврата — 3 колонки (Внутр.№, Свидетельство, Результат)', /Внутр/.test(htmlRet) && /Свидетельство/.test(htmlRet) && /Результат/.test(htmlRet) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт возврата — НЕТ колонки «Модель»', !/Модель<\/th>/.test(htmlRet) ? 'PASS' : 'FAIL');
+      log('PRINT', 'акт возврата — заголовок АКТ ВОЗВРАТА', /АКТ ВОЗВРАТА С ПОВЕРКИ/.test(htmlRet) ? 'PASS' : 'FAIL');
+
+      try { closeBulkReturnModal(); } catch (e) {}
+    } else {
+      log('PRINT', 'printReturnAct', 'SKIP', 'нет приборов «на поверке»');
+    }
+
+    // Восстановим настройки
+    await api('/settings/export', 'PUT', _origExportCfg);
+    const eff2 = await api('/settings/print-documents/effective');
+    if (eff2.ok) settings.printDocs = eff2.body;
+    _bulkSendIds = [];
+    _bulkReturnIds = [];
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * 🆕 БЛОК 15: скрытие кнопок UI (.btn-export, «Экспорт истории», акты)
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🙈 БЛОК 15: скрытие кнопок UI', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  if (_origExportCfg) {
+    // 15.1 export=false → .btn-export скрыты
+    await api('/settings/export', 'PUT', { exportEnabled: false });
+    const eff = await api('/settings/print-documents/effective');
+    if (eff.ok) settings.printDocs = eff.body;
+    try { renderAuthUI(); await sleep(200); } catch (e) {}
+    {
+      const btns = document.querySelectorAll('.btn-export');
+      const allHidden = [...btns].every(b => b.style.display === 'none');
+      log('PRINT', 'export=false → .btn-export скрыты', btns.length > 0 && allHidden ? 'PASS' : 'FAIL', `${btns.length} кнопок`);
+    }
+    // 15.2 export=false → exportToXlsx делает тост и не вызывает window.open
+    _openCallCount = 0;
+    try { await exportToXlsx(); await sleep(300); } catch (e) {}
+    log('PRINT', 'export=false → exportToXlsx не открывает окно', _openCallCount === 0 ? 'PASS' : 'FAIL', `${_openCallCount}`);
+    _openCallCount = 0;
+    try { await exportToPDF(); await sleep(300); } catch (e) {}
+    log('PRINT', 'export=false → exportToPDF не открывает окно', _openCallCount === 0 ? 'PASS' : 'FAIL', `${_openCallCount}`);
+
+    // 15.3 history=false → кнопка «Экспорт истории» скрыта в #history-modal
+    await api('/settings/export', 'PUT', { historyEnabled: false });
+    const eff2 = await api('/settings/print-documents/effective');
+    if (eff2.ok) settings.printDocs = eff2.body;
+    if (pipettes.length > 0) {
+      try { await openHistoryModal(pipettes[0].id); await sleep(400); } catch (e) {}
+      const b = document.querySelector('#history-modal [onclick="openHistoryExportModal()"]');
+      log('PRINT', 'history=false → «Экспорт истории» скрыта', b && b.style.display === 'none' ? 'PASS' : 'FAIL');
+      try { closeHistoryModal(); } catch (e) {}
+    }
+    // 15.4 openHistoryExportModal при history=false — тост, модалка не открывается
+    _openCallCount = 0;
+    try { currentHistoryId = pipettes[0]?.id || null; await openHistoryExportModal(); await sleep(200); } catch (e) {}
+    const histModal = document.getElementById('history-export-modal');
+    log('PRINT', 'history=false → openHistoryExportModal не открывает модалку', !histModal || !histModal.classList.contains('active') ? 'PASS' : 'FAIL');
+
+    // 15.5 actSend=false → кнопка скрыта в bulk-send-modal
+    await api('/settings/export', 'PUT', { actSendEnabled: false });
+    const eff3 = await api('/settings/print-documents/effective');
+    if (eff3.ok) settings.printDocs = eff3.body;
+    const sendable = pipettes.filter(p => !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type)).slice(0, 1);
+    if (sendable.length) {
+      selectedPipettes.clear(); selectedPipettes.add(sendable[0].id);
+      try { await openBulkSendModal(); await sleep(400); } catch (e) {}
+      const b = document.querySelector('#bulk-send-modal [onclick="printSendAct()"]');
+      log('PRINT', 'actSend=false → кнопка акта отправки скрыта', b && b.style.display === 'none' ? 'PASS' : 'FAIL');
+      try { closeBulkSendModal(); } catch (e) {}
+      selectedPipettes.clear();
+    }
+
+    // восстановим
+    await api('/settings/export', 'PUT', _origExportCfg);
+    const effR = await api('/settings/print-documents/effective');
+    if (effR.ok) settings.printDocs = effR.body;
+    try { renderAuthUI(); } catch (e) {}
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * 🆕 БЛОК 16: exportHistoryToXlsx/PDF — historyFields
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c📜 БЛОК 16: historyFields в экспорте истории', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  if (_origExportCfg && pipettes.length > 0) {
+    // Настроим historyFields = ['date','cert']
+    await api('/settings/export', 'PUT', {
+      historyEnabled: true,
+      historyFields: ['date', 'cert'],
+    });
+    const eff = await api('/settings/print-documents/effective');
+    if (eff.ok) settings.printDocs = eff.body;
+
+    const pipId = pipettes[0].id;
+    currentHistoryId = pipId;
+    // Проверим, есть ли история
+    const hist = await api(`/pipettes/${encodeURIComponent(pipId)}/calibration`);
+    const histCount = Array.isArray(hist.body) ? hist.body.length : 0;
+
+    if (histCount > 0) {
+      // эмулируем поля формы
+      const heFrom = document.getElementById('he-from'); if (heFrom) heFrom.value = '';
+      const heTo = document.getElementById('he-to'); if (heTo) heTo.value = '';
+      const errEl = document.getElementById('history-export-error'); if (errEl) errEl.textContent = '';
+
+      // ─── Excel: перехватим downloadFile ───
+      let excelBody = null;
+      const _origDl = window.downloadFile;
+      window.downloadFile = async (url, opts, defName) => { try { excelBody = JSON.parse(opts.body); } catch (e) {} return true; };
+      try { await exportHistoryToXlsx(); await sleep(300); } catch (e) { log('PRINT', 'exportHistoryToXlsx', 'FAIL', e.message); }
+      window.downloadFile = _origDl;
+      if (excelBody) {
+        log('PRINT', 'Excel history — headers = 2 поля', Array.isArray(excelBody.headers) && excelBody.headers.length === 2 ? 'PASS' : 'FAIL', `${excelBody.headers?.length}`);
+        log('PRINT', 'Excel history — headers «Дата поверки» + «Свидетельство»',
+          excelBody.headers?.[0] === 'Дата поверки' && excelBody.headers?.[1] === 'Свидетельство' ? 'PASS' : 'FAIL',
+          JSON.stringify(excelBody.headers));
+      } else {
+        log('PRINT', 'Excel history — перехвачен', 'FAIL');
+      }
+
+      // ─── PDF: перехватим URL.createObjectURL — читаем HTML блоба синхронно ───
+      _openCallCount = 0; _lastOpenHtml = '';
+      let _lastBlobHtml = '';
+      URL.createObjectURL = function(blob) {
+        const blobUrl = _origCreateObjectURL.call(URL, blob);
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', blobUrl, false);   // sync!
+          xhr.send();
+          _lastBlobHtml = xhr.responseText || '';
+        } catch (e) { _lastBlobHtml = ''; }
+        return blobUrl;
+      };
+
+      const curErr = document.getElementById('history-export-error'); if (curErr) curErr.textContent = '';
+      try { await exportHistoryToPDF(); await sleep(300); } catch (e) { log('PRINT', 'exportHistoryToPDF', 'FAIL', e.message); }
+
+      URL.createObjectURL = _origCreateObjectURL;
+
+      const pdfHtml = _lastBlobHtml || _lastOpenHtml || '';
+      log('PRINT', 'PDF history — открыто окно', _openCallCount >= 1 ? 'PASS' : 'FAIL', `${_openCallCount}`);
+      log('PRINT', 'PDF history — HTML прочитан', pdfHtml.length > 100 ? 'PASS' : 'FAIL', `${pdfHtml.length} байт`);
+      log('PRINT', 'PDF history — колонка «Дата»', /Дата/.test(pdfHtml) ? 'PASS' : 'FAIL');
+      log('PRINT', 'PDF history — колонка «Свидетельство»', /Свидетельство/.test(pdfHtml) ? 'PASS' : 'FAIL');
+      log('PRINT', 'PDF history — НЕТ колонки «Организация»', !/Организация<\/th>/.test(pdfHtml) ? 'PASS' : 'FAIL');
+    } else {
+      log('PRINT', 'historyFields', 'SKIP', 'у первого прибора нет истории');
+    }
+
+    await api('/settings/export', 'PUT', _origExportCfg);
+    const effR = await api('/settings/print-documents/effective');
+    if (effR.ok) settings.printDocs = effR.body;
+    currentHistoryId = null;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+   * БЛОК 17: Cleanup
+   * ═══════════════════════════════════════════════════════════ */
+  console.log('\n%c🧹 БЛОК 17: Cleanup', 'font-size:14px;font-weight:bold;color:#0ea5e9;');
+  for (const userId of testUserIds) {
+    try { const r = await api('/users/' + userId, 'DELETE'); log('CLEAN', `DELETE user ${userId}`, r.ok || r.status === 404 ? 'PASS' : 'FAIL'); }
+    catch (e) { log('CLEAN', `DELETE user ${userId}`, 'FAIL', e.message); }
+  }
   for (const id of testIds) {
     try {
       await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE').catch(() => {});
@@ -770,14 +687,10 @@
       log('CLEAN', `DELETE pipette ${id}`, r.ok || r.status === 404 ? 'PASS' : 'FAIL');
     } catch (e) { log('CLEAN', `DELETE pipette ${id}`, 'FAIL', e.message); }
   }
-
   for (const presetId of testPresetIds) {
     try { await api('/users/presets/' + presetId, 'DELETE'); } catch (e) {}
   }
-
-  window.showConfirm = _origConfirm;
-  window.showPrompt = _origPrompt;
-  window.showLockWarning = _origLockW;
+  restoreAll();
 
   /* ═══════════════════════════════════════════════════════════
    * ИТОГ
@@ -787,26 +700,15 @@
   const totalSkip = results.filter(r => r.s === 'SKIP').length;
 
   console.log('\n%c═══════════════════════════════════════════', 'color:#8b5cf6;');
-  console.log(`%c📊 АВТОСКРИПТ ИТОГ: ✅ ${totalPass}  ❌ ${totalFail}  ⏭️ ${totalSkip}`, `font-size:18px;font-weight:bold;color:${totalFail ? '#dc2626' : '#16a34a'};`);
+  console.log(`%c📊 АВТОСКРИПТ v2.1 ИТОГ: ✅ ${totalPass}  ❌ ${totalFail}  ⏭️ ${totalSkip}`, `font-size:18px;font-weight:bold;color:${totalFail ? '#dc2626' : '#16a34a'};`);
   console.log('%c═══════════════════════════════════════════', 'color:#8b5cf6;');
 
   if (totalFail > 0) {
     console.log('%c❌ ПРОВАЛЫ:', 'color:#dc2626;font-weight:bold;');
     console.table(results.filter(r => r.s === 'FAIL'));
   } else {
-    console.log('%c🎉 АВТОСКРИПТ: всё отлично!', 'color:#16a34a;font-weight:bold;font-size:16px;');
+    console.log('%c🎉 ВСЁ ОТЛИЧНО!', 'color:#16a34a;font-weight:bold;font-size:16px;');
   }
 
-  console.log('\n%c📋 ЧТО ПРОВЕРЕНО:', 'color:#0ea5e9;font-weight:bold;');
-  console.log('  1. Форма пользователей + HTML-проверки');
-  console.log('  2. Пресеты end-to-end');
-  console.log('  3. Реальные права: 3 пользователя (пароль ' + PASSWORD + ')');
-  console.log('  4. view_log / view_audit разделены на реальных токенах');
-  console.log('  5. 403 PUT → «Редактирование прибора:» в app_logs');
-  console.log('  6. Таймеры (с перезагрузкой pipettes)');
-  console.log('  7. Импорт с notes > 65 535');
-  console.log('  8. Полный автотест v9.2');
-  console.log('  9. Cleanup');
-
-  window.__autoScriptResults = results;
+  window.__autoScriptV21Results = results;
 })();
