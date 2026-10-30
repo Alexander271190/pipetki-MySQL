@@ -9,47 +9,18 @@ const { logAction } = require('../utils/audit');
 
 const router = express.Router();
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'frontend', 'uploads', 'help');
+const UPLOAD_DIR = path.join(__dirname, '..', 'frontend', 'help-defaults');
 try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); } catch (e) {}
-
-// 🆕 Вспомогательная функция для очистки и транслитерации имени файла
-function slugifyFilename(originalName) {
-  const ru = { 'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya' };
-  const base = path.parse(originalName).name;
-  const ext = path.extname(originalName).toLowerCase();
-  
-  // Транслитерируем и заменяем всё лишнее на подчеркивания
-  let res = base.toLowerCase().split('').map(ch => ru[ch] !== undefined ? ru[ch] : ch).join('');
-  res = res.replace(/[^a-z0-9_-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-  
-  return { base: res || 'file', ext };
-}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
-    const { base, ext } = slugifyFilename(file.originalname);
-    
-    // 🆕 Формируем дату: 20261029_191445
-    const now = new Date();
-    const ts = 
-      `${now.getFullYear()}` +
-      `${String(now.getMonth()+1).padStart(2,'0')}` +
-      `${String(now.getDate()).padStart(2,'0')}_` +
-      `${String(now.getHours()).padStart(2,'0')}` +
-      `${String(now.getMinutes()).padStart(2,'0')}` +
-      `${String(now.getSeconds()).padStart(2,'0')}`;
-    
-    // 🆕 Проверяем на конфликт имен (если два файла загружены в одну секунду)
-    let filename = `${ts}_${base}${ext}`;
-    let counter = 1;
-    while (fs.existsSync(path.join(UPLOAD_DIR, filename))) {
-      filename = `${ts}_${base}_${counter++}${ext}`;
-    }
-    
-    cb(null, filename);
+    // Временное имя — потом переименуем в <slug>.<ext> в обработчике /upload
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `tmp_${Date.now()}${ext}`);
   },
 });
+   
 const upload = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -133,7 +104,7 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 function slugifyTitle(text) {
   const ru = { 'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya' };
   let res = text.toLowerCase().split('').map(ch => ru[ch] !== undefined ? ru[ch] : ch).join('');
-  res = res.replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  res = res.replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   return res || 'doc_' + Date.now().toString(36);
 }
 
@@ -157,9 +128,36 @@ router.post('/upload', authenticate, requireRole(['admin']), upload.single('file
     }
 
     const [ex] = await db.query('SELECT id, file_path FROM help_docs WHERE slug = ?', [slug]);
-    let filePath = ex.length ? ex[0].file_path : null;
-    if (req.file) filePath = `uploads/help/${req.file.filename}`;
-    else if (!ex.length) return res.status(400).json({ error: 'Файл обязателен для нового раздела' });
+        let filePath = ex.length ? ex[0].file_path : null;
+    
+    if (req.file) {
+      // Переименовываем файл в <slug>.<ext> для корректной работы seedHelpDocs
+      const ext = path.extname(req.file.filename).toLowerCase();
+      const newName = `${slug}${ext}`;
+      const oldPath = path.join(UPLOAD_DIR, req.file.filename);
+      const newPath = path.join(UPLOAD_DIR, newName);
+
+      // Удаляем старый файл с таким же slug, но другим расширением (например, был .docx, стал .pdf)
+      for (const otherExt of ['.pdf', '.docx', '.doc']) {
+        if (otherExt !== ext) {
+          const otherPath = path.join(UPLOAD_DIR, `${slug}${otherExt}`);
+          if (fs.existsSync(otherPath)) {
+            try { fs.unlinkSync(otherPath); } catch (e) {}
+          }
+        }
+      }
+
+      try {
+        fs.renameSync(oldPath, newPath);
+        req.file.filename = newName; 
+        filePath = `help-defaults/${newName}`;
+      } catch (e) {
+        console.error('Ошибка переименования:', e.message);
+        return res.status(500).json({ error: 'Не удалось сохранить файл' });
+      }
+    } else if (!ex.length) {
+      return res.status(400).json({ error: 'Файл обязателен для нового раздела' });
+    }
 
     const permsJson = requiredPermissions || '[]';
     const isEnabled = enabled === 'true' ? 1 : 0;
