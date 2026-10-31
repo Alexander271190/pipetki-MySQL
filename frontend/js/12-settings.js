@@ -349,7 +349,7 @@ async function renderDepartmentsSettings(skipFetch = false) {
     });
     html += `</tbody></table>
     <div class="form-actions" style="margin-top:16px;">
-        <input type="text" id="new-dept-name" placeholder="Название нового отдела" style="flex:1; max-width:400px; padding:9px 12px; border:1px solid #d1d5db; border-radius:8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addDepartmentItem();}">
+        <input type="text" id="new-dept-name" placeholder="Название нового отдела" style="flex:1; max-width:400px; padding:9px 12px; border:1px solid var(--border-hard); border-radius:8px; background: var(--card); color: var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addDepartmentItem();}">
         <button type="button" class="btn btn-success" onclick="addDepartmentItem()"><i class="fa-solid fa-plus"></i> Добавить</button>
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
         <button type="button" class="btn btn-primary" onclick="saveDepartmentsFull()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
