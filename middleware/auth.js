@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const roleCache = require('../utils/roles');
 const { USER_COLUMNS } = require('../routes/pipettes/_helpers');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -20,20 +21,17 @@ const authenticate = async (req, res, next) => {
     if (!rows.length) return res.status(401).json({ error: 'Пользователь не найден' });
 
     const user = rows[0];
-      // Пароль был изменён после выдачи токена → старый токен недействителен.
-    // 🆕 Пропускаем проверку, если пользователь ещё не сменил/не установил пароль —
-    // в этом случае он всё равно будет заблокирован блоками must_set_password /
-    // must_change_password ниже.
-    if (user.password_changed_at
-        && !user.must_set_password
-        && !user.must_change_password) {
+
+    // Пароль изменён после выдачи токена
+    if (user.password_changed_at && !user.must_set_password && !user.must_change_password) {
       const pwdTs = new Date(user.password_changed_at).getTime() / 1000;
       const iat = decoded.iat || 0;
       if (pwdTs > iat + 2) {
         return res.status(401).json({ error: 'Пароль был изменён, войдите заново' });
       }
     }
-  // 🆕 Админ ещё не установил пароль → блокируем всё, кроме спец-роутов
+
+    // Блокировки по паролю
     if (user.must_set_password && !req.allowWhenPasswordMustChange) {
       return res.status(403).json({
         error: 'Требуется установка пароля администратора',
@@ -41,7 +39,6 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-  // Обязательная смена пароля: блокируем всё, кроме помеченных роутов
     if (user.must_change_password && !req.allowWhenPasswordMustChange) {
       return res.status(403).json({
         error: 'Требуется смена пароля',
@@ -49,7 +46,7 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-        // 🛡️ Если и.о. — подтягиваем данные основного
+    // Подтягиваем данные для и.о.
     if (user.is_acting && user.acting_for_id) {
       const [actingRows] = await db.query(
         'SELECT id, full_name, department FROM users WHERE id = ? LIMIT 1',
@@ -63,13 +60,32 @@ const authenticate = async (req, res, next) => {
         user.acting_department = null;
       }
     }
-    user._perms = db.safeParse(user.extra_permissions, []);
+
+    // Получаем права из роли
+    try {
+      user._roleDef = await roleCache.getRoleDef(user.role);
+    } catch (e) {
+      console.warn('roleCache недоступен, fallback:', e.message);
+      user._roleDef = null;
+    }
+
+    user._isAdmin = user._roleDef
+      ? !!user._roleDef.isAdmin
+      : user.role === 'admin'; // fallback
+
+    user._perms = user._isAdmin
+      ? ['*']
+      : [
+          ...(user._roleDef?.permissions || []),
+          ...db.safeParse(user.extra_permissions, []),
+        ];
 
     req.impersonatedBy     = decoded.impersonatedBy     || null;
     req.impersonatedByName = decoded.impersonatedByName || null;
     req.user = user;
     next();
   } catch (e) {
+    console.error('Auth error:', e);
     return res.status(500).json({ error: 'Ошибка аутентификации' });
   }
 };
@@ -82,7 +98,7 @@ const requireRole = (roles) => (req, res, next) => {
 
 const requirePermission = (perm) => (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Требуется авторизация' });
-  if (req.user.role === 'admin') return next();
+  if (req.user._isAdmin) return next();
   const perms = req.user._perms || [];
   if (!perms.includes(perm)) return res.status(403).json({ error: 'Недостаточно прав' });
   next();
@@ -90,10 +106,16 @@ const requirePermission = (perm) => (req, res, next) => {
 
 const requireAnyPermission = (perms) => (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Требуется авторизация' });
-  if (req.user.role === 'admin') return next();
+  if (req.user._isAdmin) return next();
   const userPerms = req.user._perms || [];
   if (perms.some(p => userPerms.includes(p))) return next();
   return res.status(403).json({ error: 'Недостаточно прав' });
 };
 
-module.exports = { authenticate, requireRole, requirePermission, requireAnyPermission };
+const requireAdmin = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Требуется авторизация' });
+  if (!req.user._isAdmin) return res.status(403).json({ error: 'Недостаточно прав' });
+  next();
+};
+
+module.exports = { authenticate, requireRole, requirePermission, requireAnyPermission, requireAdmin };
