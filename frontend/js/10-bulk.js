@@ -29,12 +29,12 @@ async function openBulkSendModal() {
         return;
       }
 
-       _bulkSendIds = [...toSend];
+      _bulkSendIds = [...toSend];
       document.getElementById('bulk-send-count').textContent = toSend.length;
 
-      // 🆕 O(n) — Map вместо find
+      // O(n) — Map вместо find
       const pipettesMap = new Map(pipettes.map(p => [p.id, p]));
-     const listHtml = toSend.map(id => {
+      const listHtml = toSend.map(id => {
         const p = pipettesMap.get(id);
         if (!p) return '';
         return `<div style="padding:6px 0; border-bottom: 1px dashed var(--border-soft);">
@@ -46,12 +46,11 @@ async function openBulkSendModal() {
       document.getElementById('bulk-send-date').value = todayStr();
       document.getElementById('bulk-send-note').value = '';
 
-      // 🆕 Модалка — сразу
       UI.modal.open('bulk-send-modal');
       const btnAct = document.querySelector('#bulk-send-modal [onclick="printSendAct()"]');
       if (btnAct) btnAct.style.display = settings.printDocs?.actSend === false ? 'none' : '';
 
-      // 🆕 Блокировки — один запрос, в фоне
+      // Блокировки — один запрос, в фоне
       (async () => {
         try {
           const r = await apiRequest('/pipettes/bulk-lock', 'POST', { ids: toSend });
@@ -88,7 +87,7 @@ async function loadReplacementOptions(ids) {
 
   container.innerHTML = '<p id="repl-placeholder" style="color:#94a3b8;font-size:.85rem;">Загрузка складских…</p>';
 
-  // 🆕 Формируем массив для батч-запроса
+  // Формируем массив для батч-запроса
   const items = ids.map(id => {
     const p = pipettes.find(x => x.id === id);
     if (!p) return null;
@@ -132,7 +131,7 @@ async function loadReplacementOptions(ids) {
 
 function buildReplacementBlock(id, p, options) {
   const safeName = id.replace(/[^a-zA-Z0-9_-]/g, '_');
-   let html = `<div class="card">
+  let html = `<div class="card">
     <div class="card-title" style="margin-bottom: 8px;">${getDeviceIdentityHtml(p)}</div>
 
     <div class="text-muted-sm" style="margin-bottom:6px;">Складские того же типа:</div>
@@ -174,9 +173,9 @@ async function saveBulkSend(e) {
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
         
   const toSend = _bulkSendIds.filter(id => {
-  const p = pipettes.find(x => x.id === id);
-  return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
-});
+    const p = pipettes.find(x => x.id === id);
+    return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
+  });
 
   if (toSend.length === 0) {
     showToast('Не выбрано ни одной единицы для внешней поверки', 'error');
@@ -192,7 +191,7 @@ async function saveBulkSend(e) {
     return;
   }
 
-   if (toSend.length > 1) {
+  if (toSend.length > 1) {
     const ok = await showConfirm(
       `Отправить на поверку ${toSend.length} единиц оборудования?`,
       { icon: '📦', title: 'Отправка на поверку', okText: 'Отправить', okClass: 'btn-warning' }
@@ -232,10 +231,11 @@ async function saveBulkSend(e) {
     currentPage = 1;
     await loadPipetteData();
     await loadStats();
-    } catch (error) {
+  } catch (error) {
     showToast(error.message || 'Ошибка отправки', 'error');
   }
- }
+}
+
 // ============================================================
 // ПЕЧАТЬ АКТА ОТПРАВКИ
 // ============================================================
@@ -368,8 +368,8 @@ async function openBulkReturnModal() {
 
       document.getElementById('bulk-return-count').textContent = sentItems.length;
 
-        const container = document.getElementById('bulk-return-items-container');
-        container.innerHTML = `
+      const container = document.getElementById('bulk-return-items-container');
+      container.innerHTML = `
       <div class="card-title" style="margin-bottom:8px;">
           Свидетельства по оборудованию:
        </div>
@@ -406,33 +406,33 @@ async function openBulkReturnModal() {
           </table>
         `;
 
-        document.getElementById('bulk-return-date').value = todayStr();
-        document.getElementById('bulk-return-org').value = '';
-        document.getElementById('bulk-return-result').value = 'pass';
-        document.getElementById('bulk-return-note').value = '';
-        document.getElementById('bulk-return-cert').value = '';
-        document.getElementById('bulk-return-single-cert').checked = false;
-        toggleSingleCert(false);
+      document.getElementById('bulk-return-date').value = todayStr();
+      document.getElementById('bulk-return-org').value = '';
+      document.getElementById('bulk-return-result').value = 'pass';
+      document.getElementById('bulk-return-note').value = '';
+      document.getElementById('bulk-return-cert').value = '';
+      document.getElementById('bulk-return-single-cert').checked = false;
+      toggleSingleCert(false);
 
-        renderReturnReplacements(sentItems);
+      renderReturnReplacements(sentItems);
 
-        UI.modal.open('bulk-return-modal');
+      UI.modal.open('bulk-return-modal');
 
       const btnAct = document.querySelector('#bulk-return-modal [onclick="printReturnAct()"]');
       if (btnAct) btnAct.style.display = settings.printDocs?.actReturn === false ? 'none' : '';
 
-        // 🆕 Блокировки — один запрос, в фоне
-        (async () => {
-          try {
-            const r = await apiRequest('/pipettes/bulk-lock', 'POST', { ids: _bulkReturnIds });
-            if (r.busy && r.busy.length > 0) {
-              const names = r.busy.map(b => `${b.id} (${b.lockedBy})`).join(', ');
-              showToast(`Уже редактируются другими: ${names}`, 'warn');
-            }
-          } catch (e) {
-            console.warn('bulk-lock error:', e.message);
+      // Блокировки — один запрос, в фоне
+      (async () => {
+        try {
+          const r = await apiRequest('/pipettes/bulk-lock', 'POST', { ids: _bulkReturnIds });
+          if (r.busy && r.busy.length > 0) {
+            const names = r.busy.map(b => `${b.id} (${b.lockedBy})`).join(', ');
+            showToast(`Уже редактируются другими: ${names}`, 'warn');
           }
-        })();
+        } catch (e) {
+          console.warn('bulk-lock error:', e.message);
+        }
+      })();
     }
   );
 }
@@ -519,8 +519,8 @@ async function saveBulkReturn(e) {
   }
 
   const sentIds = _bulkReturnIds.filter(id => {
-  const p = pipettes.find(x => x.id === id);
-  return p && p.sent_for_calibration && isExternalCalibration(p.equipment_type);
+    const p = pipettes.find(x => x.id === id);
+    return p && p.sent_for_calibration && isExternalCalibration(p.equipment_type);
   });
 
   const items = sentIds.map(id => {
@@ -544,7 +544,7 @@ async function saveBulkReturn(e) {
     }
   }
 
-   if (items.length > 1) {
+  if (items.length > 1) {
     const ok = await showConfirm(
       `Применить возврат для ${items.length} единиц оборудования?`,
       { icon: '📥', title: 'Возврат с поверки', okText: 'Применить', okClass: 'btn-success' }
@@ -552,7 +552,7 @@ async function saveBulkReturn(e) {
     if (!ok) return;
   }
 
-    const returnReplacements = [];
+  const returnReplacements = [];
   document.querySelectorAll('.return-repl-cb:checked').forEach(cb => {
     returnReplacements.push(cb.value);
   });
@@ -569,7 +569,7 @@ async function saveBulkReturn(e) {
       toastType = 'error';
       console.warn('⚠️ Пропущенные замены:', res.missingReplacements);
     }
-        showToast(msg, toastType);
+    showToast(msg, toastType);
 
     clearSelection();
     closeBulkReturnModal();
@@ -598,7 +598,7 @@ async function saveBulkReturn(e) {
     }
 
     applyFilterStateToPanel();
-      } catch (error) {
+  } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
@@ -621,7 +621,7 @@ async function openBulkResponsibleModal() {
         return;
       }
 
-       _bulkResponsibleIds = [...selected];
+      _bulkResponsibleIds = [...selected];
 
       document.getElementById('bulk-responsible-count').textContent = selected.length;
       document.getElementById('bulk-responsible-error').textContent = '';
@@ -649,7 +649,7 @@ async function openBulkResponsibleModal() {
 
       UI.modal.open('bulk-responsible-modal');
 
-      // 🆕 Блокировки — один запрос, в фоне
+      // Блокировки — один запрос, в фоне
       (async () => {
         try {
           const r = await apiRequest('/pipettes/bulk-lock', 'POST', { ids: _bulkResponsibleIds });
@@ -719,10 +719,10 @@ async function saveBulkResponsible(e) {
     clearSelection();
     closeBulkResponsibleModal();
     await loadPipetteData();
-    } catch (e) {
+  } catch (e) {
     if (e.status === 409) { return; }
     errEl.textContent = e.message || 'Ошибка';
-   }
+  }
 }
 
 async function printReturnAct() {
