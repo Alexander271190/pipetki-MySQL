@@ -94,6 +94,7 @@ function isExternalCalibration(equipmentType) {
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.style.whiteSpace = 'pre-line';
   t.className = 'toast show ' + (type || '');
   clearTimeout(t._timeout);
   t._timeout = setTimeout(() => t.className = 'toast', 4000);
@@ -288,20 +289,6 @@ async function showLockWarning(lockRes, actionName = 'выполнить дей�
   }
   
   return false; 
-}
-
-// ============================================================
-// ВАЛИДАЦИЯ ПАРОЛЯ (клиент)
-// ============================================================
-function validatePasswordClient(pwd) {
-  const errors = [];
-  if (!pwd || pwd.length < 8)     errors.push('Минимум 8 символов');
-  if (!/[a-z]/.test(pwd))         errors.push('Хотя бы одна строчная буква');
-  if (!/[A-Z]/.test(pwd))         errors.push('Хотя бы одна заглавная буква');
-  if (!/[0-9]/.test(pwd))         errors.push('Хотя бы одна цифра');
-  if (!/[^A-Za-z0-9]/.test(pwd))  errors.push('Хотя бы один спецсимвол');
-  if (/\s/.test(pwd))             errors.push('Пробелы в пароле недопустимы');
-  return { ok: errors.length === 0, errors };
 }
 
 // ============================================================
