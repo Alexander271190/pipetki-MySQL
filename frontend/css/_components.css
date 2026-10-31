@@ -112,7 +112,7 @@
 @media (max-width: 480px) { .status-badge { padding: 4px 8px; font-size: .72rem; } }
 
 /* ============================================================
-   БЕЙДЖ ТИПА — теперь просто текст (без цвета и рамок)
+   БЕЙДЖ ТИПА — просто текст (без цвета и рамок)
    ============================================================ */
 .badge-type {
   display: inline;
@@ -355,7 +355,7 @@ body.compact-mode .col-checkbox input[type="checkbox"], body.compact-mode .row-c
 @media (max-width: 375px) { .prefs-tab { padding: 6px 10px; font-size: .8rem; } }
 
 /* ============================================================
-   «СКОПИРОВАТЬ ВИД С ДРУГОГО ПОЛЬЗОВАТЕЛЯ»
+   СКОПИРОВАТЬ ВИД С ДРУГОГО ПОЛЬЗОВАТЕЛЯ
    ============================================================ */
 .copy-view-block { margin-bottom: 16px; padding: 12px 14px; background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 8px; }
 .copy-view-label { display: block; font-weight: 600; font-size: .85rem; color: #0369a1; margin-bottom: 8px; }
@@ -418,10 +418,7 @@ body.is-admin .admin-only, body.is-admin .senior-only, body.can-manage .admin-on
   opacity: 0;
   visibility: hidden;
   transition: all 0.2s ease;
-  
-  /* 🆕 Максимальный приоритет, чтобы перекрывать фиксированную шапку */
   z-index: 99999 !important; 
-  
   text-align: left;
   color: #1e293b;
   font-size: 0.85rem;
@@ -471,7 +468,7 @@ td small i { color: inherit !important; }
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* 🆕 Фикс белого уголка для всего документа */
+/* Фикс белого уголка для всего документа */
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
@@ -487,16 +484,15 @@ html[data-theme="dark"] ::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-/* 🆕 Подсказки в справке */
+/* Подсказки в справке */
 .docs-hint {
   background: #f0f9ff; border-left: 3px solid #0ea5e9; padding: 10px 14px;
   border-radius: 6px; color: #0c4a6e; font-size: .88rem; margin: 12px 0;
 }
 html[data-theme="dark"] .docs-hint { background: rgba(14,165,233,.12); color: #93c5fd; }
 
-
 /* ============================================================
-   🆕 HTML-контент в справке (для пользователей)
+   HTML-контент в справке (для пользователей)
    ============================================================ */
 .docs-content p { margin: 0 0 12px; line-height: 1.6; }
 .docs-content ul, .docs-content ol { padding-left: 24px; margin: 0 0 14px; }
@@ -514,8 +510,7 @@ html[data-theme="dark"] .docs-hint { background: rgba(14,165,233,.12); color: #9
 /* Иконки */
 .docs-content .fa-solid { color: #4f46e5; margin-right: 4px; vertical-align: middle; }
 
-
-/* 🆕 Таблица справки: заголовки по центру, содержимое слева */
+/* Таблица справки: заголовки по центру, содержимое слева */
 .help-admin-table th:nth-child(2) {
   text-align: center !important;
 }
@@ -550,7 +545,7 @@ html[data-theme="dark"] .skeleton-line {
 }
 
 /* ============================================================
-   🆕 Утилитарные классы (для замены inline-стилей в JS)
+   УТИЛИТАРНЫЕ КЛАССЫ
    ============================================================ */
 
 /* Карточки */
@@ -624,7 +619,7 @@ html[data-theme="dark"] .badge-result-fail { background: rgba(220, 38, 38, .2); 
 html[data-theme="dark"] .badge-result-wip  { background: rgba(14, 165, 233, .2); color: #93c5fd; }
 
 /* ============================================================
-   🆕 КАРТОЧКА ДОКУМЕНТА В СПРАВКЕ (В стиле QMS)
+   КАРТОЧКА ДОКУМЕНТА В СПРАВКЕ
    ============================================================ */
 .help-file-card {
   background: var(--card);
@@ -642,7 +637,7 @@ html[data-theme="dark"] .badge-result-wip  { background: rgba(14, 165, 233, .2);
 
 .help-file-icon {
   font-size: 4rem;
-  color: #0ea5e9; /* Синий цвет для иконки */
+  color: #0ea5e9;
   margin-bottom: 20px;
 }
 
@@ -674,7 +669,7 @@ html[data-theme="dark"] .badge-result-wip  { background: rgba(14, 165, 233, .2);
   justify-content: center;
 }
 
-/* Темная тема */
+/* Тёмная тема */
 html[data-theme="dark"] .help-file-card {
   background: #1e293b;
   border-color: #334155;
@@ -683,8 +678,9 @@ html[data-theme="dark"] .help-file-card {
 html[data-theme="dark"] .help-file-icon {
   color: #38bdf8;
 }
+
 /* ============================================================
-   🆕 КАСТОМНЫЙ ВЫПАДАЮЩИЙ СПИСОК ПРАВ (МУЛЬТИСЕЛЕКТ)
+   КАСТОМНЫЙ ВЫПАДАЮЩИЙ СПИСОК ПРАВ (МУЛЬТИСЕЛЕКТ)
    ============================================================ */
 .hup-multiselect-wrap { position: relative; }
 .hup-multiselect-trigger {
@@ -706,7 +702,7 @@ html[data-theme="dark"] .hup-multiselect-menu label:hover { background: #334155;
 .hup-multiselect-menu label:hover { background: #f1f5f9; }
 
 /* ============================================================
-   🆕 СПИСОК ССЫЛОК В СПРАВКЕ
+   СПИСОК ССЫЛОК В СПРАВКЕ
    ============================================================ */
 .help-link-item {
   display: flex;
@@ -739,7 +735,7 @@ html[data-theme="dark"] .help-link-item:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* 🆕 Стиль для раздела без файла */
+/* Стиль для раздела без файла */
 .help-link-missing {
   cursor: pointer;
   opacity: 0.85;
