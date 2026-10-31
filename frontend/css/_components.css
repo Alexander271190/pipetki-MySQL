@@ -471,6 +471,11 @@ td small i { color: inherit !important; }
   background: rgba(0, 0, 0, 0.4);
 }
 
+/* 🆕 Фикс белого уголка для всего документа */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Для тёмной темы */
 html[data-theme="dark"] ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
