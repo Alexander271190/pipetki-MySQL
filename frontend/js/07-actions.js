@@ -48,17 +48,34 @@ async function openUserActions(ev, userId) {
       console.warn('Не удалось подтянуть данные пользователя:', e.message);
     }
 
-    const items = [
-      { label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => editUserSetting(userId) },
-      { label: '<i class="fa-solid fa-list-check"></i> Настроить видимые поля', action: () => openUserViewModal(userId, u.fullName || '') },
-    ];
+    const isBuiltinAdmin = u.login === 'admin';
+    const isMe = currentUser.id === userId;
+
+    const items = [];
+
+    // Редактировать встроенного админа другим нельзя
+    if (!(isBuiltinAdmin && !isMe)) {
+      items.push({ label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => editUserSetting(userId) });
+    }
+    
+    items.push({ label: '<i class="fa-solid fa-list-check"></i> Настроить видимые поля', action: () => openUserViewModal(userId, u.fullName || '') });
 
     if (!isSelf) {
       items.push({ divider: true });
-      items.push({ label: '<i class="fa-solid fa-right-to-bracket"></i> Войти как этот пользователь', class: 'item-warning', action: () => impersonateUser(userId) });
+      
+      // Имперсонировать встроенного админа другим нельзя
+      if (!(isBuiltinAdmin && !isMe)) {
+        items.push({ label: '<i class="fa-solid fa-right-to-bracket"></i> Войти как этот пользователь', class: 'item-warning', action: () => impersonateUser(userId) });
+      }
+
+      // Сбросить пароль можно ЛЮБОМУ (ты просил оставить)
       items.push({ label: '<i class="fa-solid fa-key"></i> Сбросить пароль', class: 'item-warning', action: () => resetUserPassword(userId, u.login || '') });
-      items.push({ divider: true });
-      items.push({ label: '<i class="fa-solid fa-trash"></i> Удалить пользователя', class: 'item-danger', action: () => deleteUserSetting(userId, u.fullName || '') });
+      
+      // Удалить встроенного админа нельзя
+      if (!isBuiltinAdmin) {
+        items.push({ divider: true });
+        items.push({ label: '<i class="fa-solid fa-trash"></i> Удалить пользователя', class: 'item-danger', action: () => deleteUserSetting(userId, u.fullName || '') });
+      }
     }
 
     renderUserActionsMenu(anchorEl, items); 
