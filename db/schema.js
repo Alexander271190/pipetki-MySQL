@@ -87,6 +87,18 @@ async function initSchema() {
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL UNIQUE,
+        value VARCHAR(50) NOT NULL UNIQUE,
+        permissions JSON NOT NULL,
+        is_system TINYINT DEFAULT 0,
+        is_admin TINYINT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS pipettes (
         id VARCHAR(255) PRIMARY KEY,
         serial VARCHAR(255),
@@ -114,7 +126,7 @@ async function initSchema() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS edit_locks (
         pipette_id VARCHAR(255) PRIMARY KEY,
@@ -124,7 +136,7 @@ async function initSchema() {
         FOREIGN KEY (pipette_id) REFERENCES pipettes(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS calibration_history (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -261,13 +273,13 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 🆕 Справка (ДОБАВЛЕНО file_path)
+    // Справка
     await conn.query(`
       CREATE TABLE IF NOT EXISTS help_docs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         slug VARCHAR(100) NOT NULL UNIQUE,
         title VARCHAR(255) NOT NULL,
-        content MEDIUMTEXT NULL DEFAULT NULL,  
+        content MEDIUMTEXT NULL DEFAULT NULL,
         file_path VARCHAR(255) DEFAULT NULL,
         required_permissions TEXT,
         sort_order INT DEFAULT 0,
@@ -278,7 +290,7 @@ async function initSchema() {
         INDEX idx_help_sort (sort_order)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
-    
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS help_images (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -291,7 +303,7 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 🆕 Шаблоны вида
+    // Шаблоны вида
     await conn.query(`
       CREATE TABLE IF NOT EXISTS view_templates (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -304,7 +316,7 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 🆕 Шаблоны единиц оборудования
+    // Шаблоны единиц оборудования
     await conn.query(`
       CREATE TABLE IF NOT EXISTS equipment_templates (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -317,7 +329,7 @@ async function initSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
-    // 🆕 Догон колонок
+    // Догон колонок
     await ensureColumns(conn, 'users', [
       { name: 'is_acting',           ddl: 'TINYINT DEFAULT 0' },
       { name: 'acting_for_id',       ddl: 'VARCHAR(255) DEFAULT NULL' },
@@ -326,11 +338,12 @@ async function initSchema() {
       { name: 'must_set_password',   ddl: 'TINYINT DEFAULT 0' },
       { name: 'view_template_id',    ddl: 'INT NULL DEFAULT NULL' },
     ]);
-    
+
     await ensureColumns(conn, 'help_docs', [
       { name: 'file_path', ddl: 'VARCHAR(255) DEFAULT NULL' }
     ]);
-        // 🆕 Принудительно делаем content nullable на существующей БД
+
+    // content делаем nullable на существующей БД
     const [contentCol] = await conn.query(`
       SELECT IS_NULLABLE FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'help_docs' AND COLUMN_NAME = 'content'
@@ -346,14 +359,14 @@ async function initSchema() {
     ]);
 
     await ensureColumns(conn, 'export_settings', [
-  { name: 'export_enabled',     ddl: 'TINYINT DEFAULT 1' },
-  { name: 'act_send_enabled',   ddl: 'TINYINT DEFAULT 1' },
-  { name: 'act_send_fields',    ddl: 'JSON DEFAULT NULL' },
-  { name: 'act_return_enabled', ddl: 'TINYINT DEFAULT 1' },
-  { name: 'act_return_fields',  ddl: 'JSON DEFAULT NULL' },
-  { name: 'history_enabled',    ddl: 'TINYINT DEFAULT 1' },
-  { name: 'history_fields',     ddl: 'JSON DEFAULT NULL' },
-]);
+      { name: 'export_enabled',     ddl: 'TINYINT DEFAULT 1' },
+      { name: 'act_send_enabled',   ddl: 'TINYINT DEFAULT 1' },
+      { name: 'act_send_fields',    ddl: 'JSON DEFAULT NULL' },
+      { name: 'act_return_enabled', ddl: 'TINYINT DEFAULT 1' },
+      { name: 'act_return_fields',  ddl: 'JSON DEFAULT NULL' },
+      { name: 'history_enabled',    ddl: 'TINYINT DEFAULT 1' },
+      { name: 'history_fields',     ddl: 'JSON DEFAULT NULL' },
+    ]);
 
     try {
       await conn.query('CREATE INDEX idx_audit_pipette ON audit_log(pipette_id)');
@@ -372,7 +385,7 @@ async function initSchema() {
       { name: 'barcode_source',       ddl: 'VARCHAR(50) DEFAULT NULL' },
     ]);
 
-   // 🆕 Догон индексов
+    // Догон индексов
     await ensureIndexes(conn, 'pipettes', [
       { name: 'idx_pipettes_department',     ddl: 'CREATE INDEX idx_pipettes_department ON pipettes(department)' },
       { name: 'idx_pipettes_equipment_type', ddl: 'CREATE INDEX idx_pipettes_equipment_type ON pipettes(equipment_type)' },
@@ -402,7 +415,7 @@ async function initSchema() {
     if (!barcodeSrcCol.length || barcodeSrcCol[0].len !== 50) {
       await conn.query('ALTER TABLE pipettes MODIFY COLUMN barcode_source VARCHAR(50) NULL DEFAULT NULL');
     }
-    
+
   } finally {
     conn.release();
   }
