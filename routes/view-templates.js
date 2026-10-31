@@ -1,12 +1,12 @@
 const express = require('express');
 const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
 
 const router = express.Router();
 
 // GET /api/view-templates — все шаблоны
-router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT id, name, visible_fields, is_default FROM view_templates ORDER BY is_default DESC, name ASC'
@@ -24,7 +24,7 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 // POST /api/view-templates
-router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, visibleFields, isDefault } = req.body || {};
     if (!name || !String(name).trim()) {
@@ -57,7 +57,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 // PUT /api/view-templates/:id
-router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { name, visibleFields, isDefault } = req.body || {};
@@ -96,7 +96,7 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 // DELETE /api/view-templates/:id
-router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [ex] = await db.query('SELECT name FROM view_templates WHERE id = ?', [id]);
@@ -115,7 +115,7 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
 });
 
 // POST /api/view-templates/:id/apply-to-user/:userId
-router.post('/:id/apply-to-user/:userId', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/:id/apply-to-user/:userId', authenticate, requireAdmin, async (req, res) => {
   try {
     const tplId = parseInt(req.params.id, 10);
     const userId = req.params.userId;
