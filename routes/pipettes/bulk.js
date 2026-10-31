@@ -57,7 +57,8 @@ router.post('/bulk-create', authenticate, requireAnyPermission(['add_pipette', '
     let responsible = String(r.responsible || '').replace(/[\s\u00A0\u2000-\u200A\u2028\u2029\u3000]+/g, ' ').trim();
     let department = String(r.department || '').trim();
 
-    if (req.user.is_acting) {
+    // Админ не подменяется данными и.о. — даже если случайно его включили
+    if (req.user.is_acting && !req.user._isAdmin) {
       responsible = req.user.acting_full_name || '';
       department = req.user.acting_department || '';
     }
@@ -208,11 +209,11 @@ router.post('/bulk-send', authenticate, requireAnyPermission(['bulk_send', 'mana
         );
         if (!rows.length) { notFound.push(id); continue; }
         if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
-          const [lock] = await conn.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [id]);
+        const [lock] = await conn.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [id]);
         if (lock.length && lock[0].user_id !== req.user.id) {
-        skipped.push(`${id} (заблокирован: ${lock[0].user_full_name})`);
-        continue;
-  }
+          skipped.push(`${id} (заблокирован: ${lock[0].user_full_name})`);
+          continue;
+        }
         if (!isExternalType(rows[0].equipment_type)) { skipped.push(id); continue; }
         if (rows[0].sent_for_calibration) { skipped.push(id); continue; }
         if (rows[0].replacing) { skipped.push(id); continue; }
@@ -328,15 +329,15 @@ router.post('/bulk-return', authenticate, requireAnyPermission(['bulk_return', '
           [item.id]
         );
         if (!rows.length) { skipped.push(item.id); continue; }
-        if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }         
+        if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(item.id); continue; }
         const [lock] = await conn.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [item.id]);
         if (lock.length && lock[0].user_id !== req.user.id) {
-       skipped.push(`${item.id} (заблокирован: ${lock[0].user_full_name})`);
-       continue;
-       }
-        if (!rows[0].sent_for_calibration && !isExternalType(rows[0].equipment_type)) { 
-          skipped.push(item.id); 
-          continue; 
+          skipped.push(`${item.id} (заблокирован: ${lock[0].user_full_name})`);
+          continue;
+        }
+        if (!rows[0].sent_for_calibration && !isExternalType(rows[0].equipment_type)) {
+          skipped.push(item.id);
+          continue;
         }
         if (!rows[0].sent_for_calibration) { skipped.push(item.id); continue; }
 
@@ -424,10 +425,10 @@ router.post('/bulk-change-responsible', authenticate, requireAnyPermission(['bul
         );
         if (!rows.length) { skipped.push(id); continue; }
         if (!canAccessDepartment(req.user, rows[0].department)) { skipped.push(id); continue; }
-          const [lock] = await conn.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [id]);
+        const [lock] = await conn.query('SELECT user_id, user_full_name FROM edit_locks WHERE pipette_id = ?', [id]);
         if (lock.length && lock[0].user_id !== req.user.id) {
-       skipped.push(`${id} (заблокирован: ${lock[0].user_full_name})`);
-        continue;
+          skipped.push(`${id} (заблокирован: ${lock[0].user_full_name})`);
+          continue;
         }
         if (rows[0].responsible === resp) { skipped.push(id); continue; }
 
@@ -455,7 +456,9 @@ router.post('/bulk-change-responsible', authenticate, requireAnyPermission(['bul
   }
 });
 
-// 🆕 Массовая блокировка — 1 запрос вместо N
+// ═══════════════════════════════════════════════════════════
+// POST /bulk-lock — массовая блокировка (1 запрос вместо N)
+// ═══════════════════════════════════════════════════════════
 router.post('/bulk-lock', authenticate, requireAnyPermission(['add_pipette', 'edit_pipette', 'bulk_send', 'bulk_return', 'bulk_change_responsible', 'manage_pipettes']), async (req, res) => {
   try {
     const { ids } = req.body || {};
