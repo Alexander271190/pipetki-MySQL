@@ -13,7 +13,7 @@ function renderAuthUI() {
 
     document.getElementById('user-fullname').textContent = currentUser.fullName;
     let posText = currentUser.position +
-      (currentUser.role === 'admin' ? ' (админ)'
+      (isAdmin() ? ' (админ)'
         : currentUser.role === 'senior_lab' ? ' (ст. лаборант)' : '');
     if (currentUser.isActing) {
       posText += currentUser.actingForName
