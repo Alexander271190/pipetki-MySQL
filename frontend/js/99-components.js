@@ -71,7 +71,7 @@ window.UI = {
       if (!el) return;
       el.classList.remove('active');
 
-      // 🆕 Сбрасываем размеры, чтобы при следующем открытии модалка была стандартной
+      // Сбрасываем размеры, чтобы при следующем открытии модалка была стандартной
       const modal = el.querySelector('.modal');
       if (modal) {
         modal.style.width = '';
@@ -83,7 +83,7 @@ window.UI = {
     closeAll() {
       document.querySelectorAll('.modal-overlay.active').forEach(el => {
         el.classList.remove('active');
-        // 🆕 Сбрасываем размеры
+        // Сбрасываем размеры
         const modal = el.querySelector('.modal');
         if (modal) {
           modal.style.width = '';
@@ -232,7 +232,7 @@ window.UI = {
   },
 
   // ────────────────────────────────────────────────────────
-  // 12. БЛОКИ-ПОДСКАЗКИ (замена inline-стилей)
+  // 12. БЛОКИ-ПОДСКАЗКИ
   // ────────────────────────────────────────────────────────
   infoBlock(html) {
     return `<div class="info-block">${html}</div>`;
