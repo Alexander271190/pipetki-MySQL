@@ -1071,12 +1071,6 @@ async function submitChangePassword(e) {
     return;
   }
 
-  const v = validatePasswordClient(newPwd);
-  if (!v.ok) {
-    errEl.textContent = 'Пароль не соответствует требованиям:\n• ' + v.errors.join('\n• ');
-    return;
-  }
-
   if (cpBtn) cpBtn.disabled = true;
   if (cpBtnIcon) cpBtnIcon.className = 'fa-solid fa-spinner fa-spin';
   if (cpBtnText) cpBtnText.textContent = 'Сохранение…';
