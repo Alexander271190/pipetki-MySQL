@@ -49,6 +49,9 @@ const PRINT_DOC_FIELDS = {
 async function renderUsersSettings() {
   const c = document.getElementById('settings-section-content');
   try {
+    if (!_cachedRolesList || _cachedRolesList.length === 0) {
+      _cachedRolesList = await apiRequest('/roles');
+    }
     const users = await getCachedUsers(true);
     
     let html = '<h3>Управление пользователями</h3>';
@@ -79,7 +82,7 @@ async function renderUsersSettings() {
 
     users.forEach(u => {
       const perms = u.extraPermissions || [];
-      const isAdm = u.role === 'admin';
+      const isAdm = u.isAdmin === true;
       const permText = isAdm
         ? `<span style="color:${COLORS.danger};font-weight:700;">все</span>`
         : (perms.length === 0
@@ -93,7 +96,7 @@ async function renderUsersSettings() {
           ? ` <span style="color:${COLORS.warning};font-weight:600;">(и.о.${u.actingForName ? ' за ' + esc(u.actingForName) : ''})</span>`
           : ''}</td>
         <td>${esc(u.department || '—')}</td>
-        <td>${ROLE_LABELS[u.role] || u.role}</td>
+        <td>${esc(u.roleName || u.role)}</td>
         <td class="perm-cell">${permText}</td>
         <td class="actions">
           <button class="row-actions-btn"
@@ -216,11 +219,13 @@ function renderUserEditForm() {
       </div>
       
       <div class="form-row">
-        <div class="form-group"><label>Роль</label>
+       <div class="form-group"><label>Роль</label>
           <select id="usr-role" onchange="onUserRoleChange(this.value)">
-            <option value="user">Пользователь</option>
-            <option value="senior_lab">Старший лаборант</option>
-            <option value="admin">Администратор</option>
+            ${(_cachedRolesList || []).map(r => {
+              // Скрываем админские роли для не-админов
+              if (r.isAdmin && !isAdmin()) return '';
+              return `<option value="${esc(r.value)}" data-is-admin="${r.isAdmin ? 1 : 0}">${esc(r.name)}</option>`;
+            }).join('')}
           </select>
         </div>
         <div class="form-group"><label>Строк на странице</label>
@@ -406,7 +411,10 @@ async function deleteCustomPreset(id) {
 }
 
 function onUserRoleChange(role) {
-  const isAdminRole = (role === 'admin');
+  // Ищем роль в кэше и проверяем её флаг isAdmin
+  const roleDef = (_cachedRolesList || []).find(r => r.value === role);
+  const isAdminRole = roleDef ? roleDef.isAdmin : false;
+  
   document.querySelectorAll('.usr-perm-cb').forEach(cb => {
     if (isAdminRole) {
       cb.checked = true;
@@ -467,9 +475,17 @@ async function editUserSetting(id) {
       showToast(`Отдел «${u.department}» отсутствует в справочнике`, 'error');
     }
 
-    document.getElementById('usr-role').value = u.role;
+    const roleSel = document.getElementById('usr-role');
+    roleSel.value = u.role;
+    
+    // Если редактируем админа, а мы сами не админ — блокируем селект
+    if (u.isAdmin && !isAdmin()) {
+      roleSel.disabled = true;
+    } else {
+      roleSel.disabled = false;
+    }
+    
     document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Редактирование: ' + esc(u.login);
-
     let perms = [...(u.extraPermissions || [])];
     if (perms.includes('manage_pipettes')) {
       perms = perms.filter(p => p !== 'manage_pipettes');
@@ -477,13 +493,13 @@ async function editUserSetting(id) {
       perms = [...new Set(perms)];
     }
     await loadCustomPresets();
+    const uRoleDef = (_cachedRolesList || []).find(r => r.value === u.role);
+    const isUAdmin = u.isAdmin === true; 
     document.querySelectorAll('.usr-perm-cb').forEach(cb => {
       cb.checked = perms.includes(cb.value);
-      cb.disabled = (u.role === 'admin');
+      cb.disabled = isUAdmin;
     });
-
     document.getElementById('usr-only-own-dept').checked = !!u.onlyOwnDepartment;
-
     const isActingCb = document.getElementById('usr-is-acting');
     isActingCb.checked = !!u.isActing;
     await onActingChange(isActingCb.checked);
@@ -531,8 +547,11 @@ async function saveUserSetting() {
     return; 
   }
 
+  const roleDef = (_cachedRolesList || []).find(r => r.value === role);
+  const isRoleAdmin = roleDef ? roleDef.isAdmin : false;
+
   const extraPermissions = [];
-  if (role !== 'admin') {
+  if (!isRoleAdmin) {
     document.querySelectorAll('.usr-perm-cb:checked').forEach(cb => extraPermissions.push(cb.value));
   }
 
@@ -596,8 +615,15 @@ function resetUserSettingForm() {
     deptSel.value = '';
   }
   
-  const roleSel = document.getElementById('usr-role');
-  if (roleSel) roleSel.value = 'user';
+   const roleSel = document.getElementById('usr-role');
+  if (roleSel) {
+    roleSel.disabled = false;
+    if (roleSel.options.length > 0) {
+      const userOpt = Array.from(roleSel.options).find(o => o.value === 'user');
+      roleSel.value = userOpt ? 'user' : roleSel.options[0].value;
+      onUserRoleChange(roleSel.value);
+    }
+  }
   
   const titleEl = document.getElementById('user-form-title');
   if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-plus"></i> Добавить пользователя';
@@ -615,6 +641,16 @@ function resetUserSettingForm() {
 }
 
 async function deleteUserSetting(id, displayName) {
+  // Проверяем, не пытаемся ли удалить админа
+  try {
+    const users = await apiRequest('/users');
+    const u = users.find(x => x.id === id);
+    if (u && u.isAdmin && !isAdmin()) {
+      showToast('Только администратор может удалить администратора', 'error');
+      return;
+    }
+  } catch (e) {}
+
   let who = displayName;
   if (!who) {
     try {
@@ -627,7 +663,7 @@ async function deleteUserSetting(id, displayName) {
 
   const ok = await showConfirm(
     `Удалить пользователя «${who}»?\nДействие необратимо.`,
-    { icon: '👤', title: 'Удаление пользователя', okText: 'Удалить', okClass: 'btn-danger' }
+    { icon: '<i class="fa-solid fa-user"></i>', title: 'Удаление пользователя', okText: 'Удалить', okClass: 'btn-danger' }
   );
   if (!ok) return;
   
@@ -894,7 +930,7 @@ async function applyFieldsToAll(mode) {
 
   const ok = await showConfirm(
     `Применить ${selected.length} полей ${modeLabel}?\n\nДействие затронет всех пользователей.`,
-    { icon: '⚠️', title: 'Массовое применение', okText: 'Применить', okClass: 'btn-warning' }
+    {icon: '<i class="fa-solid fa-triangle-exclamation"></i>', title: 'Массовое применение', okText: 'Применить', okClass: 'btn-warning' }
   );
   if (!ok) return;
 
@@ -958,7 +994,7 @@ async function resetUserView() {
   if (!_userViewUserId) return;
   const ok = await showConfirm(
     'Сбросить настройки полей и документов к стандартным?',
-    { icon: '↩️', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' }
+    { icon: '<i class="fa-solid fa-rotate-left"></i>', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' }
   );
   if (!ok) return;
   try {
@@ -1115,7 +1151,7 @@ async function resetUserPassword(userId, login) {
   const ok = await showConfirm(
     `Сбросить пароль пользователя «${displayName}»?\n\n` +
     `Будет сгенерирован разовый пароль. Пользователь обязан сменить его при следующем входе.`,
-    { icon: '🔑', title: 'Сброс пароля', okText: 'Сбросить', okClass: 'btn-warning' }
+    {icon: '<i class="fa-solid fa-key"></i>', title: 'Сброс пароля', okText: 'Сбросить', okClass: 'btn-warning' }
   );
   if (!ok) return;
 
@@ -1205,7 +1241,7 @@ async function renderUserViewDocuments() {
     user = users.find(u => u.id === _userViewUserId) || null;
   } catch (e) {}
 
-  const hasPerm = user && (user.role === 'admin' || (user.extraPermissions || []).includes('export_data'));
+  const hasPerm = user && (user.isAdmin === true || (user.extraPermissions || []).includes('export_data'));
 
   if (!hasPerm) {
     c.innerHTML = `
