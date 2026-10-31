@@ -51,6 +51,7 @@ function wrapRouter(router) {
 app.use('/api/auth',     wrapRouter(require('./routes/auth')));
 app.use('/api/pipettes', wrapRouter(require('./routes/pipettes')));
 app.use('/api/users',    wrapRouter(require('./routes/users')));
+app.use('/api/roles',    wrapRouter(require('./routes/roles')));
 app.use('/api/settings', wrapRouter(require('./routes/settings')));
 app.use('/api/log',      wrapRouter(require('./routes/log')));
 app.use('/api/import',   wrapRouter(require('./routes/import')));
@@ -133,7 +134,7 @@ async function waitForDatabase(maxAttempts = 90) {
     }
   }
 
-  // 🆕 Захватываем сервер, чтобы можно было закрыть его graceful
+  // Захватываем сервер, чтобы можно было закрыть его graceful
   const server = app.listen(PORT, () => {
     console.log(`🚀 Server on http://0.0.0.0:${PORT}`);
   });
@@ -182,7 +183,7 @@ async function waitForDatabase(maxAttempts = 90) {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🆕 Graceful shutdown (SIGTERM / SIGINT)
+  // Graceful shutdown (SIGTERM / SIGINT)
   // ═══════════════════════════════════════════════════════════
   let _shuttingDown = false;
 
@@ -238,7 +239,7 @@ async function waitForDatabase(maxAttempts = 90) {
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
   process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
-  // 🆕 Ловим необработанные ошибки — чтобы не падать молча
+  //  Ловим необработанные ошибки — чтобы не падать молча
   process.on('uncaughtException', (err) => {
     console.error('💥 uncaughtException:', err);
     gracefulShutdown('uncaughtException');
