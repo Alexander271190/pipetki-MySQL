@@ -608,40 +608,36 @@ async function renderExportSettings() {
       </div>
     `;
 
-   window._printSettingsDraft = JSON.parse(JSON.stringify(settings));
+    window._printSettingsDraft = JSON.parse(JSON.stringify(settings));
 
-// 🆕 Если поля не настроены (пусто в БД) — предзаполняем дефолтами,
-// чтобы «из коробки» все галочки уже стояли.
-const customIds = (_cachedFields || [])
-  .filter(f => f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id))
-  .map(f => f.id);
+    const customIds = (_cachedFields || [])
+      .filter(f => f.enabled && !SYSTEM_FIELD_IDS_IN_CONFIG.has(f.id))
+      .map(f => f.id);
 
-const _printDefaults = {
-  fields:          [...SYSTEM_EXPORT_FIELDS.map(f => f.id), ...customIds],
-  actSendFields:   ['id','model','manufacturer','serial','volume','department','responsible','location','cert','notes'],
-  actReturnFields: ['id','model','manufacturer','serial','volume','department','responsible','cert','result','notes'],
-  historyFields:   ['date','cert','result','org','note'],
-};
-for (const key of Object.keys(_printDefaults)) {
-  const arr = window._printSettingsDraft[key];
-  if (!Array.isArray(arr) || arr.length === 0) {
-    window._printSettingsDraft[key] = [..._printDefaults[key]];
-  } else if (customIds.length > 0 && key === 'fields') {
-    // 🆕 Добавляем кастомные поля в «Экспорт реестра», если их ещё нет
-    // (в актах они уже включены — туда попадают через renderPrintTab)
-    const set = new Set(arr);
-    let added = false;
-    for (const id of customIds) {
-      if (!set.has(id)) { set.add(id); added = true; }
+    const _printDefaults = {
+      fields:          [...SYSTEM_EXPORT_FIELDS.map(f => f.id), ...customIds],
+      actSendFields:   ['id','model','manufacturer','serial','volume','department','responsible','location','cert','notes'],
+      actReturnFields: ['id','model','manufacturer','serial','volume','department','responsible','cert','result','notes'],
+      historyFields:   ['date','cert','result','org','note'],
+    };
+    for (const key of Object.keys(_printDefaults)) {
+      const arr = window._printSettingsDraft[key];
+      if (!Array.isArray(arr) || arr.length === 0) {
+        window._printSettingsDraft[key] = [..._printDefaults[key]];
+      } else if (customIds.length > 0 && key === 'fields') {
+        const set = new Set(arr);
+        let added = false;
+        for (const id of customIds) {
+          if (!set.has(id)) { set.add(id); added = true; }
+        }
+        if (added) window._printSettingsDraft[key] = [...set];
+      }
     }
-    if (added) window._printSettingsDraft[key] = [...set];
-  }
-}
-if (typeof window._printSettingsDraft.exportEnabled !== 'boolean') {
-  window._printSettingsDraft.exportEnabled = true;
-}
+    if (typeof window._printSettingsDraft.exportEnabled !== 'boolean') {
+      window._printSettingsDraft.exportEnabled = true;
+    }
 
-renderPrintTab('export');
+    renderPrintTab('export');
   } catch (e) {
     c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
   }
@@ -659,8 +655,8 @@ function renderPrintTab(tab) {
   const c = document.getElementById(`print-tab-${tab}`);
   const s = window._printSettingsDraft;
 
-    const configs = {
-      export: {
+  const configs = {
+    export: {
       enabledKey: 'exportEnabled', fieldsKey: 'fields',
       title: 'Реестр оборудования',
       hint: 'Документ при нажатии «Печать в Excel» / «Печать в PDF»',
@@ -897,7 +893,6 @@ function renderEquipmentTypesTable() {
   if (!tbody) return;
   
   if (_equipmentTypesDraft.length === 0) {
-    // 🆕 Изменили colspan с 8 на 7 (так как убрали одну колонку)
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px;">Нет типов. Нажмите «Добавить тип».</td></tr>';
     return;
   }
@@ -953,7 +948,6 @@ async function addEquipmentType() {
   let baseValue = slugify(label);
   let finalValue = baseValue;
   let counter = 1;
-  // Если сгенерированный value уже существует — добавляем цифру
   while (_equipmentTypesDraft.some(x => x.value === finalValue)) {
     finalValue = `${baseValue}_${counter++}`;
   }
@@ -1304,7 +1298,6 @@ async function editViewTemplate(id) {
   const tpl = templates.find(t => t.id === id);
   if (!tpl) return;
 
-  // Получаем все возможные поля (активные + виртуальные)
   const allFields = [
     ..._cachedFields.filter(f => f.enabled).map(f => ({ id: f.id, label: f.label })),
     { id: 'status', label: 'Статус' },
@@ -1485,7 +1478,6 @@ async function renderHelpSettings() {
       </thead>
       <tbody>`;
 
-          // 🆕 Проверяем наличие файлов (до сортировки, чтобы индексы совпадали)
     const fileExistsMap = new Map();
     await Promise.all(sections.map(async (s) => {
       if (!s.filePath) {
@@ -1504,7 +1496,6 @@ async function renderHelpSettings() {
       const fileName = s.filePath ? s.filePath.split('/').pop() : 'Нет файла';
       const exists = fileExistsMap.get(s.slug);
       
-      // 🆕 Бейдж файла
       let fileCell;
       if (!s.filePath) {
         fileCell = `<span style="font-size:.8rem;color:#94a3b8;">— нет файла —</span>`;
@@ -1545,13 +1536,12 @@ function openHelpAdminActions(ev, slug) {
   renderRowActionsMenu(ev.currentTarget, items);
 }
 
-// 🆕 Добавьте глобальную переменную для хранения выбранных прав
 let _hupSelectedPerms = [];
 
 async function openHelpFileUploadModal(slug = null) {
   const isEdit = !!slug;
   let sec = null;
-  _hupSelectedPerms = []; // Сбрасываем выбор
+  _hupSelectedPerms = [];
   
   if (isEdit) {
     const sections = await apiRequest('/help');
@@ -1569,7 +1559,6 @@ async function openHelpFileUploadModal(slug = null) {
   for (const [group, items] of Object.entries(groups)) {
     permsHtml += `<div style="font-size:.7rem;font-weight:700;color:#94a3b8;margin:8px 0 4px 4px;text-transform:uppercase;">${group}</div>`;
     
-    // 🆕 Убрали невалидный инлайн-стиль hover:background, добавили класс hup-menu-item
     permsHtml += items.map(p => `
       <label class="hup-menu-item" style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:4px;">
         <input type="checkbox" value="${p.key}" class="hup-perm-cb" ${_hupSelectedPerms.includes(p.key) ? 'checked' : ''} onchange="updateHupPermCount()">
@@ -1619,7 +1608,6 @@ async function openHelpFileUploadModal(slug = null) {
   updateHupPermCount();
 }
 
-// 🆕 Управление выпадающим списком
 function toggleHupDropdown(e) {
   e.stopPropagation();
   const menu = document.getElementById('hup-perm-menu');
@@ -1643,7 +1631,6 @@ async function uploadHelpFile(slug) {
   const title = document.getElementById('hup-title').value.trim();
   const fileInput = document.getElementById('hup-file');
   
-  // Собираем права
   _hupSelectedPerms = Array.from(document.querySelectorAll('.hup-perm-cb:checked')).map(cb => cb.value);
 
   if (!title) { showToast('Заполните название', 'error'); return; }
@@ -1651,7 +1638,7 @@ async function uploadHelpFile(slug) {
 
   const fd = new FormData();
   fd.append('title', title);
-  if (slug) fd.append('slug', slug); // Если редактируем, передаем старый slug
+  if (slug) fd.append('slug', slug);
   fd.append('requiredPermissions', JSON.stringify(_hupSelectedPerms));
   fd.append('enabled', 'true');
   if (fileInput.files[0]) fd.append('file', fileInput.files[0]);
@@ -1696,4 +1683,3 @@ async function resetHelpToFactory() {
     renderHelpSettings();
   } catch (e) { showToast(e.message, 'error'); }
 }
-
