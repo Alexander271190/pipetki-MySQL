@@ -1,8 +1,9 @@
+'use strict';
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../db');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireAnyPermission } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
 const roleCache = require('../utils/roles');
 
@@ -11,7 +12,7 @@ const router = express.Router();
 // ============================================================
 // ПРЕСЕТЫ ПРАВ
 // ============================================================
-router.get('/presets', authenticate, requireAdmin, async (req, res) => {
+router.get('/presets', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const [rows] = await db.query('SELECT id, name, permissions FROM permission_presets ORDER BY name');
     res.json(rows.map(r => ({
@@ -25,7 +26,7 @@ router.get('/presets', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-router.post('/presets', authenticate, requireAdmin, async (req, res) => {
+router.post('/presets', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const { name, permissions } = req.body || {};
     if (!name || !String(name).trim()) {
@@ -49,7 +50,7 @@ router.post('/presets', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-router.delete('/presets/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/presets/:id', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     await db.query('DELETE FROM permission_presets WHERE id = ?', [req.params.id]);
     res.json({ message: 'Пресет удалён' });
@@ -118,7 +119,7 @@ function generateTempPassword() {
 // ============================================================
 // СПИСОК ОСНОВНЫХ СОТРУДНИКОВ
 // ============================================================
-router.get('/acting-targets', authenticate, requireAdmin, async (req, res) => {
+router.get('/acting-targets', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const [users] = await db.query(
       `SELECT id, full_name, department, position
@@ -141,7 +142,7 @@ router.get('/acting-targets', authenticate, requireAdmin, async (req, res) => {
 // ============================================================
 // СПИСОК ПОЛЬЗОВАТЕЛЕЙ
 // ============================================================
-router.get('/', authenticate, requireAdmin, async (req, res) => {
+router.get('/', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   const [users] = await db.query(`
     SELECT u.id, u.login, u.full_name, u.position, u.department, u.role,
            u.only_own_department, u.extra_permissions, u.is_acting, u.acting_for_id,
@@ -185,7 +186,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 // ============================================================
 // СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+router.post('/', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const { login, fullName, position, department, role,
             onlyOwnDepartment, extraPermissions, isActing, actingForId } = req.body;
@@ -193,6 +194,11 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     const roleDef = await roleCache.getRoleDef(role || 'user');
     if (!roleDef) {
       return res.status(400).json({ error: `Неизвестная роль: ${role || 'user'}` });
+    }
+
+    // Только настоящий админ может создавать администраторов
+    if (roleDef.isAdmin && !req.user._isAdmin) {
+      return res.status(403).json({ error: 'Только администратор может создавать администраторов' });
     }
 
     const missing = [];
@@ -256,7 +262,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 // ============================================================
 // ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-router.put('/:id', authenticate, requireAdmin, async (req, res) => {
+router.put('/:id', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const { login, fullName, position, department, role,
             onlyOwnDepartment, extraPermissions, isActing, actingForId } = req.body;
@@ -295,6 +301,19 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
 
     const oldRoleDef = await roleCache.getRoleDef(ex[0].role);
+
+    // Только настоящий админ может назначать админскую роль
+    if (roleDef.isAdmin && !req.user._isAdmin) {
+      return res.status(403).json({ error: 'Только администратор может назначать роль администратора' });
+    }
+
+    // Кастомного админа может менять только другой админ
+    if (oldRoleDef?.isAdmin && !req.user._isAdmin) {
+      if (role !== ex[0].role) {
+        return res.status(403).json({ error: 'Только администратор может менять роль администратора' });
+      }
+    }
+
     if (oldRoleDef?.isAdmin && !roleDef.isAdmin) {
       const [admins] = await db.query(`
         SELECT COUNT(*) AS c FROM users u
@@ -393,7 +412,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
 // ============================================================
 // УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     if (req.params.id === req.user.id) {
       return res.status(400).json({
@@ -405,6 +424,12 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
     if (!users.length) return res.status(404).json({ error: 'Не найден' });
 
     const targetRoleDef = await roleCache.getRoleDef(users[0].role);
+
+    // Кастомного админа может удалить только другой админ
+    if (targetRoleDef?.isAdmin && !req.user._isAdmin) {
+      return res.status(403).json({ error: 'Только администратор может удалить администратора' });
+    }
+
     if (targetRoleDef?.isAdmin) {
       const [admins] = await db.query(`
         SELECT COUNT(*) AS c FROM users u
@@ -452,11 +477,11 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
 // ============================================================
 // СБРОС ПАРОЛЯ (админом)
 // ============================================================
-router.post('/:id/reset-password', authenticate, requireAdmin, async (req, res) => {
+router.post('/:id/reset-password', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const userId = req.params.id;
 
-    const [ex] = await db.query('SELECT id, login, full_name FROM users WHERE id = ?', [userId]);
+    const [ex] = await db.query('SELECT id, login, full_name, role FROM users WHERE id = ?', [userId]);
     if (!ex.length) return res.status(404).json({ error: 'Пользователь не найден' });
 
     const user = ex[0];
@@ -465,6 +490,12 @@ router.post('/:id/reset-password', authenticate, requireAdmin, async (req, res) 
       return res.status(400).json({
         error: 'Для смены своего пароля используйте «Сменить пароль» в шапке'
       });
+    }
+
+    // Не-админ не может сбрасывать пароль админам
+    const targetRoleDef = await roleCache.getRoleDef(user.role);
+    if (targetRoleDef?.isAdmin && !req.user._isAdmin) {
+      return res.status(403).json({ error: 'Только администратор может сбросить пароль администратора' });
     }
 
     const tempPassword = generateTempPassword();
