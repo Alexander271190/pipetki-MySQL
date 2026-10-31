@@ -401,6 +401,7 @@ function makeDefaultBulkRow() {
         row[f.id] = '';
       }
     }
+  }
   return row;
 }
 
