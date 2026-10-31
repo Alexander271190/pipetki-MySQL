@@ -13,7 +13,7 @@ let pageSize = 100;
 let currentHistoryId = null;
 let departmentsList = [];
 
-// 🆕 Состояние серверной пагинации
+// Состояние серверной пагинации
 let pagedState = {
   items: [],
   total: 0,
@@ -23,7 +23,7 @@ let pagedState = {
   counters: { ok: 0, warn: 0, danger: 0, total: 0 },
 };
 
-// 🆕 Статистика + напоминания (с сервера)
+// Статистика + напоминания (с сервера)
 let statsState = {
   counters: { ok: 0, warn: 0, danger: 0, total: 0 },
   reminders: { danger: [], warn: [] },
@@ -35,7 +35,7 @@ let statsState = {
 async function loadPipetteData() {
   if (!isAuthenticated()) return;
 
-  // 🆕 Если уже идёт загрузка — возвращаем тот же Promise
+  // Если уже идёт загрузка — возвращаем тот же Promise
   if (_loadPipettePromise) return _loadPipettePromise;
 
   _loadPipettePromise = (async () => {
@@ -62,7 +62,7 @@ async function loadPipetteData() {
         canTransferPipette() ||
         canBulkChangeResponsible();
 
-         const [
+      const [
         settingsData, typesResult, exportResult, fieldsResult, responsiblesResult, departmentsResult,
       ] = await Promise.all([
         apiRequest('/settings/system').catch(() => null),
@@ -154,7 +154,7 @@ async function loadPipetteData() {
       // ── 5) Параллельно: paged + stats ──
       await Promise.all([loadPaged(), loadStats()]);
 
-       render();
+      render();
       checkReminder();
       _reminderScheduled = false;
     } catch (error) {
@@ -168,8 +168,9 @@ async function loadPipetteData() {
 
   return _loadPipettePromise;
 }
+
 // ============================================================
-// 🆕 СЕРВЕРНАЯ ПАГИНАЦИЯ — загрузка одной страницы
+// СЕРВЕРНАЯ ПАГИНАЦИЯ — загрузка одной страницы
 // ============================================================
 async function loadPaged() {
   if (!isAuthenticated()) return;
@@ -211,7 +212,7 @@ async function loadPaged() {
       currentPage = pagedState.totalPages;
     }
 
-    // 🆕 pipettes = текущая страница (для 07-actions, 09-form, 10-bulk)
+    // pipettes = текущая страница (для 07-actions, 09-form, 10-bulk)
     pipettes = pagedState.items;
   } catch (e) {
     console.error('loadPaged error:', e);
@@ -225,7 +226,7 @@ async function loadPaged() {
 }
 
 // ============================================================
-// 🆕 СТАТИСТИКА (напоминания) — для 16-reminders.js (этап B)
+// СТАТИСТИКА (напоминания)
 // ============================================================
 let _loadStatsPromise = null;
 
@@ -242,7 +243,7 @@ async function loadStats() {
     };
   } catch (e) {
     console.error('loadStats error:', e);
-        statsState = {
+    statsState = {
       counters: { ok: 0, warn: 0, danger: 0, total: 0 },
       reminders: { danger: [], warn: [] },
     };
@@ -255,7 +256,7 @@ async function loadStats() {
 }
 
 // ============================================================
-// 🆕 ID по фильтру (для экспорта/печати всего фильтра) — этап C
+// ID по фильтру (для экспорта/печати всего фильтра)
 // ============================================================
 async function loadIdsForExport() {
   try {
@@ -282,7 +283,7 @@ async function loadIdsForExport() {
 }
 
 // ============================================================
-// 🆕 Все записи по фильтру — для экспорта Excel/PDF (этап C)
+// Все записи по фильтру — для экспорта Excel/PDF
 // ============================================================
 async function loadAllForExport() {
   try {
@@ -315,7 +316,7 @@ async function loadAllForExport() {
 }
 
 // ============================================================
-// Отделы / фильтры (без изменений)
+// Отделы / фильтры
 // ============================================================
 async function loadDepartments() {
   try {
@@ -435,7 +436,7 @@ const SYSTEM_FIELD_IDS_IN_CONFIG = new Set([
 let _allColumnsCache = null;
 let _allColumnsCacheFor = null;
 function getAllTableColumns() {
-  // 🆕 Возврат из кэша, если _cachedFields не переприсваивался
+  // Возврат из кэша, если _cachedFields не переприсваивался
   if (_allColumnsCache && _allColumnsCacheFor === _cachedFields) {
     return _allColumnsCache;
   }
@@ -476,7 +477,7 @@ function getAllTableColumns() {
     }
   }
 
-  // 🆕 Сохранить в кэш
+  // Сохранить в кэш
   _allColumnsCache = result;
   _allColumnsCacheFor = _cachedFields;
 
@@ -574,4 +575,3 @@ function getActiveFormFields(allFields) {
   const visible = new Set(myPrefs.visibleFields);
   return enabled.filter(f => visible.has(f.id));
 }
-
