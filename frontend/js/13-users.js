@@ -180,7 +180,7 @@ function renderUserEditForm() {
 
   let permsHtml = '';
   for (const [group, items] of Object.entries(groups)) {
-   permsHtml += `
+    permsHtml += `
       <div style="margin-bottom:14px;">
         <div class="section-title">${esc(group)}</div>
         <div class="help-perms-grid" style="padding: 8px 0; background: transparent; max-height: none;">
@@ -247,7 +247,7 @@ function renderUserEditForm() {
           Для роли «Администратор» все права выдаются автоматически.
         </small>
 
-              <div style="margin-bottom:14px;">
+        <div style="margin-bottom:14px;">
           <div class="card-title-sm">Стандартные:</div>
           <div class="btn-group">
             <button type="button" class="btn btn-secondary btn-sm" onclick="applyPermPreset('none')"><i class="fa-solid fa-eraser"></i> Очистить</button>
@@ -266,7 +266,6 @@ function renderUserEditForm() {
           </button>
         </div>
 
-        
         <div id="usr-permissions">${permsHtml}</div>
       `)}
 
@@ -656,13 +655,13 @@ async function openUserViewModal(userId, userName) {
   document.getElementById('user-view-target').innerHTML =
     `Настройка полей формы для: <strong>${esc(userName || userId)}</strong>`;
 
- let prefs = {};
+  let prefs = {};
   try {
     prefs = await apiRequest(`/settings/user-preferences/${userId}`);
     if (prefs.visibleFields && Array.isArray(prefs.visibleFields)) {
       _userViewVisibleFields = [...prefs.visibleFields];
     }
-              if (prefs.printDocuments && prefs.printDocuments.useIndividual !== undefined) {
+    if (prefs.printDocuments && prefs.printDocuments.useIndividual !== undefined) {
       _userViewPrintDocs = JSON.parse(JSON.stringify(prefs.printDocuments));
       for (const key of ['export', 'actSend', 'actReturn', 'history']) {
         if (!_userViewPrintDocs[key] || typeof _userViewPrintDocs[key] !== 'object') {
@@ -684,6 +683,7 @@ async function openUserViewModal(userId, userName) {
       };
     }
   } catch (e) {}
+  
   try {
     _cachedFields = await apiRequest('/settings/fields');
   } catch (e) {
@@ -713,10 +713,10 @@ async function openUserViewModal(userId, userName) {
 
   renderUserViewContent();
   document.querySelectorAll('#user-view-modal .prefs-tab').forEach((b, i) => {
-  b.classList.toggle('active', i === 0);
-});
-document.getElementById('user-view-tab-fields').style.display = '';
-document.getElementById('user-view-tab-documents').style.display = 'none';
+    b.classList.toggle('active', i === 0);
+  });
+  document.getElementById('user-view-tab-fields').style.display = '';
+  document.getElementById('user-view-tab-documents').style.display = 'none';
   UI.modal.open('user-view-modal');
   loadCopyViewUserList(userId);
 }
