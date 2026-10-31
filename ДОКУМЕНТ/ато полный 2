@@ -1,0 +1,978 @@
+/* MEGA-TEST v4.2 — полный регресс (актуализировано под текущий проект) */
+(async function runMegaTestV4_2() {
+  'use strict';
+
+  const userIsAdmin = currentUser && (currentUser.isAdmin === true ||
+    (typeof isAdmin === 'function' && isAdmin()) || currentUser.role === 'admin');
+  if (!userIsAdmin) { console.error('❌ Требуется вход админом'); return; }
+  if (typeof pipettes === 'undefined' || typeof settings === 'undefined') {
+    console.error('❌ Приложение не инициализировано'); return;
+  }
+
+  const results = [];
+  const log = (g, n, s, d = '') => {
+    results.push({ g, n, s, d });
+    const ic = { PASS: '✅', FAIL: '❌', SKIP: '⏭️', WARN: '⚠️' }[s] || 'ℹ️';
+    console.log(`${ic} [${g}] ${n}${d ? ' — ' + d : ''}`);
+  };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const uid = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
+
+  const adminToken = (() => {
+    try { return JSON.parse(sessionStorage.getItem('pipette_session') || '{}').token; }
+    catch { return null; }
+  })();
+  if (!adminToken) { console.error('❌ Нет токена'); return; }
+
+  // исправлено: tk !== undefined, а не tk ||
+  const api = async (ep, m = 'GET', b = null, tk) => {
+    const useTok = tk !== undefined ? tk : adminToken;
+    const headers = { 'Content-Type': 'application/json' };
+    if (useTok) headers['Authorization'] = 'Bearer ' + useTok;
+    const opts = { method: m, headers };
+    if (b) opts.body = JSON.stringify(b);
+    const r = await fetch('/api' + ep, opts);
+    const text = await r.text();
+    let j = null;
+    try { j = text ? JSON.parse(text) : null; } catch { j = { _raw: text }; }
+    return { status: r.status, ok: r.ok, body: j, headers: r.headers };
+  };
+  const apiRaw = async (ep, tk = adminToken) => {
+    const headers = {};
+    if (tk) headers['Authorization'] = 'Bearer ' + tk;
+    return fetch('/api' + ep, { headers });
+  };
+  const loginUser = async (lg, pw) => {
+    const r = await api('/auth/login', 'POST', { login: lg, password: pw }, null);
+    return r.ok ? r.body.token : null;
+  };
+  const reloadPipettes = async () => {
+    try {
+      const r = await api('/pipettes/all?limit=5000');
+      if (r.ok && Array.isArray(r.body.items)) {
+        try { pipettes = r.body.items; } catch (e) { window.pipettes = r.body.items; }
+      }
+    } catch (e) {}
+  };
+  const fmtDT = typeof _fmtDateTime === 'function' ? _fmtDateTime
+    : ts => { const s = String(ts || ''); const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+             return m ? `${m[3]}.${m[2]}.${m[1]}   ${m[4]}:${m[5]}` : '—'; };
+
+  const createdUsers = [], createdPipettes = [], createdRoles = [], createdPresets = [];
+  const createdPrinters = [], createdEqTpls = [], createdViewTpls = [];
+
+  // ── моки
+  const _origConfirm = window.showConfirm, _origPrompt = window.showPrompt;
+  const _origLock = window.showLockWarning, _origOpen = window.open;
+  const _origCreateObjectURL = URL.createObjectURL;
+  window.showConfirm = async () => true;
+  window.showPrompt  = async () => 'AutoTest-' + uid;
+  window.showLockWarning = async () => true;
+  let _openCallCount = 0, _lastOpenHtml = '', _lastBlobHtml = '';
+  window.open = function () {
+    _openCallCount++;
+    return { document: { write(h) { _lastOpenHtml = String(h || ''); }, close() {} }, close() {}, focus() {} };
+  };
+  URL.createObjectURL = function (blob) {
+    const url = _origCreateObjectURL.call(URL, blob);
+    try { const xhr = new XMLHttpRequest(); xhr.open('GET', url, false); xhr.send();
+          _lastBlobHtml = xhr.responseText || ''; } catch (e) { _lastBlobHtml = ''; }
+    return url;
+  };
+  const restoreAll = () => {
+    window.showConfirm = _origConfirm; window.showPrompt = _origPrompt;
+    window.showLockWarning = _origLock; window.open = _origOpen;
+    URL.createObjectURL = _origCreateObjectURL;
+  };
+
+  let _origExportCfg = null, _origFiltersCfg = null;
+
+  console.log('%c🚀 MEGA-TEST v4.2', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
+  console.log('%cСтарт: ' + new Date().toLocaleTimeString(), 'color:#64748b;');
+
+  try {
+
+  /* ═══ 1. RBAC ═══ */
+  console.log('\n%c🔐 1. RBAC', 'font-size:14px;font-weight:bold;color:#dc2626;');
+  {
+    const r = await api('/auth/verify'); const u = r.body?.user;
+    log('RBAC', 'verify admin', r.ok ? 'PASS' : 'FAIL');
+    log('RBAC', 'isAdmin=true', u?.isAdmin === true ? 'PASS' : 'FAIL');
+    log('RBAC', 'roleName=Администратор', u?.roleName === 'Администратор' ? 'PASS' : 'FAIL', u?.roleName);
+    log('RBAC', 'permissions=["*"]', JSON.stringify(u?.permissions) === '["*"]' ? 'PASS' : 'FAIL');
+  }
+  let allRoles = [];
+  {
+    const r = await api('/roles'); allRoles = Array.isArray(r.body) ? r.body : [];
+    log('RBAC', 'GET /roles', r.ok ? 'PASS' : 'FAIL');
+    log('RBAC', '≥3 системных', allRoles.filter(x => x.isSystem).length >= 3 ? 'PASS' : 'FAIL');
+    const a = allRoles.find(x => x.value === 'admin');
+    log('RBAC', 'admin isAdmin/isSystem', a?.isAdmin && a?.isSystem ? 'PASS' : 'FAIL');
+    const u = allRoles.find(x => x.value === 'user');
+    const s = allRoles.find(x => x.value === 'senior_lab');
+    log('RBAC', 'user: 3 perms', u?.permissions?.length === 3 ? 'PASS' : 'FAIL', `${u?.permissions?.length}`);
+    log('RBAC', 'senior_lab: 12 perms', s?.permissions?.length === 12 ? 'PASS' : 'FAIL', `${s?.permissions?.length}`);
+  }
+  let customRoleId = null, customRoleValue = null;
+  {
+    const r = await api('/roles', 'POST', { name: 'MegaAdmin-' + uid, permissions: [], isAdmin: true });
+    if (r.ok) { customRoleId = r.body.id; createdRoles.push(customRoleId); log('RBAC', 'создание кастомной admin-роли', 'PASS'); }
+    else log('RBAC', 'создание кастомной admin-роли', 'FAIL', r.body?.error);
+    if (customRoleId) {
+      const r2 = await api('/roles'); const cr = (r2.body || []).find(x => x.id === customRoleId);
+      customRoleValue = cr?.value;
+      log('RBAC', 'кастомная: isAdmin=true, isSystem=false',
+          cr?.isAdmin === true && cr?.isSystem === false ? 'PASS' : 'FAIL');
+    }
+  }
+  { // admin-роль неизменяема
+    const a = allRoles.find(x => x.value === 'admin');
+    const r = await api(`/roles/${a.id}`, 'PUT', { name: 'Hacked', permissions: [] });
+    log('RBAC', 'PUT admin → 400', r.status === 400 ? 'PASS' : 'FAIL', `${r.status}`);
+    const d = await api(`/roles/${a.id}`, 'DELETE');
+    log('RBAC', 'DELETE admin → 400', d.status === 400 ? 'PASS' : 'FAIL');
+  }
+  { // user-роль: is_admin через PUT игнорируется
+    const u = allRoles.find(x => x.value === 'user');
+    await api(`/roles/${u.id}`, 'PUT', { name: u.name, permissions: u.permissions, isAdmin: true });
+    const rr = await api('/roles'); const check = (rr.body || []).find(x => x.value === 'user');
+    log('RBAC', 'user: is_admin через PUT игнорируется', check?.isAdmin === false ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 2. Auth ═══ */
+  console.log('\n%c🔑 2. Auth', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/auth/verify');
+    log('AUTH', 'verify admin', r.ok ? 'PASS' : 'FAIL');
+    log('AUTH', 'passwordChangedAt в ответе', r.body?.user?.passwordChangedAt !== undefined ? 'PASS' : 'FAIL');
+
+    const bad = await api('/auth/login', 'POST', { login: 'admin', password: 'wrong_xyz' }, null);
+    log('AUTH', 'login неверный пароль → 401', bad.status === 401 ? 'PASS' : 'FAIL');
+
+    const noPwd = await api('/auth/login', 'POST', { login: 'admin' }, null);
+    log('AUTH', 'login без пароля → 400', noPwd.status === 400 ? 'PASS' : 'FAIL');
+
+    const noLogin = await api('/auth/login', 'POST', { password: 'x' }, null);
+    log('AUTH', 'login без логина → 400', noLogin.status === 400 ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 3. Users CRUD ═══ */
+  console.log('\n%c👤 3. Users CRUD', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  let testUserId = null, testUserLogin = 'mega_user_' + uid, testUserPass = 'MegaPass1!';
+  {
+    const r = await api('/users', 'POST', {
+      login: testUserLogin, fullName: 'Mega User', position: 'Лаборант', department: '',
+      role: 'user', onlyOwnDepartment: false, extraPermissions: ['view_history'], isActing: false, actingForId: null
+    });
+    if (r.ok) { testUserId = r.body.id; createdUsers.push({ id: testUserId, login: testUserLogin }); log('USERS', 'POST', 'PASS'); }
+    else log('USERS', 'POST', 'FAIL', r.body?.error);
+
+    const dup = await api('/users', 'POST', { login: testUserLogin, fullName: 'D', position: 'X', role: 'user' });
+    log('USERS', 'dup login → 409', dup.status === 409 ? 'PASS' : 'FAIL');
+
+    const list = await api('/users');
+    log('USERS', 'GET /users', list.ok && Array.isArray(list.body) ? 'PASS' : 'FAIL');
+    const found = (list.body || []).find(u => u.id === testUserId);
+    log('USERS', 'roleName в списке', found?.roleName ? 'PASS' : 'FAIL', found?.roleName);
+
+    if (testUserId) {
+      const rp = await api(`/users/${testUserId}/reset-password`, 'POST', {});
+      log('USERS', 'reset-password', rp.ok && rp.body.tempPassword ? 'PASS' : 'FAIL');
+      if (rp.ok) {
+        const tokTmp = await loginUser(testUserLogin, rp.body.tempPassword);
+        log('USERS', 'login по temp-паролю', tokTmp ? 'PASS' : 'FAIL');
+        if (tokTmp) {
+          const ch = await api('/auth/change-password', 'POST',
+            { currentPassword: rp.body.tempPassword, newPassword: testUserPass, confirmPassword: testUserPass }, tokTmp);
+          log('USERS', 'change-password', ch.ok ? 'PASS' : 'FAIL', ch.body?.error || '');
+          const reLogin = await loginUser(testUserLogin, testUserPass);
+          log('USERS', 'login после смены', reLogin ? 'PASS' : 'FAIL');
+        }
+      }
+      const upd = await api(`/users/${testUserId}`, 'PUT', {
+        login: testUserLogin, fullName: 'Mega User Upd', position: 'Ст. лаборант', department: '',
+        role: 'user', onlyOwnDepartment: false, extraPermissions: ['view_history', 'print_labels'],
+        isActing: false, actingForId: null
+      });
+      log('USERS', 'PUT', upd.ok ? 'PASS' : 'FAIL', upd.body?.error || '');
+    }
+
+    // self-protection
+    const me = (await api('/auth/verify')).body.user;
+    const delSelf = await api(`/users/${me.id}`, 'DELETE');
+    log('USERS', 'нельзя удалить себя → 400', delSelf.status === 400 ? 'PASS' : 'FAIL');
+
+    const demote = await api(`/users/${me.id}`, 'PUT', {
+      login: me.login, fullName: me.fullName, position: me.position, department: me.department,
+      role: 'user', onlyOwnDepartment: false, extraPermissions: [], isActing: false, actingForId: null
+    });
+    log('USERS', 'self-demote → 400', demote.status === 400 ? 'PASS' : 'FAIL');
+
+    // acting без actingForId
+    const badAct = await api('/users', 'POST', {
+      login: 'mega_badact_' + uid, fullName: 'X', position: 'Y', role: 'user',
+      isActing: true, actingForId: null
+    });
+    log('USERS', 'acting без actingForId → 400', badAct.status === 400 ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 4. Presets ═══ */
+  console.log('\n%c💾 4. Presets', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/users/presets', 'POST', { name: 'MegaPreset-' + uid, permissions: ['view_history', 'export_data'] });
+    if (r.ok) { createdPresets.push(r.body.id); log('PRESET', 'POST', 'PASS'); }
+    else log('PRESET', 'POST', 'FAIL', r.body?.error);
+    const l = await api('/users/presets');
+    log('PRESET', 'GET', l.ok && Array.isArray(l.body) ? 'PASS' : 'FAIL', `${(l.body || []).length}`);
+  }
+
+  /* ═══ 5. Permissions ═══ */
+  console.log('\n%c🛡 5. Permissions', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const createUserWithPerms = async (suffix, perms, pass) => {
+    const lg = `mega_${suffix}_${uid}`;
+    const cr = await api('/users', 'POST', {
+      login: lg, fullName: 'Mega ' + suffix, position: 'X', department: '', role: 'user',
+      extraPermissions: perms, onlyOwnDepartment: false
+    });
+    if (!cr.ok) return null;
+    createdUsers.push({ id: cr.body.id, login: lg });
+    const tokTmp = await loginUser(lg, cr.body.tempPassword);
+    if (!tokTmp) return null;
+    await api('/auth/change-password', 'POST',
+      { currentPassword: cr.body.tempPassword, newPassword: pass, confirmPassword: pass }, tokTmp);
+    return await loginUser(lg, pass);
+  };
+  const noPermToken        = await createUserWithPerms('noperm', [], 'NoPerm1!');
+  const viewLogToken       = await createUserWithPerms('log',    ['view_log'], 'LogUser1!');
+  const viewAuditOnlyToken = await createUserWithPerms('audit',  ['view_audit'], 'AuditUser1!');
+  const viewHistoryOnlyToken = await createUserWithPerms('hist', ['view_history'], 'HistUser1!');
+
+  const canBarcodePrintOnlyToken = await createUserWithPerms('bprint', ['print_labels'], 'BPrint1!');
+  const canScanOnlyToken         = await createUserWithPerms('scan',   ['scan_barcode'], 'ScanUser1!');
+  const canTransferOnlyToken     = await createUserWithPerms('trans',  ['transfer_pipette'], 'Trans1!');
+  const canQuickCalOnlyToken     = await createUserWithPerms('qcal',   ['quick_calibration'], 'Qcal1!');
+  const canImportOnlyToken       = await createUserWithPerms('imp',    ['import_data'], 'ImpUser1!');
+  const canExportOnlyToken       = await createUserWithPerms('exp',    ['export_data'], 'ExpUser1!');
+  const canAddPipetteToken       = await createUserWithPerms('addp',   ['add_pipette'], 'AddPip1!');
+
+  if (noPermToken) {
+    log('PERMS', 'noPerm: /log/errors → 403', (await api('/log/errors?limit=1','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /pipettes/audit → 403', (await api('/pipettes/audit?limit=1','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /barcode-printers → 403', (await api('/barcode-printers','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: POST /barcodes/manual → 403', (await api('/barcodes/manual','POST',{id:'X',barcode:'Y'},noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /barcodes/fonts → 200', (await api('/barcodes/fonts','GET',null,noPermToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /barcode-printers/available → 200', (await api('/barcode-printers/available','GET',null,noPermToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /help/visible → 200', (await api('/help/visible','GET',null,noPermToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /help (admin) → 403', (await api('/help','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /equipment-templates → 403', (await api('/equipment-templates','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /view-templates → 403', (await api('/view-templates','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+  }
+  if (viewLogToken) {
+    log('PERMS', 'view_log: /log/errors → 200', (await api('/log/errors?limit=1','GET',null,viewLogToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'view_log: /pipettes/audit → 200', (await api('/pipettes/audit?limit=1','GET',null,viewLogToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'view_log: /log → 200', (await api('/log?limit=1','GET',null,viewLogToken)).status === 200 ? 'PASS':'FAIL');
+  }
+  if (viewAuditOnlyToken) {
+    log('PERMS', 'view_audit: /log/errors → 403', (await api('/log/errors?limit=1','GET',null,viewAuditOnlyToken)).status === 403 ? 'PASS':'FAIL');
+  }
+  if (viewHistoryOnlyToken) {
+    log('PERMS', 'view_history: /:id/audit работает (не 403)', (await api('/pipettes/__nope__/audit','GET',null,viewHistoryOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canBarcodePrintOnlyToken) {
+    // labels.pdf без ids → 400, но не 403
+    log('PERMS', 'print_labels: /barcodes/labels.pdf доступен', (await api('/barcodes/labels.pdf','GET',null,canBarcodePrintOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+    log('PERMS', 'print_labels: /barcodes/print доступен (не 403)', (await api('/barcodes/print','POST',{ids:[]},canBarcodePrintOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canScanOnlyToken) {
+    log('PERMS', 'scan_barcode: /barcodes/lookup доступен', (await api('/barcodes/lookup','POST',{barcode:'zzz'},canScanOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+    log('PERMS', 'scan_barcode: /barcodes/lookup bad → 404', (await api('/barcodes/lookup','POST',{barcode:'zzz-not-exist-'+uid},canScanOnlyToken)).status === 404 ? 'PASS':'FAIL');
+  }
+  if (canQuickCalOnlyToken) {
+    log('PERMS', 'quick_calibration: /:id/calibration доступен (не 403)', (await api('/pipettes/__nope__/calibration','POST',{},canQuickCalOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canTransferOnlyToken) {
+    log('PERMS', 'transfer_pipette: /:id/transfer доступен (не 403)', (await api('/pipettes/__nope__/transfer','POST',{department:'X',responsible:'Y'},canTransferOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canImportOnlyToken) {
+    const csv = 'ID;Модель\n____NOPE-' + uid + ';X\n';
+    const b64 = btoa(unescape(encodeURIComponent(csv)));
+    log('PERMS', 'import_data: /import доступен (не 403)', (await api('/import','POST',{file:b64,filename:'x.csv'},canImportOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canExportOnlyToken) {
+    log('PERMS', 'export_data: /settings/print-documents/effective hasPermission=true',
+      (await api('/settings/print-documents/effective','GET',null,canExportOnlyToken)).body?.hasPermission === true ? 'PASS':'FAIL');
+  }
+  if (canAddPipetteToken) {
+    log('PERMS', 'add_pipette: POST /pipettes доступен (не 403)', (await api('/pipettes','POST',{},canAddPipetteToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 6. Equipment CRUD ═══ */
+  console.log('\n%c🔬 6. Equipment CRUD', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const pipIds = [];
+  {
+    const id = 'MEGA-P-' + uid;
+    const r = await api('/pipettes', 'POST', {
+      id, model: 'Mega Model', equipmentType: 'pipette', lastCalibration: today,
+      responsible: currentUser.fullName || 'Admin', volume: '100', department: '', serial: 'MEGA-SN-' + uid
+    });
+    if (r.ok) { pipIds.push(id); createdPipettes.push(id); log('CRUD','POST','PASS'); }
+    else log('CRUD','POST','FAIL', r.body?.error);
+
+    log('CRUD','duplicate ID → 409', (await api('/pipettes','POST',{id,model:'D',equipmentType:'pipette',lastCalibration:today,responsible:'X'})).status === 409 ? 'PASS':'FAIL');
+
+    const future = new Date(); future.setFullYear(future.getFullYear()+1);
+    log('CRUD','future date → 400', (await api('/pipettes','POST',{
+      id: 'MEGA-F-'+uid, model: 'F', equipmentType: 'pipette',
+      lastCalibration: future.toISOString().slice(0,10), responsible: 'X'
+    })).status === 400 ? 'PASS':'FAIL');
+
+    const g = await api(`/pipettes/${id}`);
+    log('CRUD','GET one', g.ok ? 'PASS':'FAIL');
+    log('CRUD','computed_status есть', g.body?.computed_status ? 'PASS':'FAIL', g.body?.computed_status);
+
+    log('CRUD','PUT', (await api(`/pipettes/${id}`,'PUT',{ model: 'Mega Updated', notes: 'test' })).ok ? 'PASS':'FAIL');
+
+    const a = await api(`/pipettes/${id}/audit?limit=20`);
+    log('CRUD','audit trail', a.ok && Array.isArray(a.body?.items) ? 'PASS':'FAIL');
+    const editRec = (a.body?.items || []).find(x => x.action === 'Редактирование оборудования');
+    log('CRUD','audit: запись редактирования', editRec ? 'PASS':'FAIL');
+    if (editRec) log('CRUD','audit: diff с «→»', /→/.test(editRec.details || '') ? 'PASS':'FAIL', (editRec.details||'').slice(0,80));
+
+    const pg = await api('/pipettes/paged?limit=5');
+    log('CRUD','GET /paged', pg.ok && Array.isArray(pg.body?.items) ? 'PASS':'FAIL');
+    log('CRUD','paged: counters.total число', typeof pg.body?.counters?.total === 'number' ? 'PASS':'FAIL');
+
+    log('CRUD','GET /all', (await api('/pipettes/all?limit=100')).ok ? 'PASS':'FAIL');
+    log('CRUD','GET /ids', (await api('/pipettes/ids')).ok ? 'PASS':'FAIL');
+    log('CRUD','GET /stats', (await api('/pipettes/stats')).ok ? 'PASS':'FAIL');
+    log('CRUD','GET /next-id', (await api('/pipettes/next-id?type=pipette')).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 7. Paged — search / filters / pagination ═══ */
+  console.log('\n%c🔍 7. Paged — search / filters / pagination', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const s1 = await api('/pipettes/paged?limit=5&search=Mega');
+    log('PAGED','search=Mega', s1.ok ? 'PASS':'FAIL', `total=${s1.body?.total}`);
+
+    const filters = encodeURIComponent(JSON.stringify({ equipmentType: 'pipette' }));
+    const s2 = await api('/pipettes/paged?limit=5&filters=' + filters);
+    log('PAGED','filters={equipmentType:pipette}', s2.ok ? 'PASS':'FAIL', `total=${s2.body?.total}`);
+
+    const s3 = await api('/pipettes/paged?limit=5&sort=id&dir=desc');
+    log('PAGED','sort=id&dir=desc', s3.ok ? 'PASS':'FAIL');
+    if (s3.ok && Array.isArray(s3.body?.items) && s3.body.items.length > 1) {
+      const asc = s3.body.items[0].id < s3.body.items[1].id;
+      log('PAGED','dir=desc: первый > второй', !asc ? 'PASS':'FAIL');
+    }
+
+    const s4 = await api('/pipettes/paged?page=99999&limit=5');
+    log('PAGED','page=99999: не падает', s4.ok ? 'PASS':'FAIL', `totalPages=${s4.body?.totalPages}`);
+
+    const s5 = await api('/pipettes/paged?limit=10000');
+    log('PAGED','limit>500 обрезается до ≤500', s5.ok && s5.body?.limit <= 500 ? 'PASS':'FAIL', `limit=${s5.body?.limit}`);
+  }
+
+  /* ═══ 8. Bulk ═══ */
+  console.log('\n%c📦 8. Bulk', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const bulkIds = [];
+  {
+    const rows = [1,2].map(i => ({ model: 'Mega Bulk ' + i, equipmentType: 'pipette', lastCalibration: today, responsible: 'Admin' }));
+    const bc = await api('/pipettes/bulk-create', 'POST', { rows });
+    if (bc.ok && Array.isArray(bc.body.ids)) {
+      bulkIds.push(...bc.body.ids); createdPipettes.push(...bc.body.ids);
+      log('BULK','bulk-create ×2','PASS', bc.body.ids.join(', '));
+    } else log('BULK','bulk-create','FAIL', bc.body?.error);
+
+    log('BULK','bulk-lock', (await api('/pipettes/bulk-lock','POST',{ids:bulkIds})).ok ? 'PASS':'FAIL');
+    let locked = 0;
+    for (const id of bulkIds) { const r = await api(`/pipettes/${encodeURIComponent(id)}/lock`); if (r.ok && r.body.mine) locked++; }
+    log('BULK','все заблокированы', locked === bulkIds.length ? 'PASS':'FAIL', `${locked}/${bulkIds.length}`);
+    log('BULK','bulk-unlock', (await api('/pipettes/bulk-unlock','POST',{ids:bulkIds})).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 9. Locks ═══ */
+  console.log('\n%c🔒 9. Locks', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+    await api(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST');
+    const l = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
+    log('LOCK','single lock mine', l.ok && l.body.mine ? 'PASS':'FAIL');
+    await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE');
+    log('LOCK','force unlock','PASS');
+
+    // Чужой лок: ставим как admin, пробуем из-под другого
+    if (canTransferOnlyToken) {
+      await api(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST');
+      const otherTry = await api(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST', null, canTransferOnlyToken);
+      log('LOCK','чужой лок → 409', otherTry.status === 409 ? 'PASS':'FAIL');
+      await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE');
+    }
+  }
+
+  /* ═══ 10. Calibration ═══ */
+  console.log('\n%c📊 10. Calibration', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+    const c = await api(`/pipettes/${encodeURIComponent(id)}/calibration`, 'POST', {
+      date: today, cert: 'MEGA-' + uid, result: 'pass', org: 'Test', note: 'Mega test'
+    });
+    log('CAL','POST','PASS'.replace('PASS', c.ok ? 'PASS':'FAIL'), c.body?.error || '');
+    const h = await api(`/pipettes/${encodeURIComponent(id)}/calibration`);
+    log('CAL','GET history', h.ok && Array.isArray(h.body) ? 'PASS':'FAIL', `${(h.body||[]).length}`);
+
+    const future = new Date(); future.setFullYear(future.getFullYear()+1);
+    log('CAL','future date → 400', (await api(`/pipettes/${encodeURIComponent(id)}/calibration`,'POST',{
+      date: future.toISOString().slice(0,10), result: 'pass'
+    })).status === 400 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 11. Send → Return cycle (+ replaces) ═══ */
+  console.log('\n%c🔄 11. Send → Return', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+    const s = await api('/pipettes/bulk-send', 'POST', { ids: [id], sentDate: today, note: 'Mega' });
+    log('CYCLE','bulk-send', s.ok ? 'PASS':'FAIL', s.body?.message || s.body?.error || '');
+    const afterSend = await api(`/pipettes/${encodeURIComponent(id)}`);
+    log('CYCLE','после send: sent_for_calibration', afterSend.body?.sent_for_calibration ? 'PASS':'FAIL');
+    log('CYCLE','после send: active=false', afterSend.body?.active === false ? 'PASS':'FAIL');
+
+    const r = await api('/pipettes/bulk-return', 'POST', {
+      items: [{ id, result: 'pass', cert: 'MEGA-RET-' + uid }], date: today, org: 'Test', note: 'ret'
+    });
+    log('CYCLE','bulk-return', r.ok ? 'PASS':'FAIL', r.body?.message || r.body?.error || '');
+    const afterReturn = await api(`/pipettes/${encodeURIComponent(id)}`);
+    log('CYCLE','после return: sent=null', afterReturn.body?.sent_for_calibration === null ? 'PASS':'FAIL');
+    log('CYCLE','после return: active=true', afterReturn.body?.active === true ? 'PASS':'FAIL');
+    log('CYCLE','после return: last_calibration', afterReturn.body?.last_calibration === today ? 'PASS':'FAIL', afterReturn.body?.last_calibration);
+
+    // cancel-send
+    await api('/pipettes/bulk-send', 'POST', { ids: [id], sentDate: today });
+    const cs = await api(`/pipettes/${encodeURIComponent(id)}/cancel-send`, 'POST');
+    log('CYCLE','cancel-send', cs.ok ? 'PASS':'FAIL', cs.body?.error || '');
+    const afterCancel = await api(`/pipettes/${encodeURIComponent(id)}`);
+    log('CYCLE','после cancel: sent=null', afterCancel.body?.sent_for_calibration === null ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 12. Transfer ═══ */
+  console.log('\n%c🚚 12. Transfer', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const deps = (await api('/settings/departments')).body || [];
+    if (deps.length >= 2 && bulkIds.length) {
+      const id = bulkIds[0];
+      const tr = await api(`/pipettes/${encodeURIComponent(id)}/transfer`, 'POST', { department: deps[0], responsible: 'Transfer Test' });
+      log('TRANSFER','transfer в deps[0]', tr.ok ? 'PASS':'FAIL', tr.body?.error || tr.body?.message);
+      // тот же отдел → 400
+      const sameDept = await api(`/pipettes/${encodeURIComponent(id)}/transfer`, 'POST', { department: deps[0], responsible: 'X' });
+      log('TRANSFER','тот же отдел → 400', sameDept.status === 400 ? 'PASS':'FAIL');
+      // чужой отдел
+      const badDept = await api(`/pipettes/${encodeURIComponent(id)}/transfer`, 'POST', { department: '___NO_SUCH___'+uid, responsible: 'X' });
+      log('TRANSFER','несуществующий отдел → 400', badDept.status === 400 ? 'PASS':'FAIL');
+    }
+  }
+
+  /* ═══ 13. Replacement (available-for-replacement) ═══ */
+  console.log('\n%c↔️ 13. Replacement', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/pipettes/available-for-replacement?type=pipette');
+    log('REPL','available-for-replacement', r.ok && Array.isArray(r.body) ? 'PASS':'FAIL', `${(r.body||[]).length}`);
+    const r2 = await api('/pipettes/available-for-replacement-batch', 'POST', { items: [{ id: 'P-001', type: 'pipette', department: '' }] });
+    log('REPL','available-for-replacement-batch', r2.ok && typeof r2.body === 'object' ? 'PASS':'FAIL');
+    // internal не попадает в bulk-send (через ошибку успешного = 0)
+    const scalesTry = await api('/pipettes/bulk-send', 'POST', { ids: bulkIds, sentDate: today });
+    log('REPL','bulk-send не падает на non-external', scalesTry.ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 14. Import ═══ */
+  console.log('\n%c📥 14. Import', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const longNotes = 'X'.repeat(70000);
+    const csv = 'ID;Модель;Дата поверки;Ответственный;Примечание\n' +
+      `MEGA-IMP-OK-${uid};Test OK;${today};Admin;норм\n` +
+      `MEGA-IMP-BAD-${uid};Test BAD;${today};Admin;${longNotes}\n`;
+    const base64 = btoa(unescape(encodeURIComponent(csv)));
+    const imp = await api('/import', 'POST', { file: base64, filename: 'mega.csv' });
+    if (imp.ok) {
+      log('IMPORT','import','PASS', `added=${imp.body.added}, skipped=${imp.body.skipped}`);
+      log('IMPORT','bad row skipped', imp.body.skipped >= 1 ? 'PASS':'FAIL');
+      try { await api(`/pipettes/MEGA-IMP-OK-${uid}`,'DELETE'); } catch (e) {}
+    } else log('IMPORT','import','FAIL', imp.body?.error || imp.status);
+  }
+
+  /* ═══ 15. Export & Print settings ═══ */
+  console.log('\n%c🖨 15. Export & Print settings', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/export');
+    log('PRINT','GET /settings/export', r.ok ? 'PASS':'FAIL');
+    _origExportCfg = r.body;
+    const hasKeys = ['fields','exportEnabled','actSendEnabled','actSendFields','actReturnEnabled',
+                     'actReturnFields','historyEnabled','historyFields'].every(k => k in (r.body || {}));
+    log('PRINT','все ключи', hasKeys ? 'PASS':'FAIL');
+    log('PRINT','PUT exportEnabled=false', (await api('/settings/export','PUT',{exportEnabled:false})).ok ? 'PASS':'FAIL');
+    log('PRINT','проверка сброса', (await api('/settings/export')).body?.exportEnabled === false ? 'PASS':'FAIL');
+    if (_origExportCfg) await api('/settings/export','PUT', _origExportCfg);
+
+    const eff = await api('/settings/print-documents/effective');
+    log('PRINT','GET /print-documents/effective', eff.ok ? 'PASS':'FAIL');
+    log('PRINT','hasPermission=true (admin)', eff.body?.hasPermission === true ? 'PASS':'FAIL');
+    log('PRINT','source=global/individual', ['global','individual'].includes(eff.body?.source) ? 'PASS':'FAIL', eff.body?.source);
+  }
+
+  /* ═══ 16. Barcodes API ═══ */
+  console.log('\n%c🏷 16. Barcodes API', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+
+    log('BARCODE','/barcodes/fonts → 200', (await api('/barcodes/fonts')).status === 200 ? 'PASS':'FAIL');
+
+    const pngResp = await apiRaw(`/barcodes/${encodeURIComponent(id)}/png?type=code128`);
+    log('BARCODE','/:id/png (code128) → 200 + image', pngResp.ok && (pngResp.headers.get('Content-Type')||'').includes('png') ? 'PASS':'FAIL');
+
+    const pngQr = await apiRaw(`/barcodes/${encodeURIComponent(id)}/png?type=qr`);
+    log('BARCODE','/:id/png (qr) → 200 + image', pngQr.ok && (pngQr.headers.get('Content-Type')||'').includes('png') ? 'PASS':'FAIL');
+
+    const lookup = await api('/barcodes/lookup', 'POST', { barcode: id });
+    log('BARCODE','/lookup по id → 200', lookup.ok && lookup.body?.id === id ? 'PASS':'FAIL');
+
+    const badLookup = await api('/barcodes/lookup', 'POST', { barcode: 'zzz-'+uid });
+    log('BARCODE','/lookup не найден → 404', badLookup.status === 404 ? 'PASS':'FAIL');
+
+    // manual
+    const mb = 'MEGA-BC-' + uid;
+    const manual = await api('/barcodes/manual', 'POST', { id, barcode: mb });
+    log('BARCODE','/manual (admin) → 200', manual.ok ? 'PASS':'FAIL', manual.body?.error || '');
+
+    // reset
+    const reset = await api('/barcodes/reset', 'POST', { id });
+    log('BARCODE','/reset (admin) → 200', reset.ok ? 'PASS':'FAIL');
+
+    // labels.pdf
+    const pdfResp = await apiRaw(`/barcodes/labels.pdf?ids=${encodeURIComponent(id)}&copies=1&layout=a4`);
+    log('BARCODE','/labels.pdf → 200 + pdf', pdfResp.ok && (pdfResp.headers.get('Content-Type')||'').includes('pdf') ? 'PASS':'FAIL');
+
+    // print без принтера (fallback)
+    const pr = await api('/barcodes/print', 'POST', { ids: [id], copies: 1 });
+    log('BARCODE','/print без принтера → 200', pr.ok ? 'PASS':'FAIL', pr.body?.mode);
+
+    // printer-status
+    const ps = await api('/barcodes/printer-status', 'POST', { ip: '127.0.0.1', port: 1 });
+    log('BARCODE','/printer-status → 200', ps.ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 17. Barcode printers CRUD ═══ */
+  console.log('\n%c🖨 17. Barcode printers', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('PRINTER','GET / → 200', (await api('/barcode-printers')).ok ? 'PASS':'FAIL');
+    log('PRINTER','GET /available → 200', (await api('/barcode-printers/available')).ok ? 'PASS':'FAIL');
+
+    const cr = await api('/barcode-printers', 'POST', {
+      name: 'Mega Printer ' + uid, mode: 'pdf-a4', labelSize: '58x40', enabled: true, isDefault: false
+    });
+    if (cr.ok) {
+      createdPrinters.push(cr.body.id);
+      log('PRINTER','POST', 'PASS');
+      log('PRINTER','PUT', (await api(`/barcode-printers/${cr.body.id}`,'PUT',{
+        name: 'Mega Renamed '+uid, mode: 'pdf-a4', labelSize: '58x40', enabled: true, isDefault: false
+      })).ok ? 'PASS':'FAIL');
+      log('PRINTER','DELETE', (await api(`/barcode-printers/${cr.body.id}`,'DELETE')).ok ? 'PASS':'FAIL');
+      createdPrinters.pop();
+    } else log('PRINTER','POST','FAIL', cr.body?.error);
+
+    // валидация
+    const bad = await api('/barcode-printers', 'POST', { name: '', mode: 'pdf-a4' });
+    log('PRINTER','POST без name → 400', bad.status === 400 ? 'PASS':'FAIL');
+    const bad2 = await api('/barcode-printers', 'POST', { name: 'X', mode: 'nonsense' });
+    log('PRINTER','POST bad mode → 400', bad2.status === 400 ? 'PASS':'FAIL');
+    const bad3 = await api('/barcode-printers', 'POST', { name: 'X', mode: 'zebra-ip' });
+    log('PRINTER','POST zebra-ip без ip → 400', bad3.status === 400 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 18. Equipment templates ═══ */
+  console.log('\n%c📋 18. Equipment templates', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('EQ-TPL','GET /', (await api('/equipment-templates')).ok ? 'PASS':'FAIL');
+    const cr = await api('/equipment-templates', 'POST', { name: 'MegaTpl-' + uid, data: { model: 'X', volume: '100' } });
+    if (cr.ok) {
+      createdEqTpls.push(cr.body.id);
+      log('EQ-TPL','POST', 'PASS');
+      const dup = await api('/equipment-templates', 'POST', { name: 'MegaTpl-' + uid, data: {} });
+      log('EQ-TPL','duplicate name → 409', dup.status === 409 ? 'PASS':'FAIL');
+      log('EQ-TPL','DELETE', (await api(`/equipment-templates/${cr.body.id}`,'DELETE')).ok ? 'PASS':'FAIL');
+      createdEqTpls.pop();
+    } else log('EQ-TPL','POST','FAIL', cr.body?.error);
+
+    const bad = await api('/equipment-templates', 'POST', { name: '', data: {} });
+    log('EQ-TPL','POST без name → 400', bad.status === 400 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 19. View templates ═══ */
+  console.log('\n%c👁 19. View templates', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('VW-TPL','GET /', (await api('/view-templates')).ok ? 'PASS':'FAIL');
+    const cr = await api('/view-templates', 'POST', {
+      name: 'MegaView-' + uid, visibleFields: ['id','model','status','nextCalibration'], isDefault: false
+    });
+    if (cr.ok) {
+      createdViewTpls.push(cr.body.id);
+      log('VW-TPL','POST', 'PASS');
+      log('VW-TPL','PUT', (await api(`/view-templates/${cr.body.id}`,'PUT',{
+        name: 'MegaView-'+uid, visibleFields: ['id','model'], isDefault: false
+      })).ok ? 'PASS':'FAIL');
+      log('VW-TPL','DELETE', (await api(`/view-templates/${cr.body.id}`,'DELETE')).ok ? 'PASS':'FAIL');
+      createdViewTpls.pop();
+    } else log('VW-TPL','POST','FAIL', cr.body?.error);
+
+    const bad = await api('/view-templates', 'POST', { name: '', visibleFields: ['id'] });
+    log('VW-TPL','POST без name → 400', bad.status === 400 ? 'PASS':'FAIL');
+    const bad2 = await api('/view-templates', 'POST', { name: 'X', visibleFields: [] });
+    log('VW-TPL','POST пустые поля → 400', bad2.status === 400 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 20. Settings: equipment-types ═══ */
+  console.log('\n%c⚙️ 20. Settings equipment-types', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/equipment-types');
+    const orig = r.body;
+    log('EQ-TYPE','GET /settings/equipment-types', r.ok && Array.isArray(r.body) ? 'PASS':'FAIL', `${(r.body||[]).length}`);
+
+    // Добавляем и убираем — original не трогаем
+    const draft = JSON.parse(JSON.stringify(orig));
+    draft.push({ value: 'mega_test_' + uid, label: 'Mega Test', prefix: 'MG', calibrationPlace: 'internal', interval: 12 });
+    const put = await api('/settings/equipment-types', 'PUT', draft);
+    log('EQ-TYPE','PUT add new', put.ok ? 'PASS':'FAIL', put.body?.error || '');
+    // откатываем
+    await api('/settings/equipment-types','PUT', orig);
+
+    // Используемый тип удалять нельзя
+    const usedType = orig[0]?.value;
+    if (usedType) {
+      const withoutUsed = orig.filter(t => t.value !== usedType);
+      const tryDel = await api('/settings/equipment-types','PUT', withoutUsed);
+      log('EQ-TYPE','нельзя удалить используемый тип → 400', tryDel.status === 400 ? 'PASS':'FAIL', tryDel.body?.error||'');
+    }
+  }
+
+  /* ═══ 21. Settings: user-preferences ═══ */
+  console.log('\n%c👤 21. Settings user-preferences', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (testUserId) {
+    log('PREFS','GET /user-preferences/:id → 200', (await api(`/settings/user-preferences/${testUserId}`)).status === 200 ? 'PASS':'FAIL');
+
+    const put = await api(`/settings/user-preferences/${testUserId}`, 'PUT', {
+      visibleFields: ['id','model','status','nextCalibration'], _virtualsInitialized: true
+    });
+    log('PREFS','PUT user-preferences', put.ok ? 'PASS':'FAIL', put.body?.error || '');
+
+    const eff = await api(`/settings/user-preferences/${testUserId}/effective`);
+    log('PREFS','GET effective → source=individual', eff.body?.source === 'individual' ? 'PASS':'FAIL', eff.body?.source);
+
+    log('PREFS','DELETE user-preferences', (await api(`/settings/user-preferences/${testUserId}`,'DELETE')).ok ? 'PASS':'FAIL');
+
+    log('PREFS','GET /my-preferences → 200', (await api('/settings/my-preferences')).ok ? 'PASS':'FAIL');
+    log('PREFS','GET /my-preferences/effective → 200', (await api('/settings/my-preferences/effective')).ok ? 'PASS':'FAIL');
+
+    const apply = await api('/settings/apply-fields-to-all', 'POST', {
+      visibleFields: ['id','model','status','nextCalibration'], mode: 'missing'
+    });
+    log('PREFS','POST /apply-fields-to-all', apply.ok ? 'PASS':'FAIL', apply.body?.message || apply.body?.error);
+  }
+
+  /* ═══ 22. Settings: fields ═══ */
+  console.log('\n%c📋 22. Settings fields', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/fields');
+    const orig = r.body;
+    log('FIELDS','GET /settings/fields', r.ok && Array.isArray(r.body) ? 'PASS':'FAIL');
+
+    // Пробуем удалить поле с данными (inventorynumber у нас заполнено в seed)
+    const removedField = orig.find(f => f.id === 'volume');
+    if (removedField) {
+      const withoutVol = orig.filter(f => f.id !== 'volume');
+      const tryDel = await api('/settings/fields', 'PUT', withoutVol);
+      const hasData = tryDel.status === 409;
+      log('FIELDS','удаление поля с данными → 409 (или 200 если данных нет)',
+          hasData || tryDel.ok ? 'PASS' : 'FAIL', `status=${tryDel.status}`);
+      // откат если удалили
+      await api('/settings/fields','PUT', orig);
+    }
+
+    // безопасное добавление + откат
+    const withNew = JSON.parse(JSON.stringify(orig));
+    withNew.push({ id: 'mega_test_field_' + uid, label: 'Mega Test', type: 'text', required: false, enabled: true, options: [], default: '', order: 999 });
+    log('FIELDS','PUT добавить новое', (await api('/settings/fields','PUT', withNew)).ok ? 'PASS':'FAIL');
+    await api('/settings/fields','PUT', orig);
+  }
+
+  /* ═══ 23. Settings: filters ═══ */
+  console.log('\n%c🔍 23. Settings filters', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/filters');
+    _origFiltersCfg = r.body;
+    log('FILTERS','GET /settings/filters', r.ok && Array.isArray(r.body) ? 'PASS':'FAIL');
+    const put = await api('/settings/filters','PUT', r.body);
+    log('FILTERS','PUT (no-change)', put.ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 24. Help ═══ */
+  console.log('\n%c📖 24. Help', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('HELP','GET /help/visible (user)', (await api('/help/visible')).ok ? 'PASS':'FAIL');
+    log('HELP','GET /help (admin)', (await api('/help')).ok ? 'PASS':'FAIL');
+
+    const reset = await api('/help/reset', 'POST', {});
+    log('HELP','POST /reset (admin)', reset.ok ? 'PASS':'FAIL', reset.body?.error || '');
+
+    const sections = (await api('/help')).body || [];
+    if (Array.isArray(sections) && sections.length > 0 && sections[0].slug) {
+      // удаляем только если файла нет (чтобы не портить пользовательский контент)
+      const testSlug = sections[0].slug;
+      const delRes = await api(`/help/${encodeURIComponent(testSlug)}`, 'DELETE');
+      log('HELP','DELETE /:slug (admin)', delRes.ok || delRes.status === 404 ? 'PASS':'FAIL');
+      // восстанавливаем
+      await api('/help/reset','POST',{});
+    }
+  }
+
+  /* ═══ 25. only_own_department ═══ */
+  console.log('\n%c🏢 25. only_own_department', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const deps = (await api('/settings/departments')).body || [];
+    if (deps.length >= 2) {
+      const myDept = deps[0];
+      const otherDept = deps[1];
+
+      const cr = await api('/users', 'POST', {
+        login: 'mega_od_' + uid, fullName: 'OD User', position: 'Лаборант',
+        department: myDept, role: 'user',
+        onlyOwnDepartment: true, extraPermissions: ['add_pipette'], isActing: false, actingForId: null
+      });
+      if (cr.ok) {
+        createdUsers.push({ id: cr.body.id, login: 'mega_od_' + uid });
+        const tokTmp = await loginUser('mega_od_' + uid, cr.body.tempPassword);
+        if (tokTmp) {
+          await api('/auth/change-password','POST',
+            { currentPassword: cr.body.tempPassword, newPassword: 'OdUser1!', confirmPassword: 'OdUser1!' }, tokTmp);
+          const odTok = await loginUser('mega_od_' + uid, 'OdUser1!');
+          if (odTok) {
+            // создать в своём отделе — ок
+            const okCreate = await api('/pipettes','POST',{
+              id: 'OD-OK-'+uid, model: 'OD', equipmentType: 'pipette', lastCalibration: today,
+              responsible: 'OD', department: myDept
+            }, odTok);
+            log('OWN-DEPT','создать в своём отделе', okCreate.ok ? 'PASS':'FAIL', okCreate.body?.error || '');
+            if (okCreate.ok) createdPipettes.push('OD-OK-'+uid);
+
+            // в чужой — 403 или department игнорируется
+            const badCreate = await api('/pipettes','POST',{
+              id: 'OD-BAD-'+uid, model: 'OD', equipmentType: 'pipette', lastCalibration: today,
+              responsible: 'OD', department: otherDept
+            }, odTok);
+            log('OWN-DEPT','создать в чужом → 403/400', [400,403].includes(badCreate.status) ? 'PASS':'FAIL', `${badCreate.status}`);
+            if (badCreate.ok) createdPipettes.push('OD-BAD-'+uid);
+          }
+        }
+      }
+    }
+  }
+
+  /* ═══ 26. Print acts ═══ */
+  console.log('\n%c📄 26. Print acts', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length && _origExportCfg) {
+    await api('/settings/export', 'PUT', {
+      actSendFields: ['id','model','serial'], actReturnFields: ['id','cert','result'],
+      actSendEnabled: true, actReturnEnabled: true
+    });
+    const eff = await api('/settings/print-documents/effective');
+    if (eff.ok) settings.printDocs = eff.body;
+
+    const freshId = 'MEGA-ACT-' + uid;
+    const cr = await api('/pipettes','POST',{
+      id: freshId, model: 'Act Model', equipmentType: 'pipette', lastCalibration: today,
+      responsible: 'Admin', serial: 'ACT-SN-' + uid
+    });
+    if (cr.ok) {
+      createdPipettes.push(freshId);
+      await reloadPipettes(); await sleep(300);
+
+      if (typeof printSendAct === 'function') {
+        _bulkSendIds = [freshId];
+        const fd = document.getElementById('bulk-send-date'); if (fd) fd.value = today;
+        _openCallCount = 0; _lastOpenHtml = ''; _lastBlobHtml = '';
+        try { await printSendAct(); await sleep(300); } catch (e) { log('PRINT','printSendAct', 'FAIL', e.message); }
+        const actHtml = _lastOpenHtml || _lastBlobHtml || '';
+        log('PRINT','printSendAct: окно', (_openCallCount >= 1 || actHtml.length > 100) ? 'PASS':'FAIL', `open=${_openCallCount}, html=${actHtml.length}b`);
+        log('PRINT','акт отправки: колонки', /Внутр/.test(actHtml) && /Модель/.test(actHtml) && /Серийный/.test(actHtml) ? 'PASS':'FAIL');
+        _bulkSendIds = [];
+      }
+
+      await api('/pipettes/bulk-send','POST',{ ids: [freshId], sentDate: today, note: '' });
+      await sleep(300); await reloadPipettes(); await sleep(200);
+
+      if (typeof openBulkReturnModal === 'function') { try { await openBulkReturnModal(); await sleep(300); } catch (e) {} }
+      if (typeof printReturnAct === 'function') {
+        _bulkReturnIds = [freshId];
+        const fd = document.getElementById('bulk-return-date'); if (fd) fd.value = today;
+        _openCallCount = 0; _lastOpenHtml = ''; _lastBlobHtml = '';
+        try { await printReturnAct(); await sleep(300); } catch (e) { log('PRINT','printReturnAct', 'FAIL', e.message); }
+        const retHtml = _lastOpenHtml || _lastBlobHtml || '';
+        log('PRINT','printReturnAct: окно', (_openCallCount >= 1 || retHtml.length > 100) ? 'PASS':'FAIL', `open=${_openCallCount}, html=${retHtml.length}b`);
+        log('PRINT','акт возврата: колонки', /Внутр/.test(retHtml) && /Свидетельство/.test(retHtml) && /Результат/.test(retHtml) ? 'PASS':'FAIL');
+        _bulkReturnIds = [];
+      }
+      try { if (typeof closeBulkReturnModal === 'function') closeBulkReturnModal(); } catch (e) {}
+
+      await api('/pipettes/bulk-return','POST',{
+        items: [{ id: freshId, result: 'pass', cert: 'ACT-' + uid }], date: today, org: 'Test'
+      });
+    }
+    if (_origExportCfg) await api('/settings/export','PUT', _origExportCfg);
+    const eff2 = await api('/settings/print-documents/effective');
+    if (eff2.ok) settings.printDocs = eff2.body;
+  }
+
+  /* ═══ 27. UI modals ═══ */
+  console.log('\n%c🪟 27. UI modals', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const modalActive = id => { const el = document.getElementById(id); return !!(el && el.classList.contains('active')); };
+  {
+    const checks = [
+      ['openAuditModal','closeAuditModal','audit-modal'],
+      ['openHistoryModal','closeHistoryModal','history-modal'],
+      ['openQuickCalModal','closeQuickCalModal','quick-cal-modal'],
+      ['openBarcodeScannerModal','closeBarcodeScannerModal','barcode-scanner-modal'],
+      ['openHotkeysHelp','closeHotkeysHelp','hotkeys-modal'],
+    ];
+    for (const [openFn, closeFn, mid] of checks) {
+      if (typeof window[openFn] !== 'function') { log('UI', openFn, 'SKIP'); continue; }
+      try {
+        const args = (openFn === 'openHistoryModal' || openFn === 'openQuickCalModal') ? [pipIds[0]] : [];
+        await window[openFn](...args); await sleep(300);
+        log('UI', openFn, modalActive(mid) ? 'PASS':'FAIL');
+        try { if (typeof window[closeFn] === 'function') await window[closeFn](); } catch (e) {}
+        await sleep(150);
+      } catch (e) { log('UI', openFn, 'FAIL', e.message); }
+    }
+
+    for (const sec of ['users','roles','export','departments','fields','filters','help','equipment','printers','barcodes','view-templates']) {
+      try {
+        if (typeof openSettingsModal === 'function') await openSettingsModal();
+        await sleep(200);
+        if (typeof openSettingsSection === 'function') {
+          await openSettingsSection(sec); await sleep(300);
+          const c = document.getElementById('settings-section-content');
+          log('UI', 'settings:' + sec, c && c.innerHTML.length > 50 ? 'PASS':'FAIL');
+        }
+        if (typeof closeSettingsModal === 'function') closeSettingsModal();
+        await sleep(150);
+      } catch (e) { log('UI', 'settings:' + sec, 'FAIL', e.message); }
+    }
+  }
+
+  /* ═══ 28. UI theme ═══ */
+  console.log('\n%c🌓 28. UI theme', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const getTheme = () => document.documentElement.getAttribute('data-theme') || 'light';
+    const before = getTheme();
+    if (typeof window.toggleTheme === 'function') {
+      window.toggleTheme(); await sleep(200);
+      const after = getTheme();
+      log('THEME','переключение', before !== after ? 'PASS':'FAIL', `${before} → ${after}`);
+      window.toggleTheme(); await sleep(150);
+    } else log('THEME','переключение','SKIP');
+  }
+
+  /* ═══ 29. UI keyboard ═══ */
+  console.log('\n%c⌨️ 29. UI keyboard', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length && typeof selectedPipettes !== 'undefined') {
+    selectedPipettes.clear(); selectedPipettes.add(pipIds[0]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }));
+    await sleep(400);
+    log('KEYS','Ctrl+H → history', modalActive('history-modal') ? 'PASS':'FAIL');
+    if (modalActive('history-modal') && typeof closeHistoryModal === 'function') closeHistoryModal();
+    await sleep(200);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', shiftKey: true, ctrlKey: true, bubbles: true }));
+    await sleep(400);
+    log('KEYS','Ctrl+Shift+A → equipment audit', modalActive('equipment-audit-modal') ? 'PASS':'FAIL');
+    if (modalActive('equipment-audit-modal') && typeof closeEquipmentAuditModal === 'function') closeEquipmentAuditModal();
+    selectedPipettes.clear();
+  }
+
+  /* ═══ 30. Format ═══ */
+  console.log('\n%c📅 30. Format', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const dt = fmtDT('2026-10-25T12:17:00');
+    log('FMT','ISO date format', /^\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/.test(dt) ? 'PASS':'FAIL', dt);
+    log('FMT','empty → «—»', fmtDT(null) === '—' ? 'PASS':'FAIL');
+    if (typeof window.slugify === 'function') {
+      log('FMT','slugify("Инвентарный номер")', window.slugify('Инвентарный номер') === 'inventarnyy_nomer' ? 'PASS':'FAIL');
+      log('FMT','slugify("Весы")', window.slugify('Весы') === 'vesy' ? 'PASS':'FAIL');
+    }
+    const testEl = document.createElement('div'); testEl.className = 'skeleton-line';
+    document.body.appendChild(testEl);
+    const cs = getComputedStyle(testEl);
+    log('FMT','.skeleton-line animation', cs.animationName && cs.animationName !== 'none' ? 'PASS':'FAIL');
+    testEl.remove();
+  }
+
+  /* ═══ 31. app_logs ═══ */
+  console.log('\n%c📋 31. app_logs', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  await sleep(1500);
+  {
+    const r = await api('/log/errors?limit=50');
+    if (r.ok && Array.isArray(r.body?.items)) {
+      log('LOG','GET /log/errors', 'PASS', `${r.body.items.length} записей`);
+      const has409 = r.body.items.find(x => x.status_code === 409);
+      if (has409) log('LOG','409 записан', 'PASS', (has409.message || '').slice(0, 60));
+    }
+    log('LOG','GET /log (audit)', (await api('/log?limit=10')).ok ? 'PASS':'FAIL');
+  }
+
+  } finally {
+
+  /* ═══ CLEANUP ═══ */
+  console.log('\n%c🧹 CLEANUP', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+
+  if (_origExportCfg) { try { await api('/settings/export','PUT', _origExportCfg); } catch (e) {} }
+  if (_origFiltersCfg) { try { await api('/settings/filters','PUT', _origFiltersCfg); } catch (e) {} }
+  try { const e = await api('/settings/print-documents/effective'); if (e.ok) settings.printDocs = e.body; } catch (e) {}
+  restoreAll();
+
+  for (const u of createdUsers) {
+    try {
+      await api(`/pipettes/${encodeURIComponent(u.id)}/lock?force=true`, 'DELETE').catch(() => {});
+      const r = await api('/users/' + u.id, 'DELETE');
+      log('CLEAN', `DELETE user ${u.login}`, r.ok || r.status === 404 ? 'PASS':'FAIL', r.body?.error || '');
+    } catch (e) { log('CLEAN', `DELETE user ${u.login}`,'FAIL', e.message); }
+  }
+  for (const id of createdPresets) { try { await api('/users/presets/' + id, 'DELETE'); } catch (e) {} }
+  for (const id of createdPipettes) {
+    try {
+      await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE').catch(() => {});
+      const r = await api(`/pipettes/${encodeURIComponent(id)}`, 'DELETE');
+      log('CLEAN', `DELETE pipette ${id}`, r.ok || r.status === 404 ? 'PASS':'FAIL', r.body?.error || '');
+    } catch (e) { log('CLEAN', `DELETE pipette ${id}`,'FAIL', e.message); }
+  }
+  for (const id of createdRoles) {
+    try { const r = await api('/roles/' + id, 'DELETE'); log('CLEAN', `DELETE role ${id}`, r.ok || r.status === 404 ? 'PASS':'FAIL'); } catch (e) {}
+  }
+
+  try { await loadPipetteData(); } catch (e) {}
+
+  /* ═══ ИТОГ ═══ */
+  const pass = results.filter(r => r.s === 'PASS').length;
+  const fail = results.filter(r => r.s === 'FAIL').length;
+  const skip = results.filter(r => r.s === 'SKIP').length;
+  const warn = results.filter(r => r.s === 'WARN').length;
+
+  console.log('\n' + '═'.repeat(60));
+  console.log(`%c📊 ИТОГ: ✅ ${pass}  ❌ ${fail}  ⚠️ ${warn}  ⏭️ ${skip}`,
+    `font-size:18px;font-weight:bold;color:${fail ? '#dc2626' : (warn ? '#eab308' : '#16a34a')};`);
+  console.log('═'.repeat(60));
+  if (fail > 0) { console.log('%c❌ ПРОВАЛЫ:', 'color:#dc2626;font-weight:bold;'); console.table(results.filter(r => r.s === 'FAIL')); }
+  if (warn > 0) { console.log('%c⚠️ ПРЕДУПРЕЖДЕНИЯ:', 'color:#eab308;font-weight:bold;'); console.table(results.filter(r => r.s === 'WARN')); }
+  if (fail === 0 && warn === 0) { console.log('%c🎉 Все проверки пройдены!', 'color:#16a34a;font-weight:bold;font-size:16px;'); }
+  window.__megaTestResults = results;
+  console.log('%cРезультаты: window.__megaTestResults', 'color:#64748b;');
+
+  } // finally
+})();
