@@ -37,12 +37,12 @@ router.get('/paged', authenticate, async (req, res) => {
     const warnDays = await getWarnDays();
     const statusExpr = sqlComputedStatus(warnDays);
 
-        const { empty, baseWhere, baseParams } = buildDepartmentScope(req.user);
+    const { empty, baseWhere, baseParams } = buildDepartmentScope(req.user);
     if (empty) {
       return res.json({ items: [], total: 0, page: 1, limit, totalPages: 0,
         counters: { ok: 0, warn: 0, danger: 0, total: 0 } });
     }
-         
+
     const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
     let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
     whereSql += filterSql;
@@ -54,20 +54,20 @@ router.get('/paged', authenticate, async (req, res) => {
       statusFilterSql = ` AND (${statusExpr}) = ?`;
       statusFilterParams.push(String(filters.status));
     }
-      
+
     let exactFilter = '';
     let exactParams = [];
     const searchStr = (search || '').trim();
 
     if (searchStr) {
-        const exSql = `id = ? OR serial = ? OR model = ? OR manufacturer = ? OR department = ? OR responsible = ? OR JSON_SEARCH(custom_data, 'one', ?) IS NOT NULL`;
-        const exParams = [searchStr, searchStr, searchStr, searchStr, searchStr, searchStr, searchStr];
-        
-        const [exRows] = await db.query(`SELECT id FROM pipettes WHERE ${exSql} LIMIT 1`, exParams);
-            if (exRows.length > 0) {
-            exactFilter = ` AND (${exSql})`;
-            exactParams = exParams;
-        }
+      const exSql = `id = ? OR serial = ? OR model = ? OR manufacturer = ? OR department = ? OR responsible = ? OR JSON_SEARCH(custom_data, 'one', ?) IS NOT NULL`;
+      const exParams = [searchStr, searchStr, searchStr, searchStr, searchStr, searchStr, searchStr];
+
+      const [exRows] = await db.query(`SELECT id FROM pipettes WHERE ${exSql} LIMIT 1`, exParams);
+      if (exRows.length > 0) {
+        exactFilter = ` AND (${exSql})`;
+        exactParams = exParams;
+      }
     }
 
     const finalWhere = whereSql + statusFilterSql + exactFilter;
@@ -86,7 +86,7 @@ router.get('/paged', authenticate, async (req, res) => {
      FROM pipettes${whereSql}`,
       allParams
     );
-    
+
     const counters = {
       total: Number(counterRows[0].total) || 0,
       ok: Number(counterRows[0].ok) || 0,
@@ -98,7 +98,7 @@ router.get('/paged', authenticate, async (req, res) => {
       unknownDate: Number(counterRows[0].unknown_date) || 0,
       inactive: Number(counterRows[0].inactive) || 0,
     };
-    
+
     const [countRows] = await db.query(
       `SELECT COUNT(*) AS c FROM pipettes${finalWhere}`,
       finalParams
@@ -213,7 +213,7 @@ router.get('/stats', authenticate, async (req, res) => {
       return res.json({ counters: { ok: 0, warn: 0, danger: 0, total: 0 },
         reminders: { danger: [], warn: [] } });
     }
-        
+
     const whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : '';
 
     const [counterRows] = await db.query(
@@ -291,6 +291,7 @@ router.get('/all', authenticate, async (req, res) => {
 
     const { empty, baseWhere, baseParams } = buildDepartmentScope(req.user);
     if (empty) return res.json({ items: [] });
+
     const { sql: filterSql, params: filterParams } = buildFiltersWhere(filters, search);
     let whereSql = baseWhere.length ? ' WHERE ' + baseWhere.join(' AND ') : ' WHERE 1=1';
     whereSql += filterSql;
@@ -302,28 +303,27 @@ router.get('/all', authenticate, async (req, res) => {
       statusFilterSql = ` AND (${statusExpr}) = ?`;
       statusFilterParams.push(String(filters.status));
     }
-      
+
     let exactFilter = '';
     let exactParams = [];
     const searchStr = (search || '').trim();
 
     if (searchStr) {
-        const exSql = `id = ? OR serial = ? OR model = ? OR manufacturer = ? OR department = ? OR responsible = ? OR JSON_SEARCH(custom_data, 'one', ?) IS NOT NULL`;
-        const exParams = [searchStr, searchStr, searchStr, searchStr, searchStr, searchStr, searchStr];
-        
-        const [exRows] = await db.query(`SELECT id FROM pipettes WHERE ${exSql} LIMIT 1`, exParams);
-                
-        if (exRows.length > 0) {
-            exactFilter = ` AND (${exSql})`;
-            exactParams = exParams;
-        }
+      const exSql = `id = ? OR serial = ? OR model = ? OR manufacturer = ? OR department = ? OR responsible = ? OR JSON_SEARCH(custom_data, 'one', ?) IS NOT NULL`;
+      const exParams = [searchStr, searchStr, searchStr, searchStr, searchStr, searchStr, searchStr];
+
+      const [exRows] = await db.query(`SELECT id FROM pipettes WHERE ${exSql} LIMIT 1`, exParams);
+      if (exRows.length > 0) {
+        exactFilter = ` AND (${exSql})`;
+        exactParams = exParams;
+      }
     }
 
     const finalWhere = whereSql + statusFilterSql + exactFilter;
     const finalParams = [...allParams, ...statusFilterParams, ...exactParams];
-    
+
     const orderSql = sqlOrderBy(sort, dir, warnDays);
-   
+
     const ALL_HARD_LIMIT = 50000;
 
     const [countRows] = await db.query(
@@ -373,7 +373,7 @@ router.get('/all', authenticate, async (req, res) => {
       mergeCustomList(rows);
     }
 
-   res.json({
+    res.json({
       items: rows,
       total: totalCount,
       truncated,
@@ -426,7 +426,7 @@ router.get('/audit', authenticate, requireAnyPermission(['view_log']), async (re
     const total = Number(cnt[0].c) || 0;
 
     const [rows] = await db.query(
-       `SELECT l.id, l.user_id, l.user_full_name, l.action, l.details, l.pipette_id, l.category, l.timestamp, p.model
+      `SELECT l.id, l.user_id, l.user_full_name, l.action, l.details, l.pipette_id, l.category, l.timestamp, p.model
        FROM audit_log l
        LEFT JOIN pipettes p ON p.id = l.pipette_id
        ${whereSql}
@@ -480,7 +480,7 @@ router.get('/:id/audit', authenticate, requireAnyPermission(['view_audit', 'view
     if (dateTo)   { parts.push('DATE(l.timestamp) <= ?'); params.push(dateTo); }
 
     const [rows] = await db.query(
-       `SELECT l.id, l.user_id, l.user_full_name, l.action, l.details, l.pipette_id, l.category, l.timestamp, p.model
+      `SELECT l.id, l.user_id, l.user_full_name, l.action, l.details, l.pipette_id, l.category, l.timestamp, p.model
        FROM audit_log l
        LEFT JOIN pipettes p ON p.id = l.pipette_id
        WHERE ${parts.join(' AND ')}
@@ -595,7 +595,8 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
   let department  = req.body.department;
   let responsible = req.body.responsible;
 
-  if (req.user.is_acting) {
+  // Админ не подменяется данными и.о. — даже если случайно его включили
+  if (req.user.is_acting && !req.user._isAdmin) {
     responsible = req.user.acting_full_name  || '';
     department  = req.user.acting_department || '';
   }
@@ -639,7 +640,7 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
     }
   }
 
-  if (req.user.only_own_department && req.user.role !== 'admin') {
+  if (req.user.only_own_department && !req.user._isAdmin) {
     if (!req.user.department) {
       return res.status(403).json({ error: 'У вас не указан отдел, создание оборудования недоступно' });
     }
@@ -685,7 +686,7 @@ router.post('/', authenticate, requireAnyPermission(['add_pipette', 'manage_pipe
       let barcodeValue = null;
       let barcodeSource = null;
 
-      if (req.user.role === 'admin' && rawBarcode && String(rawBarcode).trim()) {
+      if (req.user._isAdmin && rawBarcode && String(rawBarcode).trim()) {
         const trimmed = stripNulls(rawBarcode).trim();
         if (trimmed.length > BARCODE_MAX_LEN) {
           const err = new Error(`Штрихкод слишком длинный (максимум ${BARCODE_MAX_LEN} символов)`);
@@ -764,13 +765,14 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
 
   const updates = req.body;
 
-  if (req.user.is_acting) {
+  // Админ не подменяется данными и.о. — даже если случайно его включили
+  if (req.user.is_acting && !req.user._isAdmin) {
     updates.responsible = req.user.acting_full_name  || '';
     updates.department  = req.user.acting_department || '';
   }
 
   const stripNullsUpd = (s) => String(s || '').replace(/\u0000/g, '');
-  const manualBarcode = (req.user.role === 'admin' && updates.barcode !== undefined)
+  const manualBarcode = (req.user._isAdmin && updates.barcode !== undefined)
     ? stripNullsUpd(updates.barcode).trim() : null;
   if (manualBarcode !== null && manualBarcode.length > BARCODE_MAX_LEN) {
     return res.status(400).json({ error: `Штрихкод слишком длинный (максимум ${BARCODE_MAX_LEN} символов)` });
@@ -843,16 +845,16 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     }
   }
 
-   let oldValues = null;
-   try {
-   const result = await withTransaction(async (conn) => {
-   const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
-   oldValues = { ...p };
-   const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
-      
-      // 🆕 Проверяем: если блокировка наша (или её нет) — пропускаем проверку конфликта
+  let oldValues = null;
+  try {
+    const result = await withTransaction(async (conn) => {
+      const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
+      oldValues = { ...p };
+      const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
+
+      // Проверяем: если блокировка наша (или её нет) — пропускаем проверку конфликта
       const hasForeignLock = lockChk.length > 0 && String(lockChk[0].user_id) !== String(req.user.id);
-      
+
       if (updates.updatedAt && p.updated_at && hasForeignLock) {
         const clientTime = new Date(updates.updatedAt).getTime();
         const dbTime = new Date(p.updated_at).getTime();
@@ -862,13 +864,13 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
           throw err;
         }
       }
-      if (updates.department !== undefined && req.user.role !== 'admin' && updates.department !== p.department) {
+      if (updates.department !== undefined && !req.user._isAdmin && updates.department !== p.department) {
         const err = new Error('Смена отдела доступна только администратору');
         err.status = 403;
         throw err;
       }
 
-      if (req.user.role !== 'admin' && !req.user.is_acting) {
+      if (!req.user._isAdmin && !req.user.is_acting) {
         delete updates.responsible;
       }
 
@@ -944,17 +946,17 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       return { oldType, newType, regeneratedId };
     });
 
-       const fieldLabels = {
+    const fieldLabels = {
       model: 'Модель', serial: 'Серийный номер', manufacturer: 'Производитель',
       equipment_type: 'Тип', volume: 'Объём', department: 'Отдел',
       interval: 'МПИ (мес.)', last_calibration: 'Дата поверки',
       cert: 'Свидетельство', last_result: 'Результат', active: 'Статус',
       responsible: 'Ответственный', location: 'Место', notes: 'Примечание'
     };
-        const changes = [];
+    const changes = [];
 
     if (!oldValues) {
-      oldValues = {};  
+      oldValues = {};
     }
 
     for (const [col, label] of Object.entries(fieldLabels)) {
@@ -972,7 +974,7 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
         oldVal = Number(oldVal) ? 'В работе' : 'Не используется';
         newVal = (newVal === false || newVal === 0 || newVal === 'false' || newVal === '0') ? 'Не используется' : 'В работе';
       }
-        if (String(oldVal) !== String(newVal)) {
+      if (String(oldVal) !== String(newVal)) {
         if (!oldVal && newVal) {
           changes.push(`${label}: + ${newVal}`);
         } else if (oldVal && !newVal) {
@@ -990,7 +992,7 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       const [fcs] = await db.query('SELECT id, label FROM field_config');
       for (const f of fcs) customLabels[f.id] = f.label;
     }
-        for (const key of allCustomKeys) {
+    for (const key of allCustomKeys) {
       const oldV = oldCustom[key] ?? '';
       const newV = customUpdates[key] !== undefined ? customUpdates[key] : oldV;
       if (String(oldV) !== String(newV)) {
