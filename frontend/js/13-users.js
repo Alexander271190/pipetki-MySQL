@@ -459,6 +459,12 @@ async function editUserSetting(id) {
     const users = await apiRequest('/users');
     const u = users.find(x => x.id === id);
     if (!u) return;
+    
+     // Запрещаем редактировать встроенного админа, если мы не он
+    if (u.login === 'admin' && currentUser.login !== 'admin') {
+      showToast('Встроенного администратора может редактировать только он сам', 'error');
+      return;
+    }
 
     document.getElementById('usr-edit-id').value = u.id;
     document.getElementById('usr-login').value = u.login;
@@ -483,10 +489,10 @@ async function editUserSetting(id) {
     const roleSel = document.getElementById('usr-role');
     roleSel.value = u.role;
     
-    // Если редактируем админа, а мы сами не главный админ — блокируем селект
-    if (u.isAdmin && currentUser.role !== 'admin') {
+    // Если редактируем админа, а мы сами не встроенный админ — блокируем селект
+    if (u.isAdmin && currentUser.login !== 'admin') {
       roleSel.disabled = true;
-      roleSel.title = 'Только главный администратор может менять роль';
+      roleSel.title = 'Только встроенный администратор может менять роль';
     } else {
       roleSel.disabled = false;
       roleSel.title = '';
