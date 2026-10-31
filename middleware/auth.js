@@ -62,16 +62,19 @@ const authenticate = async (req, res, next) => {
     }
 
     // Получаем права из роли
+    let roleCacheError = false;
     try {
       user._roleDef = await roleCache.getRoleDef(user.role);
     } catch (e) {
-      console.warn('roleCache недоступен, fallback:', e.message);
+      roleCacheError = true;
+      console.warn('[WARN] roleCache недоступен:', e.message);
       user._roleDef = null;
     }
 
-    user._isAdmin = user._roleDef
-      ? !!user._roleDef.isAdmin
-      : user.role === 'admin'; // fallback
+    if (!user._roleDef && !roleCacheError) {
+      console.warn(`[WARN] Роль не найдена: role=${user.role}, user=${user.id}. Права не выданы.`);
+    }
+    user._isAdmin = !!(user._roleDef && user._roleDef.isAdmin);
 
     user._perms = user._isAdmin
       ? ['*']
