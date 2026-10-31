@@ -220,13 +220,18 @@ function renderUserEditForm() {
       
       <div class="form-row">
        <div class="form-group"><label>Роль</label>
-          <select id="usr-role" onchange="onUserRoleChange(this.value)">
-            ${(_cachedRolesList || []).map(r => {
-              // Скрываем админские роли для не-админов
-              if (r.isAdmin && !isAdmin()) return '';
-              return `<option value="${esc(r.value)}" data-is-admin="${r.isAdmin ? 1 : 0}">${esc(r.name)}</option>`;
-            }).join('')}
-          </select>
+          <div style="display:flex; gap:8px;">
+            <select id="usr-role" style="flex:1;" onchange="onUserRoleChange(this.value)">
+              ${(_cachedRolesList || []).map(r => {
+                // Скрываем админские роли для не-админов
+                if (r.isAdmin && !isAdmin()) return '';
+                return `<option value="${esc(r.value)}" data-is-admin="${r.isAdmin ? 1 : 0}">${esc(r.name)}</option>`;
+              }).join('')}
+            </select>
+            <button type="button" class="btn btn-secondary" onclick="openQuickRoleModal()" title="Создать новую роль" style="white-space:nowrap;">
+              <i class="fa-solid fa-plus"></i> Новая роль
+            </button>
+          </div>
         </div>
         <div class="form-group"><label>Строк на странице</label>
           <select id="usr-page-size" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;">
@@ -478,11 +483,13 @@ async function editUserSetting(id) {
     const roleSel = document.getElementById('usr-role');
     roleSel.value = u.role;
     
-    // Если редактируем админа, а мы сами не админ — блокируем селект
-    if (u.isAdmin && !isAdmin()) {
+    // Если редактируем админа, а мы сами не главный админ — блокируем селект
+    if (u.isAdmin && currentUser.role !== 'admin') {
       roleSel.disabled = true;
+      roleSel.title = 'Только главный администратор может менять роль';
     } else {
       roleSel.disabled = false;
+      roleSel.title = '';
     }
     
     document.getElementById('user-form-title').innerHTML = '<i class="fa-solid fa-pen"></i> Редактирование: ' + esc(u.login);
@@ -1371,4 +1378,89 @@ function toggleUserPrintField(docKey, fieldId, checked) {
   if (checked) set.add(fieldId);
   else set.delete(fieldId);
   _userViewPrintDocs[docKey].fields = [...set];
+}
+
+// ============================================================
+// БЫСТРОЕ СОЗДАНИЕ РОЛИ ИЗ КАРТОЧКИ ПОЛЬЗОВАТЕЛЯ
+// ============================================================
+function openQuickRoleModal() {
+  if (!isAdmin()) {
+    showToast('Только администратор может создавать роли', 'error');
+    return;
+  }
+
+  const modalHtml = `
+    <div class="modal-overlay active" id="quick-role-modal" style="z-index:1000;">
+      <div class="modal" style="max-width: 450px;">
+        <h2><i class="fa-solid fa-user-shield"></i> Новая роль</h2>
+        
+        <div class="form-group">
+          <label>Название роли *</label>
+          <input type="text" id="quick-role-name" placeholder="Например: Администратор 1" autofocus>
+        </div>
+        
+        <div class="form-group" style="margin-top:12px; padding:10px; background:var(--card-alt); border-radius:6px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" id="quick-role-is-admin" style="width:18px;height:18px;">
+            <span style="font-weight:600;color:var(--text-strong);">Дать все права администратора</span>
+          </label>
+          <small style="color:var(--text-muted);margin-top:4px;display:block;margin-left:28px;">
+            Пользователи с этой ролью получат полный доступ к системе. Отдельные права настраивать не нужно.
+          </small>
+        </div>
+
+        <div class="form-actions" style="margin-top:20px;">
+          <button class="btn btn-secondary" onclick="document.getElementById('quick-role-modal').remove()">Отмена</button>
+          <button class="btn btn-success" onclick="saveQuickRole()"><i class="fa-solid fa-floppy-disk"></i> Создать</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  setTimeout(() => document.getElementById('quick-role-name').focus(), 100);
+}
+
+async function saveQuickRole() {
+  const name = document.getElementById('quick-role-name').value.trim();
+  const isAdminRole = document.getElementById('quick-role-is-admin').checked;
+  
+  if (!name) { 
+    showToast('Укажите название роли', 'error'); 
+    return; 
+  }
+  
+  const btn = document.querySelector('#quick-role-modal .btn-success');
+  btn.disabled = true; 
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Создание...';
+
+  try {
+    // Отправляем запрос (права пустые, если это админ - бэкенд сам их проигнорирует)
+    await apiRequest('/roles', 'POST', { name, permissions: [], isAdmin: isAdminRole });
+    
+    // Обновляем кэш ролей
+    _cachedRolesList = await apiRequest('/roles');
+    
+    // Обновляем выпадающий список в текущей открытой форме
+    const roleSel = document.getElementById('usr-role');
+    if (roleSel) {
+      roleSel.innerHTML = _cachedRolesList.map(r => {
+        if (r.isAdmin && !isAdmin()) return '';
+        return `<option value="${esc(r.value)}" data-is-admin="${r.isAdmin ? 1 : 0}">${esc(r.name)}</option>`;
+      }).join('');
+      
+      // Находим ID только что созданной роли и выбираем её
+      const newRole = _cachedRolesList.find(r => r.name === name);
+      if (newRole) {
+        roleSel.value = newRole.value;
+        onUserRoleChange(newRole.value);
+      }
+    }
+    
+    showToast('Роль создана', 'success');
+    document.getElementById('quick-role-modal').remove();
+  } catch (e) {
+    showToast(e.message, 'error');
+    btn.disabled = false; 
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Создать';
+  }
 }
