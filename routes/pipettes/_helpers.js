@@ -12,9 +12,6 @@ const USER_COLUMNS = 'id, login, password, full_name, position, department, role
 const AUDIT_COLUMNS = 'id, user_id, user_full_name, action, details, pipette_id, category, timestamp';
 const PRINTER_COLUMNS = 'id, name, department, mode, ip, port, label_size, enabled, is_default, sort_order';
 
-
-
-
 // ============================================================
 // КОНСТАНТЫ
 // ============================================================
@@ -111,7 +108,7 @@ async function applyIdChange(oldId, newId, conn) {
 }
 
 // ============================================================
-// 🆕 Скоуп по отделу — общий для /paged, /ids, /stats, /all.
+// Скоуп по отделу — общий для /paged, /ids, /stats, /all.
 // Возвращает: { empty, baseWhere, baseParams }.
 //   empty = true — у и.о./пользователя нет отдела, роут должен
 //                  вернуть пустой результат (что именно — решает роут).
@@ -127,7 +124,7 @@ function buildDepartmentScope(user) {
     if (!user.acting_department) return { empty: true, baseWhere, baseParams };
     baseWhere.push('department = ?');
     baseParams.push(user.acting_department);
-  } else if (user.role !== 'admin' && user.only_own_department) {
+  } else if (!user._isAdmin && user.only_own_department) {
     if (!user.department) return { empty: true, baseWhere, baseParams };
     baseWhere.push('department = ?');
     baseParams.push(user.department);
@@ -141,7 +138,7 @@ function buildDepartmentScope(user) {
 // ============================================================
 function canAccessDepartment(user, department) {
   if (!user) return false;
-  if (user.role === 'admin') return true;
+  if (user._isAdmin) return true;
   if (user.is_acting) {
     if (!user.acting_department) return false;
     return department === user.acting_department;
@@ -182,7 +179,7 @@ async function findPipetteOrFail(executor, id, user, { forUpdate = false } = {})
 // Меняешь порядок/условия — меняй ТОЛЬКО здесь.
 // ═══════════════════════════════════════════════════════════════════
 function sqlComputedStatus(warnDays) {
-   // ⚠️ ТОЛЬКО числа, никогда не строки. Принудительный каст защищает
+  // ⚠️ ТОЛЬКО числа, никогда не строки. Принудительный каст защищает
   // от SQL-инъекции, если warnDays придёт из query/body.
   const n = Number(warnDays);
   const wd = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
@@ -227,9 +224,9 @@ function buildFiltersWhere(filters, search) {
   const params = [];
 
   // Поиск по 7 колонкам
-     if (search && String(search).trim()) {
+  if (search && String(search).trim()) {
     const s = String(search).trim();
-    const q = `%${s}%`;    
+    const q = `%${s}%`;
     parts.push(`(
       id LIKE ? OR model LIKE ? OR serial LIKE ? OR manufacturer LIKE ?
       OR department LIKE ? OR responsible LIKE ?
@@ -237,7 +234,7 @@ function buildFiltersWhere(filters, search) {
     )`);
     params.push(q, q, q, q, q, q, q);
   }
-  
+
   if (filters && typeof filters === 'object' && !Array.isArray(filters)) {
     for (const [fieldId, value] of Object.entries(filters)) {
       if (value === undefined || value === null || value === '') continue;
@@ -358,7 +355,6 @@ function invalidateWarnDaysCache() {
   _warnDaysCache = null;
   _warnDaysCacheTime = 0;
 }
-
 
 module.exports = {
   validateISODate,
