@@ -6,6 +6,8 @@ const { authenticate } = require('../middleware/auth');
 const { validatePassword } = require('../middleware/passwordPolicy');
 const { logAction } = require('../utils/audit');
 const { USER_COLUMNS } = require('./pipettes/_helpers');
+const roleCache = require('../utils/roles');
+
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -26,6 +28,10 @@ function userPublic(u) {
     position: u.position,
     department: u.department,
     role: u.role,
+    isAdmin: u._isAdmin !== undefined ? !!u._isAdmin : u.role === 'admin',
+    roleName: u._roleDef?.name || u.role,
+    rolePermissions: u._roleDef?.permissions || [],
+    permissions: u._perms || db.safeParse(u.extra_permissions, []),
     onlyOwnDepartment: !!u.only_own_department,
     isActing: !!u.is_acting,
     actingForId: u.acting_for_id || null,
@@ -46,14 +52,14 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-     const [rows] = await db.query(`SELECT ${USER_COLUMNS} FROM users WHERE login = ?`, [login]);
-    if (!rows.length)
+    const [rows] = await db.query(`SELECT ${USER_COLUMNS} FROM users WHERE login = ?`, [login]);
+    if (!rows.length) {
       return res.status(401).json({ error: 'Неверный логин или пароль' });
+    }
 
     const u = rows[0];
 
-    // 🆕 Первый вход админа: пароль ещё не установлен.
-    // Пропускаем bcrypt — сравнивать нечего.
+    // Первый вход админа: пароль ещё не установлен
     if (u.must_set_password) {
       if (password && password.length > 0) {
         return res.status(401).json({
@@ -65,11 +71,12 @@ router.post('/login', async (req, res) => {
         return res.status(400).json({ error: 'Заполните поле «Пароль»' });
       }
       const passwordOk = await bcrypt.compare(password, u.password);
-      if (!passwordOk)
+      if (!passwordOk) {
         return res.status(401).json({ error: 'Неверный логин или пароль' });
+      }
     }
 
-    // 🛡️ Если и.о. — подтягиваем данные основного
+    // Подтягиваем данные основного, если это и.о.
     if (u.is_acting && u.acting_for_id) {
       const [actingRows] = await db.query(
         'SELECT full_name, department FROM users WHERE id = ? LIMIT 1',
@@ -81,9 +88,16 @@ router.post('/login', async (req, res) => {
       }
     }
 
+    // Инициализация прав на основе роли
+    u._roleDef = await roleCache.getRoleDef(u.role);
+    u._isAdmin = !!(u._roleDef?.isAdmin || u.role === 'admin');
+    u._perms = u._isAdmin
+      ? ['*']
+      : [...(u._roleDef?.permissions || []), ...db.safeParse(u.extra_permissions, [])];
+
     const token = jwt.sign({ id: u.id, login: u.login, role: u.role }, JWT_SECRET, { expiresIn: '24h' });
 
-   await logAction({ user: { id: u.id, full_name: u.full_name } }, 'Вход в систему');
+    await logAction({ user: { id: u.id, full_name: u.full_name } }, 'Вход в систему');
 
     res.json({ token, user: userPublic(u) });
   } catch (e) {
@@ -98,12 +112,13 @@ router.post('/login', async (req, res) => {
 router.get('/verify', allowWhenPasswordMustChange, authenticate, (req, res) => {
   res.json({ user: userPublic(req.user) });
 });
+
 // ============================================================
 // ВХОД ПОД ДРУГИМ ПОЛЬЗОВАТЕЛЕМ (impersonate)
 // ============================================================
 router.post('/impersonate/:userId', authenticate, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!req.user._isAdmin) {
       return res.status(403).json({ error: 'Только администратор может входить под другими' });
     }
 
@@ -115,22 +130,28 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Вы уже вошли под этой учётной записью' });
     }
 
-    // 🆕 Кто зашёл под target — сохраняем в токене
+    // Инициализация прав для target
+    target._roleDef = await roleCache.getRoleDef(target.role);
+    target._isAdmin = !!(target._roleDef?.isAdmin || target.role === 'admin');
+    target._perms = target._isAdmin
+      ? ['*']
+      : [...(target._roleDef?.permissions || []), ...db.safeParse(target.extra_permissions, [])];
+
     const token = jwt.sign(
       {
         id: target.id,
         login: target.login,
         role: target.role,
-        impersonatedBy: req.user.id,          // 🆕 id админа
-        impersonatedByName: req.user.full_name // 🆕 имя админа
+        impersonatedBy: req.user.id,
+        impersonatedByName: req.user.full_name
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
-       await logAction(req, 'Вход под пользователем', target.full_name);
-    
-        if (target.is_acting && target.acting_for_id) {
+
+    await logAction(req, 'Вход под пользователем', target.full_name);
+
+    if (target.is_acting && target.acting_for_id) {
       const [actingRows] = await db.query(
         'SELECT full_name, department FROM users WHERE id = ? LIMIT 1',
         [target.acting_for_id]
@@ -142,7 +163,7 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
     }
 
     res.json({ token, user: userPublic(target) });
-    
+
   } catch (e) {
     console.error('Impersonate error:', e);
     res.status(500).json({ error: 'Ошибка входа под пользователем' });
@@ -150,33 +171,28 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
 });
 
 // ============================================================
-// ВОЗВРАТ К СВОЕЙ УЧЁТНОЙ ЗАПИСИ (конец impersonate-сессии)
+// ВОЗВРАТ К СВОЕЙ УЧЁТНОЙ ЗАПИСИ
 // ============================================================
 router.post('/stop-impersonate', allowWhenPasswordMustChange, authenticate, async (req, res) => {
   try {
-    // Достаём id админа из JWT (установлен в middleware/auth.js)
     const adminId = req.impersonatedBy;
     if (!adminId) {
-      return res.status(400).json({
-        error: 'Вы не в режиме переключения'
-      });
+      return res.status(400).json({ error: 'Вы не в режиме переключения' });
     }
 
-    // Загружаем данные админа (для имени в логе)
     const [adminRows] = await db.query(
       'SELECT id, full_name, login FROM users WHERE id = ?',
       [adminId]
     );
 
     if (!adminRows.length) {
-            // Админ был удалён — логируем хотя бы факт возврата
       const deletedAdminReq = { user: { id: adminId, full_name: req.impersonatedByName || 'admin (удалён)' } };
       await logAction(deletedAdminReq, 'Возврат к своей учётной записи', `Работал под: ${req.user.full_name} (${req.user.login}); сам админ удалён`);
       return res.json({ message: 'Возврат залогирован (админ удалён)' });
     }
 
     const admin = adminRows[0];
-           
+
     await db.query('DELETE FROM edit_locks WHERE user_id = ?', [req.user.id]);
     const adminReq = { user: { id: admin.id, full_name: admin.full_name } };
     await logAction(adminReq, 'Возврат к своей учётной записи', `Работал под: ${req.user.full_name} (${req.user.login})`);
@@ -187,7 +203,6 @@ router.post('/stop-impersonate', allowWhenPasswordMustChange, authenticate, asyn
     res.status(500).json({ error: 'Ошибка логирования возврата' });
   }
 });
-
 
 // ============================================================
 // СМЕНА ПАРОЛЯ (свой аккаунт)
@@ -229,7 +244,7 @@ router.post('/change-password', allowWhenPasswordMustChange, authenticate, async
     return res.status(400).json({ error: 'Новый пароль должен отличаться от текущего' });
   }
 
-    const hash = await bcrypt.hash(newPassword, 10);
+  const hash = await bcrypt.hash(newPassword, 10);
   await db.query(
     `UPDATE users
      SET password = ?,
@@ -242,8 +257,6 @@ router.post('/change-password', allowWhenPasswordMustChange, authenticate, async
 
   await logAction(req, 'Смена пароля', 'Пользователь сменил свой пароль');
 
-  // Перевыпускаем токен: password_changed_at стал новее старого iat,
-  // иначе следующий же запрос словит 401 в middleware/auth.js
   const freshToken = jwt.sign(
     { id: req.user.id, login: req.user.login, role: req.user.role },
     JWT_SECRET,
@@ -254,7 +267,7 @@ router.post('/change-password', allowWhenPasswordMustChange, authenticate, async
 });
 
 // ============================================================
-// 🆕 УСТАНОВКА ПАРОЛЯ АДМИНИСТРАТОРА (первый вход)
+// УСТАНОВКА ПАРОЛЯ АДМИНИСТРАТОРА (первый вход)
 // ============================================================
 router.post('/setup-password', allowWhenPasswordMustChange, authenticate, async (req, res) => {
   if (!req.user.must_set_password) {
@@ -298,6 +311,7 @@ router.post('/setup-password', allowWhenPasswordMustChange, authenticate, async 
   );
 
   await logAction(req, 'Установка пароля администратора', 'Первый вход');
+
   const freshToken = jwt.sign(
     { id: req.user.id, login: req.user.login, role: req.user.role },
     JWT_SECRET,
@@ -306,7 +320,5 @@ router.post('/setup-password', allowWhenPasswordMustChange, authenticate, async 
 
   res.json({ message: 'Пароль установлен', token: freshToken });
 });
-
-
 
 module.exports = router;
