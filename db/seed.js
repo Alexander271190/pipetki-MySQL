@@ -28,7 +28,6 @@ async function generatePipetteId(prefix = 'P', conn = null) {
   return `${prefix}-${String(maxNum + 1).padStart(3, '0')}`;
 }
 
-
 // ============================================================
 // СПРАВКА — русские названия разделов по slug
 // ============================================================
@@ -61,8 +60,6 @@ const HELP_TITLES = {
 
 // ============================================================
 // СПРАВКА — сканирование frontend/help-defaults/
-// Файлы .docx / .pdf лежат в репозитории, имя файла = slug.
-// Пример: frontend/help-defaults/intro.docx → slug='intro'
 // ============================================================
 async function seedHelpDocs(conn) {
   const executor = conn || pool;
@@ -79,7 +76,6 @@ async function seedHelpDocs(conn) {
     return;
   }
 
-  // Сортируем по алфавиту, чтобы sort_order был стабильным
   files.sort();
 
   let added = 0;
@@ -102,15 +98,12 @@ async function seedHelpDocs(conn) {
         [slug, fallbackTitle, dbPath, sortIdx]
       );
       added++;
-    } else {
-      // Обновляем только если file_path пустой (не перезаписываем загруженное админом)
-      if (!existing[0].file_path) {
-        await executor.query(
-          'UPDATE help_docs SET file_path = ?, title = COALESCE(NULLIF(title, \'\'), ?) WHERE slug = ?',
-          [dbPath, fallbackTitle, slug]
-        );
-        updated++;
-      }
+    } else if (!existing[0].file_path) {
+      await executor.query(
+        'UPDATE help_docs SET file_path = ?, title = COALESCE(NULLIF(title, \'\'), ?) WHERE slug = ?',
+        [dbPath, fallbackTitle, slug]
+      );
+      updated++;
     }
     sortIdx++;
   }
@@ -121,13 +114,14 @@ async function seedHelpDocs(conn) {
     console.log(`📖 seedHelpDocs: всё актуально (файлов: ${files.length})`);
   }
 }
+
 // ============================================================
 // НАЧАЛЬНЫЕ ДАННЫЕ
 // ============================================================
 async function seedInitialData() {
-  // --- Пользователи ---
   let seededAny = false;
 
+  // --- Пользователи ---
   const [uc] = await pool.query('SELECT COUNT(*) AS c FROM users');
   if (uc[0].c === 0) {
     seededAny = true;
@@ -144,6 +138,27 @@ async function seedInitialData() {
     console.log('👤 Создана учётная запись администратора.');
     console.log('   Логин: admin');
     console.log('   Пароль: не задан. При первом входе система попросит установить пароль.');
+  }
+
+  // --- Системные роли ---
+  const [rc] = await pool.query('SELECT COUNT(*) AS c FROM roles');
+  if (rc[0].c === 0) {
+    await pool.query(
+      `INSERT INTO roles (name, value, permissions, is_system, is_admin) VALUES
+       ('Пользователь',  'user',       ?, 1, 0),
+       ('Ст. лаборант',  'senior_lab', ?, 1, 0),
+       ('Администратор', 'admin',      ?, 1, 1)`,
+      [
+        JSON.stringify(['view_history', 'print_labels', 'export_data']),
+        JSON.stringify([
+          'add_pipette', 'edit_pipette', 'quick_calibration', 'transfer_pipette',
+          'bulk_change_responsible', 'bulk_send', 'bulk_return',
+          'export_data', 'scan_barcode', 'print_labels', 'view_history', 'view_audit',
+        ]),
+        JSON.stringify([]),
+      ]
+    );
+    console.log('🎭 Созданы системные роли');
   }
 
   // --- Отделы ---
@@ -175,7 +190,6 @@ async function seedInitialData() {
 
   await pool.query(`INSERT IGNORE INTO system_settings (setting_key, setting_value) VALUES ('warn_days', '30')`);
 
-  // Дефолтные типы оборудования
   const defaultTypes = [
     { value: 'pipette',     label: 'Пипетка',     prefix: 'P', calibrationPlace: 'external', interval: 12, allowReplacement: true },
     { value: 'analyzer',    label: 'Анализатор',  prefix: 'A', calibrationPlace: 'external', interval: 12, allowReplacement: true },
@@ -287,7 +301,7 @@ async function seedInitialData() {
     await pool.query(insF, ['calPeriod', 'Дата поверки', 'date-period', 'last_calibration', 1, '', 8]);
   }
 
-  // 🆕 Справка (вызывается всегда — внутри есть проверки и генерация файлов)
+  // --- Справка ---
   await seedHelpDocs();
   console.log('📖 Справка проверена и инициализирована');
 
