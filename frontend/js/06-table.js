@@ -89,40 +89,40 @@ function renderCounters() {
           { label: '⛔ Неактивные',         value: c.inactive || 0 },
         ];
         
-       const visibleLines = allCategories
-        .filter(cat => cat.value > 0)
-        .map(cat => `
-          <div class="tooltip-row" style="font-size:0.78rem;">
-            <span>${cat.label}:</span> <b>${cat.value}</b>
-          </div>
-        `);
+        const visibleLines = allCategories
+          .filter(cat => cat.value > 0)
+          .map(cat => `
+            <div class="tooltip-row" style="font-size:0.78rem;">
+              <span>${cat.label}:</span> <b>${cat.value}</b>
+            </div>
+          `);
       
-      const sumCategories = allCategories.reduce((sum, cat) => sum + cat.value, 0);
-      
-      // Если сумма не сходится — показываем «Прочее»
-      const diff = outside - sumCategories;
-      if (diff > 0) {
-        visibleLines.push(`
-          <div class="tooltip-row" style="font-size:0.78rem; color:#94a3b8;">
-            <span>Прочее:</span> <b>${diff}</b>
+        const sumCategories = allCategories.reduce((sum, cat) => sum + cat.value, 0);
+        
+        // Если сумма не сходится — показываем «Прочее»
+        const diff = outside - sumCategories;
+        if (diff > 0) {
+          visibleLines.push(`
+            <div class="tooltip-row" style="font-size:0.78rem; color:#94a3b8;">
+              <span>Прочее:</span> <b>${diff}</b>
+            </div>
+          `);
+        }
+        
+        if (visibleLines.length === 0) {
+          visibleLines.push(`<div class="tooltip-row" style="font-size:0.78rem;"><span>— (нет данных)</span></div>`);
+        }
+        
+        html += `
+          <div class="tooltip-outside">
+            <div class="tooltip-row" style="font-weight:600; margin-bottom: 4px; color: var(--warn);">
+              <span>Вне индикаторов:</span> <b>${outside}</b>
+            </div>
+            <div style="font-size:0.78rem; line-height: 1.5; color: var(--text);">
+              ${visibleLines.join('')}
+            </div>
           </div>
-        `);
-      }
-      
-      if (visibleLines.length === 0) {
-        visibleLines.push(`<div class="tooltip-row" style="font-size:0.78rem;"><span>— (нет данных)</span></div>`);
-      }
-      
-      html += `
-        <div class="tooltip-outside">
-          <div class="tooltip-row" style="font-weight:600; margin-bottom: 4px; color: var(--warn);">
-            <span>Вне индикаторов:</span> <b>${outside}</b>
-          </div>
-          <div style="font-size:0.78rem; line-height: 1.5; color: var(--text);">
-            ${visibleLines.join('')}
-          </div>
-        </div>
-      `;
+        `;
       }
       
       tipEl.innerHTML = html;
@@ -400,8 +400,8 @@ function updateBulkCalButton() {
   const visibleSelected = [...selectedPipettes].filter(id => pipettes.some(p => p.id === id));
 
   const toSend = visibleSelected.filter(id => {
-  const p = pipettes.find(x => x.id === id);
-  return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
+    const p = pipettes.find(x => x.id === id);
+    return p && !p.sent_for_calibration && !p.replacing && isExternalCalibration(p.equipment_type);
   });
   const toReturn = visibleSelected.filter(id => {
     const p = pipettes.find(x => x.id === id);
