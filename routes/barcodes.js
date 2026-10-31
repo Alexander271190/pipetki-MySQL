@@ -9,11 +9,11 @@ const bwipjs = require('bwip-js');
 const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
 const db = require('../db');
-const { authenticate, requireRole, requirePermission } = require('../middleware/auth');
+const { authenticate, requireAdmin, requirePermission } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
 const { PRINTER_COLUMNS } = require('./pipettes/_helpers');
 
-// 🆕 Реестр шрифтов с кириллицей.
+// Реестр шрифтов с кириллицей.
 // Файлы лежат в frontend/fonts/. Ключ хранится в system_settings.barcode_font.
 // Если у выбранного шрифта нет файла — fallback на DejaVu, затем на любой
 // доступный, затем на Helvetica (кириллица сломается, но PDF сгенерится).
@@ -126,7 +126,7 @@ async function generateBarcodePng(value, type = 'code128') {
   });
 }
 
-// 🆕 Кэш настроек штрихкодов (60 сек)
+// Кэш настроек штрихкодов (60 сек)
 let _settingsCache = null;
 let _settingsCacheTime = 0;
 const SETTINGS_CACHE_TTL = 60_000;
@@ -243,7 +243,7 @@ function sendZplToPrinter(zpl, ip, port, timeoutMs = 4000) {
     const timer = setTimeout(() => finish(new Error('Таймаут подключения к принтеру')), timeoutMs);
     client.once('error', (e) => { clearTimeout(timer); finish(e); });
     client.once('timeout', () => { clearTimeout(timer); finish(new Error('Таймаут')); });
-      client.connect(port, ip, () => {
+    client.connect(port, ip, () => {
       client.write(zpl, 'utf8', (err) => {
         if (err) {
           clearTimeout(timer);
@@ -343,7 +343,7 @@ router.post('/lookup', authenticate, requirePermission('scan_barcode'), async (r
 // ═══════════════════════════════════════════════════════════
 // POST /api/barcodes/manual — ручной ввод (админ)
 // ═══════════════════════════════════════════════════════════
-router.post('/manual', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/manual', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id, barcode } = req.body || {};
     if (!id)      return res.status(400).json({ error: 'Укажите id пипетки' });
@@ -381,7 +381,7 @@ router.post('/manual', authenticate, requireRole(['admin']), async (req, res) =>
 // ═══════════════════════════════════════════════════════════
 // POST /api/barcodes/reset — сбросить к авто
 // ═══════════════════════════════════════════════════════════
-router.post('/reset', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/reset', authenticate, requireAdmin, async (req, res) => {
   try {
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'Укажите id' });
@@ -446,7 +446,7 @@ router.get('/labels.pdf', authenticate, requirePermission('print_labels'), async
       ? new PDFDocument({ size: [zebraSize.widthPt, zebraSize.heightPt], margins: { top: 4, bottom: 4, left: 4, right: 4 }, autoFirstPage: false })
       : new PDFDocument({ size: 'A4', margin: 20 });
 
-    // 🆕 Шрифт с кириллицей. Fallback: выбранный → DejaVu → любой доступный.
+    // Шрифт с кириллицей. Fallback: выбранный → DejaVu → любой доступный.
     const font = resolveFont(s.barcode_font);
     const fontOk = registerFontOnDoc(doc, font);
 
@@ -553,7 +553,7 @@ router.get('/labels.pdf', authenticate, requirePermission('print_labels'), async
 // ═══════════════════════════════════════════════════════════
 // POST /api/barcodes/printer-status — проверка TCP (админ)
 // ═══════════════════════════════════════════════════════════
-router.post('/printer-status', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/printer-status', authenticate, requireAdmin, async (req, res) => {
   try {
     const { ip, port } = req.body || {};
     if (!ip) return res.json({ ok: false, message: 'IP не указан' });
@@ -587,8 +587,8 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
     const { ids, copies: copiesRaw, printerId } = req.body || {};
     const copies = Math.max(1, Math.min(50, parseInt(copiesRaw, 10) || 1));
 
-     if (!Array.isArray(ids) || ids.length === 0) {
-     return res.status(400).json({ error: 'Не указаны ids' });
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Не указаны ids' });
     }
     if (ids.length > 2000) {
       return res.status(400).json({ error: 'Слишком много ID за раз (максимум 2000)' });
@@ -610,9 +610,9 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
     let printer = null;
     if (printerId) {
       const [rows] = await db.query(
-   `SELECT ${PRINTER_COLUMNS} FROM barcode_printers WHERE id = ? AND enabled = 1`,
-       [printerId]
-       );
+        `SELECT ${PRINTER_COLUMNS} FROM barcode_printers WHERE id = ? AND enabled = 1`,
+        [printerId]
+      );
       printer = rows[0] || null;
     }
 
@@ -622,21 +622,21 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
         : req.user.department;
 
       if (userDept) {
-    const [rows] = await db.query(
-      `SELECT ${PRINTER_COLUMNS} FROM barcode_printers
-       WHERE department = ? AND enabled = 1
-       ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`,
-       [userDept]
-     );
+        const [rows] = await db.query(
+          `SELECT ${PRINTER_COLUMNS} FROM barcode_printers
+           WHERE department = ? AND enabled = 1
+           ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`,
+          [userDept]
+        );
         printer = rows[0] || null;
       }
     }
 
     if (!printer) {
-  const [rows] = await db.query(
-      `SELECT ${PRINTER_COLUMNS} FROM barcode_printers WHERE enabled = 1
-       ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`
-    );
+      const [rows] = await db.query(
+        `SELECT ${PRINTER_COLUMNS} FROM barcode_printers WHERE enabled = 1
+         ORDER BY is_default DESC, sort_order ASC, id ASC LIMIT 1`
+      );
       printer = rows[0] || null;
     }
 
@@ -662,8 +662,8 @@ router.post('/print', authenticate, requirePermission('print_labels'), async (re
         }
         await sendZplToPrinter(zplParts.join('\n'), printer.ip, printer.port || 9100);
 
-         await logAction(req, 'Печать Zebra IP',
-           `${pipettes.length} × ${copies} → ${printer.name} (${printer.ip}:${printer.port})`);
+        await logAction(req, 'Печать Zebra IP',
+          `${pipettes.length} × ${copies} → ${printer.name} (${printer.ip}:${printer.port})`);
 
         return res.json({
           mode: 'zebra-ip',
