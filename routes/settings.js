@@ -1,12 +1,13 @@
 const express = require('express');
 const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const equipmentTypes = require('../utils/equipment-types');
-const { logAction } = require('../utils/audit');            
-const { withTransaction } = require('../utils/db-helper');   
+const { logAction } = require('../utils/audit');
+const { withTransaction } = require('../utils/db-helper');
 const pipettesHelpers = require('./pipettes/_helpers');
 const barcodesRouter = require('./barcodes');
 const router = express.Router();
+
 // ============================================================
 // ОТДЕЛЫ
 // ============================================================
@@ -20,7 +21,7 @@ router.get('/departments', authenticate, async (req, res) => {
   }
 });
 
-router.put('/departments', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/departments', authenticate, requireAdmin, async (req, res) => {
   const departments = req.body;
 
   if (!Array.isArray(departments)) {
@@ -61,11 +62,9 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
 
   try {
     const result = await withTransaction(async (conn) => {
-      // 1) Читаем старый список
       const [oldRows] = await conn.query('SELECT name FROM departments');
       const oldNames = oldRows.map(r => r.name);
 
-      // 2) Обновляем привязки при переименовании
       for (const d of normalized) {
         if (d.oldName && d.oldName !== d.name) {
           await conn.query(
@@ -79,7 +78,6 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
         }
       }
 
-      // 3) Проверяем что удаляемые отделы не используются
       const newNames = new Set(normalized.map(d => d.name));
       const removed = oldNames.filter(n => !newNames.has(n));
       if (removed.length > 0) {
@@ -101,7 +99,6 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
         }
       }
 
-      // 4) Полная замена справочника
       await conn.query('DELETE FROM departments');
       for (const d of normalized) {
         await conn.query(
@@ -126,7 +123,7 @@ router.put('/departments', authenticate, requireRole(['admin']), async (req, res
   }
 });
 
-router.get('/departments-full', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/departments-full', authenticate, requireAdmin, async (req, res) => {
   const [rows] = await db.query('SELECT name, enabled FROM departments ORDER BY name');
   res.json(rows.map(r => ({ name: r.name, enabled: !!r.enabled })));
 });
@@ -138,7 +135,7 @@ router.get('/fields', authenticate, async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT id, label, type, required, enabled, options, default_value, field_order FROM field_config ORDER BY field_order'
-      );
+    );
     res.json(rows.map(f => ({
       id: f.id,
       label: f.label,
@@ -155,101 +152,93 @@ router.get('/fields', authenticate, async (req, res) => {
   }
 });
 
-router.put('/fields', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/fields', authenticate, requireAdmin, async (req, res) => {
   const fields = req.body;
   if (!Array.isArray(fields)) return res.status(400).json({ error: 'Ожидается массив' });
 
   try {
     await withTransaction(async (conn) => {
+      // 🛡️ Защита от удаления полей, у которых уже есть данные
+      const [oldFields] = await conn.query('SELECT id FROM field_config');
+      const newIds = new Set(fields.map(f => f.id));
+      const removed = oldFields.map(r => r.id).filter(id => !newIds.has(id));
 
-    // 🛡️ Защита от удаления полей, у которых уже есть данные
-    const [oldFields] = await conn.query('SELECT id FROM field_config');
-    const newIds = new Set(fields.map(f => f.id));
-    const removed = oldFields.map(r => r.id).filter(id => !newIds.has(id));
+      if (removed.length > 0) {
+        const confirmDelete = req.query.confirmDelete === 'true';
 
-    if (removed.length > 0) {
-      const confirmDelete = req.query.confirmDelete === 'true';
+        const [rows] = await conn.query(
+          'SELECT id, custom_data FROM pipettes WHERE custom_data IS NOT NULL'
+        );
 
-      const [rows] = await conn.query(
-        'SELECT id, custom_data FROM pipettes WHERE custom_data IS NOT NULL'
-      );
+        const removedLower = new Set(removed.map(id => id.toLowerCase()));
+        const usedFields = new Set();
+        let affectedRecords = 0;
+        const recordsToClean = [];
 
-      const removedLower = new Set(removed.map(id => id.toLowerCase()));
-      const usedFields = new Set();       // какие поля используются
-      let affectedRecords = 0;             // в скольких записях есть НЕпустые данные
-      const recordsToClean = [];           // { id, cleanedCustomData } для каскада
+        for (const r of rows) {
+          if (r.custom_data == null) continue;
 
-      for (const r of rows) {
-        if (r.custom_data == null) continue;
+          let cd;
+          if (typeof r.custom_data === 'object') cd = r.custom_data;
+          else {
+            try { cd = JSON.parse(r.custom_data) || {}; }
+            catch { continue; }
+          }
 
-        let cd;
-        if (typeof r.custom_data === 'object') cd = r.custom_data;
-        else {
-          try { cd = JSON.parse(r.custom_data) || {}; }
-          catch { continue; }
+          const keysToDelete = Object.keys(cd).filter(k => removedLower.has(k.toLowerCase()));
+          if (keysToDelete.length === 0) continue;
+
+          keysToDelete.forEach(k => usedFields.add(k));
+
+          const hasData = keysToDelete.some(k =>
+            cd[k] !== undefined && cd[k] !== null && cd[k] !== ''
+          );
+          if (hasData) affectedRecords++;
+
+          const cleaned = { ...cd };
+          keysToDelete.forEach(k => delete cleaned[k]);
+          recordsToClean.push({ id: r.id, cleaned });
         }
 
-        // Ищем ключи, соответствующие удаляемым полям (регистронезависимо)
-        const keysToDelete = Object.keys(cd).filter(k => removedLower.has(k.toLowerCase()));
-        if (keysToDelete.length === 0) continue;
+        if (affectedRecords > 0 && !confirmDelete) {
+          const err = new Error(
+            `Поля заполнены у ${affectedRecords} запис${affectedRecords === 1 ? 'и' : 'ей'}`
+          );
+          err.status = 409;
+          err.code = 'field_has_data';
+          err.affected = affectedRecords;
+          err.fields = [...usedFields];
+          throw err;
+        }
 
-        keysToDelete.forEach(k => usedFields.add(k));
+        for (const rec of recordsToClean) {
+          const cleanedJson = Object.keys(rec.cleaned).length
+            ? JSON.stringify(rec.cleaned)
+            : null;
+          await conn.query(
+            'UPDATE pipettes SET custom_data = ? WHERE id = ?',
+            [cleanedJson, rec.id]
+          );
+        }
 
-        // Проверяем, есть ли ХОТЯ БЫ ОДНО непустое значение
-        const hasData = keysToDelete.some(k =>
-          cd[k] !== undefined && cd[k] !== null && cd[k] !== ''
-        );
-        if (hasData) affectedRecords++;
-
-        // Готовим очищенный объект (без удаляемых ключей)
-        const cleaned = { ...cd };
-        keysToDelete.forEach(k => delete cleaned[k]);
-        recordsToClean.push({ id: r.id, cleaned });
+        if (recordsToClean.length > 0) {
+          console.log(`🗑️ Каскадная очистка: ${recordsToClean.length} записей (поля: ${[...usedFields].join(', ')})`);
+        }
       }
 
-      // ── Случай 1: есть данные и нет подтверждения — 409 ──
-     if (affectedRecords > 0 && !confirmDelete) {
-        const err = new Error(
-          `Поля заполнены у ${affectedRecords} запис${affectedRecords === 1 ? 'и' : 'ей'}`
-        );
-        err.status = 409;
-        err.code = 'field_has_data';
-        err.affected = affectedRecords;
-        err.fields = [...usedFields];
-        throw err;
-      }
-
-      // ── Случай 2: подтверждено (или данных нет) — каскадная очистка ──
-      // Если поле удаляется — его ключ не должен оставаться в custom_data,
-      // даже если значение пустое. Чистим всех, у кого ключ был.
-      for (const rec of recordsToClean) {
-        const cleanedJson = Object.keys(rec.cleaned).length
-          ? JSON.stringify(rec.cleaned)
-          : null;
+      await conn.query('DELETE FROM field_config');
+      for (const f of fields) {
         await conn.query(
-          'UPDATE pipettes SET custom_data = ? WHERE id = ?',
-          [cleanedJson, rec.id]
+          `INSERT INTO field_config (id, label, type, required, enabled, options, default_value, field_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [f.id, f.label, f.type, f.required ? 1 : 0, f.enabled !== false ? 1 : 0,
+           JSON.stringify(f.options || []), f.default || '', f.order || 0]
         );
       }
-
-      if (recordsToClean.length > 0) {
-        console.log(`🗑️ Каскадная очистка: ${recordsToClean.length} записей (поля: ${[...usedFields].join(', ')})`);
-      }
-    }
-    
-    await conn.query('DELETE FROM field_config');
-    for (const f of fields) {
-      await conn.query(
-        `INSERT INTO field_config (id, label, type, required, enabled, options, default_value, field_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [f.id, f.label, f.type, f.required ? 1 : 0, f.enabled !== false ? 1 : 0,
-         JSON.stringify(f.options || []), f.default || '', f.order || 0]
-      );
-    }
-    }); 
+    });
 
     res.json({ message: 'Поля обновлены' });
-   } catch (e) {
+  } catch (e) {
     if (e.status === 409) {
       return res.status(409).json({
         error: e.message,
@@ -291,7 +280,7 @@ router.get('/export', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
-router.put('/export', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/export', authenticate, requireAdmin, async (req, res) => {
   try {
     const b = req.body;
     if (Array.isArray(b)) {
@@ -328,7 +317,7 @@ router.put('/export', authenticate, requireRole(['admin']), async (req, res) => 
 router.get('/print-documents/effective', authenticate, async (req, res) => {
   try {
     const user = req.user;
-    const hasPermission = user.role === 'admin'
+    const hasPermission = user._isAdmin
       || (user._perms || []).includes('export_data');
 
     if (!hasPermission) {
@@ -396,6 +385,7 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Ошибка' });
   }
 });
+
 // ============================================================
 // СИСТЕМНЫЕ НАСТРОЙКИ
 // ============================================================
@@ -411,7 +401,7 @@ router.get('/system', authenticate, async (req, res) => {
   }
 });
 
-router.put('/system', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/system', authenticate, requireAdmin, async (req, res) => {
   const settings = req.body;
   try {
     for (const [k, v] of Object.entries(settings)) {
@@ -421,7 +411,7 @@ router.put('/system', authenticate, requireRole(['admin']), async (req, res) => 
         [k, String(v)]
       );
     }
-   if ('equipment_types' in settings) {
+    if ('equipment_types' in settings) {
       equipmentTypes.invalidateCache();
     }
     if ('warn_days' in settings) {
@@ -441,8 +431,8 @@ router.put('/system', authenticate, requireRole(['admin']), async (req, res) => 
 router.get('/filters', authenticate, async (req, res) => {
   try {
     const [rows] = await db.query(
-       'SELECT id, label, type, field_id, enabled, options_source, filter_order FROM filter_config ORDER BY filter_order'
-     );
+      'SELECT id, label, type, field_id, enabled, options_source, filter_order FROM filter_config ORDER BY filter_order'
+    );
     res.json(rows.map(f => ({
       id: f.id,
       label: f.label,
@@ -458,10 +448,10 @@ router.get('/filters', authenticate, async (req, res) => {
   }
 });
 
-router.put('/filters', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/filters', authenticate, requireAdmin, async (req, res) => {
   const filters = req.body;
   if (!Array.isArray(filters)) return res.status(400).json({ error: 'Ожидается массив' });
-  
+
   try {
     await withTransaction(async (conn) => {
       await conn.query('DELETE FROM filter_config');
@@ -508,7 +498,7 @@ router.get('/equipment-types', authenticate, async (req, res) => {
 });
 
 // PUT /api/settings/equipment-types (только админ)
-router.put('/equipment-types', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/equipment-types', authenticate, requireAdmin, async (req, res) => {
   try {
     const types = req.body;
     if (!Array.isArray(types)) {
@@ -531,16 +521,16 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
       } else {
         t.prefix = t.prefix.trim().toUpperCase();
       }
-       if (t.prefix.length > 10) {
+      if (t.prefix.length > 10) {
         return res.status(400).json({ error: `Слишком длинный prefix у ${t.value}` });
       }
 
-       // 🛡️ Место поверки: external | internal
+      // 🛡️ Место поверки: external | internal
       if (!t.calibrationPlace || !['external', 'internal'].includes(t.calibrationPlace)) {
         t.calibrationPlace = 'internal';
       }
 
-      // 🆕 МПИ (месяцы). Если не задан или ≤0 — ставим 12.
+      // МПИ (месяцы). Если не задан или ≤0 — ставим 12.
       const rawIv = parseInt(t.interval, 10);
       if (!Number.isFinite(rawIv) || rawIv < 1 || rawIv > 120) {
         t.interval = 12;
@@ -583,7 +573,7 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
       [JSON.stringify(types)]
     );
 
-    // 🆕 Сбросить кэш — иначе последующие запросы ещё 60 сек будут получать старое
+    // Сбросить кэш — иначе последующие запросы ещё 60 сек будут получать старое
     equipmentTypes.invalidateCache();
 
     res.json({ message: 'Типы оборудования обновлены' });
@@ -592,12 +582,13 @@ router.put('/equipment-types', authenticate, requireRole(['admin']), async (req,
     res.status(500).json({ error: 'Ошибка сохранения типов' });
   }
 });
+
 // ============================================================
 // НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ (только для админа)
 // ============================================================
 
 // Получить настройки вида конкретного пользователя (админ)
-router.get('/user-preferences/:userId', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/user-preferences/:userId', authenticate, requireAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT preferences FROM user_preferences WHERE user_id = ?',
@@ -605,14 +596,14 @@ router.get('/user-preferences/:userId', authenticate, requireRole(['admin']), as
     );
     if (!rows.length) return res.json({});
     res.json(db.safeParse(rows[0].preferences, {}));
-    } catch (e) {
+  } catch (e) {
     console.error('user-preferences GET error:', e);
     res.status(500).json({ error: 'Ошибка загрузки настроек пользователя' });
   }
 });
 
 // Сохранить настройки вида конкретного пользователя (админ)
-router.put('/user-preferences/:userId', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/user-preferences/:userId', authenticate, requireAdmin, async (req, res) => {
   try {
     const prefs = req.body;
     if (typeof prefs !== 'object' || prefs === null) {
@@ -636,7 +627,7 @@ router.put('/user-preferences/:userId', authenticate, requireRole(['admin']), as
 });
 
 // Сбросить настройки вида пользователя (админ)
-router.delete('/user-preferences/:userId', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/user-preferences/:userId', authenticate, requireAdmin, async (req, res) => {
   try {
     await db.query('DELETE FROM user_preferences WHERE user_id = ?', [req.params.userId]);
     res.json({ message: 'Настройки сброшены' });
@@ -654,7 +645,7 @@ router.get('/my-preferences', authenticate, async (req, res) => {
     );
     if (!rows.length) return res.json({});
     res.json(db.safeParse(rows[0].preferences, {}));
-    } catch (e) {
+  } catch (e) {
     console.error('my-preferences GET error:', e);
     res.status(500).json({ error: 'Ошибка загрузки настроек' });
   }
@@ -663,7 +654,7 @@ router.get('/my-preferences', authenticate, async (req, res) => {
 // ============================================================
 // СБРОС ВСЕХ ДАННЫХ (только для админа)
 // ============================================================
-router.post('/reset-data', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/reset-data', authenticate, requireAdmin, async (req, res) => {
   try {
     await withTransaction(async (conn) => {
       await conn.query('DELETE FROM calibration_history');
@@ -678,7 +669,7 @@ router.post('/reset-data', authenticate, requireRole(['admin']), async (req, res
 });
 
 // POST /api/settings/apply-fields-to-all
-router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/apply-fields-to-all', authenticate, requireAdmin, async (req, res) => {
   try {
     const { visibleFields, mode } = req.body || {};
 
@@ -707,7 +698,7 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
 
     let updated = 0;
     await withTransaction(async (conn) => {
-      const values = []; 
+      const values = [];
 
       for (const u of users) {
         const cur = prefsByUser[u.id] || {};
@@ -764,7 +755,7 @@ router.post('/apply-fields-to-all', authenticate, requireRole(['admin']), async 
 // Актуальный вид пользователя: индивидуальное → шаблон → дефолт.
 // Только для админа.
 // ============================================================
-router.get('/user-preferences/:userId/effective', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/user-preferences/:userId/effective', authenticate, requireAdmin, async (req, res) => {
   try {
     const userId = req.params.userId;
 
