@@ -312,10 +312,10 @@ router.put('/:id', authenticate, requireAnyPermission(['manage_users']), async (
       return res.status(403).json({ error: 'Только администратор может назначать роль администратора' });
     }
 
-    // Кастомного админа может менять только другой админ
-    if (oldRoleDef?.isAdmin && !req.user._isAdmin) {
+    // Кастомного админа может менять только ВСТРОЕННЫЙ админ
+    if (oldRoleDef?.isAdmin && req.user.login !== 'admin') {
       if (role !== ex[0].role) {
-        return res.status(403).json({ error: 'Только администратор может менять роль администратора' });
+        return res.status(403).json({ error: 'Только встроенный администратор может менять роль другого администратора' });
       }
     }
 
