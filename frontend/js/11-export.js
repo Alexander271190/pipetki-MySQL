@@ -1,7 +1,7 @@
 'use strict';
 
 // ============================================================
-// ПЕЧАТЬ
+// ЭКСПОРТ В EXCEL И PDF
 // ============================================================
 const SYSTEM_EXPORT_FIELD_MAP = {
   id: { label: 'ID', get: p => p.id },
@@ -32,13 +32,12 @@ const SYSTEM_EXPORT_FIELD_MAP = {
   },
   responsible: { label: 'Ответственный', get: p => p.responsible || '' },
   location: { label: 'Место', get: p => p.location || '' },
-   status: {
+  status: {
     label: 'Статус', get: p => {
       const st = calcStatus(p);
       return STATUS_LABELS[st] || st;
     }
   },
-  
   cert: { label: 'Свидетельство', get: p => p.cert || '' },
   notes: { label: 'Примечание', get: p => p.notes || '' }
 };
@@ -119,14 +118,13 @@ async function exportToXlsx() {
 
         showToast(`Напечатано: ${data.length} записей`, 'success');
       } catch (e) {
-        // Ошибка 401 уже обработана в downloadFile, здесь только остальные
         if (e.message !== 'Неавторизован') {
-           // ничего не делаем, тост уже показан
+           // Тост уже показан в downloadFile
         }
       }
     }
   );
-} // 🆕 ИСПРАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
+}
 
 async function exportToPDF() {
   await UI.guard(
@@ -163,7 +161,7 @@ async function exportToPDF() {
           if (f === 'model') {
             return `<td>${esc(p.model)}</td>`;
           }
-           if (f === 'responsible') {
+          if (f === 'responsible') {
             return `<td>${esc(p.responsible || '—')}</td>`;
           }
           if (f === 'nextCalibration') {
@@ -304,7 +302,7 @@ async function exportHistoryToXlsx() {
   const from = document.getElementById('he-from').value;
   const to   = document.getElementById('he-to').value;
  
-    const HISTORY_LABELS = {
+  const HISTORY_LABELS = {
     date: 'Дата поверки', cert: 'Свидетельство', result: 'Результат',
     org: 'Организация', note: 'Примечание',
   };
@@ -326,7 +324,7 @@ async function exportHistoryToXlsx() {
     return obj;
   });
   
-   const meta = {
+  const meta = {
     title: 'История поверок оборудования',
     equipmentId: p.id,
     model: p.model,
@@ -355,8 +353,7 @@ async function exportHistoryToXlsx() {
       errEl.textContent = e.message || 'Ошибка печати';
     }
   }
-} // 🆕 ИСПРАВЛЕНА ЗАКРЫВАЮЩАЯ СКОБКА
-
+}
 
 async function exportHistoryToPDF() {
   const errEl = document.getElementById('history-export-error');
@@ -380,7 +377,7 @@ async function exportHistoryToPDF() {
   const userPosition = currentUser ? (currentUser.position || '') : '';
   const today = new Date().toLocaleDateString('ru-RU');
   
-    const HISTORY_LABELS = {
+  const HISTORY_LABELS = {
     date: 'Дата', cert: 'Свидетельство', result: 'Результат',
     org: 'Организация', note: 'Примечание',
   };
