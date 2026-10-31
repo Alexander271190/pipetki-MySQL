@@ -2,14 +2,16 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
+const roleCache = require('../utils/roles');
+
 const router = express.Router();
 
 // ============================================================
-// ПРЕСЕТЫ ПРАВ (только для админа)
+// ПРЕСЕТЫ ПРАВ
 // ============================================================
-router.get('/presets', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/presets', authenticate, requireAdmin, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT id, name, permissions FROM permission_presets ORDER BY name');
     res.json(rows.map(r => ({
@@ -23,7 +25,7 @@ router.get('/presets', authenticate, requireRole(['admin']), async (req, res) =>
   }
 });
 
-router.post('/presets', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/presets', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, permissions } = req.body || {};
     if (!name || !String(name).trim()) {
@@ -47,7 +49,7 @@ router.post('/presets', authenticate, requireRole(['admin']), async (req, res) =
   }
 });
 
-router.delete('/presets/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/presets/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     await db.query('DELETE FROM permission_presets WHERE id = ?', [req.params.id]);
     res.json({ message: 'Пресет удалён' });
@@ -58,16 +60,11 @@ router.delete('/presets/:id', authenticate, requireRole(['admin']), async (req, 
 });
 
 // ============================================================
-// СПИСОК ОТВЕТСТВЕННЫХ (для поля «Ответственный»)
-
-// ============================================================
-// СПИСОК ОТВЕТСТВЕННЫХ (для поля «Ответственный»)
-// Доступно всем авторизованным пользователям
+// СПИСОК ОТВЕТСТВЕННЫХ
 // ============================================================
 router.get('/responsibles', authenticate, async (req, res, next) => {
-  // 🆕 Доступ: админ, ст. лаборант, или владелец одного из прав
   const allowed =
-    req.user.role === 'admin' ||
+    req.user._isAdmin ||
     req.user.role === 'senior_lab' ||
     (req.user._perms || []).some(p =>
       p === 'transfer_pipette' ||
@@ -77,7 +74,8 @@ router.get('/responsibles', authenticate, async (req, res, next) => {
   if (!allowed) {
     return res.status(403).json({ error: 'Недостаточно прав' });
   }
-    try {
+
+  try {
     const [users] = await db.query(
       'SELECT id, full_name, login, department FROM users ORDER BY full_name'
     );
@@ -94,7 +92,7 @@ router.get('/responsibles', authenticate, async (req, res, next) => {
 });
 
 // ============================================================
-// Генератор разового пароля (12 символов, соответствует политике)
+// Генератор разового пароля
 // ============================================================
 function generateTempPassword() {
   const lower  = 'abcdefghijkmnpqrstuvwxyz';
@@ -118,9 +116,9 @@ function generateTempPassword() {
 }
 
 // ============================================================
-// СПИСОК ОСНОВНЫХ СОТРУДНИКОВ (для селекта «за кого»)
+// СПИСОК ОСНОВНЫХ СОТРУДНИКОВ
 // ============================================================
-router.get('/acting-targets', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/acting-targets', authenticate, requireAdmin, async (req, res) => {
   try {
     const [users] = await db.query(
       `SELECT id, full_name, department, position
@@ -143,12 +141,14 @@ router.get('/acting-targets', authenticate, requireRole(['admin']), async (req, 
 // ============================================================
 // СПИСОК ПОЛЬЗОВАТЕЛЕЙ
 // ============================================================
-router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
-  const [users] = await db.query(
-    `SELECT id, login, full_name, position, department, role,
-            only_own_department, extra_permissions, is_acting, acting_for_id,
-            must_change_password
-     FROM users`);
+router.get('/', authenticate, requireAdmin, async (req, res) => {
+  const [users] = await db.query(`
+    SELECT u.id, u.login, u.full_name, u.position, u.department, u.role,
+           u.only_own_department, u.extra_permissions, u.is_acting, u.acting_for_id,
+           u.must_change_password, r.name AS role_name, r.is_admin AS role_is_admin
+    FROM users u
+    LEFT JOIN roles r ON r.value = u.role
+  `);
 
   const actingIds = users.filter(u => u.acting_for_id).map(u => u.acting_for_id);
   const actingById = {};
@@ -163,13 +163,15 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
     }
   }
 
-     res.json(users.map(u => ({
+  res.json(users.map(u => ({
     id:                u.id,
     login:             u.login,
     fullName:          u.full_name,
     position:          u.position,
     department:        u.department,
     role:              u.role,
+    roleName:          u.role_name || u.role,
+    isAdmin:           !!u.role_is_admin,
     onlyOwnDepartment: !!u.only_own_department,
     isActing:          !!u.is_acting,
     actingForId:       u.acting_for_id || null,
@@ -179,13 +181,20 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
     mustChangePassword: !!u.must_change_password
   })));
 });
+
 // ============================================================
 // СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const { login, fullName, position, department, role,
             onlyOwnDepartment, extraPermissions, isActing, actingForId } = req.body;
+
+    const roleDef = await roleCache.getRoleDef(role || 'user');
+    if (!roleDef) {
+      return res.status(400).json({ error: `Неизвестная роль: ${role || 'user'}` });
+    }
+
     const missing = [];
     if (!login)    missing.push('Логин');
     if (!fullName) missing.push('ФИО');
@@ -196,15 +205,15 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
         : `Заполните поля: ${missing.map(m => `«${m}»`).join(', ')}`;
       return res.status(400).json({ error: msg });
     }
-    
-        if (isActing && !actingForId) {
+
+    if (isActing && !actingForId) {
       return res.status(400).json({
         error: 'Для и.о. нужно указать, за кого он исполняет обязанности'
       });
     }
 
-      if (onlyOwnDepartment && !department) {
-       return res.status(400).json({
+    if (onlyOwnDepartment && !department) {
+      return res.status(400).json({
         error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
                'Заполните поле «Отдел» или снимите галку.'
       });
@@ -218,8 +227,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    // 🆕 По умолчанию права пустые — админ сам выдаёт
-    const initialPermissions = role === 'admin' ? [] : (Array.isArray(extraPermissions) ? extraPermissions : []);
+    const initialPermissions = roleDef.isAdmin ? [] : (Array.isArray(extraPermissions) ? extraPermissions : []);
 
     await db.query(
       `INSERT INTO users
@@ -248,13 +256,18 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
 // ============================================================
 // ОБНОВЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const { login, fullName, position, department, role,
             onlyOwnDepartment, extraPermissions, isActing, actingForId } = req.body;
     const id = req.params.id;
 
-        const missing = [];
+    const roleDef = await roleCache.getRoleDef(role || 'user');
+    if (!roleDef) {
+      return res.status(400).json({ error: `Неизвестная роль: ${role || 'user'}` });
+    }
+
+    const missing = [];
     if (!login)    missing.push('Логин');
     if (!fullName) missing.push('ФИО');
     if (!position) missing.push('Должность');
@@ -265,16 +278,15 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
       return res.status(400).json({ error: msg });
     }
 
-    // 🆕 Проверка и.о. — вставлено СЮДА
     if (isActing && !actingForId) {
       return res.status(400).json({
         error: 'Для и.о. нужно указать, за кого он исполняет обязанности'
       });
     }
 
-        if (onlyOwnDepartment && !department) {
+    if (onlyOwnDepartment && !department) {
       return res.status(400).json({
-      error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
+        error: 'Для галки «Только свой отдел» нужно указать отдел. ' +
                'Заполните поле «Отдел» или снимите галку.'
       });
     }
@@ -282,22 +294,22 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
     const [ex] = await db.query('SELECT id, role FROM users WHERE id = ?', [id]);
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
 
-    // Защита последнего админа: не даём понизить/лишить роль admin
-    if (ex[0].role === 'admin' && role !== 'admin') {
-      const [admins] = await db.query(
-        `SELECT COUNT(*) AS c FROM users WHERE role = 'admin'`
-      );
+    const oldRoleDef = await roleCache.getRoleDef(ex[0].role);
+    if (oldRoleDef?.isAdmin && !roleDef.isAdmin) {
+      const [admins] = await db.query(`
+        SELECT COUNT(*) AS c FROM users u
+        JOIN roles r ON r.value = u.role
+        WHERE r.is_admin = 1
+      `);
       if (admins[0].c <= 1) {
         return res.status(400).json({ error: 'Нельзя понизить последнего администратора' });
       }
+      if (id === req.user.id) {
+        return res.status(400).json({ error: 'Нельзя понизить собственную роль администратора' });
+      }
     }
 
-    // Нельзя понизить себя (иначе можно случайно остаться без прав)
-    if (ex[0].role === 'admin' && role !== 'admin' && id === req.user.id) {
-      return res.status(400).json({ error: 'Нельзя понизить собственную роль администратора' });
-    }
-
-       const [dup] = await db.query(
+    const [dup] = await db.query(
       'SELECT id FROM users WHERE login = ? AND id <> ?',
       [login, id]
     );
@@ -305,7 +317,6 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 
     const onlyOwn = onlyOwnDepartment ? 1 : 0;
 
-    // 🆕 Загружаем СТАРОЕ состояние для diff-логирования
     const [oldRows] = await db.query(
       `SELECT login, full_name, position, department, role,
               only_own_department, extra_permissions, is_acting, acting_for_id
@@ -314,7 +325,7 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
     );
     const old = oldRows[0];
 
-     await db.query(
+    await db.query(
       `UPDATE users SET login=?, full_name=?, position=?, department=?, role=?,
          only_own_department=?, extra_permissions=?,
          is_acting=?, acting_for_id=?,
@@ -325,7 +336,6 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
        isActing ? 1 : 0, isActing && actingForId ? actingForId : null, id]
     );
 
-    // 🆕 Собираем diff — что изменилось
     const changes = [];
 
     if (old.login !== login) {
@@ -350,7 +360,6 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
       changes.push(`и.о.: ${old.is_acting ? 'вкл' : 'выкл'} → ${isActing ? 'вкл' : 'выкл'}`);
     }
 
-    // Сравнение extra_permissions (нормализуем через safeParse)
     const oldPerms = db.safeParse(old.extra_permissions, []).sort();
     const newPerms = (extraPermissions || []).slice().sort();
     const permsChanged =
@@ -366,7 +375,6 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
       changes.push(`права: ${parts.join(' ')}`);
     }
 
-    // 🆕 Пишем в audit_log
     const isSelf = (id === req.user.id);
     const action = isSelf ? 'Редактирование своего профиля' : 'Редактирование пользователя';
     const details = changes.length
@@ -385,7 +393,7 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 // ============================================================
 // УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
 // ============================================================
-router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     if (req.params.id === req.user.id) {
       return res.status(400).json({
@@ -396,13 +404,18 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
     const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
     if (!users.length) return res.status(404).json({ error: 'Не найден' });
 
-    if (users[0].role === 'admin') {
-      const [admins] = await db.query(`SELECT id FROM users WHERE role = 'admin'`);
-      if (admins.length <= 1) {
+    const targetRoleDef = await roleCache.getRoleDef(users[0].role);
+    if (targetRoleDef?.isAdmin) {
+      const [admins] = await db.query(`
+        SELECT COUNT(*) AS c FROM users u
+        JOIN roles r ON r.value = u.role
+        WHERE r.is_admin = 1
+      `);
+      if (admins[0].c <= 1) {
         return res.status(400).json({ error: 'Нельзя удалить последнего админа' });
       }
     }
-        // 🆕 Сбрасываем ссылки у и.о.
+
     await db.query(
       `UPDATE users SET is_acting = 0, acting_for_id = NULL,
        updated_at = CURRENT_TIMESTAMP
@@ -410,7 +423,6 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
       [req.params.id]
     );
 
-    // 🆕 Загружаем данные удаляемого для audit_log
     const [targetRows] = await db.query(
       `SELECT login, full_name, position, department, role,
               only_own_department, extra_permissions, is_acting
@@ -421,7 +433,6 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
 
     await db.query('DELETE FROM users WHERE id = ?', [req.params.id]);
 
-    // 🆕 Пишем в audit_log с полной информацией о том, кого удалили
     const details = [
       `${target.login} (${target.full_name})`,
       `должность: ${target.position || '—'}`,
@@ -436,12 +447,12 @@ router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => 
     console.error('DELETE /users error:', e);
     res.status(500).json({ error: 'Ошибка удаления пользователя' });
   }
-});   
+});
 
 // ============================================================
 // СБРОС ПАРОЛЯ (админом)
 // ============================================================
-router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/:id/reset-password', authenticate, requireAdmin, async (req, res) => {
   try {
     const userId = req.params.id;
 
@@ -456,7 +467,7 @@ router.post('/:id/reset-password', authenticate, requireRole(['admin']), async (
       });
     }
 
-        const tempPassword = generateTempPassword();
+    const tempPassword = generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, 10);
 
     await db.query(
