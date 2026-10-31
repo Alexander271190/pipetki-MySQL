@@ -44,7 +44,7 @@ function renderFilterFields() {
           <div class="form-group"><label>С даты</label><input type="date" id="${fid}-from"></div>
           <div class="form-group"><label>По дату</label><input type="date" id="${fid}-to"></div>
         </div>`;
-       } else if (f.type === 'select') {
+    } else if (f.type === 'select') {
       html += `<div class="form-group">
         <label>${esc(f.label)}</label>
         <select id="${fid}">
@@ -71,7 +71,6 @@ function toggleCustomPeriod(fid) {
     custom.style.display = sel.value === 'custom' ? 'flex' : 'none';
   }
 }
-
 
 function toggleFilterPanel() {
   const panel = document.getElementById('filter-panel');
@@ -163,4 +162,3 @@ function applyFilterStateToPanel() {
     }
   }
 }
-
