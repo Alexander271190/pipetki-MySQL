@@ -24,7 +24,7 @@ function invalidateUsersCache() {
 }
 
 // ============================================================
-// 🆕 МЕНЮ ДЕЙСТВИЙ В СТРОКЕ (кнопка ⋮)
+// МЕНЮ ДЕЙСТВИЙ В СТРОКЕ (кнопка ⋮)
 // ============================================================
 let _rowActionsMenu = null;
 let _transferLockTimer = null;
@@ -34,14 +34,13 @@ let _calFormLockedId = null;
 async function openUserActions(ev, userId) {
   ev.stopPropagation();
   
-  
   const anchorEl = ev.currentTarget;
   
   await UI.guard({ role: 'admin', errorMsg: 'Только для администратора' }, async () => {
     const curId = currentUser.id;
     const isSelf = userId === curId;
 
-  let u = {};
+    let u = {};
     try {
       const users = await getCachedUsers();
       u = users.find(x => x.id === userId) || {};
@@ -65,6 +64,7 @@ async function openUserActions(ev, userId) {
     renderUserActionsMenu(anchorEl, items); 
   });
 }
+
 function renderUserActionsMenu(anchorEl, items) {
   renderRowActionsMenu(anchorEl, items);
 }
@@ -117,7 +117,7 @@ async function openRowActions(ev, id) {
       });
     }
 
-    // Отмена отправки (не входит в основной порядок, но должна быть доступна)
+    // Отмена отправки
     if (status === 'sent' && canBulkSend()) {
       items.push({ divider: true });
       items.push({ label: '<i class="fa-solid fa-xmark"></i> Отменить отправку', class: 'item-warning', action: () => cancelSend(id) });
@@ -153,7 +153,6 @@ function renderRowActionsMenu(anchorEl, items) {
   document.body.appendChild(menu);
   _rowActionsMenu = menu;
 
-  // 🆕 Все замеры и установка позиции — в одном requestAnimationFrame
   requestAnimationFrame(() => {
     const menuRect = menu.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -206,7 +205,7 @@ function closeRowActionsMenu() {
 }
 
 // ============================================================
-// 🆕 ПЕРЕДАЧА В ДРУГОЙ ОТДЕЛ
+// ПЕРЕДАЧА В ДРУГОЙ ОТДЕЛ
 // ============================================================
 let _transferPipetteId = null;
 
@@ -214,7 +213,7 @@ async function openTransferModal(id) {
   await UI.guard(
     { permission: ['transfer_pipette', 'manage_pipettes'], errorMsg: 'Нет прав на передачу' },
     async () => {
-      // 🆕 1. Проверяем блокировку и ставим свою
+      // Проверяем блокировку и ставим свою
       try {
         const lockRes = await apiRequest(`/pipettes/${id}/lock`);
         if (lockRes.locked && !lockRes.mine) {
@@ -247,7 +246,7 @@ async function openTransferModal(id) {
       respSel.disabled = true;
 
       document.getElementById('transfer-error').textContent = '';
-            UI.modal.open('transfer-modal');
+      UI.modal.open('transfer-modal');
 
       if (_transferLockTimer) clearInterval(_transferLockTimer);
       _transferLockTimer = setInterval(async () => {
@@ -352,7 +351,7 @@ async function saveTransfer() {
   );
   if (!ok) return;
 
-    try {
+  try {
     await apiRequest(`/pipettes/${id}/transfer`, 'POST', {
       department: newDept,
       responsible: newResp,
@@ -361,7 +360,7 @@ async function saveTransfer() {
     showToast(`Передано в «${newDept}»`, 'success');
     closeTransferModal();
     await loadPipetteData();
-    } catch (e) {
+  } catch (e) {
     if (e.status === 409) {
       _skipTransferUnlock = true;
       _transferPipetteId = null;
@@ -382,10 +381,12 @@ async function openHistoryModal(id) {
       `<i class="fa-solid fa-clock-rotate-left"></i> История поверок — ${esc(p.id)}`;
     await renderHistoryContent(p);
     closeCalibrationForm();
+    
+    // Скрываем кнопку «Печать истории», если админ отключил этот документ
     const btnHistExport = document.querySelector('#history-modal [onclick="openHistoryExportModal()"]');
-   if (btnHistExport) {
-   btnHistExport.style.display = settings.printDocs?.history === false ? 'none' : '';
-}
+    if (btnHistExport) {
+      btnHistExport.style.display = settings.printDocs?.history === false ? 'none' : '';
+    }
     UI.modal.open('history-modal');
   });
 }
@@ -513,7 +514,7 @@ async function addCalibrationRecord() {
     closeHistoryModal();
     await loadPipetteData();
     await loadStats();
-   } catch (error) {
+  } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
