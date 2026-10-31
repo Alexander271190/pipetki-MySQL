@@ -297,10 +297,15 @@ router.put('/:id', authenticate, requireAnyPermission(['manage_users']), async (
       });
     }
 
-    const [ex] = await db.query('SELECT id, role FROM users WHERE id = ?', [id]);
+    const [ex] = await db.query('SELECT id, login, role FROM users WHERE id = ?', [id]);
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
 
     const oldRoleDef = await roleCache.getRoleDef(ex[0].role);
+
+    // ЗАЩИТА ВСТРОЕННОГО АДМИНА (логин 'admin')
+    if (ex[0].login === 'admin' && req.user.id !== ex[0].id) {
+      return res.status(403).json({ error: 'Встроенного администратора может редактировать только он сам' });
+    }
 
     // Только настоящий админ может назначать админскую роль
     if (roleDef.isAdmin && !req.user._isAdmin) {
@@ -420,8 +425,12 @@ router.delete('/:id', authenticate, requireAnyPermission(['manage_users']), asyn
       });
     }
 
-    const [users] = await db.query('SELECT role FROM users WHERE id = ?', [req.params.id]);
+    const [users] = await db.query('SELECT id, login, role FROM users WHERE id = ?', [req.params.id]);
     if (!users.length) return res.status(404).json({ error: 'Не найден' });
+
+    if (users[0].login === 'admin') {
+      return res.status(400).json({ error: 'Нельзя удалить встроенного администратора' });
+    }
 
     const targetRoleDef = await roleCache.getRoleDef(users[0].role);
 
