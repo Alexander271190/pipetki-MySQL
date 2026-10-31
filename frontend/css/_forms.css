@@ -377,6 +377,11 @@ td small { display: block; font-size: .7rem; color: #6b7280; line-height: 1.25; 
 .table-wrapper::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.28); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
 .table-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.45); background-clip: content-box; }
 
+/* 🆕 Фикс белого уголка для таблицы */
+.table-wrapper::-webkit-scrollbar-corner {
+  background: var(--card);
+}
+
 @media (max-width: 768px) {
   th { padding: 10px 10px; font-size: .68rem; }
   td { padding: 10px 10px; font-size: .82rem; }
