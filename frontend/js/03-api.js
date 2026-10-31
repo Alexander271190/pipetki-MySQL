@@ -44,8 +44,17 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
   }
 
   if (!response.ok) {
-    const error = new Error(result.error || 'Ошибка запроса');
+    // 🆕 Понятные сообщения: бизнес-код → HTTP-фоллбэк → сырой текст сервера
+    const code = result.code;
+    const fallbackKey = `http_${response.status}`;
+    const info = (code && ERROR_HINTS[code]) || ERROR_HINTS[fallbackKey];
+    const message = info
+      ? (info.hint ? `${info.title}\n${info.hint}` : info.title)
+      : (result.error || `Ошибка ${response.status}`);
+
+    const error = new Error(message);
     error.status = response.status;
+    error.code = code || fallbackKey;
     error.response = result;
     throw error;
   }
@@ -69,8 +78,15 @@ async function downloadFile(url, options = {}, defaultFilename) {
     }
 
     if (!response.ok) {
+      // 🆕 Понятные сообщения для ошибок скачивания
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || 'Ошибка скачивания файла');
+      const code = err.code;
+      const fallbackKey = `http_${response.status}`;
+      const info = (code && ERROR_HINTS[code]) || ERROR_HINTS[fallbackKey];
+      const message = info
+        ? (info.hint ? `${info.title}\n${info.hint}` : info.title)
+        : (err.error || `Ошибка ${response.status}`);
+      throw new Error(message);
     }
 
     // Получаем имя файла из заголовка или используем дефолтное
