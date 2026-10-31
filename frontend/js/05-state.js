@@ -57,11 +57,11 @@ async function loadPipetteData() {
 
       // ── 2) Параллельно: settings, types, export, fields, responsibles, departments ──
       const needsResponsibles =
-        currentUser.role === 'admin' ||
+        isAdmin() ||
         isSeniorLab() ||
         canTransferPipette() ||
         canBulkChangeResponsible();
-
+      
       const [
         settingsData, typesResult, exportResult, fieldsResult, responsiblesResult, departmentsResult,
       ] = await Promise.all([
