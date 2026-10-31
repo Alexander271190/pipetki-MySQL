@@ -120,11 +120,14 @@ function buildDepartmentScope(user) {
 
   if (!user) return { empty: true, baseWhere, baseParams };
 
+  // Админ всегда видит всё, в т.ч. в режиме и.о.
+  if (user._isAdmin) return { empty: false, baseWhere, baseParams };
+
   if (user.is_acting) {
     if (!user.acting_department) return { empty: true, baseWhere, baseParams };
     baseWhere.push('department = ?');
     baseParams.push(user.acting_department);
-  } else if (!user._isAdmin && user.only_own_department) {
+  } else if (user.only_own_department) {
     if (!user.department) return { empty: true, baseWhere, baseParams };
     baseWhere.push('department = ?');
     baseParams.push(user.department);
