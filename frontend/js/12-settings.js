@@ -4,7 +4,6 @@
 // НАСТРОЙКИ
 // ============================================================
 async function openSettingsModal() {
-  // Вместо UI.guard({ role: 'admin' }) используем нашу функцию isAdmin()
   if (!isAdmin()) {
     showToast('Доступно только администратору', 'error');
     return;
@@ -69,7 +68,7 @@ async function openSettingsSection(id) {
 
   const permCheck = {
     users:    canManageUsers,
-    roles:    () => isAdmin() || canManageUsers(), // <-- Добавлено
+    roles:    () => isAdmin() || canManageUsers(),
     printers: canManagePrinters,
     log:      canViewLog,
   }[id];
@@ -107,7 +106,6 @@ async function openSettingsSection(id) {
   }
 }
 
-
 // ============================================================
 // ВКЛАДКА: ПОЛЯ ФОРМЫ
 // ============================================================
@@ -142,17 +140,17 @@ async function renderFieldsSettings(skipFetch = false) {
         <td>${renderFieldOptionsCell(i, f.type)}</td>
         <td style="text-align: center;">
           <button class="row-actions-btn" onclick="openFieldActions(event, ${i})" title="Действия">
-             <i class="fa-solid fa-ellipsis-vertical"></i>'''
+             <i class="fa-solid fa-ellipsis-vertical"></i>
           </button>
         </td>
       </tr>`;
     });
      html += `</tbody></table>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i>''' Добавить поле</button>
-        <button class="btn btn-warning" onclick="renderIdentitySettingsInline()" title="Настроить, какие поля видны в массовых операциях"><i class="fa-solid fa-list-ul"></i>''' Отображение в списках</button>
+        <button class="btn btn-primary" onclick="addFieldSetting()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить поле</button>
+        <button class="btn btn-warning" onclick="renderIdentitySettingsInline()" title="Настроить, какие поля видны в массовых операциях"><i class="fa-solid fa-list-ul"></i> Отображение в списках</button>
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
-        <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+        <button class="btn btn-success" onclick="saveFieldsSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>`;
     c.innerHTML = html;
   } catch (e) {
@@ -165,7 +163,7 @@ async function onFieldEnabledChange(idx, checked) {
   if (!checked && f.required) {
     const ok = await showConfirm(
       `Поле «${f.label}» обязательно. Если скрыть его, при создании оборудования будет подставляться значение «Не указана» (или значение по умолчанию). Продолжить?`,
-      { icon: '<i class="fa-solid fa-triangle-exclamation"></i>''', title: 'Скрытие обязательного поля', okText: 'Скрыть', okClass: 'btn-warning' }
+      { icon: '<i class="fa-solid fa-triangle-exclamation"></i>', title: 'Скрытие обязательного поля', okText: 'Скрыть', okClass: 'btn-warning' }
     );
     if (!ok) {
        const row = document.querySelectorAll('.field-settings-table tbody tr')[idx];
@@ -252,7 +250,7 @@ async function addFieldSetting() {
 }
 
 async function deleteFieldSetting(idx) {
-  const ok = await showConfirm(`Удалить поле «${_cachedFields[idx].label}»?`, { icon: '<i class="fa-solid fa-clipboard-list"></i>''', title: 'Удаление поля', okText: 'Удалить', okClass: 'btn-danger' });
+  const ok = await showConfirm(`Удалить поле «${_cachedFields[idx].label}»?`, { icon: '<i class="fa-solid fa-clipboard-list"></i>', title: 'Удаление поля', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _cachedFields.splice(idx, 1);
   _cachedFields.forEach((f, i) => f.order = i + 1);
@@ -294,7 +292,7 @@ async function saveFieldsSettings() {
       const listText = fieldsArr.map(f => `«${f}»`).join(', ');
       const recordPlural = affected === 1 ? 'и' : 'ей';
 
-      const ok = await showConfirm(`Поле ${listText} заполнено у ${affected} запис${recordPlural}.\n\nДанные будут стёрты. Продолжить?`, { icon: '<i class="fa-solid fa-triangle-exclamation"></i>''', title: 'Поле с данными', okText: 'Удалить', okClass: 'btn-danger' });
+      const ok = await showConfirm(`Поле ${listText} заполнено у ${affected} запис${recordPlural}.\n\nДанные будут стёрты. Продолжить?`, { icon: '<i class="fa-solid fa-triangle-exclamation"></i>', title: 'Поле с данными', okText: 'Удалить', okClass: 'btn-danger' });
       if (!ok) return;
 
       try {
@@ -348,16 +346,16 @@ async function renderDepartmentsSettings(skipFetch = false) {
         <td style="text-align:center;">${UI.checkbox(`_cachedDepartmentsFull[${i}].enabled=this.checked`, d.enabled)}</td>
         <td><input type="text" value="${esc(d.name)}" oninput="onDepartmentNameChange(${i}, this.value)"></td>
         <td style="text-align: center;">
-           <button class="row-actions-btn" onclick="openDeptActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i>'''</button>
+           <button class="row-actions-btn" onclick="openDeptActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>
         </td>
       </tr>`;
     });
     html += `</tbody></table>
     <div class="form-actions" style="margin-top:16px;">
         <input type="text" id="new-dept-name" placeholder="Название нового отдела" style="flex:1; max-width:400px; padding:9px 12px; border:1px solid var(--border-hard); border-radius:8px; background: var(--card); color: var(--text);" onkeydown="if(event.key==='Enter'){event.preventDefault();addDepartmentItem();}">
-        <button type="button" class="btn btn-success" onclick="addDepartmentItem()"><i class="fa-solid fa-plus"></i>''' Добавить</button>
+        <button type="button" class="btn btn-success" onclick="addDepartmentItem()"><i class="fa-solid fa-plus"></i> Добавить</button>
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="margin-left:auto;">Закрыть</button>
-        <button type="button" class="btn btn-primary" onclick="saveDepartmentsFull()"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+        <button type="button" class="btn btn-primary" onclick="saveDepartmentsFull()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
      </div>
      <div id="dept-duplicate-warning" style="margin-top:12px;display:none;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;"></div>`;
     c.innerHTML = html;
@@ -375,7 +373,7 @@ function onDepartmentNameChange(idx, value) {
   if (warn) {
     if (duplicates.length > 0 && trimmed !== '') {
       warn.style.display = 'block';
-      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>''' Отдел «${esc(trimmed)}» уже существует.`;
+      warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Отдел «${esc(trimmed)}» уже существует.`;
     } else { warn.style.display = 'none'; }
   }
 }
@@ -408,13 +406,12 @@ async function deleteDepartmentItem(idx) {
       showToast(`Нельзя удалить отдел «${name}»: к нему привязано ${usedCount} единиц оборудования. Сначала переведите их в другой отдел.`, 'error');
     return;
   }
-  const ok = await showConfirm(`Удалить отдел «${name}»?`, { icon: '<i class="fa-solid fa-building"></i>''', title: 'Удаление отдела', okText: 'Удалить', okClass: 'btn-danger' });
+  const ok = await showConfirm(`Удалить отдел «${name}»?`, { icon: '<i class="fa-solid fa-building"></i>', title: 'Удаление отдела', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _cachedDepartmentsFull.splice(idx, 1);
   showToast(`Отдел «${name}» удаляется...`, 'success');
   await saveDepartmentsFull();
 }
-
 
 async function saveDepartmentsFull() {
   const cleaned = [];
@@ -483,16 +480,16 @@ async function renderFiltersSettings(skipFetch = false) {
           </select>
         </td>
         <td style="text-align: center;">
-         <button class="row-actions-btn" onclick="openFilterActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i>'''</button>
+         <button class="row-actions-btn" onclick="openFilterActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>
        </td>
       </tr>`;
     });
     
     html += `</tbody></table>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addFilter()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i>''' Добавить фильтр</button>
+        <button class="btn btn-primary" onclick="addFilter()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить фильтр</button>
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
-        <button class="btn btn-success" onclick="saveFilters()"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+        <button class="btn btn-success" onclick="saveFilters()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>`;
     c.innerHTML = html;
   } catch (e) { c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + e.message + '</p>'; }
@@ -532,9 +529,8 @@ async function addFilter() {
   renderFiltersSettings(true);
 }
 
-
 async function deleteFilter(idx) {
-  const ok = await showConfirm(`Удалить фильтр «${_cachedFilters[idx].label}»?`, { icon: '<i class="fa-solid fa-magnifying-glass"></i>''', title: 'Удаление фильтра', okText: 'Удалить', okClass: 'btn-danger' });
+  const ok = await showConfirm(`Удалить фильтр «${_cachedFilters[idx].label}»?`, { icon: '<i class="fa-solid fa-magnifying-glass"></i>', title: 'Удаление фильтра', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _cachedFilters.splice(idx, 1);
   _cachedFilters.forEach((f, i) => f.order = i + 1);
@@ -608,7 +604,7 @@ async function renderExportSettings() {
       <div class="form-actions" style="margin-top:20px;">
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
         <button class="btn btn-success" onclick="savePrintSettings()">
-          <i class="fa-solid fa-floppy-disk"></i>''' Сохранить
+          <i class="fa-solid fa-floppy-disk"></i> Сохранить
         </button>
       </div>
     `;
@@ -827,7 +823,7 @@ async function renderGeneralSettings() {
           <label>Порог предупреждения о поверке (дней)</label>
           <input type="number" id="sys-warn-days" value="${esc(s.warn_days || '30')}" min="1" max="365" style="max-width:150px;">
         </div>
-        <button class="btn btn-success btn-sm" onclick="saveSystemSetting()"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+        <button class="btn btn-success btn-sm" onclick="saveSystemSetting()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
 
       <div class="settings-form" style="margin-top:24px;border-left:3px solid #dc2626;">
@@ -835,7 +831,7 @@ async function renderGeneralSettings() {
         <p style="color:#64748b;font-size:.88rem;margin:8px 0 12px;">
           Удаление <strong>всех данных</strong> об оборудовании и истории поверок. <strong>Действие необратимо.</strong>
         </p>
-        <button class="btn btn-danger btn-sm" onclick="resetAllDataSetting()"><i class="fa-solid fa-trash"></i>''' Сбросить все данные</button>
+        <button class="btn btn-danger btn-sm" onclick="resetAllDataSetting()"><i class="fa-solid fa-trash"></i> Сбросить все данные</button>
       </div>
 
       <div class="form-actions" style="margin-top: 24px;">
@@ -883,9 +879,9 @@ async function renderEquipmentSettings() {
       </table>
 
       <div class="form-actions">
-        <button class="btn btn-primary btn-sm" onclick="addEquipmentType()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i>''' Добавить тип</button>
+        <button class="btn btn-primary btn-sm" onclick="addEquipmentType()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить тип</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
-        <button class="btn btn-success btn-sm" onclick="saveEquipmentTypes()"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+        <button class="btn btn-success btn-sm" onclick="saveEquipmentTypes()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
       <div id="equip-types-warning" style="display:none;margin-top:12px;padding:10px 12px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:6px;color:#991b1b;font-size:.85rem;"></div>
     `;
@@ -917,7 +913,7 @@ function renderEquipmentTypesTable() {
     <td style="text-align: center;">
       <input type="checkbox" ${t.allowReplacement !== false ? 'checked' : ''} onchange="updateEquipmentType(${i}, 'allowReplacement', this.checked)" title="Предлагать замену со склада">
     </td>
-   <td style="text-align: center;"><button class="row-actions-btn" onclick="openEquipTypeActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i>'''</button></td>
+   <td style="text-align: center;"><button class="row-actions-btn" onclick="openEquipTypeActions(event, ${i})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button></td>
   </tr>`).join('');
   
   updateEquipmentTypesWarning();
@@ -972,7 +968,7 @@ async function addEquipmentType() {
 async function deleteEquipmentType(idx) {
   if (idx < 0 || idx >= _equipmentTypesDraft.length) return;
   const t = _equipmentTypesDraft[idx];
-  const ok = await showConfirm(`Удалить тип «${t.label}»?`, { icon: '<i class="fa-solid fa-screwdriver-wrench"></i>''', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
+  const ok = await showConfirm(`Удалить тип «${t.label}»?`, { icon: '<i class="fa-solid fa-screwdriver-wrench"></i>', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   _equipmentTypesDraft.splice(idx, 1);
   renderEquipmentTypesTable();
@@ -989,7 +985,7 @@ function updateEquipmentTypesWarning() {
   
   if (problems.length > 0) {
     warn.style.display = 'block';
-    warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>''' ' + problems.join(', ');
+    warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + problems.join(', ');
   } else {
     warn.style.display = 'none';
   }
@@ -1027,7 +1023,7 @@ async function renderPrintersSettings() {
       <p style="color:#64748b;font-size:.85rem;margin:0 0 12px;">Список принтеров.</p>
       <div id="barcode-printers-list"></div>
       <div class="form-actions" style="margin-top:16px;">
-        <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i>''' Добавить принтер</button>
+        <button class="btn btn-primary btn-sm" onclick="addBarcodePrinter()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить принтер</button>
         <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
       </div>
     `;
@@ -1057,12 +1053,12 @@ async function renderBarcodesSettings() {
         <div class="bc-fields-section">
           <div class="bc-fields-label">Поля на этикетке:</div>
           <div id="bc-label-fields" class="bc-fields-grid"></div>
-          <div class="bc-fields-hint"><i class="fa-solid fa-circle-info"></i>''' Влезает <b>3–4 поля</b></div>
+          <div class="bc-fields-hint"><i class="fa-solid fa-circle-info"></i> Влезает <b>3–4 поля</b></div>
         </div>
       </div>
       <div class="form-actions" style="margin-top:16px;">
         <button type="button" class="btn btn-secondary btn-sm" onclick="closeSettingsModal()">Закрыть</button>
-        <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+        <button class="btn btn-success btn-sm" onclick="saveBarcodeSettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
     `;
     await loadBarcodeSettings();
@@ -1106,8 +1102,8 @@ async function renderLogSettings() {
           <option value="month">30 дней</option>
           <option value="custom">Произвольный</option>
         </select>
-        <button class="btn btn-secondary" onclick="renderLogSettings()"><i class="fa-solid fa-rotate"></i>'''</button>
-        <button class="btn btn-danger" onclick="clearLogSetting()"><i class="fa-solid fa-trash"></i>'''</button>
+        <button class="btn btn-secondary" onclick="renderLogSettings()"><i class="fa-solid fa-rotate"></i></button>
+        <button class="btn btn-danger" onclick="clearLogSetting()"><i class="fa-solid fa-trash"></i></button>
       </div>
       <div id="log-custom-period" style="display:none;gap:8px;margin-bottom:10px;">
         <input type="date" id="log-from" onchange="renderLogList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
@@ -1215,7 +1211,7 @@ function renderLogList() {
 }
 
 async function clearLogSetting() {
-  const ok = await showConfirm('Очистить журнал действий?', { icon: '<i class="fa-solid fa-note-sticky"></i>''', title: 'Очистка', okText: 'Очистить', okClass: 'btn-danger' });
+  const ok = await showConfirm('Очистить журнал действий?', { icon: '<i class="fa-solid fa-note-sticky"></i>', title: 'Очистка', okText: 'Очистить', okClass: 'btn-danger' });
   if (!ok) return;
   await apiRequest('/log', 'DELETE');
   showToast('Журнал очищен', 'success');
@@ -1224,9 +1220,9 @@ async function clearLogSetting() {
 
 async function resetAllDataSetting() {
   if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
-  const ok1 = await showConfirm('ВНИМАНИЕ! Всё оборудование будет удалено безвозвратно.', { icon: '<i class="fa-solid fa-triangle-exclamation"></i>''', title: 'Сброс', okText: 'Продолжить', okClass: 'btn-danger' });
+  const ok1 = await showConfirm('ВНИМАНИЕ! Всё оборудование будет удалено безвозвратно.', { icon: '<i class="fa-solid fa-triangle-exclamation"></i>', title: 'Сброс', okText: 'Продолжить', okClass: 'btn-danger' });
   if (!ok1) return;
-  const ok2 = await showConfirm('Вы точно уверены?', { icon: '<i class="fa-solid fa-bell"></i>''', title: 'Последнее предупреждение', okText: 'Удалить всё', okClass: 'btn-danger' });
+  const ok2 = await showConfirm('Вы точно уверены?', { icon: '<i class="fa-solid fa-bell"></i>', title: 'Последнее предупреждение', okText: 'Удалить всё', okClass: 'btn-danger' });
   if (!ok2) return;
   try {
     await apiRequest('/settings/reset-data', 'POST', {});
@@ -1261,7 +1257,7 @@ async function renderViewTemplatesSettings() {
           <td>${esc(t.name)}</td>
           <td style="text-align:center;">${t.isDefault ? '✅' : '—'}</td>
           <td style="text-align:center;">
-            <button class="row-actions-btn" onclick="openViewTemplateActions(event, ${t.id})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i>'''</button>
+            <button class="row-actions-btn" onclick="openViewTemplateActions(event, ${t.id})" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>
           </td>
         </tr>`;
       });
@@ -1269,7 +1265,7 @@ async function renderViewTemplatesSettings() {
     
     html += `</tbody></table>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="addViewTemplate()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i>''' Добавить шаблон</button>
+        <button class="btn btn-primary" onclick="addViewTemplate()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить шаблон</button>
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
       
@@ -1327,7 +1323,7 @@ async function editViewTemplate(id) {
     </div>
     <div class="form-actions">
       <button type="button" class="btn btn-secondary" onclick="renderViewTemplatesSettings()">Отмена</button>
-      <button class="btn btn-success" onclick="saveViewTemplate(${id})"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+      <button class="btn btn-success" onclick="saveViewTemplate(${id})"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
     </div>`;
 
   document.getElementById('settings-section-content').innerHTML = html;
@@ -1355,9 +1351,9 @@ async function saveViewTemplate(id) {
 function openViewTemplateActions(ev, id) {
   ev.stopPropagation();
   renderRowActionsMenu(ev.currentTarget, [
-    { label: '<i class="fa-solid fa-pen"></i>''' Редактировать', action: () => editViewTemplate(id) },
-    { label: '<i class="fa-solid fa-trash"></i>''' Удалить', class: 'item-danger', action: async () => {
-        const ok = await showConfirm('Удалить шаблон?', { icon: '<i class="fa-solid fa-trash"></i>''', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
+    { label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => editViewTemplate(id) },
+    { label: '<i class="fa-solid fa-trash"></i> Удалить', class: 'item-danger', action: async () => {
+        const ok = await showConfirm('Удалить шаблон?', { icon: '<i class="fa-solid fa-trash"></i>', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
         if (!ok) return;
         try {
           await apiRequest('/view-templates/' + id, 'DELETE');
@@ -1371,10 +1367,10 @@ function openViewTemplateActions(ev, id) {
 // ============================================================
 // МЕНЮ ДЕЙСТВИЙ ДЛЯ НАСТРОЕК
 // ============================================================
-function openFieldActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i>''' Удалить поле', class: 'item-danger', action: () => deleteFieldSetting(idx) }]); }
-function openDeptActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i>''' Удалить отдел', class: 'item-danger', action: () => deleteDepartmentItem(idx) }]); }
-function openFilterActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i>''' Удалить фильтр', class: 'item-danger', action: () => deleteFilter(idx) }]); }
-function openEquipTypeActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i>''' Удалить тип', class: 'item-danger', action: () => deleteEquipmentType(idx) }]); }
+function openFieldActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить поле', class: 'item-danger', action: () => deleteFieldSetting(idx) }]); }
+function openDeptActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить отдел', class: 'item-danger', action: () => deleteDepartmentItem(idx) }]); }
+function openFilterActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить фильтр', class: 'item-danger', action: () => deleteFilter(idx) }]); }
+function openEquipTypeActions(ev, idx) { ev.stopPropagation(); renderRowActionsMenu(ev.currentTarget, [{ label: '<i class="fa-solid fa-trash"></i> Удалить тип', class: 'item-danger', action: () => deleteEquipmentType(idx) }]); }
 
 // ============================================================
 // РАЗДЕЛ: ИДЕНТИФИКАЦИЯ ПРИБОРА
@@ -1412,9 +1408,9 @@ async function renderIdentitySettingsInline() {
       </div>
       <div class="form-actions" style="margin-top:20px;">
         <button type="button" class="btn btn-secondary" onclick="renderFieldsSettings(true)">
-          <i class="fa-solid fa-arrow-left"></i>''' Назад к полям
+          <i class="fa-solid fa-arrow-left"></i> Назад к полям
         </button>
-        <button class="btn btn-success" onclick="saveBulkIdentitySettings()"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+        <button class="btn btn-success" onclick="saveBulkIdentitySettings()"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
       </div>
     `;
   } catch (e) { 
@@ -1441,6 +1437,7 @@ async function saveBulkIdentitySettings() {
     });
   } catch (e) {}
 }
+
 // ============================================================
 // РАЗДЕЛ: СПРАВКА
 // ============================================================
@@ -1458,10 +1455,10 @@ async function renderHelpSettings() {
       </p>
       <div class="help-actions-bar">
         <button class="btn btn-primary btn-sm" onclick="openHelpFileUploadModal()">
-          <i class="fa-solid fa-plus"></i>''' Добавить раздел с файлом
+          <i class="fa-solid fa-plus"></i> Добавить раздел с файлом
         </button>
         <button class="btn btn-warning btn-sm" onclick="resetHelpToFactory()">
-          <i class="fa-solid fa-rotate-left"></i>''' Сбросить к заводской
+          <i class="fa-solid fa-rotate-left"></i> Сбросить к заводской
         </button>
       </div>
     `;
@@ -1505,10 +1502,10 @@ async function renderHelpSettings() {
       if (!s.filePath) {
         fileCell = `<span style="font-size:.8rem;color:#94a3b8;">— нет файла —</span>`;
       } else if (exists) {
-        fileCell = `<span style="font-size:.8rem;color:#0369a1;"><i class="fa-solid fa-file"></i>''' ${esc(fileName)}</span>`;
+        fileCell = `<span style="font-size:.8rem;color:#0369a1;"><i class="fa-solid fa-file"></i> ${esc(fileName)}</span>`;
       } else {
         fileCell = `<span style="font-size:.8rem;color:#dc2626;font-weight:600;" title="Файл в БД прописан, но физически отсутствует на сервере">
-          <i class="fa-solid fa-triangle-exclamation"></i>''' ${esc(fileName)} — ОТСУТСТВУЕТ
+          <i class="fa-solid fa-triangle-exclamation"></i> ${esc(fileName)} — ОТСУТСТВУЕТ
         </span>`;
       }
 
@@ -1518,7 +1515,7 @@ async function renderHelpSettings() {
         <td style="text-align:center;">${s.enabled ? '✅' : '❌'}</td>
         <td class="help-admin-actions">
           <button class="row-actions-btn" onclick="openHelpAdminActions(event, '${esc(s.slug)}')" title="Действия">
-            <i class="fa-solid fa-ellipsis-vertical"></i>'''
+            <i class="fa-solid fa-ellipsis-vertical"></i>
           </button>
         </td>
       </tr>`;
@@ -1535,8 +1532,8 @@ async function renderHelpSettings() {
 function openHelpAdminActions(ev, slug) {
   ev.stopPropagation();
   const items = [
-    { label: '<i class="fa-solid fa-pen"></i>''' Заменить файл / Изменить', action: () => openHelpFileUploadModal(slug) },
-    { label: '<i class="fa-solid fa-trash"></i>''' Удалить раздел', class: 'item-danger', action: () => deleteHelpSection(slug) }
+    { label: '<i class="fa-solid fa-pen"></i> Заменить файл / Изменить', action: () => openHelpFileUploadModal(slug) },
+    { label: '<i class="fa-solid fa-trash"></i> Удалить раздел', class: 'item-danger', action: () => deleteHelpSection(slug) }
   ];
   renderRowActionsMenu(ev.currentTarget, items);
 }
@@ -1575,7 +1572,7 @@ async function openHelpFileUploadModal(slug = null) {
   const modalHtml = `
     <div class="modal-overlay active" id="help-upload-modal" style="z-index:1000;">
       <div class="modal" style="max-width: 500px;">
-        <h2><i class="fa-solid fa-upload"></i>''' ${isEdit ? 'Изменить раздел' : 'Новый раздел справки'}</h2>
+        <h2><i class="fa-solid fa-upload"></i> ${isEdit ? 'Изменить раздел' : 'Новый раздел справки'}</h2>
         
         <div class="form-group">
           <label>Название (видно пользователям) *</label>
@@ -1593,7 +1590,7 @@ async function openHelpFileUploadModal(slug = null) {
           <div class="hup-multiselect-wrap">
             <div class="hup-multiselect-trigger" onclick="toggleHupDropdown(event)">
               <span id="hup-perm-text">Выбрано: ${_hupSelectedPerms.length} прав</span>
-              <i class="fa-solid fa-caret-down"></i>'''
+              <i class="fa-solid fa-caret-down"></i>
             </div>
             <div class="hup-multiselect-menu" id="hup-perm-menu">
               ${permsHtml}
@@ -1604,7 +1601,7 @@ async function openHelpFileUploadModal(slug = null) {
 
         <div class="form-actions">
           <button class="btn btn-secondary" onclick="document.getElementById('help-upload-modal').remove()">Отмена</button>
-          <button class="btn btn-success" onclick="uploadHelpFile('${slug || ''}')"><i class="fa-solid fa-upload"></i>''' Сохранить</button>
+          <button class="btn btn-success" onclick="uploadHelpFile('${slug || ''}')"><i class="fa-solid fa-upload"></i> Сохранить</button>
         </div>
       </div>
     </div>
@@ -1650,7 +1647,7 @@ async function uploadHelpFile(slug) {
 
   try {
     const btn = document.querySelector('#help-upload-modal .btn-success');
-    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>''' Загрузка...';
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Загрузка...';
     
     const res = await fetch('/api/help/upload', {
       method: 'POST',
@@ -1665,12 +1662,12 @@ async function uploadHelpFile(slug) {
   } catch (e) {
     showToast(e.message, 'error');
     const btn = document.querySelector('#help-upload-modal .btn-success');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-upload"></i>''' Сохранить'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-upload"></i> Сохранить'; }
   }
 }
 
 async function deleteHelpSection(slug) {
-  const ok = await showConfirm('Удалить раздел справки?', { icon: '<i class="fa-solid fa-trash"></i>''', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
+  const ok = await showConfirm('Удалить раздел справки?', { icon: '<i class="fa-solid fa-trash"></i>', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' });
   if (!ok) return;
   try {
     await apiRequest('/help/' + slug, 'DELETE');
@@ -1680,7 +1677,7 @@ async function deleteHelpSection(slug) {
 }
 
 async function resetHelpToFactory() {
-  const ok = await showConfirm('Сбросить справку к заводской? Все изменения названий и добавленные разделы будут потеряны.', { icon: '<i class="fa-solid fa-triangle-exclamation"></i>''', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' });
+  const ok = await showConfirm('Сбросить справку к заводской? Все изменения названий и добавленные разделы будут потеряны.', { icon: '<i class="fa-solid fa-triangle-exclamation"></i>', title: 'Сброс', okText: 'Сбросить', okClass: 'btn-warning' });
   if (!ok) return;
   try {
     await apiRequest('/help/reset', 'POST', {});
@@ -1714,7 +1711,7 @@ async function renderRolesSettings() {
     _cachedRolesList.forEach(r => {
       const permsCount = r.permissions ? r.permissions.length : 0;
       const isAdminText = r.isAdmin ? '<span style="color:#dc2626;font-weight:bold;">Да</span>' : '—';
-      const sysBadge = r.isSystem ? ' <i class="fa-solid fa-lock" style="color:#94a3b8;font-size:0.8em;" title="Системная роль"></i>'''' : '';
+      const sysBadge = r.isSystem ? ' <i class="fa-solid fa-lock" style="color:#94a3b8;font-size:0.8em;" title="Системная роль"></i>' : '';
 
       html += `<tr>
         <td><strong>${esc(r.name)}</strong>${sysBadge}</td>
@@ -1723,7 +1720,7 @@ async function renderRolesSettings() {
         <td style="text-align:center;">${r.isAdmin ? 'Все' : permsCount + ' шт.'}</td>
         <td style="text-align:center;">
           <button class="row-actions-btn" onclick="openRoleActions(event, ${r.id})" title="Действия">
-            <i class="fa-solid fa-ellipsis-vertical"></i>'''
+            <i class="fa-solid fa-ellipsis-vertical"></i>
           </button>
         </td>
       </tr>`;
@@ -1731,7 +1728,7 @@ async function renderRolesSettings() {
 
     html += `</tbody></table>
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="openRoleModal()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i>''' Добавить роль</button>
+        <button class="btn btn-primary" onclick="openRoleModal()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить роль</button>
         <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
       </div>`;
 
@@ -1745,13 +1742,12 @@ function openRoleActions(ev, id) {
   ev.stopPropagation();
   const role = _cachedRolesList.find(r => r.id === id);
   const items = [
-    { label: '<i class="fa-solid fa-pen"></i>''' Редактировать', action: () => openRoleModal(id) }
+    { label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => openRoleModal(id) }
   ];
 
-  // Системную роль "admin" удалять нельзя (это защищено на бэке, но и на фронте скроем)
   if (!role.isSystem && role.value !== 'admin') {
     items.push({ 
-      label: '<i class="fa-solid fa-trash"></i>''' Удалить', 
+      label: '<i class="fa-solid fa-trash"></i> Удалить', 
       class: 'item-danger', 
       action: () => deleteRoleSetting(id) 
     });
@@ -1769,7 +1765,6 @@ async function openRoleModal(editId = null) {
     if (!role) return;
   }
 
-  // Группируем права по категориям
   const groups = {};
   ALL_PERMISSIONS.forEach(p => {
     if (!groups[p.group]) groups[p.group] = [];
@@ -1788,7 +1783,6 @@ async function openRoleModal(editId = null) {
     }).join('');
   }
 
-  // Скрываем чекбокс "Админ", если текущий пользователь сам не админ
   const adminCheckboxHtml = isAdmin() ? `
     <div class="form-group" style="margin-top:12px; padding:10px; background:var(--card-alt); border-radius:6px;">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
@@ -1802,7 +1796,7 @@ async function openRoleModal(editId = null) {
   const modalHtml = `
     <div class="modal-overlay active" id="role-modal" style="z-index:1000;">
       <div class="modal" style="max-width: 500px;">
-        <h2><i class="fa-solid fa-user-shield"></i>''' ${isEdit ? 'Редактирование роли' : 'Новая роль'}</h2>
+        <h2><i class="fa-solid fa-user-shield"></i> ${isEdit ? 'Редактирование роли' : 'Новая роль'}</h2>
         
         <div class="form-group">
           <label>Название роли (видно пользователям) *</label>
@@ -1818,7 +1812,7 @@ async function openRoleModal(editId = null) {
 
         <div class="form-actions">
           <button class="btn btn-secondary" onclick="document.getElementById('role-modal').remove()">Отмена</button>
-          <button class="btn btn-success" onclick="saveRoleSetting(${isEdit ? editId : 'null'})"><i class="fa-solid fa-floppy-disk"></i>''' Сохранить</button>
+          <button class="btn btn-success" onclick="saveRoleSetting(${isEdit ? editId : 'null'})"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
         </div>
       </div>
     </div>
@@ -1858,7 +1852,7 @@ async function saveRoleSetting(editId) {
   
   try {
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>''' Сохранение...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Сохранение...';
 
     if (editId) {
       await apiRequest('/roles/' + editId, 'PUT', payload);
@@ -1868,11 +1862,11 @@ async function saveRoleSetting(editId) {
     
     showToast('Роль сохранена', 'success');
     document.getElementById('role-modal').remove();
-    renderRolesSettings(); // Перезагружаем таблицу
+    renderRolesSettings();
   } catch (e) {
     showToast(e.message, 'error');
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i>''' Сохранить';
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Сохранить';
   }
 }
 
@@ -1882,7 +1876,7 @@ async function deleteRoleSetting(id) {
 
   const ok = await showConfirm(
     `Удалить роль «${role.name}»?`, 
-    { icon: '<i class="fa-solid fa-trash"></i>''', title: 'Удаление роли', okText: 'Удалить', okClass: 'btn-danger' }
+    { icon: '<i class="fa-solid fa-trash"></i>', title: 'Удаление роли', okText: 'Удалить', okClass: 'btn-danger' }
   );
   if (!ok) return;
 
@@ -1891,7 +1885,6 @@ async function deleteRoleSetting(id) {
     showToast('Роль удалена', 'success');
     renderRolesSettings();
   } catch (e) {
-    // Если бэк вернул 400 (роль используется пользователями)
     showToast(e.message, 'error');
   }
 }
