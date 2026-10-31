@@ -1,4 +1,5 @@
 'use strict';
+
 let _lockCheckTimer = null;
 let _skipUnlockOnClose = false;
 let _calLockTimer = null;
@@ -12,7 +13,7 @@ async function generateFormFields(data = null) {
   container.innerHTML = '<p style="color:#94a3b8;padding:10px;">Загрузка полей…</p>';
 
   try {
-       const allFields = await apiRequest('/settings/fields');
+    const allFields = await apiRequest('/settings/fields');
     const fields = getActiveFormFields(allFields)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -23,7 +24,7 @@ async function generateFormFields(data = null) {
       return;
     }
 
-        for (const f of fields) {
+    for (const f of fields) {
       if (f.id === 'id' && !data) continue;
 
       const div = document.createElement('div');
@@ -83,15 +84,15 @@ async function generateFormFields(data = null) {
       };
 
       eqSelect.addEventListener('change', async () => {
-  applyIntervalFromType();
-  try {
-    const res = await apiRequest('/pipettes/next-id?type=' + eqSelect.value);
-    const idInput = document.getElementById('p-id');
-    if (idInput) idInput.value = res.nextId;
-  } catch (e) {
-    console.warn('Не удалось обновить ID:', e.message);
-  }
-});
+        applyIntervalFromType();
+        try {
+          const res = await apiRequest('/pipettes/next-id?type=' + eqSelect.value);
+          const idInput = document.getElementById('p-id');
+          if (idInput) idInput.value = res.nextId;
+        } catch (e) {
+          console.warn('Не удалось обновить ID:', e.message);
+        }
+      });
       if (!data || !data.id) {
         applyIntervalFromType();
       }
@@ -141,7 +142,7 @@ async function openModal(id) {
         try {
           const lockRes = await apiRequest(`/pipettes/${id}/lock`);
                     
-                    if (lockRes.locked && !lockRes.mine) {
+          if (lockRes.locked && !lockRes.mine) {
             const proceed = await showLockWarning(lockRes, 'Редактирование');
             if (!proceed) return;
           }
@@ -149,6 +150,8 @@ async function openModal(id) {
           await apiRequest(`/pipettes/${id}/lock`, 'POST');
           
           if (_lockCheckTimer) clearInterval(_lockCheckTimer);
+          
+          // Heartbeat: проверяем, не забрал ли лок другой пользователь
           _lockCheckTimer = setInterval(async () => {
             const modalEl = document.getElementById('modal');
             if (!modalEl || !modalEl.classList.contains('active')) {
@@ -157,11 +160,11 @@ async function openModal(id) {
             try {
               const r = await apiRequest(`/pipettes/${id}/lock`);
                             
-               if (!r.locked || !r.mine) {
+              if (!r.locked || !r.mine) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
                 _skipUnlockOnClose = true;
 
-                // 🆕 Прямой await — ждём реального завершения сохранения
+                // Автосохранение перед закрытием
                 let savedOk = false;
                 try {
                   await savePipette(null, true);
@@ -215,7 +218,7 @@ async function openModal(id) {
         if (bar) bar.style.display = 'none';
       }
 
-            if (isEdit) {
+      if (isEdit) {
         let p = pipettes.find(x => x.id === id);
         if (!p) {
           showToast('Оборудование не найдено', 'error');
@@ -224,13 +227,11 @@ async function openModal(id) {
           return;
         }
 
-        // 🆕 После перехвата блокировки загружаем свежие данные с сервера,
-        // чтобы не перезаписать только что сохраненные данные другого пользователя.
+        // Загружаем свежие данные с сервера, чтобы не перезаписать чужое сохранение
         try {
           const fresh = await apiRequest(`/pipettes/${encodeURIComponent(id)}`);
           if (fresh && fresh.id) {
             p = { ...p, ...fresh };
-            // Обновляем локальный кэш pipettes
             const idx = pipettes.findIndex(x => x.id === id);
             if (idx !== -1) pipettes[idx] = { ...pipettes[idx], ...fresh };
           }
@@ -570,7 +571,7 @@ async function saveBulkRows(e) {
     return;
   }
 
-   const bulkFieldIds = new Set(_bulkFields.map(f => f.id));
+  const bulkFieldIds = new Set(_bulkFields.map(f => f.id));
   const errors = [];
 
   _bulkRows.forEach((r, i) => {
@@ -579,7 +580,7 @@ async function saveBulkRows(e) {
     if (bulkFieldIds.has('lastCalibration') && !String(r.lastCalibration || '').trim()) errors.push(`Строка ${n}: дата`);
     if (bulkFieldIds.has('responsible') && !String(r.responsible || '').trim()) errors.push(`Строка ${n}: ответственный`);
 
-    // Проверяем остальные обязательные поля (если админ поставил им галку "Обязательно")
+    // Проверяем остальные обязательные поля
     const SYSTEM_REQUIRED = new Set(['model', 'lastCalibration', 'responsible']);
     _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id) && bulkFieldIds.has(f.id)).forEach(f => {
       if (!String(r[f.id] || '').trim()) errors.push(`Строка ${n}: ${f.label}`);
@@ -592,7 +593,7 @@ async function saveBulkRows(e) {
     return;
   }
 
-  // Автоподстановка для СКРЫТЫХ обязательных полей в партии
+  // Автоподстановка для скрытых обязательных полей
   const defaultResp = currentUser.isActing && currentUser.actingForName
     ? currentUser.actingForName
     : currentUser.fullName;
@@ -611,7 +612,7 @@ async function saveBulkRows(e) {
     if (!ok) return;
   }
 
-    try {
+  try {
     await UI.saveAction({
       btn: '#bc-submit-btn',
       successMsg: `Создано ${_bulkRows.length} единиц`,
@@ -655,7 +656,7 @@ async function savePipette(e, force = false) {
   if (fieldElements.lastCalibration && !String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
   if (fieldElements.responsible && !String(payload.responsible || '').trim()) errors.push('Ответственный');
 
-  // Проверяем остальные обязательные поля (если админ поставил им галку "Обязательно")
+  // Проверяем остальные обязательные поля
   const SYSTEM_REQUIRED = new Set(['model', 'lastCalibration', 'responsible']);
   _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id)).forEach(f => {
     if (fieldElements[f.id] && !String(payload[f.id] || '').trim()) errors.push(f.label);
@@ -678,7 +679,7 @@ async function savePipette(e, force = false) {
     return;
   }
 
-      try {
+  try {
     await UI.saveAction({
       btn: '#pipette-form button[type="submit"]',
       successMsg: isEdit ? 'Оборудование обновлено' : 'Оборудование создано',
@@ -694,9 +695,8 @@ async function savePipette(e, force = false) {
         showToast(`Оборудование создано (${res.id})`, 'success');
       }
     });
-        } catch (e) {
-    // 🆕 Если поймали 409 (кто-то успел изменить данные), 
-    // принудительно сохраняем еще раз, БЕЗ updatedAt, чтобы перезаписать.
+  } catch (e) {
+    // Если поймали 409 (конфликт версий), сохраняем принудительно без updatedAt
     if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
       delete payload.updatedAt; 
       try {
@@ -717,7 +717,7 @@ async function deletePipette(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
-    try {
+  try {
     const lockRes = await apiRequest(`/pipettes/${id}/lock`);
     if (lockRes.locked && !lockRes.mine) {
       const proceed = await showLockWarning(lockRes, 'Удаление оборудования');
@@ -754,14 +754,14 @@ async function openQuickCalModal(id) {
   await UI.guard(
     { permission: ['quick_calibration', 'manage_pipettes'], errorMsg: 'Доступ запрещён' },
     async () => {
-      // 🆕 1. Проверяем блокировку и ставим свою (как при редактировании)
+      // Проверяем блокировку и ставим свою
       try {
         const lockRes = await apiRequest(`/pipettes/${id}/lock`);
         if (lockRes.locked && !lockRes.mine) {
           const proceed = await showLockWarning(lockRes, 'Проведение быстрой поверки');
           if (!proceed) return;
         }
-        await apiRequest(`/pipettes/${id}/lock`, 'POST'); // Ставим свою блокировку
+        await apiRequest(`/pipettes/${id}/lock`, 'POST');
       } catch (e) {
         if (e.status === 409) {
           showToast(`Заблокировано: ${e.response?.lockedBy || ''}`, 'error');
@@ -781,7 +781,10 @@ async function openQuickCalModal(id) {
       document.getElementById('quick-cal-org').value = '';
       document.getElementById('quick-cal-note').value = '';
       UI.modal.open('quick-cal-modal');
-            if (_calLockTimer) clearInterval(_calLockTimer);
+      
+      if (_calLockTimer) clearInterval(_calLockTimer);
+      
+      // Heartbeat для быстрой поверки
       _calLockTimer = setInterval(async () => {
         const modalEl = document.getElementById('quick-cal-modal');
         if (!modalEl || !modalEl.classList.contains('active')) {
@@ -814,7 +817,8 @@ async function openQuickCalModal(id) {
             const msg = saved
               ? `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`
               : `Сессия завершена. Прибор забрал в работу: ${displayUser}.`;
-              await showConfirm(msg, {
+            
+            await showConfirm(msg, {
               icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>',
               title: 'Сессия завершена', okText: 'ОК', hideCancel: true, okClass: 'btn-secondary'
             });
@@ -855,8 +859,7 @@ async function saveQuickCalibration() {
     closeQuickCalModal();
     await loadPipetteData();
     await loadStats();
-    } catch (error) {
-    // Если блокировка перехвачена только что, даем серверу время
+  } catch (error) {
     showToast(error.message || 'Ошибка сохранения', 'error');
   }
 }
