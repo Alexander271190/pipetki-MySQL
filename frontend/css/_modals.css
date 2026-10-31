@@ -25,20 +25,20 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
-  resize: none;                       /* нативный ресайз отключён */
+  resize: none;
   min-width: 400px;
   min-height: 300px;
   position: relative;
   border: 1px solid transparent;
 
-  /* 🆕 Скролл: не торчит за границы, не «прыгает» */
+  /* Скролл: не торчит за границы, не «прыгает» */
   clip-path: inset(0 round 16px);
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-gutter: stable;
 }
 
-/* 🆕 Тонкий скроллбар внутри модалки */
+/* Тонкий скроллбар внутри модалки */
 .modal::-webkit-scrollbar { width: 8px; height: 8px; }
 .modal::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
 .modal::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, .15); border-radius: 4px; }
@@ -100,7 +100,7 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
   border: none;
 }
 
-/* 🆕 Невидимая зона захвата (без визуальных полосок) */
+/* Невидимая зона захвата (без визуальных полосок) */
 .modal::after {
   content: '';
   position: absolute;
@@ -108,7 +108,7 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
   bottom: 0;
   width: 40px;
   height: 40px;
-  cursor: nwse-resize;        /* курсор ↘ при наведении */
+  cursor: nwse-resize;
   background: transparent;
   pointer-events: auto;
   touch-action: none;
@@ -478,11 +478,9 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
   background: #273449;
 }
 
-
 /* ============================================================
-   🆕 ФИКС ПОЛНОЭКРАННОГО РЕЖИМА JODIT
+   ФИКС ПОЛНОЭКРАННОГО РЕЖИМА JODIT
    ============================================================ */
-
 .modal-overlay.jodit-fullscreen-modal {
   padding: 0 !important;
 }
