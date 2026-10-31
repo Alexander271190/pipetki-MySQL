@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Клинико-диагностическая лаборатория</title>
-  <link rel="stylesheet" href="fontawesome/css/all.min.css">   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Скрипты (порядок подключения важен) -->
   <script src="js/00-constants.js" defer></script>
   <script src="js/01-config.js" defer></script>
   <script src="js/02-utils.js" defer></script>
@@ -25,7 +28,7 @@
   <script src="js/17-help-templates.js" defer></script>
   <script src="js/99-components.js" defer></script>
   <script src="js/20-audit.js" defer></script>
-   <script src="js/18-init.js" defer></script>
+  <script src="js/18-init.js" defer></script>
 </head>
 <body>
 
@@ -57,170 +60,166 @@
   
 <!-- ОСНОВНОЙ КОНТЕНТ -->
 <div class="main-content" id="main-content">
-<div class="header" id="main-header">
-  <div class="header-top">
-    <h1>
-  <span class="logo"><i class="fa-solid fa-flask-vial"></i></span>
-  <span class="h1-full">Клинико-диагностическая лаборатория учёт оборудования и его поверок</span>
-  <span class="h1-short">КДЛ-оборудование</span>
-</h1>
-    <div class="header-mini-stats" id="header-mini-stats"></div>
-    <button class="header-collapse-btn" id="header-collapse-btn" onclick="toggleHeaderCollapse()" title="Свернуть шапку">
-      <span class="collapse-label"><i class="fa-solid fa-chevron-up"></i> Свернуть</span>
-    </button>
-   </div>
+  <div class="header" id="main-header">
+    <div class="header-top">
+      <h1>
+        <span class="logo"><i class="fa-solid fa-flask-vial"></i></span>
+        <span class="h1-full">Клинико-диагностическая лаборатория учёт оборудования и его поверок</span>
+        <span class="h1-short">КДЛ-оборудование</span>
+      </h1>
+      <div class="header-mini-stats" id="header-mini-stats"></div>
+      <button class="header-collapse-btn" id="header-collapse-btn" onclick="toggleHeaderCollapse()" title="Свернуть шапку">
+        <span class="collapse-label"><i class="fa-solid fa-chevron-up"></i> Свернуть</span>
+      </button>
+    </div>
 
-  <div class="header-body">
-    <div class="header-stats">
-      <div class="stat-card ok"><div class="num" id="stat-ok">0</div><div class="label">В норме</div></div>
-      <div class="stat-card warn"><div class="num" id="stat-warn">0</div><div class="label">Скоро поверка</div></div>
-      <div class="stat-card danger"><div class="num" id="stat-danger">0</div><div class="label">Просрочены</div></div>
-      <div class="stat-card" id="stat-total-card">
-      <div class="num" id="stat-total" style="cursor:help;">0</div>
-      <div class="label">Всего</div>
-      <div class="stat-tooltip" id="stat-tooltip"></div>
+    <div class="header-body">
+      <div class="header-stats">
+        <div class="stat-card ok"><div class="num" id="stat-ok">0</div><div class="label">В норме</div></div>
+        <div class="stat-card warn"><div class="num" id="stat-warn">0</div><div class="label">Скоро поверка</div></div>
+        <div class="stat-card danger"><div class="num" id="stat-danger">0</div><div class="label">Просрочены</div></div>
+        <div class="stat-card" id="stat-total-card">
+          <div class="num" id="stat-total" style="cursor:help;">0</div>
+          <div class="label">Всего</div>
+          <div class="stat-tooltip" id="stat-tooltip"></div>
+        </div>
+      </div>
+      <div class="user-info" id="user-info">
+        <span class="name" id="user-fullname">Имя</span>
+        <span class="position" id="user-position">Должность</span>
+        <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()"><i class="fa-solid fa-arrow-left"></i> Вернуться</button>
+        <button class="btn btn-sm" id="theme-btn" onclick="toggleTheme()" title="Переключить тему"><i class="fa-solid fa-moon"></i></button>
+        <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль"><i class="fa-solid fa-lock"></i> Пароль</button>
+        <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
       </div>
     </div>
-    <div class="user-info" id="user-info">
-      <span class="name" id="user-fullname">Имя</span>
-      <span class="position" id="user-position">Должность</span>
-      <button class="btn btn-sm" id="btn-impersonate-stop" style="display:none;" onclick="stopImpersonate()"><i class="fa-solid fa-arrow-left"></i> Вернуться</button>
-      <button class="btn btn-sm" id="theme-btn" onclick="toggleTheme()" title="Переключить тему">   <i class="fa-solid fa-moon"></i> </button>
-      <button class="btn btn-sm" onclick="openChangePasswordModal(false)" title="Сменить пароль"><i class="fa-solid fa-lock"></i> Пароль</button>
-      <button class="btn btn-sm" onclick="logoutUser()">Выйти</button>
-    </div>
   </div>
-</div>
 
   <div class="container">
- <div class="alert-banner" id="alert-banner">
-  <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
-  <span id="alert-text"></span>
-</div>
+    <div class="alert-banner" id="alert-banner">
+      <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <span id="alert-text"></span>
+    </div>
 
-<!-- ТУЛБАР -->
-<div class="toolbar" id="toolbar">
-
-  <!-- Строка массовых операций (появляется при выбранных) -->
-  <div class="toolbar-bulk" id="toolbar-bulk" style="display:none;">
-    <span class="bulk-label"><i class="fa-solid fa-bolt"></i> Выбрано: <b id="bulk-total">0</b></span>
-    <button class="btn btn-info btn-bulk-cal" id="btn-bulk-cal" onclick="openBulkSendModal()">
-      <i class="fa-solid fa-box"></i> Отправить (<span id="bulk-counter">0</span>)
-    </button>
-    <button class="btn btn-success btn-bulk-return" id="btn-bulk-return" onclick="openBulkReturnModal()">
-      <i class="fa-solid fa-box-open"></i> Вернуть (<span id="bulk-return-counter">0</span>)
-    </button>
-    <button class="btn btn-secondary btn-bulk-responsible" id="btn-bulk-responsible" onclick="openBulkResponsibleModal()">
-      <i class="fa-solid fa-user-pen"></i> Ответственный (<span id="bulk-responsible-counter">0</span>)
-    </button>
-    <button class="btn btn-secondary btn-sm" onclick="clearSelection()">
-      <i class="fa-solid fa-xmark"></i> Снять
-    </button>
-  </div>
-
-  <!-- Поиск -->
-  <input type="text" id="search" placeholder="Поиск по номеру, модели, отделу, ответственному…">
-
-  <!-- Фильтр -->
-  <div style="position:relative;display:inline-block;">
-    <button class="btn btn-secondary" id="filter-btn" onclick="toggleFilterPanel(event)">
-      <i class="fa-solid fa-filter"></i> Фильтр
-    </button>
-    <div class="filter-panel" id="filter-panel">
-      <div id="filter-fields-container"></div>
-      <div class="filter-actions">
-        <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
-          <i class="fa-solid fa-rotate-left"></i> Сбросить
+    <!-- ТУЛБАР -->
+    <div class="toolbar" id="toolbar">
+      <!-- Строка массовых операций -->
+      <div class="toolbar-bulk" id="toolbar-bulk" style="display:none;">
+        <span class="bulk-label"><i class="fa-solid fa-bolt"></i> Выбрано: <b id="bulk-total">0</b></span>
+        <button class="btn btn-info btn-bulk-cal" id="btn-bulk-cal" onclick="openBulkSendModal()">
+          <i class="fa-solid fa-box"></i> Отправить (<span id="bulk-counter">0</span>)
         </button>
-        <button class="btn btn-primary btn-sm" onclick="applyFilters()">
-          <i class="fa-solid fa-check"></i> Применить
+        <button class="btn btn-success btn-bulk-return" id="btn-bulk-return" onclick="openBulkReturnModal()">
+          <i class="fa-solid fa-box-open"></i> Вернуть (<span id="bulk-return-counter">0</span>)
+        </button>
+        <button class="btn btn-secondary btn-bulk-responsible" id="btn-bulk-responsible" onclick="openBulkResponsibleModal()">
+          <i class="fa-solid fa-user-pen"></i> Ответственный (<span id="bulk-responsible-counter">0</span>)
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="clearSelection()">
+          <i class="fa-solid fa-xmark"></i> Снять
         </button>
       </div>
-    </div>
-  </div>
 
-  <!-- Сканировать -->
-  <button class="btn btn-info btn-scan-barcode" onclick="handleScanButton()" title="Сканировать штрихкод">
-    <i class="fa-solid fa-barcode"></i> Сканировать
-  </button>
+      <!-- Поиск -->
+      <input type="text" id="search" placeholder="Поиск по номеру, модели, отделу, ответственному…">
 
-  <!-- Ещё ▼ -->
-  <div class="dropdown" id="more-dropdown" style="position:relative;display:inline-block;">
-    <button class="btn btn-secondary" onclick="toggleMoreMenu(event)">
-      <i class="fa-solid fa-ellipsis"></i> Ещё <i class="fa-solid fa-caret-down"></i>
-    </button>
-    <div id="more-menu" class="dropdown-menu">
-      <button class="dropdown-item btn-add-pipette" onclick="openModal(); closeMoreMenu();" style="display: none;">
-         <i class="fa-solid fa-plus"></i> Создать оборудование
+      <!-- Фильтр -->
+      <div style="position:relative;display:inline-block;">
+        <button class="btn btn-secondary" id="filter-btn" onclick="toggleFilterPanel(event)">
+          <i class="fa-solid fa-filter"></i> Фильтр
+        </button>
+        <div class="filter-panel" id="filter-panel">
+          <div id="filter-fields-container"></div>
+          <div class="filter-actions">
+            <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
+              <i class="fa-solid fa-rotate-left"></i> Сбросить
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+              <i class="fa-solid fa-check"></i> Применить
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Сканировать -->
+      <button class="btn btn-info btn-scan-barcode" onclick="handleScanButton()" title="Сканировать штрихкод">
+        <i class="fa-solid fa-barcode"></i> Сканировать
       </button>
-      <div class="dropdown-divider"></div>
-      <button class="dropdown-item btn-export" onclick="exportToXlsx(); closeMoreMenu();">
-         <i class="fa-solid fa-file-excel"></i> Печать в Excel
-      </button>
-       <button class="dropdown-item btn-export" onclick="exportToPDF(); closeMoreMenu();">
-        <i class="fa-solid fa-print"></i> Печать в PDF
-      </button>
-      <div class="dropdown-divider"></div>
-      <button class="dropdown-item btn-print-labels" onclick="openBarcodePrintModal(); closeMoreMenu();">
-        <i class="fa-solid fa-tag"></i> Печать этикеток
-      </button>
-      <button class="dropdown-item btn-import" onclick="openImportModal(); closeMoreMenu();">
-        <i class="fa-solid fa-download"></i> Импорт данных
-      </button>
-      <div class="dropdown-divider"></div>
-      <button class="dropdown-item btn-settings" onclick="openSettingsModal(); closeMoreMenu();">
-        <i class="fa-solid fa-gear"></i> Настройки
-      </button>
-      <div class="dropdown-divider"></div>
-      <button class="dropdown-item" onclick="toggleCompactMode(); closeMoreMenu();">
-        <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
-      </button>
-       <button class="dropdown-item btn-audit-log" onclick="openAuditModal(); closeMoreMenu();">
-        <i class="fa-solid fa-clipboard-list"></i> Журнал действий
-      </button>
-      <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
-         <i class="fa-solid fa-book-open"></i> Справка
-      </button>
-    </div>
-  </div>
-</div>   
+
+      <!-- Меню «Ещё ▼» -->
+      <div class="dropdown" id="more-dropdown" style="position:relative;display:inline-block;">
+        <button class="btn btn-secondary" onclick="toggleMoreMenu(event)">
+          <i class="fa-solid fa-ellipsis"></i> Ещё <i class="fa-solid fa-caret-down"></i>
+        </button>
+        <div id="more-menu" class="dropdown-menu">
+          <button class="dropdown-item btn-add-pipette" onclick="openModal(); closeMoreMenu();" style="display: none;">
+            <i class="fa-solid fa-plus"></i> Создать оборудование
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item btn-export" onclick="exportToXlsx(); closeMoreMenu();">
+            <i class="fa-solid fa-file-excel"></i> Печать в Excel
+          </button>
+          <button class="dropdown-item btn-export" onclick="exportToPDF(); closeMoreMenu();">
+            <i class="fa-solid fa-print"></i> Печать в PDF
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item btn-print-labels" onclick="openBarcodePrintModal(); closeMoreMenu();">
+            <i class="fa-solid fa-tag"></i> Печать этикеток
+          </button>
+          <button class="dropdown-item btn-import" onclick="openImportModal(); closeMoreMenu();">
+            <i class="fa-solid fa-download"></i> Импорт данных
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item btn-settings" onclick="openSettingsModal(); closeMoreMenu();">
+            <i class="fa-solid fa-gear"></i> Настройки
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" onclick="toggleCompactMode(); closeMoreMenu();">
+            <i class="fa-solid fa-arrows-up-down"></i> Компактный режим
+          </button>
+          <button class="dropdown-item btn-audit-log" onclick="openAuditModal(); closeMoreMenu();">
+            <i class="fa-solid fa-clipboard-list"></i> Журнал действий
+          </button>
+          <button class="dropdown-item" onclick="openHotkeysHelp(); closeMoreMenu();">
+            <i class="fa-solid fa-book-open"></i> Справка
+          </button>
+        </div>
+      </div>
+    </div>   
     
     <div class="table-wrapper">
       <table id="pipettes-table">
         <thead>
-  <tr>
-    <th class="col-checkbox">
-      <input type="checkbox" id="select-all-checkbox" 
-             onclick="toggleSelectAll(this.checked)" 
-             title="Выбрать все">
-    </th>
-    <th onclick="sortBy('id')">ID <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('equipmentType')">Тип <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('model')">Модель <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('volume')">Объём <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('department')">Отдел <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('lastCalibration')">Поверка <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('nextCalibration')">Следующая <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('responsible')">Ответственный <span class="sort-arrow"></span></th>
-    <th onclick="sortBy('status')">Статус <span class="sort-arrow" data-field="status"></span></th>
-    <th id="actions-header">Действия</th>
-  </tr>
-</thead>
+          <tr>
+            <th class="col-checkbox">
+              <input type="checkbox" id="select-all-checkbox" onclick="toggleSelectAll(this.checked)" title="Выбрать все">
+            </th>
+            <th onclick="sortBy('id')">ID <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('equipmentType')">Тип <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('model')">Модель <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('volume')">Объём <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('department')">Отдел <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('lastCalibration')">Поверка <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('nextCalibration')">Следующая <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('responsible')">Ответственный <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('status')">Статус <span class="sort-arrow" data-field="status"></span></th>
+            <th id="actions-header">Действия</th>
+          </tr>
+        </thead>
         <tbody id="pipettes-body"></tbody>
       </table>
     </div>
 
-        <div class="pagination" id="pagination">
+    <div class="pagination" id="pagination">
       <button class="pagination-btn" id="page-prev" onclick="changePage(-1)">← Назад</button>
       <span class="pagination-info">
-        Стр. <strong id="page-current">1</strong> из <strong id="page-total">1</strong>
-        · <span id="page-count">0</span> записей
+        Стр. <strong id="page-current">1</strong> из <strong id="page-total">1</strong> · <span id="page-count">0</span> записей
       </span>
       <button class="pagination-btn" id="page-next" onclick="changePage(1)">Вперёд →</button>
     </div>
 
-  <div class="empty-state" id="empty-state" style="display:none">
-  <div class="icon"><i class="fa-solid fa-flask-vial"></i></div>
+    <div class="empty-state" id="empty-state" style="display:none">
+      <div class="icon"><i class="fa-solid fa-flask-vial"></i></div>
       <p>Оборудования пока нет. Нажмите «Добавить оборудование», чтобы начать.</p>
     </div>
   </div>
@@ -231,18 +230,18 @@
   <div class="modal modal-xl">
     <h2 id="modal-title"><i class="fa-solid fa-plus"></i> Добавить оборудование</h2>
 
-    <!-- 🆕 Панель шаблонов (только для админа) -->
-<div class="template-bar" id="template-bar" style="display:none;">
-  <label class="template-bar-label">
-    <i class="fa-solid fa-clone"></i> Шаблон:
-  </label>
-  <select id="template-select" onchange="applyEquipmentTemplate(this.value)">
-    <option value="">— без шаблона —</option>
-  </select>
-  <button type="button" class="btn btn-secondary btn-sm" onclick="saveAsTemplate()" title="Сохранить текущие поля как шаблон">
-    <i class="fa-solid fa-floppy-disk"></i> Сохранить как шаблон
-  </button>
-</div>
+    <!-- Панель шаблонов (только для админа) -->
+    <div class="template-bar" id="template-bar" style="display:none;">
+      <label class="template-bar-label">
+        <i class="fa-solid fa-clone"></i> Шаблон:
+      </label>
+      <select id="template-select" onchange="applyEquipmentTemplate(this.value)">
+        <option value="">— без шаблона —</option>
+      </select>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="saveAsTemplate()" title="Сохранить текущие поля как шаблон">
+        <i class="fa-solid fa-floppy-disk"></i> Сохранить как шаблон
+      </button>
+    </div>
 
     <div class="add-tabs" id="add-tabs">
       <button type="button" class="add-tab active" data-tab="single" onclick="switchAddTab('single')">
@@ -294,7 +293,6 @@
         </button>
       </div>
     </div>
-
   </div>
 </div>
   
@@ -303,9 +301,7 @@
   <div class="modal">
     <h2><i class="fa-solid fa-right-left"></i> Передача в другой отдел</h2>
 
-    <div id="transfer-pipette-info"
-         style="margin-bottom:16px;padding:12px;background:#f8fafc;border-radius:8px;font-size:.9rem;">
-    </div>
+    <div id="transfer-pipette-info" style="margin-bottom:16px;padding:12px;background:#f8fafc;border-radius:8px;font-size:.9rem;"></div>
 
     <form id="transfer-form" onsubmit="event.preventDefault(); saveTransfer();" novalidate>
       <div class="form-group">
@@ -380,26 +376,22 @@
   </div>
 </div>
   
- <!-- МОДАЛКА МАССОВОЙ ОТПРАВКИ -->
+<!-- МОДАЛКА МАССОВОЙ ОТПРАВКИ -->
 <div class="modal-overlay" id="bulk-send-modal">
   <div class="modal modal-lg">
     <h2><i class="fa-solid fa-box"></i> Отправить на поверку</h2>
 
-     <div id="bulk-send-info" class="info-block">
+    <div id="bulk-send-info" class="info-block">
       <strong>Выбрано единиц:</strong> <span id="bulk-send-count">0</span>
     </div>
 
     <div style="margin-bottom:15px;">
-      <div style="font-weight:600;color:#475569;margin-bottom:8px;font-size:.85rem;">
-     Выбранное оборудование:
-      </div>
-      <div id="bulk-send-list" 
-           style="max-height:150px;overflow-y:auto;padding:8px;background:#f8fafc;border-radius:8px;font-size:.85rem;line-height:1.6;">
-      </div>
+      <div style="font-weight:600;color:#475569;margin-bottom:8px;font-size:.85rem;">Выбранное оборудование:</div>
+      <div id="bulk-send-list" style="max-height:150px;overflow-y:auto;padding:8px;background:#f8fafc;border-radius:8px;font-size:.85rem;line-height:1.6;"></div>
     </div>
 
-     <div class="warning-block">
-     ℹ️ На внешнюю поверку отправляются типы оборудования, у которых в настройках указано <strong>«📦 Внешняя (с отправкой)»</strong>. Для оборудования с поверкой на месте используйте <strong>✔️ Быстрая поверка</strong>.
+    <div class="warning-block">
+      ℹ️ На внешнюю поверку отправляются типы оборудования, у которых в настройках указано <strong>«📦 Внешняя (с отправкой)»</strong>. Для оборудования с поверкой на месте используйте <strong>✔️ Быстрая поверка</strong>.
     </div>
 
     <div id="replacement-options" style="margin-bottom:15px;"></div>
@@ -412,13 +404,10 @@
       </div>
       <div class="form-group">
         <label>Примечание</label>
-        <textarea id="bulk-send-note" rows="2" 
-                  placeholder="например: отправлено курьером, накладная №123"></textarea>
+        <textarea id="bulk-send-note" rows="2" placeholder="например: отправлено курьером, накладная №123"></textarea>
       </div>
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeBulkSendModal()">
-          Отмена
-        </button>
+        <button type="button" class="btn btn-secondary" onclick="closeBulkSendModal()">Отмена</button>
         <button type="button" class="btn btn-info" onclick="printSendAct()"><i class="fa-solid fa-print"></i> Распечатать акт</button>
         <button type="submit" class="btn btn-warning"><i class="fa-solid fa-box"></i> Отправить на поверку</button>
       </div>
@@ -426,7 +415,7 @@
   </div>
 </div> 
   
-  <!-- МОДАЛКА МАССОВОГО ВОЗВРАТА -->
+<!-- МОДАЛКА МАССОВОГО ВОЗВРАТА -->
 <div class="modal-overlay" id="bulk-return-modal">
   <div class="modal modal-lg">
     <h2><i class="fa-solid fa-box-open"></i> Возврат с поверки</h2>
@@ -458,8 +447,7 @@
         </div>
         <div class="form-group" style="display:flex;align-items:flex-end;">
           <label class="info-label">
-            <input type="checkbox" id="bulk-return-single-cert"
-                   onchange="toggleSingleCert(this.checked)">
+            <input type="checkbox" id="bulk-return-single-cert" onchange="toggleSingleCert(this.checked)">
             Одно свидетельство на всех
           </label>
         </div>
@@ -477,22 +465,19 @@
 
       <div class="form-group">
         <label>Примечание (общее для всех)</label>
-        <textarea id="bulk-return-note" rows="2" 
-                  placeholder="например: без замечаний, годны к эксплуатации"></textarea>
+        <textarea id="bulk-return-note" rows="2" placeholder="например: без замечаний, годны к эксплуатации"></textarea>
       </div>
 
       <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeBulkReturnModal()">Отмена</button>
-          <button type="button" class="btn btn-info" onclick="printReturnAct()">
-          <i class="fa-solid fa-print"></i> Распечатать акт
-         </button>
-          <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Применить ко всем</button>
+        <button type="button" class="btn btn-secondary" onclick="closeBulkReturnModal()">Отмена</button>
+        <button type="button" class="btn btn-info" onclick="printReturnAct()"><i class="fa-solid fa-print"></i> Распечатать акт</button>
+        <button type="submit" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Применить ко всем</button>
       </div>
     </form>
   </div>
 </div>
 
-  <!-- МОДАЛКА МАССОВОЙ СМЕНЫ ОТВЕТСТВЕННОГО -->
+<!-- МОДАЛКА МАССОВОЙ СМЕНЫ ОТВЕТСТВЕННОГО -->
 <div class="modal-overlay" id="bulk-responsible-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-user-pen"></i> Смена ответственного</h2>
@@ -517,9 +502,7 @@
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" onclick="closeBulkResponsibleModal()">Отмена</button>
-        <button type="submit" class="btn btn-primary">
-          <i class="fa-solid fa-check"></i> Применить
-        </button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Применить</button>
       </div>
     </form>
   </div>
@@ -529,11 +512,11 @@
   <div class="modal modal-lg">
     <h2 id="history-title"><i class="fa-solid fa-clock-rotate-left"></i> История поверок</h2>
     <div id="history-content"></div>
-        <div class="form-actions">
-  <button type="button" class="btn btn-warning" onclick="openHistoryExportModal()"><i class="fa-solid fa-print"></i> Печать истории</button>
-  <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Закрыть</button>
-  <button class="btn btn-info admin-only senior-only" onclick="openCalibrationForm()"><i class="fa-solid fa-plus"></i> Добавить поверку</button>
-</div>
+    <div class="form-actions">
+      <button type="button" class="btn btn-warning" onclick="openHistoryExportModal()"><i class="fa-solid fa-print"></i> Печать истории</button>
+      <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Закрыть</button>
+      <button class="btn btn-info admin-only senior-only" onclick="openCalibrationForm()"><i class="fa-solid fa-plus"></i> Добавить поверку</button>
+    </div>
     <div id="calibration-form-wrap" style="display:none;margin-top:20px;padding-top:20px;border-top:2px solid #e2e8f0">
       <h3 style="margin-bottom:15px;font-size:1rem;color:#1e293b">Новая запись о поверке</h3>
       <div class="form-row">
@@ -587,7 +570,7 @@
   </div>
 </div>
 
-   <!-- Модалка импорта -->
+<!-- МОДАЛКА ИМПОРТА -->
 <div class="modal-overlay" id="import-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-download"></i> Импорт данных</h2>
@@ -595,24 +578,18 @@
       <label>Файл (.xlsx, .csv, .json, .txt)</label>
       <input type="file" id="import-file" accept=".json,.csv,.xlsx,.txt">
     </div>
-   <div class="info-block">
+    <div class="info-block">
       ℹ️ Файл Excel можно загружать <strong>как есть</strong> — заголовки распознаются автоматически
       («ID», «Внутренний номер», «Модель», «Наименование», «Серийный номер», «Отдел»,
       «Дата поверки», «МПИ», «Ответственный», «Место», «Примечание» и др.).
     </div>
-        <div id="import-progress-wrap" style="display:none;margin-bottom:15px;">
+    <div id="import-progress-wrap" style="display:none;margin-bottom:15px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span id="import-progress-text" style="font-size:.85rem;color:#475569;font-weight:600;">
-          ⏳ Подготовка…
-        </span>
-        <span id="import-progress-percent" style="font-size:.85rem;color:#4f46e5;font-weight:700;">
-          0%
-        </span>
+        <span id="import-progress-text" style="font-size:.85rem;color:#475569;font-weight:600;">⏳ Подготовка…</span>
+        <span id="import-progress-percent" style="font-size:.85rem;color:#4f46e5;font-weight:700;">0%</span>
       </div>
       <div style="width:100%;height:8px;background:#e2e8f0;border-radius:6px;overflow:hidden;">
-        <div id="import-progress-bar"
-             style="width:0%;height:100%;background:linear-gradient(90deg,#6366f1,#4f46e5);
-                    border-radius:6px;transition:width .25s ease;"></div>
+        <div id="import-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#6366f1,#4f46e5);border-radius:6px;transition:width .25s ease;"></div>
       </div>
     </div>
     
@@ -622,10 +599,10 @@
     </div>
   </div>
 </div>
+
 <!-- МОДАЛКА НАСТРОЕК -->
 <div class="modal-overlay" id="settings-modal">
   <div class="modal modal-lg">
-    <!-- Заголовок меняется: либо «Настройки системы», либо название раздела -->
     <h2 id="settings-header">
       <button type="button" class="settings-back-btn" id="settings-back-btn" onclick="closeSettingsSection()" style="display:none;" title="Назад к списку">
         <i class="fa-solid fa-arrow-left"></i>
@@ -633,10 +610,8 @@
       <span id="settings-header-text">Настройки системы</span>
     </h2>
 
-    <!-- СПИСОК РАЗДЕЛОВ (показывается по умолчанию) -->
     <div id="settings-list"></div>
 
-    <!-- ОБЛАСТЬ РАЗДЕЛА (показывается при выборе) -->
     <div id="settings-section" style="display:none;">
       <div id="settings-section-content"></div>
     </div>
@@ -646,7 +621,9 @@
     </div>
   </div>
 </div>
-  <div class="modal-overlay confirm-overlay" id="confirm-modal">
+
+<!-- МОДАЛКА ПОДТВЕРЖДЕНИЯ -->
+<div class="modal-overlay confirm-overlay" id="confirm-modal">
   <div class="modal confirm-modal">
     <div class="confirm-icon" id="confirm-icon">⚠️</div>
     <h3 id="confirm-title">Подтверждение</h3>
@@ -661,9 +638,7 @@
 <!-- МОДАЛКА PROMPT -->
 <div class="modal-overlay" id="prompt-modal">
   <div class="modal prompt-modal">
-    <div class="prompt-icon" id="prompt-icon">
-      <i class="fa-solid fa-comment-dots"></i>
-    </div>
+    <div class="prompt-icon" id="prompt-icon"><i class="fa-solid fa-comment-dots"></i></div>
     <h3 id="prompt-title">Введите значение</h3>
     <p class="prompt-message" id="prompt-message"></p>
 
@@ -679,27 +654,24 @@
   </div>
 </div>  
 
-   <!-- МОДАЛКА СМЕНЫ ПАРОЛЯ -->
+<!-- МОДАЛКА СМЕНЫ ПАРОЛЯ -->
 <div class="modal-overlay" id="change-password-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-lock"></i> Смена пароля</h2>
 
-   <div id="change-password-notice" class="warning-block" style="margin-bottom:16px;">
+    <div id="change-password-notice" class="warning-block" style="margin-bottom:16px;">
       Администратор выдал вам разовый пароль. Для продолжения работы задайте новый пароль.
     </div>
 
-<form id="change-password-form" onsubmit="submitChangePassword(event)" novalidate>
- <input type="text" id="cp-username" name="username"
-       autocomplete="username"
-       tabindex="-1" aria-hidden="true"
-       style="display:none;">
+    <form id="change-password-form" onsubmit="submitChangePassword(event)" novalidate>
+      <input type="text" id="cp-username" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;">
 
-  <div class="form-group">
-    <label>Текущий пароль *</label>
-    <input type="password" id="cp-current" autocomplete="current-password" placeholder="Введите текущий пароль">
-  </div>
-  <div class="form-group">
-    <label>Новый пароль *</label>
+      <div class="form-group">
+        <label>Текущий пароль *</label>
+        <input type="password" id="cp-current" autocomplete="current-password" placeholder="Введите текущий пароль">
+      </div>
+      <div class="form-group">
+        <label>Новый пароль *</label>
         <input type="password" id="cp-new" autocomplete="new-password" placeholder="Введите новый пароль">
       </div>
       <div class="form-group">
@@ -721,7 +693,7 @@
 
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" id="cp-cancel-btn" onclick="closeChangePasswordModal()">Отмена</button>
-               <button type="submit" class="btn btn-success" id="cp-btn">
+        <button type="submit" class="btn btn-success" id="cp-btn">
           <i class="fa-solid fa-floppy-disk" id="cp-btn-icon"></i>
           <span id="cp-btn-text">Сохранить пароль</span>
         </button>
@@ -729,7 +701,8 @@
     </form>
   </div>
 </div>
-    <!-- МОДАЛКА РАЗОВОГО ПАРОЛЯ -->
+
+<!-- МОДАЛКА РАЗОВОГО ПАРОЛЯ -->
 <div class="modal-overlay" id="temp-password-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-key"></i> Разовый пароль</h2>
@@ -740,21 +713,18 @@
 
     <div class="form-group">
       <label>Логин</label>
-      <input type="text" id="tp-login" readonly
-             style="background:#f1f5f9;cursor:not-allowed;">
+      <input type="text" id="tp-login" readonly style="background:#f1f5f9;cursor:not-allowed;">
     </div>
 
     <div class="form-group">
       <label>ФИО</label>
-      <input type="text" id="tp-fullname" readonly
-             style="background:#f1f5f9;cursor:not-allowed;">
+      <input type="text" id="tp-fullname" readonly style="background:#f1f5f9;cursor:not-allowed;">
     </div>
 
     <div class="form-group">
       <label>Пароль</label>
       <div style="display:flex;gap:8px;">
-        <input type="text" id="tp-password" readonly
-               style="background:#f1f5f9;font-family:monospace;font-size:1rem;letter-spacing:1px;cursor:not-allowed;">
+        <input type="text" id="tp-password" readonly style="background:#f1f5f9;font-family:monospace;font-size:1rem;letter-spacing:1px;cursor:not-allowed;">
         <button type="button" class="btn btn-primary" onclick="copyTempPassword()" style="flex-shrink:0;"><i class="fa-solid fa-copy"></i> Скопировать</button>
       </div>
     </div>
@@ -764,7 +734,8 @@
     </div>
   </div>
 </div>
-  <!-- МОДАЛКА ПЕЧАТИ ИСТОРИИ ПОВЕРОК -->
+
+<!-- МОДАЛКА ПЕЧАТИ ИСТОРИИ ПОВЕРОК -->
 <div class="modal-overlay" id="history-export-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-print"></i> Печать истории поверок</h2>
@@ -797,7 +768,8 @@
   </div>
 </div>
 
-  <div class="modal-overlay" id="barcode-scanner-modal">
+<!-- МОДАЛКА СКАНИРОВАНИЯ ШТРИХКОДОВ -->
+<div class="modal-overlay" id="barcode-scanner-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-barcode"></i> Сканирование штрихкодов</h2>
     <div class="info-block" style="margin-bottom:16px;">
@@ -819,20 +791,19 @@
         <div style="color:#94a3b8;">Список пуст. Сканируйте штрихкоды.</div>
       </div>
     </div>
-   <div class="form-actions">
+    <div class="form-actions">
       <button type="button" class="btn btn-secondary" onclick="closeBarcodeScannerModal()">Закрыть</button>
       <button type="button" class="btn btn-warning" onclick="openBulkSendFromScanner()" id="btn-scan-send" disabled><i class="fa-solid fa-box"></i> На отправку</button>
       <button type="button" class="btn btn-success" onclick="openBulkReturnFromScanner()" id="btn-scan-return" disabled><i class="fa-solid fa-box-open"></i> На возврат</button>
-   </div>
+    </div>
   </div>
 </div>
 
-  <!-- МОДАЛКА ПЕЧАТИ ЭТИКЕТОК -->
+<!-- МОДАЛКА ПЕЧАТИ ЭТИКЕТОК -->
 <div class="modal-overlay" id="barcode-print-modal">
   <div class="modal modal-compact">
     <h2><i class="fa-solid fa-tag"></i> Печать этикеток</h2>
 
-    <!-- Что печатать -->
     <div class="bc-block">
       <div class="bc-block-title">Что печатать</div>
       <label class="bc-radio-item">
@@ -849,7 +820,6 @@
       </label>
     </div>
 
-    <!-- Принтер -->
     <div class="bc-block">
       <div class="bc-block-title">Принтер</div>
       <div id="barcode-print-printer-options" class="bc-printer-list">
@@ -857,7 +827,6 @@
       </div>
     </div>
 
-    <!-- Копий -->
     <div class="bc-row">
       <label class="bc-row-label">Копий каждой</label>
       <input type="number" id="barcode-print-copies" value="1" min="1" max="50" class="bc-copies-input">
@@ -874,18 +843,17 @@
   </div>
 </div>
   
+<!-- МОДАЛКА НАСТРОЙКИ ВИДА ПОЛЬЗОВАТЕЛЯ -->
 <div class="modal-overlay" id="user-view-modal">
   <div class="modal">
     <h2><i class="fa-solid fa-sliders"></i> Настройки пользователя</h2>
     <p id="user-view-target" style="color:#64748b;margin-bottom:16px;font-size:.9rem;"></p>
 
     <div class="prefs-tabs" style="margin-bottom:16px;">
-      <button class="prefs-tab active" data-view-tab="fields"
-              onclick="switchUserViewTab('fields', this)">
+      <button class="prefs-tab active" data-view-tab="fields" onclick="switchUserViewTab('fields', this)">
         <i class="fa-solid fa-list-check"></i> Поля формы
       </button>
-      <button class="prefs-tab" data-view-tab="documents"
-              onclick="switchUserViewTab('documents', this)">
+      <button class="prefs-tab" data-view-tab="documents" onclick="switchUserViewTab('documents', this)">
         <i class="fa-solid fa-print"></i> Документы для печати
       </button>
     </div>
@@ -925,7 +893,9 @@
     </div>
   </div>
 </div>
-  <div class="modal-overlay" id="audit-modal">
+
+<!-- МОДАЛКА ЖУРНАЛА ДЕЙСТВИЙ -->
+<div class="modal-overlay" id="audit-modal">
   <div class="modal modal-lg">
     <h2><i class="fa-solid fa-clipboard-list"></i> Журнал действий</h2>
   
@@ -939,71 +909,61 @@
     </div>
 
     <div id="audit-tab-actions">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <input type="text" id="audit-search" placeholder="Поиск по ID, модели, пользователю, деталям..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;" oninput="renderAuditList()">
+        <select id="audit-category" onchange="renderAuditList()" style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+          <option value="">Все категории</option>
+          <option value="equipment">Оборудование</option>
+          <option value="users">Пользователи</option>
+          <option value="calibration">Поверки</option>
+          <option value="barcode">Штрихкоды</option>
+          <option value="settings">Настройки</option>
+          <option value="locks">Блокировки</option>
+          <option value="auth">Вход/выход</option>
+          <option value="help">Справка</option>
+        </select>
+        <select id="audit-period" onchange="onAuditPeriodChange()" style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+          <option value="">Всё время</option>
+          <option value="today">Сегодня</option>
+          <option value="week">7 дней</option>
+          <option value="month">30 дней</option>
+          <option value="custom">Произвольный</option>
+        </select>
+        <button class="btn btn-info" onclick="exportAuditPDF()"><i class="fa-solid fa-print"></i> PDF</button>
+      </div>
+      <div id="audit-custom-period" style="display:none;gap:8px;margin-bottom:10px;">
+        <input type="date" id="audit-from" onchange="renderAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+        <span style="align-self:center;">—</span>
+        <input type="date" id="audit-to" onchange="renderAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
+      </div>
 
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-      <input type="text" id="audit-search" placeholder="Поиск по ID, модели, пользователю, деталям..."
-             style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;"
-             oninput="renderAuditList()">
-      <select id="audit-category" onchange="renderAuditList()"
-              style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
-        <option value="">Все категории</option>
-        <option value="equipment">Оборудование</option>
-        <option value="users">Пользователи</option>
-        <option value="calibration">Поверки</option>
-        <option value="barcode">Штрихкоды</option>
-        <option value="settings">Настройки</option>
-        <option value="locks">Блокировки</option>
-        <option value="auth">Вход/выход</option>
-        <option value="help">Справка</option>
-      </select>
-      <select id="audit-period" onchange="onAuditPeriodChange()"
-              style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
-        <option value="">Всё время</option>
-        <option value="today">Сегодня</option>
-        <option value="week">7 дней</option>
-        <option value="month">30 дней</option>
-        <option value="custom">Произвольный</option>
-      </select>
-      <button class="btn btn-info" onclick="exportAuditPDF()"><i class="fa-solid fa-print"></i> PDF</button>
-    </div>
-    <div id="audit-custom-period" style="display:none;gap:8px;margin-bottom:10px;">
-      <input type="date" id="audit-from" onchange="renderAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
-      <span style="align-self:center;">—</span>
-      <input type="date" id="audit-to" onchange="renderAuditList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
-    </div>
+      <div id="audit-counters" style="font-size:.85rem;color:var(--text-muted);margin-bottom:10px;"></div>
 
-    <div id="audit-counters" style="font-size:.85rem;color:var(--text-muted);margin-bottom:10px;"></div>
-
-    <div class="log-container" style="max-height:55vh;">
-      <table class="log-table">
-        <thead>
-          <tr>
-            <th style="width:140px;">Дата и время</th>
-            <th style="width:90px;">Прибор</th>
-            <th style="width:130px;">Кто</th>
-            <th style="width:120px;">Действие</th>
-            <th>Изменения</th>
-          </tr>
-        </thead>
-                <tbody id="audit-body"></tbody>
-      </table>
-    </div>
+      <div class="log-container" style="max-height:55vh;">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th style="width:140px;">Дата и время</th>
+              <th style="width:90px;">Прибор</th>
+              <th style="width:130px;">Кто</th>
+              <th style="width:120px;">Действие</th>
+              <th>Изменения</th>
+            </tr>
+          </thead>
+          <tbody id="audit-body"></tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- Вкладка ОШИБКИ -->
     <div id="audit-tab-errors" style="display:none;">
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <input type="text" id="errors-search" placeholder="Поиск по тексту, URL, пользователю..."
-               style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;"
-               oninput="renderErrorsList()">
-        <select id="errors-level" onchange="renderErrorsList()"
-                style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+        <input type="text" id="errors-search" placeholder="Поиск по тексту, URL, пользователю..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;" oninput="renderErrorsList()">
+        <select id="errors-level" onchange="renderErrorsList()" style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
           <option value="">Все уровни</option>
           <option value="error">Ошибки (error)</option>
           <option value="warn">Предупреждения (warn)</option>
         </select>
-        <select id="errors-period" onchange="onErrorsPeriodChange()"
-                style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+        <select id="errors-period" onchange="onErrorsPeriodChange()" style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
           <option value="">Всё время</option>
           <option value="today">Сегодня</option>
           <option value="week">7 дней</option>
@@ -1042,16 +1002,14 @@
   </div>
 </div>
 
+<!-- МОДАЛКА АУДИТА ПРИБОРА -->
 <div class="modal-overlay" id="equipment-audit-modal">
   <div class="modal modal-lg">
     <h2 id="equipment-audit-title"><i class="fa-solid fa-clipboard-list"></i> Аудит изменений прибора</h2>
 
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-      <input type="text" id="eq-audit-search" placeholder="Поиск по деталям, пользователю..."
-             style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;"
-             oninput="renderEquipmentAuditList()">
-      <select id="eq-audit-period" onchange="onEqAuditPeriodChange()"
-              style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
+      <input type="text" id="eq-audit-search" placeholder="Поиск по деталям, пользователю..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;" oninput="renderEquipmentAuditList()">
+      <select id="eq-audit-period" onchange="onEqAuditPeriodChange()" style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
         <option value="">Всё время</option>
         <option value="today">Сегодня</option>
         <option value="week">7 дней</option>
@@ -1087,12 +1045,12 @@
   </div>
 </div>
   
-        <!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
+<!-- МОДАЛКА СПРАВКИ (ПРОСМОТР) -->
 <div class="modal-overlay" id="hotkeys-modal">
   <div class="modal modal-compact" style="max-width: 500px; height: 80vh; display: flex; flex-direction: column;">
     <h2><i class="fa-solid fa-book-open"></i> Инструкция по работе с системой</h2>
     
-    <!-- 🆕 Убрали класс docs-sidebar и добавили width: 100% -->
+    <!-- Контейнер для списка разделов справки -->
     <div id="docs-sidebar" style="flex: 1; overflow-y: auto; width: 100%; padding-right: 5px;">
       <p style="color: #94a3b8;">Загрузка…</p>
     </div>
@@ -1106,5 +1064,3 @@
 <div class="toast" id="toast"></div>  
 </body>
 </html>
-  
-
