@@ -1423,7 +1423,10 @@ function openQuickRoleModal() {
     </div>
   `;
   document.body.insertAdjacentHTML('beforeend', modalHtml);
-  setTimeout(() => document.getElementById('quick-role-name').focus(), 100);
+ setTimeout(() => {
+    const input = document.getElementById('quick-role-name');
+    if (input) input.focus();
+  }, 100);
 }
 
 async function saveQuickRole() {
