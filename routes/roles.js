@@ -29,8 +29,8 @@ router.post('/', authenticate, requireAnyPermission(['manage_users']), async (re
     }
 
     const cleanName = String(name).trim();
-    const [dup] = await db.query('SELECT id FROM roles WHERE name = ?', [cleanName]);
-    if (dup.length) return res.status(409).json({ error: 'Роль с таким названием уже существует' });
+       const [dup] = await db.query('SELECT id FROM roles WHERE name = ?', [cleanName]);
+    if (dup.length) return res.status(409).json({ error: 'Роль с таким названием уже существует', code: 'duplicate_role' });
 
     const value = await roleCache.generateUniqueValue(cleanName);
     
@@ -69,10 +69,8 @@ router.put('/:id', authenticate, requireAnyPermission(['manage_users']), async (
 
     const cleanName = String(name).trim();
     const [dup] = await db.query(
-      'SELECT id FROM roles WHERE name = ? AND id <> ?', [cleanName, id]
-    );
-    if (dup.length) return res.status(409).json({ error: 'Роль с таким названием уже существует' });
-
+    'SELECT id FROM roles WHERE name = ? AND id <> ?', [cleanName, id]);
+       if (dup.length) return res.status(409).json({ error: 'Роль с таким названием уже существует', code: 'duplicate_role' });
     // Для системных ролей user/senior_lab запрещаем менять is_admin
     let finalIsAdmin = isAdmin ? 1 : 0;
     if (ex[0].value === 'user' || ex[0].value === 'senior_lab') {
