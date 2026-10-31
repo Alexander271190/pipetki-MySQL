@@ -443,7 +443,7 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
                 const lastCal = parseDate(obj.lastCalibration);
         const result = normalizeResult(obj.result);
 
-        // 🆕 Валидация длины строковых полей — до батча, чтобы одна
+        //  Валидация длины строковых полей — до батча, чтобы одна
         // слишком длинная строка не роняла весь batch (ER_DATA_TOO_LONG)
         // и не уводила его в медленный fallback.
         const MAX_STR = 255;
