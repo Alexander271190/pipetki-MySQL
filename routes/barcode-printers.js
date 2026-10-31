@@ -1,17 +1,17 @@
 const express = require('express');
 const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
 const { PRINTER_COLUMNS } = require('./pipettes/_helpers');
 
 const router = express.Router();
 
 // GET /api/barcode-printers — список для админа
-router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(
-  `SELECT ${PRINTER_COLUMNS} FROM barcode_printers ORDER BY sort_order ASC, id ASC`
-);
+      `SELECT ${PRINTER_COLUMNS} FROM barcode_printers ORDER BY sort_order ASC, id ASC`
+    );
     res.json(rows.map(r => ({
       id: r.id,
       name: r.name,
@@ -65,7 +65,7 @@ router.get('/available', authenticate, async (req, res) => {
 });
 
 // POST /api/barcode-printers — создать
-router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, department, mode, ip, port, labelSize, enabled, isDefault, sortOrder } = req.body || {};
 
@@ -114,7 +114,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 // PUT /api/barcode-printers/:id — обновить
-router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { name, department, mode, ip, port, labelSize, enabled, isDefault, sortOrder } = req.body || {};
@@ -167,7 +167,7 @@ router.put('/:id', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 // DELETE /api/barcode-printers/:id
-router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [exist] = await db.query('SELECT name FROM barcode_printers WHERE id = ?', [id]);
