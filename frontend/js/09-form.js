@@ -157,32 +157,32 @@ async function openModal(id) {
             try {
               const r = await apiRequest(`/pipettes/${id}/lock`);
                             
-              if (!r.locked || !r.mine) {
+               if (!r.locked || !r.mine) {
                 clearInterval(_lockCheckTimer); _lockCheckTimer = null;
-                _skipUnlockOnClose = true; 
-                
-                // 🆕 Принудительно сохраняем форму перед закрытием
-                const formEl = document.getElementById('pipette-form');
-                if (formEl) {
-                  formEl.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                _skipUnlockOnClose = true;
+
+                // 🆕 Прямой await — ждём реального завершения сохранения
+                let savedOk = false;
+                try {
+                  await savePipette(null, true);
+                  savedOk = true;
+                } catch (e) {
+                  console.warn('Автосохранение при потере лока не удалось:', e.message);
                 }
-                
-                // Ждем 800мс, чтобы PUT-запрос ушел на сервер и сохранился
-                await new Promise(resolve => setTimeout(resolve, 800));
-                
+
                 const name = r.lockedBy || '';
                 const pos = r.lockedByPosition;
-                                
-                let displayUser = '';
-                if (pos) {
-                  displayUser = `${name} (${pos})`;
-                } else {
-                  displayUser = 'Другой пользователь';
-                }
-                                               
-                 await showConfirm(
-                  `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`,
-                  { icon: '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>', title: 'Сессия завершена', okText: 'ОК', hideCancel: true, okClass: 'btn-secondary' }
+                let displayUser = pos ? `${name} (${pos})` : (name || 'Другой пользователь');
+
+                await showConfirm(
+                  savedOk
+                    ? `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`
+                    : `Не удалось автоматически сохранить изменения перед закрытием.\n\nПрибор забрал в работу: ${displayUser}.\n\nСкопируйте важные данные, если они есть.`,
+                  { icon: savedOk
+                      ? '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>'
+                      : '<i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i>',
+                    title: savedOk ? 'Сессия завершена' : 'Сессия завершена — сохранение не удалось',
+                    okText: 'ОК', hideCancel: true, okClass: 'btn-secondary' }
                 );
               }
             } catch (e) {}
