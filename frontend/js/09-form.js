@@ -60,13 +60,12 @@ async function generateFormFields(data = null) {
         input.style.cursor = 'not-allowed';
         input.title = 'И.о. работает в отделе основного';
       }
-      if (f.id === 'responsible' && currentUser.role !== 'admin') {
+      if (f.id === 'responsible' && !isAdmin()) {
         input.disabled = true;
         input.style.background = '#f1f5f9';
         input.style.cursor = 'not-allowed';
         input.title = 'Только администратор может изменить ответственного';
       }
-
       div.appendChild(input);
       container.appendChild(div);
     }
@@ -276,7 +275,7 @@ async function openModal(id) {
           active: 'true'
         };
 
-        if (currentUser.role === 'admin') {
+       if (isAdmin()) {
           // admin — ничего
         } else if (currentUser.isActing && currentUser.actingForName) {
           defaults.responsible = currentUser.actingForName;
@@ -386,25 +385,22 @@ function makeDefaultBulkRow() {
       row[f.id] = 'pass';
     } else if (f.id === 'active') {
       row[f.id] = 'true';
-    } else if (f.id === 'responsible') {
-      if (currentUser.role !== 'admin') {
+       } else if (f.id === 'responsible') {
+      if (!isAdmin()) {
         if (currentUser.isActing && currentUser.actingForName) row[f.id] = currentUser.actingForName;
         else row[f.id] = currentUser.fullName || '';
       } else {
         row[f.id] = '';
       }
     } else if (f.id === 'department') {
-      if (currentUser.role !== 'admin') {
+      if (!isAdmin()) {
         if (currentUser.isActing && currentUser.actingDepartment) row[f.id] = currentUser.actingDepartment;
         else if (currentUser.onlyOwnDepartment && currentUser.department) row[f.id] = currentUser.department;
         else row[f.id] = '';
       } else {
         row[f.id] = '';
       }
-    } else {
-      row[f.id] = '';
     }
-  }
   return row;
 }
 
@@ -493,10 +489,10 @@ function renderBulkCell(field, value, rowIdx) {
 function getBulkFieldOptions(field, currentValue) {
   let opts = [];
 
-  if (field.id === 'department') {
+ if (field.id === 'department') {
     let deps = departmentsList;
     if (currentUser.isActing && currentUser.actingDepartment) deps = [currentUser.actingDepartment];
-    else if (currentUser.role !== 'admin' && currentUser.onlyOwnDepartment && currentUser.department) {
+    else if (!isAdmin() && currentUser.onlyOwnDepartment && currentUser.department) {
       deps = [currentUser.department];
     }
     opts = deps.map(d => ({ value: d, label: d }));
@@ -514,8 +510,8 @@ function getBulkFieldOptions(field, currentValue) {
       { value: 'true',  label: '✅ В работе' },
       { value: 'false', label: '⛔ Не используется' },
     ];
-  } else if (field.id === 'responsible') {
-    if (currentUser.role === 'admin') {
+   } else if (field.id === 'responsible') {
+    if (isAdmin()) {
       opts = (_responsibles || []).map(u => ({ value: u.fullName, label: u.fullName }));
       if (!field.required) opts.unshift({ value: '', label: '—' });
     } else if (currentUser.isActing && currentUser.actingForName) {
@@ -920,7 +916,7 @@ function fillSelectOptions(selectEl, field, currentVal) {
   if (field.id === 'department') {
     let deps = departmentsList;
     if (currentUser.isActing && currentUser.actingDepartment) deps = [currentUser.actingDepartment];
-    else if (currentUser.role !== 'admin' && currentUser.onlyOwnDepartment && currentUser.department) {
+    else if (!isAdmin() && currentUser.onlyOwnDepartment && currentUser.department) {
       deps = [currentUser.department];
     }
     opts = deps.length ? deps.map(d => ({ value: d, label: d })) : (field.options || []);
@@ -939,8 +935,8 @@ function fillSelectOptions(selectEl, field, currentVal) {
       { value: 'true',  label: '✅ В работе' },
       { value: 'false', label: '⛔ Не используется' }
     ];
-  } else if (field.id === 'responsible') {
-    if (currentUser.role === 'admin') {
+ } else if (field.id === 'responsible') {
+    if (isAdmin()) {
       opts = _responsibles.map(u => ({ value: u.fullName, label: u.fullName }));
       if (!field.required) opts.unshift({ value: '', label: '— не указан —' });
     } else if (currentUser.isActing && currentUser.actingForName) {
