@@ -25,7 +25,6 @@ function closeHotkeysHelp() {
   UI.modal.close('hotkeys-modal');
 }
 
-// 🆕 Рендерим список всех разделов (с проверкой на наличие файла)
 function renderDocsSidebar() {
   const c = document.getElementById('docs-sidebar');
   if (!c) return;
@@ -34,7 +33,6 @@ function renderDocsSidebar() {
     const cleanTitle = s.title.replace(/\{icon:.*?\}/g, '').trim();
     const hasFile = !!s.filePath;
     
-    // 🆕 Если файла нет — не ссылка, а кнопка с обработчиком ошибки
     if (!hasFile) {
       return `
    <div class="help-link-item help-link-missing"
@@ -47,7 +45,6 @@ function renderDocsSidebar() {
 `;
     }
     
-  // Обычная ссылка для разделов с файлом (с проверкой 404)
     const fileUrl = s.filePath.startsWith('/') ? s.filePath : '/' + s.filePath;
     const isPdf = s.filePath.toLowerCase().endsWith('.pdf');
     const icon = isPdf ? 'fa-file-pdf' : 'fa-file-word';
@@ -64,14 +61,10 @@ function renderDocsSidebar() {
   }).join('');
 }
 
-// 🆕 Обработчик для разделов без файла
 function showMissingFileToast(title) {
   showToast(`Раздел «${title}» пока без файла. Обратитесь к администратору.`, 'warn');
 }
 
-// ============================================================
-// Проверка наличия файла перед открытием
-// ============================================================
 async function checkAndOpenHelpFile(e, url, title) {
   e.preventDefault();
 
