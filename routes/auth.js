@@ -28,7 +28,7 @@ function userPublic(u) {
     position: u.position,
     department: u.department,
     role: u.role,
-    isAdmin: u._isAdmin !== undefined ? !!u._isAdmin : u.role === 'admin',
+    isAdmin: !!u._isAdmin,
     roleName: u._roleDef?.name || u.role,
     rolePermissions: u._roleDef?.permissions || [],
     permissions: u._perms || db.safeParse(u.extra_permissions, []),
@@ -89,8 +89,18 @@ router.post('/login', async (req, res) => {
     }
 
     // Инициализация прав на основе роли
-    u._roleDef = await roleCache.getRoleDef(u.role);
-    u._isAdmin = !!(u._roleDef?.isAdmin || u.role === 'admin');
+    let roleCacheError = false;
+    try {
+      u._roleDef = await roleCache.getRoleDef(u.role);
+    } catch (err) {
+      roleCacheError = true;
+      console.warn('[WARN] roleCache недоступен при логине:', err.message);
+      u._roleDef = null;
+    }
+    if (!u._roleDef && !roleCacheError) {
+      console.warn(`[WARN] Роль не найдена при логине: role=${u.role}, user=${u.id}`);
+    }
+    u._isAdmin = !!(u._roleDef && u._roleDef.isAdmin);
     u._perms = u._isAdmin
       ? ['*']
       : [...(u._roleDef?.permissions || []), ...db.safeParse(u.extra_permissions, [])];
@@ -131,8 +141,18 @@ router.post('/impersonate/:userId', authenticate, async (req, res) => {
     }
 
     // Инициализация прав для target
-    target._roleDef = await roleCache.getRoleDef(target.role);
-    target._isAdmin = !!(target._roleDef?.isAdmin || target.role === 'admin');
+    let roleCacheError = false;
+    try {
+      target._roleDef = await roleCache.getRoleDef(target.role);
+    } catch (err) {
+      roleCacheError = true;
+      console.warn('[WARN] roleCache недоступен при impersonate:', err.message);
+      target._roleDef = null;
+    }
+    if (!target._roleDef && !roleCacheError) {
+      console.warn(`[WARN] Роль не найдена при impersonate: role=${target.role}, user=${target.id}`);
+    }
+    target._isAdmin = !!(target._roleDef && target._roleDef.isAdmin);
     target._perms = target._isAdmin
       ? ['*']
       : [...(target._roleDef?.permissions || []), ...db.safeParse(target.extra_permissions, [])];
@@ -188,7 +208,10 @@ router.post('/stop-impersonate', allowWhenPasswordMustChange, authenticate, asyn
     if (!adminRows.length) {
       const deletedAdminReq = { user: { id: adminId, full_name: req.impersonatedByName || 'admin (удалён)' } };
       await logAction(deletedAdminReq, 'Возврат к своей учётной записи', `Работал под: ${req.user.full_name} (${req.user.login}); сам админ удалён`);
-      return res.json({ message: 'Возврат залогирован (админ удалён)' });
+      return res.json({
+        message: 'Возврат залогирован (админ удалён)',
+        forceLogout: true,
+      });
     }
 
     const admin = adminRows[0];
