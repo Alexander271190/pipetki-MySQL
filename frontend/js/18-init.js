@@ -577,33 +577,47 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ============================================================
-// PULL-TO-REFRESH (Свайп вниз для обновления данных)
+// PULL-TO-REFRESH
+// ПК: тянем только внутри .table-wrapper
+// Мобильный: тянем в любом месте страницы (по document)
 // ============================================================
 (function initPullToRefresh() {
   if (!('ontouchstart' in window)) return;
 
-  const tableWrapper = document.querySelector('.table-wrapper');
-  if (!tableWrapper) return;
-
   const THRESHOLD = 80;
   const MAX_PULL  = 150;
+  const isMobile  = () => window.matchMedia('(max-width: 768px)').matches;
 
   let startY = 0;
   let currentPull = 0;
   let isPulling = false;
   let isRefreshing = false;
 
-  tableWrapper.addEventListener('touchstart', (e) => {
+  function getScrollTop() {
+    if (isMobile()) {
+      return window.scrollY || document.documentElement.scrollTop || 0;
+    }
+    const el = document.querySelector('.table-wrapper');
+    return el ? el.scrollTop : 0;
+  }
+
+  document.addEventListener('touchstart', (e) => {
     if (isRefreshing) return;
-    if (tableWrapper.scrollTop <= 0) {
+    // 🆕 На странице входа не вмешиваемся — там свой initAuthPullToRefresh
+    if (typeof isAuthenticated === 'function' && !isAuthenticated()) return;
+    // На ПК реагируем только внутри таблицы
+    if (!isMobile() && !(e.target.closest && e.target.closest('.table-wrapper'))) return;
+
+    if (getScrollTop() <= 0) {
       startY = e.touches[0].clientY;
       isPulling = true;
       currentPull = 0;
     }
   }, { passive: true });
 
-  tableWrapper.addEventListener('touchmove', (e) => {
+  document.addEventListener('touchmove', (e) => {
     if (!isPulling || isRefreshing) return;
+
     const deltaY = e.touches[0].clientY - startY;
 
     if (deltaY <= 0) {
@@ -612,7 +626,8 @@ document.addEventListener('keydown', (e) => {
       return;
     }
 
-    if (deltaY > 10) e.preventDefault();
+    // Порог 15px — чтобы случайный «тап с дрожанием» не блокировал клики
+    if (deltaY > 15) e.preventDefault();
 
     currentPull = Math.min(deltaY, MAX_PULL);
   }, { passive: false });
@@ -641,8 +656,8 @@ document.addEventListener('keydown', (e) => {
     }
   };
 
-  tableWrapper.addEventListener('touchend', finishPull, { passive: true });
-  tableWrapper.addEventListener('touchcancel', finishPull, { passive: true });
+  document.addEventListener('touchend',    finishPull, { passive: true });
+  document.addEventListener('touchcancel', finishPull, { passive: true });
 })();
 
 // ============================================================
