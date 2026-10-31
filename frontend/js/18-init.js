@@ -31,12 +31,12 @@ function renderAuthUI() {
     const admin           = isAdmin();
     const canAdd          = canAddPipette();
     const canImportData   = canImport();
-    const canExportData = canExport() && (settings.printDocs?.export !== false);
+    const canExportData   = canExport() && (settings.printDocs?.export !== false);
     const canSettings     = canManageSettings();
     const canScan         = canScanBarcode() && !isMobileDevice();
     const canPrint        = canPrintLabels();
 
-   document.querySelectorAll('.btn-add-pipette').forEach(el => {
+    document.querySelectorAll('.btn-add-pipette').forEach(el => {
       const isDropdown = el.classList.contains('dropdown-item');
       el.style.display = canAdd ? (isDropdown ? 'flex' : 'inline-flex') : 'none';
     });
@@ -48,7 +48,8 @@ function renderAuthUI() {
       el.style.display = canSettings ? 'inline-flex' : 'none');
     document.querySelectorAll('.btn-scan-barcode').forEach(el =>
       el.style.display = canScan ? 'inline-flex' : 'none');
-   const canViewAuditLog = canViewLog();
+    
+    const canViewAuditLog = canViewLog();
     document.querySelectorAll('.btn-audit-log').forEach(el =>
       el.style.display = canViewAuditLog ? 'flex' : 'none');
     document.querySelectorAll('.btn-print-labels').forEach(el =>
@@ -62,6 +63,7 @@ function renderAuthUI() {
     document.body.classList.toggle('can-import', canImportData);
     document.body.classList.toggle('can-export', canExportData);
     document.body.classList.toggle('is-admin', admin);
+
     if (currentUser.mustSetPassword) {
       openChangePasswordModal(true, 'setup');
     } else if (currentUser.mustChangePassword) {
@@ -84,6 +86,7 @@ function renderAuthUI() {
     authContainer.classList.remove('hidden');
     mainContent.classList.remove('visible');
     document.body.classList.remove('can-manage', 'can-import', 'can-export', 'is-admin');
+    
     const btnStop = document.getElementById('btn-impersonate-stop');
     if (btnStop) btnStop.style.display = 'none';
 
@@ -93,6 +96,7 @@ function renderAuthUI() {
     if (loginBtn) loginBtn.disabled = false;
     if (loginBtnIcon) loginBtnIcon.className = 'fa-solid fa-right-to-bracket';
     if (loginBtnText) loginBtnText.textContent = 'Войти';
+    
     const uInput = document.getElementById('login-username');
     const pInput = document.getElementById('login-password');
     if (uInput) uInput.disabled = false;
@@ -177,12 +181,12 @@ function toggleHeaderCollapse() {
     }
     btn.title = collapsed ? 'Развернуть шапку' : 'Свернуть шапку';
   }
-} // 🆕 ВОТ ЭТА СКОБКА БЫЛА ПРОПУЩЕНА
+}
 
 (function initHeaderCollapse() {
   try {
     const header = document.getElementById('main-header');
-    // 🆕 На ПК (шире 768px) принудительно разворачиваем шапку
+    // На ПК (шире 768px) принудительно разворачиваем шапку
     if (window.innerWidth > 768) {
       if (header) header.classList.remove('collapsed');
       return;
@@ -238,7 +242,6 @@ function applyTheme(theme) {
       : '<i class="fa-solid fa-moon"></i>';
   }
 }
-
 
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme') || 'light';
@@ -474,11 +477,11 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-        if (e.key === 'Escape') {
+  if (e.key === 'Escape') {
     const confirmModal = document.getElementById('confirm-modal');
     if (confirmModal && confirmModal.classList.contains('active')) return;
 
-    // 🆕 Закрываем ЛЮБУЮ активную модалку, у которой есть обработчик в modalCloseMap
+    // Закрываем активную модалку, у которой есть обработчик в modalCloseMap
     const activeModal = document.querySelector('.modal-overlay.active');
     if (activeModal && modalCloseMap[activeModal.id]) {
       modalCloseMap[activeModal.id]();
@@ -543,7 +546,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-    if (e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З') {
+  if (e.key === 'p' || e.key === 'P' || e.key === 'з' || e.key === 'З') {
     e.preventDefault();
     if (typeof canPrintLabels === 'function' && canPrintLabels()) {
       openBarcodePrintModal();
@@ -551,7 +554,6 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // 🆕 Ctrl+H — история текущего прибора (если есть выбранный)
   if (e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') {
     e.preventDefault();
     const selected = [...selectedPipettes];
@@ -563,7 +565,6 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // 🆕 Ctrl+Shift+A — аудит текущего прибора
   if ((e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') && e.shiftKey) {
     e.preventDefault();
     const selected = [...selectedPipettes];
@@ -603,7 +604,7 @@ document.addEventListener('keydown', (e) => {
 
   document.addEventListener('touchstart', (e) => {
     if (isRefreshing) return;
-    // 🆕 На странице входа не вмешиваемся — там свой initAuthPullToRefresh
+    // На странице входа не вмешиваемся — там свой initAuthPullToRefresh
     if (typeof isAuthenticated === 'function' && !isAuthenticated()) return;
     // На ПК реагируем только внутри таблицы
     if (!isMobile() && !(e.target.closest && e.target.closest('.table-wrapper'))) return;
@@ -672,7 +673,6 @@ document.addEventListener('keydown', (e) => {
   let minW = 0, minH = 0;
 
   function onPointerDown(e) {
-    // 🆕 Защита: e.target может быть document / window / текстом
     const t = e.target;
     if (!t || typeof t.closest !== 'function') return;
 
@@ -683,7 +683,7 @@ document.addEventListener('keydown', (e) => {
     const dx = rect.right - e.clientX;
     const dy = rect.bottom - e.clientY;
 
-    // 🆕 Зона захвата 40×40 — покрывает padding: 24px
+    // Зона захвата 40×40 — покрывает padding: 24px
     if (dx < 0 || dy < 0) return;
     if (dx > 40 || dy > 40) return;
 
@@ -728,7 +728,7 @@ document.addEventListener('keydown', (e) => {
 })();
 
 // ============================================================
-// 🆕 PULL-TO-REFRESH на странице авторизации (без спиннера)
+// PULL-TO-REFRESH на странице авторизации (без спиннера)
 // ============================================================
 (function initAuthPullToRefresh() {
   if (!('ontouchstart' in window)) return;
