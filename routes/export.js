@@ -1,6 +1,6 @@
 const express = require('express');
 const ExcelJS = require('exceljs');
-const db = require('../db');  
+const db = require('../db');
 const { authenticate, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
@@ -19,7 +19,7 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       return res.status(400).json({ error: 'Ожидается headers[] и rows[]' });
     }
 
-    // 🆕 Глобальные флаги — если админ отключил экспорт, отдаём 403
+    // Глобальные флаги — если админ отключил экспорт, отдаём 403
     const [er] = await db.query(
       'SELECT export_enabled, history_enabled FROM export_settings WHERE id = 1'
     );
@@ -40,7 +40,7 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
 
     const COLS = Math.max(headers.length, 1);
 
-       // ── Шапка ──
+    // ── Шапка ──
     if (mode === 'history' && meta) {
       const titleRow = sheet.addRow([meta.title || 'История поверок']);
       sheet.mergeCells(1, 1, 1, COLS);
@@ -64,7 +64,7 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
       titleRow.height = 22;
 
-      // 🆕 В шапке — только дата и число записей (без «Сформировал»)
+      // В шапке — только дата и число записей (без «Сформировал»)
       const metaParts = [];
       if (meta.date)                metaParts.push(`Дата: ${meta.date}`);
       if (meta.recordCount != null) metaParts.push(`Записей: ${meta.recordCount}`);
@@ -96,14 +96,14 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
     });
     headerRow.height = 22;
 
-             // ── Данные ──
+    // ── Данные ──
     let lastDataRow = null;
 
     rows.forEach((row, idx) => {
       const r = sheet.addRow(headers.map(h => row[h] ?? ''));
-      r.height = 22;                                              // 🆕 высота строки 22pt
+      r.height = 22;
       r.eachCell(cell => {
-        cell.alignment = { vertical: 'middle', wrapText: true };  // 🆕 middle вместо top
+        cell.alignment = { vertical: 'middle', wrapText: true };
         cell.font = { size: 10 };
         cell.border = {
           top:    { style: 'thin', color: { argb: 'FFE2E8F0' } },
@@ -118,14 +118,13 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       lastDataRow = r;
     });
 
-    
-       // ── Подвал: кто сформировал + подпись ──
+    // ── Подвал: кто сформировал + подпись ──
     if (mode && meta) {
-      // 🆕 Отступ ~2.1 см от последней записи (60pt)
+      // Отступ ~2.1 см от последней записи (60pt)
       const spacer = sheet.addRow([]);
       spacer.height = 60;
 
-      // 🆕 Подвал: слева «Документ сформировал», справа «Подпись»
+      // Подвал: слева «Документ сформировал», справа «Подпись»
       const footerRow = sheet.addRow([]);
       footerRow.height = 20;
 
@@ -157,39 +156,40 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
         cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
       }
 
-       const FORCE_BREAK_THRESHOLD = 40;
-        if (lastDataRow && rows.length > FORCE_BREAK_THRESHOLD) {
-          lastDataRow.addPageBreak();
-        }
+      const FORCE_BREAK_THRESHOLD = 40;
+      if (lastDataRow && rows.length > FORCE_BREAK_THRESHOLD) {
+        lastDataRow.addPageBreak();
+      }
 
-        sheet.addRow([]);
+      sheet.addRow([]);
     }
 
-       // ── Автоширина столбцов (узкие, чтобы все влезли по ширине) ──
+    // ── Автоширина столбцов (узкие, чтобы все влезли по ширине) ──
     sheet.columns.forEach((col, i) => {
       let max = String(headers[i] || '').length;
       col.eachCell({ includeEmpty: false }, cell => {
         const len = String(cell.value || '').length;
         if (len > max) max = len;
       });
-      // 🆕 максимум 20 символов — иначе одна «Примечание» растянет всю таблицу
+      // максимум 20 символов — иначе одна «Примечание» растянет всю таблицу
       col.width = Math.min(Math.max(max + 1, 8), 20);
     });
-                  // 🆕 Настройки печати: все колонки уместить по ширине 1 листа
+
+    // Настройки печати: все колонки уместить по ширине 1 листа
     sheet.pageSetup = {
-      fitToPage: true,                  // 🆕 Excel сам подберёт масштаб
+      fitToPage: true,                  // Excel сам подберёт масштаб
       fitToWidth: 1,                    // вписать по ширине в 1 страницу
       fitToHeight: 0,                   // по высоте — сколько нужно
       orientation: 'landscape',         // A4 горизонтальная
       paperSize: 9,                     // A4
       margins: {
-        left: 0.25, right: 0.25,        // 🆕 уменьшены — больше места для колонок
+        left: 0.25, right: 0.25,        // уменьшены — больше места для колонок
         top: 0.4, bottom: 0.4,
         header: 0.2, footer: 0.2,
       },
       printTitlesRow: headerRow.number + ':' + headerRow.number,
     };
-    
+
     // ── Отдача файла ──
     const buffer = await workbook.xlsx.writeBuffer();
     const today = new Date().toISOString().slice(0, 10);
