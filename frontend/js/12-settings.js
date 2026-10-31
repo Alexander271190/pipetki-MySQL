@@ -4,19 +4,20 @@
 // НАСТРОЙКИ
 // ============================================================
 async function openSettingsModal() {
-  await UI.guard(
-    { role: 'admin', errorMsg: 'Доступно только администратору' },
-    async () => {
-      document.getElementById('settings-list').style.display = '';
-      document.getElementById('settings-section').style.display = 'none';
-      document.getElementById('settings-back-btn').style.display = 'none';
-      document.getElementById('settings-header-text').textContent = 'Настройки системы';
-      document.getElementById('settings-footer').style.display = '';
+  // Вместо UI.guard({ role: 'admin' }) используем нашу функцию isAdmin()
+  if (!isAdmin()) {
+    showToast('Доступно только администратору', 'error');
+    return;
+  }
 
-      renderSettingsList();
-      UI.modal.open('settings-modal');
-    }
-  );
+  document.getElementById('settings-list').style.display = '';
+  document.getElementById('settings-section').style.display = 'none';
+  document.getElementById('settings-back-btn').style.display = 'none';
+  document.getElementById('settings-header-text').textContent = 'Настройки системы';
+  document.getElementById('settings-footer').style.display = '';
+
+  renderSettingsList();
+  UI.modal.open('settings-modal');
 }
 
 function closeSettingsModal() {
@@ -38,6 +39,7 @@ function renderSettingsList() {
 
   const canSee = (id) => {
     if (id === 'users')    return canManageUsers();
+    if (id === 'roles')    return isAdmin() || canManageUsers(); 
     if (id === 'printers') return canManagePrinters();
     if (id === 'log')      return canViewLog();
     return true;
@@ -67,6 +69,7 @@ async function openSettingsSection(id) {
 
   const permCheck = {
     users:    canManageUsers,
+    roles:    () => isAdmin() || canManageUsers(), // <-- Добавлено
     printers: canManagePrinters,
     log:      canViewLog,
   }[id];
@@ -91,6 +94,7 @@ async function openSettingsSection(id) {
     else if (id === 'filters')     await renderFiltersSettings();
     else if (id === 'export')      await renderExportSettings();
     else if (id === 'users')       await renderUsersSettings();
+    else if (id === 'roles')       await renderRolesSettings(); 
     else if (id === 'equipment')   await renderEquipmentSettings();
     else if (id === 'printers')    await renderPrintersSettings();
     else if (id === 'barcodes')    await renderBarcodesSettings();
@@ -102,6 +106,7 @@ async function openSettingsSection(id) {
     c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
   }
 }
+
 
 // ============================================================
 // ВКЛАДКА: ПОЛЯ ФОРМЫ
@@ -1682,4 +1687,206 @@ async function resetHelpToFactory() {
     showToast('Справка восстановлена', 'success');
     renderHelpSettings();
   } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ============================================================
+// ВКЛАДКА: РОЛИ И ПРАВА
+// ============================================================
+let _cachedRolesList = [];
+
+async function renderRolesSettings() {
+  const c = document.getElementById('settings-section-content');
+  try {
+    _cachedRolesList = await apiRequest('/roles');
+
+    let html = `
+      <h3>Управление ролями</h3>
+      <p style="color:#64748b;margin-bottom:12px;">Настройте права доступа для каждой роли.</p>
+      <table class="field-settings-table">
+        <thead><tr>
+          <th>Название</th>
+          <th style="text-align:center;">Код (value)</th>
+          <th style="text-align:center;">Админ</th>
+          <th style="text-align:center;">Права</th>
+          <th style="width:60px;"></th>
+        </tr></thead><tbody>`;
+
+    _cachedRolesList.forEach(r => {
+      const permsCount = r.permissions ? r.permissions.length : 0;
+      const isAdminText = r.isAdmin ? '<span style="color:#dc2626;font-weight:bold;">Да</span>' : '—';
+      const sysBadge = r.isSystem ? ' <i class="fa-solid fa-lock" style="color:#94a3b8;font-size:0.8em;" title="Системная роль"></i>' : '';
+
+      html += `<tr>
+        <td><strong>${esc(r.name)}</strong>${sysBadge}</td>
+        <td style="text-align:center;color:#64748b;font-family:monospace;">${esc(r.value)}</td>
+        <td style="text-align:center;">${isAdminText}</td>
+        <td style="text-align:center;">${r.isAdmin ? 'Все' : permsCount + ' шт.'}</td>
+        <td style="text-align:center;">
+          <button class="row-actions-btn" onclick="openRoleActions(event, ${r.id})" title="Действия">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+          </button>
+        </td>
+      </tr>`;
+    });
+
+    html += `</tbody></table>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="openRoleModal()" style="margin-right: auto;"><i class="fa-solid fa-plus"></i> Добавить роль</button>
+        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
+      </div>`;
+
+    c.innerHTML = html;
+  } catch (e) {
+    c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`;
+  }
+}
+
+function openRoleActions(ev, id) {
+  ev.stopPropagation();
+  const role = _cachedRolesList.find(r => r.id === id);
+  const items = [
+    { label: '<i class="fa-solid fa-pen"></i> Редактировать', action: () => openRoleModal(id) }
+  ];
+
+  // Системную роль "admin" удалять нельзя (это защищено на бэке, но и на фронте скроем)
+  if (!role.isSystem && role.value !== 'admin') {
+    items.push({ 
+      label: '<i class="fa-solid fa-trash"></i> Удалить', 
+      class: 'item-danger', 
+      action: () => deleteRoleSetting(id) 
+    });
+  }
+
+  renderRowActionsMenu(ev.currentTarget, items);
+}
+
+async function openRoleModal(editId = null) {
+  const isEdit = !!editId;
+  let role = { name: '', isAdmin: false, permissions: [] };
+  
+  if (isEdit) {
+    role = _cachedRolesList.find(r => r.id === editId);
+    if (!role) return;
+  }
+
+  // Группируем права по категориям
+  const groups = {};
+  ALL_PERMISSIONS.forEach(p => {
+    if (!groups[p.group]) groups[p.group] = [];
+    groups[p.group].push(p);
+  });
+
+  let permsHtml = '';
+  for (const [group, items] of Object.entries(groups)) {
+    permsHtml += `<div style="font-size:.7rem;font-weight:700;color:#94a3b8;margin:8px 0 4px 4px;text-transform:uppercase;">${group}</div>`;
+    permsHtml += items.map(p => {
+      const checked = role.permissions.includes(p.key) ? 'checked' : '';
+      return `<label style="display:flex;align-items:center;gap:8px;padding:4px 8px;cursor:pointer;">
+        <input type="checkbox" class="role-perm-cb" value="${p.key}" ${checked} ${role.isAdmin ? 'disabled' : ''}>
+        <span style="font-size:.85rem;">${p.label}</span>
+      </label>`;
+    }).join('');
+  }
+
+  const modalHtml = `
+    <div class="modal-overlay active" id="role-modal" style="z-index:1000;">
+      <div class="modal" style="max-width: 500px;">
+        <h2><i class="fa-solid fa-user-shield"></i> ${isEdit ? 'Редактирование роли' : 'Новая роль'}</h2>
+        
+        <div class="form-group">
+          <label>Название роли (видно пользователям) *</label>
+          <input type="text" id="role-name" value="${esc(role.name)}" placeholder="Например: Заведующий лабораторией">
+        </div>
+
+        <div class="form-group" style="margin-top:12px; padding:10px; background:var(--card-alt); border-radius:6px;">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" id="role-is-admin" ${role.isAdmin ? 'checked' : ''} ${role.value === 'admin' ? 'disabled' : ''} onchange="toggleRoleAdminMode(this.checked)">
+            <span style="font-weight:600;color:#dc2626;">Дать полные права администратора</span>
+          </label>
+          <small style="color:#64748b;margin-top:4px;display:block;">Администраторы игнорируют список прав ниже.</small>
+        </div>
+
+        <div class="form-group" style="max-height: 300px; overflow-y: auto; border:1px solid var(--border-hard); padding:8px; border-radius:8px;">
+          <div id="role-perms-wrap" style="${role.isAdmin ? 'opacity:0.5;pointer-events:none;' : ''}">
+            ${permsHtml}
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="document.getElementById('role-modal').remove()">Отмена</button>
+          <button class="btn btn-success" onclick="saveRoleSetting(${isEdit ? editId : 'null'})"><i class="fa-solid fa-floppy-disk"></i> Сохранить</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function toggleRoleAdminMode(isAdmin) {
+  const wrap = document.getElementById('role-perms-wrap');
+  const cbs = document.querySelectorAll('.role-perm-cb');
+  if (isAdmin) {
+    wrap.style.opacity = '0.5';
+    wrap.style.pointerEvents = 'none';
+  } else {
+    wrap.style.opacity = '1';
+    wrap.style.pointerEvents = '';
+  }
+}
+
+async function saveRoleSetting(editId) {
+  const name = document.getElementById('role-name').value.trim();
+  const isAdmin = document.getElementById('role-is-admin').checked;
+  
+  if (!name) {
+    showToast('Укажите название роли', 'error');
+    return;
+  }
+
+  const permissions = [];
+  if (!isAdmin) {
+    document.querySelectorAll('.role-perm-cb:checked').forEach(cb => permissions.push(cb.value));
+  }
+
+  const payload = { name, permissions, isAdmin };
+  const btn = document.querySelector('#role-modal .btn-success');
+  
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Сохранение...';
+
+    if (editId) {
+      await apiRequest('/roles/' + editId, 'PUT', payload);
+    } else {
+      await apiRequest('/roles', 'POST', payload);
+    }
+    
+    showToast('Роль сохранена', 'success');
+    document.getElementById('role-modal').remove();
+    renderRolesSettings(); // Перезагружаем таблицу
+  } catch (e) {
+    showToast(e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Сохранить';
+  }
+}
+
+async function deleteRoleSetting(id) {
+  const role = _cachedRolesList.find(r => r.id === id);
+  if (!role) return;
+
+  const ok = await showConfirm(
+    `Удалить роль «${role.name}»?`, 
+    { icon: '🗑️', title: 'Удаление роли', okText: 'Удалить', okClass: 'btn-danger' }
+  );
+  if (!ok) return;
+
+  try {
+    await apiRequest('/roles/' + id, 'DELETE');
+    showToast('Роль удалена', 'success');
+    renderRolesSettings();
+  } catch (e) {
+    // Если бэк вернул 400 (роль используется пользователями)
+    showToast(e.message, 'error');
+  }
 }
