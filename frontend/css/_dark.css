@@ -486,3 +486,21 @@ html[data-theme="dark"] .jodit-toolbar__box {
   min-height: 0 !important;
   overflow-y: auto !important;
 }
+
+/* ============================================================
+   ФИКС ФОНА ПОЛЕЙ В МОДАЛКАХ (универсально)
+   ============================================================ */
+html[data-theme="dark"] .modal input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] .modal select,
+html[data-theme="dark"] .modal textarea {
+  background: #273449 !important;
+  color: var(--text) !important;
+  border-color: #334155 !important;
+}
+
+html[data-theme="dark"] .modal input:not([type="checkbox"]):not([type="radio"]):focus,
+html[data-theme="dark"] .modal select:focus,
+html[data-theme="dark"] .modal textarea:focus {
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, .2) !important;
+}
