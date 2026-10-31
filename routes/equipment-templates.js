@@ -1,12 +1,12 @@
 const express = require('express');
 const db = require('../db');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
 
 const router = express.Router();
 
 // GET /api/equipment-templates — все шаблоны
-router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.get('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT id, name, data FROM equipment_templates ORDER BY name'
@@ -23,7 +23,7 @@ router.get('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 // POST /api/equipment-templates — создать (только админ)
-router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
+router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
     const { name, data } = req.body || {};
     if (!name || !String(name).trim()) {
@@ -53,7 +53,7 @@ router.post('/', authenticate, requireRole(['admin']), async (req, res) => {
 });
 
 // DELETE /api/equipment-templates/:id — удалить (только админ)
-router.delete('/:id', authenticate, requireRole(['admin']), async (req, res) => {
+router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [ex] = await db.query('SELECT name FROM equipment_templates WHERE id = ?', [id]);
