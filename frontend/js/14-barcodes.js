@@ -54,12 +54,14 @@ function renderBarcodeScanList() {
   const btnSend = document.getElementById('btn-scan-send');
   const btnReturn = document.getElementById('btn-scan-return');
   if (counter) counter.textContent = _barcodeScanList.length;
+  
   if (!_barcodeScanList.length) {
     if (list) list.innerHTML = `<div style="color:${COLORS.faint};">Список пуст. Сканируйте штрихкоды.</div>`;
     if (btnSend) btnSend.disabled = true;
     if (btnReturn) btnReturn.disabled = true;
     return;
   }
+  
   if (list) {
      list.innerHTML = _barcodeScanList.map((p, i) => `
       <div class="flex-row" style="justify-content:space-between;padding:4px 0;border-bottom:1px solid #e2e8f0;">
@@ -68,6 +70,7 @@ function renderBarcodeScanList() {
       </div>
     `).join('');
   }
+  
   const hasSendable = _barcodeScanList.some(p => !p.sent_for_calibration);
   const hasReturnable = _barcodeScanList.some(p => p.sent_for_calibration);
   if (btnSend) btnSend.disabled = !hasSendable;
@@ -227,7 +230,6 @@ function updateBarcodePrintScopeCounts() {
   const el2 = document.getElementById('bc-scope-page-count');
   if (el2) el2.textContent = pageIds.length;
 
-  // 🆕 «Весь фильтр» — общее число с сервера, а не длина текущей страницы
   const el3 = document.getElementById('bc-scope-filtered-count');
   if (el3) el3.textContent = (pagedState && pagedState.total) ? pagedState.total : 0;
 }
@@ -242,7 +244,6 @@ async function getBarcodePrintIds() {
     return getVisiblePageIds();
   }
   if (scope === 'filtered') {
-    // 🆕 Весь фильтр — с сервера, а не текущая страница
     return await loadIdsForExport();
   }
   return [];
@@ -333,7 +334,6 @@ async function downloadBarcodePdf(ids, copies, layout) {
   const url = `/api/barcodes/labels.pdf?ids=${encodeURIComponent(ids.join(','))}&copies=${copies}&layout=${layout}`;
   const defaultFilename = `labels_${layout}_${todayStr()}.pdf`;
   
-  // 🆕 Используем новую безопасную функцию скачивания
   await downloadFile(url, {}, defaultFilename);
   
   showToast(`PDF: ${ids.length} × ${copies} = ${ids.length * copies} этикеток`, 'success');
@@ -598,7 +598,7 @@ async function addBarcodePrinter() {
       placeholder: 'Например: Гематологический',
     }
   );
-  if (department === null) return;  // отмена на этом шаге = отмена всей операции
+  if (department === null) return;
 
   try {
     await apiRequest('/barcode-printers', 'POST', {
