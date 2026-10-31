@@ -358,3 +358,40 @@ html[data-theme="dark"] #search {
     width: 100% !important;
   }
 }
+
+/* ============================================================
+   🆕 МОБИЛЬНАЯ АДАПТАЦИЯ: обычный скролл страницы
+   На ПК всё остаётся как было (скроллится только таблица)
+   ============================================================ */
+@media (max-width: 768px) {
+  html {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+  body {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .main-content.visible {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+  .container {
+    flex: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .table-wrapper {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+    overscroll-behavior: auto !important;
+  }
+}
