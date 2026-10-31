@@ -4,7 +4,7 @@
 .form-group { margin-bottom: 14px; }
 .form-group > label { display: block; margin-bottom: 6px; font-size: .85rem; font-weight: 600; color: var(--text-strong); }
 
-/* 🆕 Исключаем чекбоксы и радио из общих стилей, чтобы они не растягивались */
+/* Исключаем чекбоксы и радио из общих стилей, чтобы они не растягивались */
 .form-group input:not([type="checkbox"]):not([type="radio"]),
 .form-group select,
 .form-group textarea {
@@ -38,6 +38,7 @@
 .form-actions .btn {
   white-space: nowrap;
 }
+
 /* ============================================================
    ТАБЛИЦЫ НАСТРОЕК
    ============================================================ */
@@ -372,15 +373,12 @@ tbody tr.row-warn:nth-child(even) td { background: var(--card-alt); }
 td strong { font-size: .84rem; font-weight: 700; color: #111827; letter-spacing: -.1px; }
 td small { display: block; font-size: .7rem; color: #6b7280; line-height: 1.25; margin-top: 1px; }
 
+/* Скроллбары для таблицы и фикс белого уголка */
 .table-wrapper::-webkit-scrollbar { width: 12px; height: 12px; }
 .table-wrapper::-webkit-scrollbar-track { background: transparent; }
 .table-wrapper::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.28); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
 .table-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.45); background-clip: content-box; }
-
-/* 🆕 Фикс белого уголка для таблицы */
-.table-wrapper::-webkit-scrollbar-corner {
-  background: var(--card);
-}
+.table-wrapper::-webkit-scrollbar-corner { background: var(--card); }
 
 @media (max-width: 768px) {
   th { padding: 10px 10px; font-size: .68rem; }
