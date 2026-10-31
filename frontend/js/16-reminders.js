@@ -19,7 +19,6 @@ function checkReminder() {
   const today = todayStr();
   if (lastShown === today) return;
 
-  // 🆕 Источник — statsState.reminders (сервер вернул ВСЁ, не только страницу)
   const dangerList = (statsState.reminders && Array.isArray(statsState.reminders.danger))
     ? statsState.reminders.danger.slice()
     : [];
@@ -37,7 +36,7 @@ function showReminder(dangerList, warnList) {
   const subtitle = document.getElementById('reminder-subtitle');
   const body = document.getElementById('reminder-body');
 
-    if (dangerList.length > 0) {
+  if (dangerList.length > 0) {
     icon.innerHTML = UI.icon('warning');
     title.textContent = 'Просрочены поверки!';
     title.style.color = COLORS.danger;
