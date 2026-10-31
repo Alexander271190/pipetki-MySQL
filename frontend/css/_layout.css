@@ -9,6 +9,7 @@
   overflow: hidden; 
 }
 .auth-container.hidden { display: none !important; }
+
 /* ============================================================
    ШАПКА
    ============================================================ */
@@ -239,7 +240,7 @@ html[data-theme="dark"] #search {
 }
 
 /* ============================================================
-   АДАПТИВНОСТЬ (Сгруппировано)
+   АДАПТИВНОСТЬ
    ============================================================ */
 
 /* 1. Скрываем кнопку сворачивания на ПК */
@@ -258,7 +259,7 @@ html[data-theme="dark"] #search {
     justify-content: flex-start !important;
     width: 100% !important;
   }
-  /* Жестко прибиваем блок админа к левому краю */
+  /* Блок пользователя прибиваем к левому краю */
   .header-body .user-info {
     margin-left: 0 !important; 
     width: 100% !important;
@@ -268,6 +269,7 @@ html[data-theme="dark"] #search {
 
 /* 3. Мобильные телефоны (до 768px) */
 @media (max-width: 768px) {
+  /* Тулбар: поиск на всю ширину, кнопки в 2 колонки */
   .toolbar {
     display: flex !important;
     flex-direction: row !important;
@@ -276,16 +278,12 @@ html[data-theme="dark"] #search {
     gap: 6px !important;
     align-items: center;
   }
-  
-  /* Поиск — на всю ширину */
   .toolbar > #search {
     flex: 1 1 100% !important;
     width: 100% !important;
     min-height: 40px !important;
     margin-bottom: 4px;
   }
-
-  /* Остальные кнопки делим по ширине (2 в ряд) */
   .toolbar > .btn,
   .toolbar > .dropdown,
   .toolbar > .dropdown > .btn,
@@ -296,14 +294,44 @@ html[data-theme="dark"] #search {
     white-space: nowrap !important;
     justify-content: center;
   }
-
-  .toolbar > .dropdown > .btn {
-    width: 100% !important;
-  }
+  .toolbar > .dropdown > .btn { width: 100% !important; }
   
   .header-top { margin-bottom: 10px; }
   .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
   .header-collapse-btn { font-size: .75rem; padding: 5px 10px; }
+
+  /* Мобильный скролл: разрешаем прокрутку всей страницы, а не только таблицы */
+  html {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+  body {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .main-content.visible {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+  .container {
+    flex: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  /* Таблица сохраняет горизонтальный скролл, вертикальный уходит на страницу */
+  .table-wrapper {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+    overscroll-behavior: auto !important;
+  }
 }
 
 /* 4. Маленькие мобильные (до 480px) */
@@ -346,6 +374,7 @@ html[data-theme="dark"] #search {
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
 }
 
+/* 7. Сетка для статистики на экранах до 600px */
 @media (max-width: 600px) {
   .header-stats {
     display: grid !important;
@@ -356,42 +385,5 @@ html[data-theme="dark"] #search {
   .stat-card {
     min-width: 0 !important;
     width: 100% !important;
-  }
-}
-
-/* ============================================================
-   🆕 МОБИЛЬНАЯ АДАПТАЦИЯ: обычный скролл страницы
-   На ПК всё остаётся как было (скроллится только таблица)
-   ============================================================ */
-@media (max-width: 768px) {
-  html {
-    height: auto !important;
-    min-height: 100vh;
-    overflow: visible !important;
-  }
-  body {
-    height: auto !important;
-    min-height: 100vh;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-  .main-content.visible {
-    height: auto !important;
-    min-height: 100vh;
-    overflow: visible !important;
-  }
-  .container {
-    flex: none !important;
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-  }
-  .table-wrapper {
-    flex: none !important;
-    height: auto !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    overflow: auto !important;
-    overscroll-behavior: auto !important;
   }
 }
