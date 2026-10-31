@@ -40,7 +40,6 @@ const SETTINGS_SECTIONS = [
   {
     group: 'Пользователи',
     items: [
-      { id: 'roles',       label: 'Роли и права' },
       { id: 'users',       label: 'Пользователи' },
     ]
   },
