@@ -334,13 +334,27 @@ html[data-theme="dark"] #search {
   }
 }
 
-/* 4. Маленькие мобильные (до 480px) */
+/* 4. Сетка для статистики (до 600px) */
+@media (max-width: 600px) {
+  .header-stats {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .stat-card {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* 5. Маленькие мобильные (до 480px) */
 @media (max-width: 480px) {
   .header-top h1 { font-size: .95rem; }
   .header-mini-stats { font-size: .72rem; padding: 3px 8px; }
 }
 
-/* 5. Очень маленькие экраны (до 420px) */
+/* 6. Очень маленькие экраны (до 420px) */
 @media (max-width: 420px) {
   .header.collapsed { padding: 8px 10px; }
   .header.collapsed h1 { font-size: .9rem; gap: 4px; }
@@ -349,7 +363,7 @@ html[data-theme="dark"] #search {
   .header.collapsed .header-collapse-btn { padding: 4px 8px; font-size: .7rem; }
 }
 
-/* 6. Совсем крошечные (до 375px) */
+/* 7. Совсем крошечные (до 375px) */
 @media (max-width: 375px) {
   .header { padding: 10px 12px; }
   .header h1 { font-size: .9rem; line-height: 1.2; }
@@ -372,18 +386,4 @@ html[data-theme="dark"] #search {
   .header.collapsed h1 .logo { font-size: 1rem; }
   .header.collapsed .header-mini-stats { font-size: .64rem; padding: 2px 6px; }
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
-}
-
-/* 7. Сетка для статистики на экранах до 600px */
-@media (max-width: 600px) {
-  .header-stats {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    width: 100% !important;
-  }
-  .stat-card {
-    min-width: 0 !important;
-    width: 100% !important;
-  }
 }
