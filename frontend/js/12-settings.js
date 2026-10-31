@@ -1788,6 +1788,17 @@ async function openRoleModal(editId = null) {
     }).join('');
   }
 
+  // Скрываем чекбокс "Админ", если текущий пользователь сам не админ
+  const adminCheckboxHtml = isAdmin() ? `
+    <div class="form-group" style="margin-top:12px; padding:10px; background:var(--card-alt); border-radius:6px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="role-is-admin" ${role.isAdmin ? 'checked' : ''} ${role.value === 'admin' ? 'disabled' : ''} onchange="toggleRoleAdminMode(this.checked)">
+        <span style="font-weight:600;color:#dc2626;">Дать полные права администратора</span>
+      </label>
+      <small style="color:#64748b;margin-top:4px;display:block;">Администраторы игнорируют список прав ниже.</small>
+    </div>
+  ` : '';
+
   const modalHtml = `
     <div class="modal-overlay active" id="role-modal" style="z-index:1000;">
       <div class="modal" style="max-width: 500px;">
@@ -1798,14 +1809,7 @@ async function openRoleModal(editId = null) {
           <input type="text" id="role-name" value="${esc(role.name)}" placeholder="Например: Заведующий лабораторией">
         </div>
 
-        <div class="form-group" style="margin-top:12px; padding:10px; background:var(--card-alt); border-radius:6px;">
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-            <input type="checkbox" id="role-is-admin" ${role.isAdmin ? 'checked' : ''} ${role.value === 'admin' ? 'disabled' : ''} onchange="toggleRoleAdminMode(this.checked)">
-            <span style="font-weight:600;color:#dc2626;">Дать полные права администратора</span>
-          </label>
-          <small style="color:#64748b;margin-top:4px;display:block;">Администраторы игнорируют список прав ниже.</small>
-        </div>
-
+        ${adminCheckboxHtml}
         <div class="form-group" style="max-height: 300px; overflow-y: auto; border:1px solid var(--border-hard); padding:8px; border-radius:8px;">
           <div id="role-perms-wrap" style="${role.isAdmin ? 'opacity:0.5;pointer-events:none;' : ''}">
             ${permsHtml}
@@ -1836,7 +1840,8 @@ function toggleRoleAdminMode(isAdmin) {
 
 async function saveRoleSetting(editId) {
   const name = document.getElementById('role-name').value.trim();
-  const isAdmin = document.getElementById('role-is-admin').checked;
+  const isAdminEl = document.getElementById('role-is-admin');
+  const isAdmin = isAdminEl ? isAdminEl.checked : false;
   
   if (!name) {
     showToast('Укажите название роли', 'error');
