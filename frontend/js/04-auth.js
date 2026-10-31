@@ -69,9 +69,18 @@ async function refreshCurrentUser() {
 
       const { user } = await res.json();
 
-      const oldPerms = (currentUser.extraPermissions || []).join(',');
-      const newPerms = (user.extraPermissions || []).join(',');
-      const permsChanged = oldPerms !== newPerms;
+      // Сравниваем эффективные права + роль + флаг isAdmin
+      const normalize = (arr) => (Array.isArray(arr) ? [...arr].sort().join(',') : '');
+
+      const oldPerms = normalize(currentUser.permissions || currentUser.extraPermissions || []);
+      const newPerms = normalize(user.permissions || user.extraPermissions || []);
+
+      const roleChanged    = (currentUser.roleName || currentUser.role)
+                          !== (user.roleName || user.role);
+      const isAdminChanged = !!currentUser.isAdmin !== !!user.isAdmin;
+
+      const permsChanged = oldPerms !== newPerms || roleChanged || isAdminChanged;
+
       const mustChangeChanged = !!currentUser.mustChangePassword !== !!user.mustChangePassword;
       const mustSetChanged    = !!currentUser.mustSetPassword    !== !!user.mustSetPassword;
 
@@ -107,10 +116,11 @@ async function refreshCurrentUser() {
 // ПРАВА
 // ============================================================
 function hasPermission(permission) {
-  const user = currentUser;
-  if (!user) return false;
-  if (user.role === 'admin') return true;
-  const perms = user.extraPermissions || [];
+  if (!currentUser) return false;
+  // Если это админ (кастомный или системный) — разрешено всё
+  if (currentUser.isAdmin === true) return true;
+  
+  const perms = currentUser.permissions || currentUser.extraPermissions || [];
   return perms.includes(permission);
 }
 
@@ -127,8 +137,18 @@ function canManagePipettes() {
 function canImport() { return hasPermission('import_data'); }
 function canExport() { return hasPermission('export_data'); }
 function isAuthenticated() { return !!currentUser; }
-function isAdmin() { return currentUser && currentUser.role === 'admin'; }
-function isSeniorLab() { return currentUser && currentUser.role === 'senior_lab'; }
+
+function isAdmin() {
+  if (!currentUser) return false;
+  return currentUser.isAdmin === true;
+}
+
+function isSeniorLab() {
+  if (!currentUser) return false;
+  // Защита на случай, если роль переименуют, но value останется 'senior_lab'
+  return currentUser.role === 'senior_lab' 
+      || currentUser.roleName === 'Ст. лаборант';
+}
 
 // ============================================================
 // ПРОВЕРКИ ПРАВ (расширенные)
