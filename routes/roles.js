@@ -1,13 +1,13 @@
 'use strict';
 const express = require('express');
 const db = require('../db');
-const { authenticate, requireAdmin } = require('../middleware/auth');
+const { authenticate, requireAnyPermission } = require('../middleware/auth');
 const { logAction } = require('../utils/audit');
 const roleCache = require('../utils/roles');
 
 const router = express.Router();
 
-// GET — список
+// GET — список (доступен всем авторизованным)
 router.get('/', authenticate, async (req, res) => {
   try {
     res.json(await roleCache.getRoles({ force: true }));
@@ -17,8 +17,8 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// POST — создать (value генерируется)
-router.post('/', authenticate, requireAdmin, async (req, res) => {
+// POST — создать (требует manage_users)
+router.post('/', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const { name, permissions, isAdmin } = req.body || {};
     if (!name || !String(name).trim()) {
@@ -33,9 +33,13 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
     if (dup.length) return res.status(409).json({ error: 'Роль с таким названием уже существует' });
 
     const value = await roleCache.generateUniqueValue(cleanName);
+    
+    // Только настоящий админ может создавать роли с флагом is_admin
+    const finalIsAdmin = (req.user._isAdmin && isAdmin) ? 1 : 0;
+    
     const [result] = await db.query(
       'INSERT INTO roles (name, value, permissions, is_admin, is_system) VALUES (?, ?, ?, ?, 0)',
-      [cleanName, value, JSON.stringify(permissions), isAdmin ? 1 : 0]
+      [cleanName, value, JSON.stringify(permissions), finalIsAdmin]
     );
 
     roleCache.invalidate();
@@ -47,8 +51,8 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// PUT — обновить (value НЕ меняем)
-router.put('/:id', authenticate, requireAdmin, async (req, res) => {
+// PUT — обновить (требует manage_users)
+router.put('/:id', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { name, permissions, isAdmin } = req.body || {};
@@ -69,9 +73,14 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     );
     if (dup.length) return res.status(409).json({ error: 'Роль с таким названием уже существует' });
 
-    // Для user/senior_lab запрещаем менять is_admin
+    // Для системных ролей user/senior_lab запрещаем менять is_admin
     let finalIsAdmin = isAdmin ? 1 : 0;
     if (ex[0].value === 'user' || ex[0].value === 'senior_lab') {
+      finalIsAdmin = ex[0].is_admin;
+    }
+    
+    // Не-админ не может менять флаг is_admin ни у одной роли
+    if (!req.user._isAdmin) {
       finalIsAdmin = ex[0].is_admin;
     }
 
@@ -88,8 +97,8 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// DELETE
-router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
+// DELETE (требует manage_users)
+router.delete('/:id', authenticate, requireAnyPermission(['manage_users']), async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const [ex] = await db.query('SELECT * FROM roles WHERE id = ?', [id]);
