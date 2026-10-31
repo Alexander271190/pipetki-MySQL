@@ -77,7 +77,7 @@ async function refreshCurrentUser() {
 
       currentUser = user;
 
-           let s = {};
+      let s = {};
       try {
         s = JSON.parse(sessionStorage.getItem('pipette_session') || '{}') || {};
       } catch {
@@ -114,7 +114,7 @@ function hasPermission(permission) {
   return perms.includes(permission);
 }
 
-// 🆕 Совместимость со старым правом manage_pipettes + новые права
+// Совместимость со старым правом manage_pipettes + новые права
 function canManagePipettes() {
   return hasPermission('manage_pipettes')
       || hasPermission('add_pipette')
@@ -151,12 +151,11 @@ function canViewLog()       { return hasPermission('view_log'); }
 function canViewAudit()     { return hasPermission('view_audit'); }
 function canViewHistory()   { return true; }
 
-// 🆕 Проверка необходимости смены пароля для блокировки других действий
+// Проверка необходимости смены пароля для блокировки других действий
 function requirePasswordChange() {
   if (currentUser && (currentUser.mustSetPassword || currentUser.mustChangePassword)) {
     const mode = currentUser.mustSetPassword ? 'setup' : 'change';
     openChangePasswordModal(true, mode);
-    // 🆕 Показываем сообщение, чтобы было понятно, почему клики не работают
     showToast('Для продолжения работы необходимо сменить пароль', 'warn');
     return false;
   }
@@ -180,13 +179,13 @@ async function loginUser(e) {
 
   errorEl.textContent = '';
 
-    // 🆕 Пароль может быть пустым — для админа при первом входе
+  // Пароль может быть пустым — для админа при первом входе
   if (!username) {
     errorEl.textContent = 'Заполните поле «Логин»';
     return;
   }
 
-  // 🆕 Блокируем форму и показываем спиннер
+  // Блокируем форму и показываем спиннер
   if (btn) btn.disabled = true;
   if (usernameInput) usernameInput.disabled = true;
   if (passwordInput) passwordInput.disabled = true;
@@ -201,7 +200,7 @@ async function loginUser(e) {
   } catch (error) {
     errorEl.textContent = error.message || 'Ошибка входа';
 
-    // 🆕 Разблокируем форму при ошибке
+    // Разблокируем форму при ошибке
     if (btn) btn.disabled = false;
     if (usernameInput) usernameInput.disabled = false;
     if (passwordInput) passwordInput.disabled = false;
@@ -219,7 +218,7 @@ function logoutUser() {
   clearSession();
   myPrefs = { visibleFields: null };
 
-     // 🆕 Сброс состояния сессии
+  // Сброс состояния сессии
   filterState = {};
   _filterRendered = false;
   selectedPipettes.clear();
@@ -230,7 +229,6 @@ function logoutUser() {
   currentPage = 1;
   const searchEl = document.getElementById('search');
   if (searchEl) searchEl.value = '';
-  
 
   const u = document.getElementById('login-username');
   const p = document.getElementById('login-password');
@@ -255,15 +253,15 @@ async function impersonateUser(userId) {
     const result = await apiRequest('/auth/impersonate/' + userId, 'POST', {});
     setSession(result.user, result.token, originalUser, originalToken);
 
-       myPrefs = { visibleFields: null };
+    myPrefs = { visibleFields: null };
     _dataLoadedForUser = null;
     _lastPermsCheck = 0;
 
-    // 🆕 Сброс напоминаний — у impersonated свой набор
+    // Сброс напоминаний — у impersonated свой набор
     _reminderScheduled = false;
     _reminderDismissed = false;
 
-    // 🆕 Сброс фильтров, поиска, страницы
+    // Сброс фильтров, поиска, страницы
     filterState = {};
     _filterRendered = false;
     currentPage = 1;
@@ -282,6 +280,7 @@ async function impersonateUser(userId) {
     showToast(e.message, 'error');
   }
 }
+
 async function stopImpersonate() {
   const originalUser = getOriginalUser();
   const originalToken = getOriginalToken();
@@ -290,11 +289,10 @@ async function stopImpersonate() {
     return;
   }
 
-  // 🆕 Логируем возврат на сервере (не блокируем при ошибке)
+  // Логируем возврат на сервере (не блокируем при ошибке)
   try {
     await apiRequest('/auth/stop-impersonate', 'POST', {});
   } catch (e) {
-    // Не срываем возврат, даже если лог не удался
     console.warn('Не удалось залогировать возврат:', e.message);
   }
 
@@ -304,15 +302,16 @@ async function stopImpersonate() {
     user: originalUser,
     token: originalToken
   }));
-   myPrefs = { visibleFields: null };
+  
+  myPrefs = { visibleFields: null };
   _dataLoadedForUser = null;
   _lastPermsCheck = 0;
 
-  // 🆕 Сброс напоминаний — возвращаемся к своим
+  // Сброс напоминаний — возвращаемся к своим
   _reminderScheduled = false;
   _reminderDismissed = false;
 
-   // 🆕 Сброс фильтров, поиска, страницы
+  // Сброс фильтров, поиска, страницы
   filterState = {};
   _filterRendered = false;
   currentPage = 1;
