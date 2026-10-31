@@ -36,7 +36,7 @@ async function openUserActions(ev, userId) {
   
   const anchorEl = ev.currentTarget;
   
-  await UI.guard({ role: 'admin', errorMsg: 'Только для администратора' }, async () => {
+  await UI.guard({ permission: 'manage_users', errorMsg: 'Нет прав на управление пользователями' }, async () => {
     const curId = currentUser.id;
     const isSelf = userId === curId;
 
