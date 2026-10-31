@@ -34,7 +34,7 @@ router.get('/errors', authenticate, requireAnyPermission(['view_log']), async (r
     const [cnt] = await db.query(`SELECT COUNT(*) AS c FROM app_logs ${whereSql}`, params);
     const total = Number(cnt[0].c) || 0;
 
-   const [rows] = await db.query(
+    const [rows] = await db.query(
       `SELECT id, level, source, message, stack, user_id, user_full_name, method, url, status_code, ip, timestamp
        FROM app_logs ${whereSql} ORDER BY timestamp DESC LIMIT ?`,
       [...params, limit]
