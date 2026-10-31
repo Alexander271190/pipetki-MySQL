@@ -130,9 +130,13 @@ window.UI = {
     await refreshCurrentUser();
     if (!requirePasswordChange()) return;
 
-    if (options.role && (!currentUser || currentUser.role !== options.role)) {
-      showToast(options.errorMsg || 'Недостаточно прав', 'error');
-      return;
+    if (options.role) {
+      const isAdminReq = options.role === 'admin';
+      const ok = currentUser && (currentUser.role === options.role || (isAdminReq && isAdmin()));
+      if (!ok) {
+        showToast(options.errorMsg || 'Недостаточно прав', 'error');
+        return;
+      }
     }
 
     if (options.permission) {
