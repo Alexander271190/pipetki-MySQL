@@ -23,23 +23,24 @@ let _cachedUsersList = null;
 let _cachedUsersTime = 0;
 
 // ============================================================
-// 🆕 СТРУКТУРА РАЗДЕЛОВ НАСТРОЕК
+// СТРУКТУРА РАЗДЕЛОВ НАСТРОЕК
 // ============================================================
 const SETTINGS_SECTIONS = [
-   {
+  {
     group: 'Оборудование и данные',
-  items: [
-    { id: 'fields',          label: 'Поля формы' },
-    { id: 'departments',     label: 'Отделы' },
-    { id: 'filters',         label: 'Фильтры' },
-    { id: 'export', label: 'Печать документов' },
-    { id: 'equipment',       label: 'Типы оборудования' },
-    { id: 'view-templates',  label: 'Шаблоны вида' },
-  ]
-},
+    items: [
+      { id: 'fields',          label: 'Поля формы' },
+      { id: 'departments',     label: 'Отделы' },
+      { id: 'filters',         label: 'Фильтры' },
+      { id: 'export',          label: 'Печать документов' },
+      { id: 'equipment',       label: 'Типы оборудования' },
+      { id: 'view-templates',  label: 'Шаблоны вида' },
+    ]
+  },
   {
     group: 'Пользователи',
     items: [
+      { id: 'roles',       label: 'Роли и права' },
       { id: 'users',       label: 'Пользователи' },
     ]
   },
@@ -51,19 +52,19 @@ const SETTINGS_SECTIONS = [
     ]
   },
   {
-  group: 'Общие',
-  items: [
-    { id: 'help',        label: 'Справка' },
-    { id: 'general',     label: 'Общие' },
-    { id: 'log',         label: 'Журнал действий' },
-  ]
-}
+    group: 'Общие',
+    items: [
+      { id: 'help',        label: 'Справка' },
+      { id: 'general',     label: 'Общие' },
+      { id: 'log',         label: 'Журнал действий' },
+    ]
+  }
 ];
 
 // ============================================================
-// 🆕 СПИСОК ПРАВ (16 штук, по 5 группам)
+// СПИСОК ПРАВ (19 штук, по 6 группам)
 // ============================================================
-  const ALL_PERMISSIONS = [
+const ALL_PERMISSIONS = [
   { key: 'add_pipette',       group: 'Оборудование', label: '<i class="fa-solid fa-plus"></i> Добавление оборудования' },
   { key: 'edit_pipette',      group: 'Оборудование', label: '<i class="fa-solid fa-pen"></i> Редактирование оборудования' },
   { key: 'delete_pipette',    group: 'Оборудование', label: '<i class="fa-solid fa-trash"></i> Удаление оборудования' },
@@ -75,7 +76,7 @@ const SETTINGS_SECTIONS = [
   { key: 'bulk_return',       group: 'Поверки',      label: '<i class="fa-solid fa-box-open"></i> Возврат с поверки' },
 
   { key: 'import_data',       group: 'Данные',       label: '<i class="fa-solid fa-download"></i> Импорт данных' },
-  { key: 'export_data', group: 'Данные', label: '<i class="fa-solid fa-print"></i> Печать документов' },
+  { key: 'export_data',       group: 'Данные',       label: '<i class="fa-solid fa-print"></i> Печать документов' },
 
   { key: 'scan_barcode',      group: 'Штрихкоды',    label: '<i class="fa-solid fa-barcode"></i> Сканирование штрихкодов' },
   { key: 'print_labels',      group: 'Штрихкоды',    label: '<i class="fa-solid fa-tag"></i> Печать этикеток' },
@@ -91,7 +92,7 @@ const SETTINGS_SECTIONS = [
 ];
 
 // ============================================================
-// 🆕 ПОНЯТНЫЕ СООБЩЕНИЯ ОБ ОШИБКАХ
+// ПОНЯТНЫЕ СООБЩЕНИЯ ОБ ОШИБКАХ
 // ============================================================
 const ERROR_HINTS = {
   // --- Бизнес-коды от сервера (result.code), которым нет прямого HTTP-аналога ---
