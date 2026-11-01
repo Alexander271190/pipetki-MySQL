@@ -874,7 +874,23 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
       oldValues = { ...p };
       const [lockChk] = await conn.query('SELECT user_id FROM edit_locks WHERE pipette_id = ?', [req.params.id]);
 
-      // Проверяем: если блокировка наша (или её нет) — пропускаем проверку конфликта
+      // Проверяем черновик от другого пользователя
+      const [draftRows] = await conn.query(
+        'SELECT user_id, user_full_name FROM edit_drafts WHERE pipette_id = ?',
+        [req.params.id]
+      );
+            if (draftRows.length && draftRows[0].user_id !== req.user.id) {
+        const err = new Error(
+          `Найден несохранённый черновик от ${draftRows[0].user_full_name}. ` +
+          `При сохранении он будет удалён.`
+        );
+        err.status = 409;
+        err.code = 'draft_conflict';
+        err.draftAuthor = draftRows[0].user_full_name;
+        throw err;
+      }
+
+      // 🆕 Проверка конкурентного редактирования (optimistic lock)
       const hasForeignLock = lockChk.length > 0 && String(lockChk[0].user_id) !== String(req.user.id);
 
       if (updates.updatedAt && p.updated_at && hasForeignLock) {
@@ -886,12 +902,13 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
           throw err;
         }
       }
+
       if (updates.department !== undefined && !req.user._isAdmin && updates.department !== p.department) {
         const err = new Error('Смена отдела доступна только администратору');
         err.status = 403;
         throw err;
       }
-
+      
       if (!req.user._isAdmin && !req.user.is_acting) {
         delete updates.responsible;
       }
@@ -1054,7 +1071,16 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     if (e.status === 400) return res.status(400).json({ error: e.message });
     if (e.status === 403) return res.status(403).json({ error: e.message });
     if (e.status === 404) return res.status(404).json({ error: e.message });
-    if (e.status === 409) return res.status(409).json({ error: e.message, code: 'conflict' });
+    if (e.status === 409) {
+      if (e.code === 'draft_conflict') {
+        return res.status(409).json({
+          error: e.message,
+          code: 'draft_conflict',
+          draftAuthor: e.draftAuthor,
+        });
+      }
+      return res.status(409).json({ error: e.message, code: 'conflict' });
+    }
 
     const DATA_ERROR_CODES = new Set(['ER_DATA_TOO_LONG', 'ER_TRUNCATED_WRONG_VALUE', 'ER_BAD_NULL_ERROR', 'ER_NO_DEFAULT_FOR_FIELD']);
     const DATA_ERROR_ERRNOS = new Set([1406, 1292, 1048, 1364]);
