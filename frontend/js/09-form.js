@@ -151,44 +151,96 @@ async function openModal(id) {
           if (_lockCheckTimer) clearInterval(_lockCheckTimer);
           
           // Heartbeat: проверяем, не забрал ли лок другой пользователь
-          _lockCheckTimer = setInterval(async () => {
-            const modalEl = document.getElementById('modal');
-            if (!modalEl || !modalEl.classList.contains('active')) {
-              clearInterval(_lockCheckTimer); _lockCheckTimer = null; return;
-            }
+             _lockCheckTimer = setInterval(async () => {
+        const modalEl = document.getElementById('modal');
+        if (!modalEl || !modalEl.classList.contains('active')) {
+          clearInterval(_lockCheckTimer); _lockCheckTimer = null; return;
+        }
+        try {
+          const r = await apiRequest(`/pipettes/${id}/lock`);
+
+          if (!r.locked || !r.mine) {
+            clearInterval(_lockCheckTimer); _lockCheckTimer = null;
+            _skipUnlockOnClose = true;
+
+            // 1. Пытаемся сохранить как обычно (silent — без тостов)
+            let saveResult = { ok: false, reason: 'exception' };
             try {
-              const r = await apiRequest(`/pipettes/${id}/lock`);
-                            
-              if (!r.locked || !r.mine) {
-                clearInterval(_lockCheckTimer); _lockCheckTimer = null;
-                _skipUnlockOnClose = true;
-
-                // Автосохранение перед закрытием
-                let savedOk = false;
-                try {
-                  await savePipette(null, true);
-                  savedOk = true;
-                } catch (e) {
-                  console.warn('Автосохранение при потере лока не удалось:', e.message);
-                }
-
-                const name = r.lockedBy || '';
-                const pos = r.lockedByPosition;
-                let displayUser = pos ? `${name} (${pos})` : (name || 'Другой пользователь');
-
-                await showConfirm(
-                  savedOk
-                    ? `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`
-                    : `Не удалось автоматически сохранить изменения перед закрытием.\n\nПрибор забрал в работу: ${displayUser}.\n\nСкопируйте важные данные, если они есть.`,
-                  { icon: savedOk
-                      ? '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>'
-                      : '<i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i>',
-                    title: savedOk ? 'Сессия завершена' : 'Сессия завершена — сохранение не удалось',
-                    okText: 'ОК', hideCancel: true, okClass: 'btn-secondary' }
-                );
+              saveResult = await savePipette(null, true, true);
+              if (!saveResult || typeof saveResult !== 'object') {
+                saveResult = { ok: false, reason: 'unknown' };
               }
+            } catch (e) {
+              saveResult = { ok: false, reason: 'exception', error: e.message };
+            }
+
+            // 2. Если НЕ сохранилось — сохраняем черновик (все поля как есть)
+            let draftSaved = false;
+            if (!saveResult.ok) {
+              try {
+                const draftFields = {};
+                document.querySelectorAll('#form-fields-container [data-field-id]').forEach(el => {
+                  draftFields[el.dataset.fieldId] = el.value;
+                });
+                await apiRequest(`/pipettes/${encodeURIComponent(id)}/draft`, 'PUT', draftFields);
+                draftSaved = true;
+              } catch (e) {
+                console.warn('Не удалось сохранить черновик:', e.message);
+              }
+            }
+
+            // 3. Гарантированно закрываем модалку
+            try {
+              const m = document.getElementById('modal');
+              if (m && m.classList.contains('active')) {
+                await closeModal();
+              }
+            } catch (e) {
+              console.warn('Принудительное закрытие модалки не удалось:', e.message);
+            }
+
+            // 4. Сообщение
+            const name = r.lockedBy || '';
+            const pos = r.lockedByPosition;
+            const displayUser = pos ? `${name} (${pos})` : (name || 'Другой пользователь');
+
+            let title, icon, message;
+
+            if (saveResult.ok) {
+              // Как сейчас — всё сохранилось обычным путём
+              title = 'Сессия завершена';
+              icon = '<i class="fa-solid fa-circle-info" style="color: #0ea5e9;"></i>';
+              message = `Ваши изменения были автоматически сохранены.\n\nПрибор забрал в работу: ${displayUser}.`;
+            } else if (draftSaved) {
+              // Обычное сохранение не прошло, но черновик сохранён
+              title = 'Сессия завершена — данные сохранены как черновик';
+              icon = '<i class="fa-solid fa-pencil" style="color: #d97706;"></i>';
+              const fieldList = (saveResult.fields || []).join(', ');
+              const reason = saveResult.reason === 'validation'
+                ? `не заполнены обязательные поля${fieldList ? ` (${fieldList})` : ''}`
+                : (saveResult.error || 'ошибка сохранения');
+              message =
+                `Обычное сохранение не удалось: ${reason}.\n\n` +
+                `Но ваши данные сохранены как черновик — тот, кто забрал прибор, увидит их и сможет дозаполнить.\n\n` +
+                `Прибор забрал в работу: ${displayUser}.`;
+            } else {
+              // Ни сохранить, ни черновик
+              title = 'Сессия завершена — сохранить не удалось';
+              icon = '<i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i>';
+              message =
+                `Не удалось сохранить изменения: ${saveResult.error || 'неизвестная ошибка'}.\n\n` +
+                `Прибор забрал в работу: ${displayUser}.\n\n` +
+                `Скопируйте важные данные, если они есть.`;
+            }
+
+            try {
+              await showConfirm(message, { icon, title, okText: 'ОК', hideCancel: true, okClass: 'btn-secondary' });
             } catch (e) {}
-          }, 3000);
+
+            _skipUnlockOnClose = false;
+          }
+        } catch (e) {}
+      }, 3000);
         } catch (e) {
           if (e.status === 429) {
             showToast('Секунду, синхронизация...', 'warn');
@@ -227,9 +279,12 @@ async function openModal(id) {
         }
 
         // Загружаем свежие данные с сервера, чтобы не перезаписать чужое сохранение
+        let draftData = null;
         try {
           const fresh = await apiRequest(`/pipettes/${encodeURIComponent(id)}`);
           if (fresh && fresh.id) {
+            draftData = fresh.draft || null;
+            delete fresh.draft;
             p = { ...p, ...fresh };
             const idx = pipettes.findIndex(x => x.id === id);
             if (idx !== -1) pipettes[idx] = { ...pipettes[idx], ...fresh };
@@ -247,14 +302,37 @@ async function openModal(id) {
           const m = String(p.last_calibration).match(/^(\d{4})-(\d{2})-(\d{2})/);
           if (m) lastCal = `${m[1]}-${m[2]}-${m[3]}`;
         }
-        const editData = {
+       const editData = {
           ...p,
           equipmentType:   p.equipment_type || 'pipette',
           lastCalibration: lastCal,
           result:          p.last_result || 'pass',
           active:          p.active ? 'true' : 'false'
         };
+
+        // Если есть черновик — накладываем его поля поверх
+        if (draftData && draftData.data) {
+          Object.assign(editData, draftData.data);
+        }
+
         await generateFormFields(editData);
+
+        // Показываем баннер черновика
+        const banner = document.getElementById('draft-banner');
+        if (banner && draftData) {
+          const author = document.getElementById('draft-author');
+          const dateEl = document.getElementById('draft-date');
+          if (author) author.textContent = draftData.isMine
+            ? `${draftData.userFullName} (вы)`
+            : draftData.userFullName;
+          if (dateEl) {
+            const d = new Date(draftData.updatedAt);
+            dateEl.textContent = d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          }
+          banner.style.display = 'block';
+        } else if (banner) {
+          banner.style.display = 'none';
+        }
       } else {
         document.getElementById('modal-title').innerHTML =
           '<i class="fa-solid fa-plus"></i> Добавить оборудование';
@@ -294,28 +372,41 @@ async function openModal(id) {
 }
 
 async function closeModal() {
-  if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
+  try {
+    if (_lockCheckTimer) { clearInterval(_lockCheckTimer); _lockCheckTimer = null; }
 
-  const editId = document.getElementById('edit-id').value;
+    const editIdEl = document.getElementById('edit-id');
+    const editId = editIdEl ? editIdEl.value : '';
 
-  UI.modal.close('modal');
-  document.getElementById('edit-id').value = '';
-  document.getElementById('form-fields-container').innerHTML = '';
+    UI.modal.close('modal');
+    if (editIdEl) editIdEl.value = '';
 
-  const bar = document.getElementById('template-bar');
-  if (bar) bar.style.display = 'none';
-  const sel = document.getElementById('template-select');
-  if (sel) sel.value = '';
+    const container = document.getElementById('form-fields-container');
+    if (container) container.innerHTML = '';
 
-  _bulkRows = [];
-  _bulkFields = [];
-  document.getElementById('bc-rows-body').innerHTML = '';
-  document.getElementById('bc-table-head').innerHTML = '';
-  
-  if (editId && !_skipUnlockOnClose) {
-    try { await apiRequest(`/pipettes/${editId}/lock`, 'DELETE'); } catch (e) {}
+    const bar = document.getElementById('template-bar');
+    if (bar) bar.style.display = 'none';
+    const sel = document.getElementById('template-select');
+    if (sel) sel.value = '';
+
+    const draftBanner = document.getElementById('draft-banner');
+    if (draftBanner) draftBanner.style.display = 'none';
+
+    _bulkRows = [];
+    _bulkFields = [];
+    const rowsBody = document.getElementById('bc-rows-body');
+    if (rowsBody) rowsBody.innerHTML = '';
+    const tableHead = document.getElementById('bc-table-head');
+    if (tableHead) tableHead.innerHTML = '';
+
+    if (editId && !_skipUnlockOnClose) {
+      try { await apiRequest(`/pipettes/${editId}/lock`, 'DELETE'); } catch (e) {}
+    }
+  } catch (e) {
+    console.error('closeModal error:', e);
+  } finally {
+    _skipUnlockOnClose = false;
   }
-  _skipUnlockOnClose = false;
 }
 
 function switchAddTab(tab) {
@@ -332,6 +423,45 @@ function switchAddTab(tab) {
     } else if (_bulkRows.length === 0) {
       addBulkRow();
     }
+  }
+}
+
+async function discardDraft() {
+  const editId = document.getElementById('edit-id').value;
+  if (!editId) return;
+
+  const ok = await showConfirm(
+    'Отменить черновик? Данные, введённые другим пользователем, будут потеряны.',
+    { icon: '↩️', title: 'Отмена черновика', okText: 'Отменить черновик', okClass: 'btn-warning' }
+  );
+  if (!ok) return;
+
+  try {
+    await apiRequest(`/pipettes/${encodeURIComponent(editId)}/draft`, 'DELETE');
+    showToast('Черновик отменён', 'success');
+
+    // Перезагружаем чистые данные из pipettes
+    const fresh = await apiRequest(`/pipettes/${encodeURIComponent(editId)}`);
+    if (fresh && fresh.id) {
+      let lastCal = '';
+      if (fresh.last_calibration) {
+        const m = String(fresh.last_calibration).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) lastCal = `${m[1]}-${m[2]}-${m[3]}`;
+      }
+      const cleanData = {
+        ...fresh,
+        equipmentType: fresh.equipment_type || 'pipette',
+        lastCalibration: lastCal,
+        result: fresh.last_result || 'pass',
+        active: fresh.active ? 'true' : 'false'
+      };
+      await generateFormFields(cleanData);
+
+      const banner = document.getElementById('draft-banner');
+      if (banner) banner.style.display = 'none';
+    }
+  } catch (e) {
+    showToast(e.message || 'Ошибка отмены черновика', 'error');
   }
 }
 
@@ -623,21 +753,27 @@ async function saveBulkRows(e) {
 // ============================================================
 // СОХРАНЕНИЕ ОДНОЙ ЕДИНИЦЫ (создание или редактирование)
 // ============================================================
-async function savePipette(e, force = false) {
+async function savePipette(e, force = false, silent = false) {
   if (e && e.preventDefault) e.preventDefault();
   await refreshCurrentUser();
 
   const editId = document.getElementById('edit-id').value || '';
   const isEdit = !!editId;
 
-  if (!isEdit && !canAddPipette())     { showToast('Нет прав на добавление', 'error'); return; }
-  if (isEdit  && !canEditPipette())    { showToast('Нет прав на редактирование', 'error'); return; }
+  if (!isEdit && !canAddPipette()) {
+    if (!silent) showToast('Нет прав на добавление', 'error');
+    return { ok: false, reason: 'permission' };
+  }
+  if (isEdit && !canEditPipette()) {
+    if (!silent) showToast('Нет прав на редактирование', 'error');
+    return { ok: false, reason: 'permission' };
+  }
 
   const payload = {};
   const fieldElements = {};
   const editingPipette = isEdit ? pipettes.find(p => p.id === editId) : null;
-  
-  const isForceSave = force || _skipUnlockOnClose; 
+
+  const isForceSave = force || _skipUnlockOnClose;
   if (isEdit && editingPipette && editingPipette.updated_at && !isForceSave) {
     payload.updatedAt = editingPipette.updated_at;
   }
@@ -653,12 +789,11 @@ async function savePipette(e, force = false) {
   if (fieldElements.lastCalibration && !String(payload.lastCalibration || '').trim()) errors.push('Дата последней поверки');
   if (fieldElements.responsible && !String(payload.responsible || '').trim()) errors.push('Ответственный');
 
-  // Проверяем остальные обязательные поля
   const SYSTEM_REQUIRED = new Set(['model', 'lastCalibration', 'responsible']);
   _cachedFields.filter(f => f.required && f.enabled && !SYSTEM_REQUIRED.has(f.id)).forEach(f => {
     if (fieldElements[f.id] && !String(payload[f.id] || '').trim()) errors.push(f.label);
   });
-   
+
   if (!fieldElements.model && (!isEdit || !editingPipette?.model)) {
     payload.model = 'Не указана';
   }
@@ -672,10 +807,34 @@ async function savePipette(e, force = false) {
   }
 
   if (errors.length > 0) {
-    showToast('Заполните: ' + errors.join(', '), 'error');
-    return;
+    if (!silent) showToast('Заполните: ' + errors.join(', '), 'error');
+    return { ok: false, reason: 'validation', fields: errors };
   }
 
+  // ─── Тихий режим (из heartbeat): без UI.saveAction, без тостов, без closeModal ───
+  if (silent) {
+    try {
+      if (isEdit) {
+        await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
+      } else {
+        await apiRequest('/pipettes', 'POST', payload);
+      }
+      return { ok: true };
+    } catch (e) {
+      if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
+        delete payload.updatedAt;
+        try {
+          await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
+          return { ok: true, retried: true };
+        } catch (err2) {
+          return { ok: false, reason: 'server', error: err2.message };
+        }
+      }
+      return { ok: false, reason: 'server', error: e.message };
+    }
+  }
+
+  // ─── Обычный режим ───
   try {
     await UI.saveAction({
       btn: '#pipette-form button[type="submit"]',
@@ -692,21 +851,23 @@ async function savePipette(e, force = false) {
         showToast(`Оборудование создано (${res.id})`, 'success');
       }
     });
+    return { ok: true };
   } catch (e) {
-    // Если поймали 409 (конфликт версий), сохраняем принудительно без updatedAt
     if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
-      delete payload.updatedAt; 
+      delete payload.updatedAt;
       try {
         await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
         showToast('Оборудование обновлено', 'success');
         closeModal();
         if (typeof loadPipetteData === 'function') await loadPipetteData();
+        return { ok: true, retried: true };
       } catch (err2) {
         showToast(err2.message || 'Ошибка сохранения', 'error');
+        return { ok: false, reason: 'server', error: err2.message };
       }
-      return;
     }
     showToast(e.message || 'Ошибка сохранения', 'error');
+    return { ok: false, reason: 'server', error: e.message };
   }
 }
 
