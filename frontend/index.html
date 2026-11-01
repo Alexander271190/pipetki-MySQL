@@ -254,11 +254,11 @@
 
     <!-- ВКЛАДКА: ОДНА ЕДИНИЦА -->
     <div id="add-tab-single">
-           <div id="draft-banner" style="display:none; margin-bottom:14px; padding:12px 14px; background:#fef9c3; border-left:3px solid #eab308; border-radius:8px; font-size:.88rem; color:#854d0e; line-height:1.5;">
+     <div id="draft-banner" class="warning-block" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
           <div style="flex:1; min-width:200px;">
             <strong><i class="fa-solid fa-pencil"></i> Черновик от <span id="draft-author">…</span></strong>
-            <div style="font-size:.8rem; margin-top:4px;">
+            <div style="font-size:.8rem; margin-top:4px; opacity:.85;">
               <span id="draft-date">…</span> · Данные подставлены в поля. Проверьте и сохраните.
             </div>
           </div>
@@ -267,7 +267,7 @@
           </button>
         </div>
       </div>
-
+      
       <form id="pipette-form" onsubmit="savePipette(event)" novalidate>
         <input type="hidden" id="edit-id">
         <div id="form-fields-container"></div>
