@@ -296,10 +296,31 @@ html[data-theme="dark"] #search {
   }
   .toolbar > .dropdown > .btn { width: 100% !important; }
   
-  .header-top { margin-bottom: 10px; }
-  .header-top h1 { font-size: 1.05rem; line-height: 1.25; }
-  .header-collapse-btn { font-size: .75rem; padding: 5px 10px; }
-
+    .header-top { 
+    margin-bottom: 10px; 
+    flex-wrap: nowrap !important; 
+    gap: 6px !important;
+  }
+  .header-top h1 { 
+    font-size: 0.95rem !important; 
+    line-height: 1.2 !important;
+    min-width: 0 !important; 
+    flex: 1 1 auto !important;
+    white-space: nowrap !important; 
+    overflow: hidden !important;
+    text-overflow: ellipsis !important; 
+  }
+  .header-collapse-btn { 
+    font-size: 0.75rem !important; 
+    padding: 4px 8px !important; 
+    flex-shrink: 0 !important; 
+  }
+  .header-mini-stats {
+    font-size: 0.7rem !important;
+    padding: 3px 6px !important;
+    flex-shrink: 0 !important;
+  }
+   
   /* Мобильный скролл: разрешаем прокрутку всей страницы, а не только таблицы */
   html {
     height: auto !important;
