@@ -392,136 +392,88 @@ html[data-theme="dark"] #search {
    МОБИЛЬНАЯ ВЕРСИЯ: ТАБЛИЦА-АККОРДЕОН 
    ============================================================ */
 @media (max-width: 768px) {
-  /* 1. Скрываем шапку */
-  #pipettes-table thead { 
-    display: none !important; 
-  }
+  /* Скрываем шапку таблицы */
+  #pipettes-table thead { display: none !important; }
 
-  /* 2. Сбрасываем таблицу */
-  #pipettes-table { 
-    display: block !important; 
-    min-width: 0 !important; 
-    border: none !important; 
-    background: transparent !important; 
-  }
-  #pipettes-table tbody { 
-    display: block !important; 
-  }
+  /* Сбрасываем таблицу */
+  #pipettes-table { display: block !important; min-width: 0 !important; border: none !important; background: transparent !important; }
+  #pipettes-table tbody { display: block !important; }
 
-  /* 3. Строка = Карточка */
+  /* Строка = Сетка из двух колонок */
   #pipettes-table tbody tr {
-    display: block !important;
-    background: var(--card) !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important; /* Две колонки */
+    gap: 1px !important; /* Тонкая линия между ячейками */
+    background: var(--border-soft) !important; /* Цвет этой линии */
     border: 1px solid var(--border-hard) !important;
     border-radius: 12px !important;
     margin-bottom: 12px !important;
-    padding: 12px 12px 32px 12px !important;
     position: relative !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,.05) !important;
-    height: auto !important;
-    min-height: 0 !important;
+    overflow: hidden !important;
+    padding-bottom: 28px !important; /* Место под стрелочку */
   }
 
-  /* 4. ❗️ ГЛУШИМ ВСЕ ЯЧЕЙКИ (перебиваем _forms.css) */
-  #pipettes-table tbody tr td,
-  #pipettes-table tbody tr:nth-child(even) td,
-  #pipettes-table tbody tr:nth-child(odd) td {
+  /* Скрываем все ячейки по умолчанию */
+  #pipettes-table tbody tr td {
     display: none !important;
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
+    background: var(--card) !important; /* Фон ячеек */
+    padding: 10px !important;
     margin: 0 !important;
+    border: none !important;
     width: 100% !important;
+    min-height: 45px !important;
     height: auto !important;
-    min-height: 0 !important;
     text-align: left !important;
-    line-height: 1.4 !important;
-    vertical-align: top !important;
-    float: none !important;
+    line-height: 1.3 !important;
   }
 
-  /* 5. Показываем только нужные */
-  #pipettes-table tbody tr td.col-checkbox,
+  /* Показываем нужные ячейки (как на скриншоте) */
   #pipettes-table tbody tr td.col-id,
   #pipettes-table tbody tr td.col-model,
   #pipettes-table tbody tr td.col-status,
-  #pipettes-table tbody tr td.col-actions {
+  #pipettes-table tbody tr td.col-department,
+  #pipettes-table tbody tr td.col-responsible,
+  #pipettes-table tbody tr td.col-lastCalibration {
     display: block !important;
   }
 
-  /* --- Позиционирование элементов --- */
-  /* Чекбокс */
-  #pipettes-table tbody tr td.col-checkbox { 
-    position: absolute !important; 
-    top: 12px !important; 
-    right: 12px !important; 
-    width: auto !important; 
+  /* --- Чекбокс и меню действий (поверх сетки) --- */
+  #pipettes-table tbody tr td.col-checkbox {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    padding: 0 !important;
+    background: transparent !important;
+    min-height: 0 !important;
+    z-index: 2 !important;
   }
-  
-  /* Кнопка Действия */
-  #pipettes-table tbody tr td.col-actions { 
-    position: absolute !important; 
-    bottom: 8px !important; 
-    right: 8px !important; 
-    width: auto !important; 
+  #pipettes-table tbody tr td.col-actions {
+    position: absolute !important;
+    bottom: 6px !important;
+    right: 6px !important;
+    width: auto !important;
+    padding: 0 !important;
+    background: transparent !important;
+    min-height: 0 !important;
     z-index: 2 !important;
   }
 
-  /* --- Стилизация главных полей --- */
-  #pipettes-table tbody tr td.col-id { 
-    font-size: 1.1rem !important; 
-    font-weight: 700 !important; 
-    padding-right: 40px !important; 
-    margin-bottom: 4px !important; 
-  }
-  
-  #pipettes-table tbody tr td.col-model { 
-    font-size: 0.9rem !important; 
-    color: var(--text-muted) !important; 
-    margin-bottom: 8px !important; 
-  }
-  
-  #pipettes-table tbody tr td.col-status { 
-    margin-bottom: 0 !important; 
-  }
-
-  /* --- Стрелочка --- */
+  /* --- Стрелочка внизу по центру --- */
   #pipettes-table tbody tr::after {
     content: '\25BC' !important;
-    position: absolute !important; 
-    bottom: 8px !important; 
-    left: 50% !important; 
+    position: absolute !important;
+    bottom: 8px !important;
+    left: 50% !important;
     transform: translateX(-50%) !important;
-    color: var(--text-faint) !important; 
-    font-size: 12px !important;
-  }
-  #pipettes-table tbody tr.mobile-expanded::after { 
-    transform: translateX(-50%) rotate(180deg) !important; 
+    color: var(--text-faint) !important;
+    font-size: 10px !important;
   }
 
-  /* ============================================================
-     РАСКРЫТИЕ КАРТОЧКИ
-     ============================================================ */
-  #pipettes-table tbody tr.mobile-expanded td:not(.col-checkbox):not(.col-actions) {
-    display: block !important;
-    padding: 8px 0 !important;
-    border-top: 1px dashed var(--border-soft) !important;
-  }
-
-  /* У главных полей линию сверху не рисуем */
-  #pipettes-table tbody tr.mobile-expanded td.col-id,
-  #pipettes-table tbody tr.mobile-expanded td.col-model,
-  #pipettes-table tbody tr.mobile-expanded td.col-status {
-    border-top: none !important;
-  }
-
-  /* Добавляем названия полей */
-  #pipettes-table tbody tr.mobile-expanded td[data-label]:not([data-label=""]):not(.col-id):not(.col-model):not(.col-status):not(.col-checkbox):not(.col-actions)::before {
-    content: attr(data-label) ": ";
-    font-size: 0.75rem;
-    color: var(--text-faint);
-    text-transform: uppercase;
-    margin-right: 6px;
-    font-weight: 600;
-  }
+  /* Стили для текста внутри ячеек */
+  #pipettes-table tbody tr td.col-id strong { font-size: 1rem !important; }
+  #pipettes-table tbody tr td.col-model { color: var(--text-muted) !important; font-size: .85rem !important; }
+  #pipettes-table tbody tr td.col-department, 
+  #pipettes-table tbody tr td.col-responsible, 
+  #pipettes-table tbody tr td.col-lastCalibration { font-size: .85rem !important; }
 }
