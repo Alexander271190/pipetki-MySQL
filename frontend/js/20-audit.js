@@ -227,19 +227,24 @@ async function clearErrorsLog() {
 // ГЛОБАЛЬНЫЙ АУДИТ (вкладка «Действия»)
 // ============================================================
 async function openAuditModal() {
-  UI.modal.open('audit-modal');
-  document.getElementById('audit-search').value = '';
-  document.getElementById('audit-category').value = '';
-  document.getElementById('audit-period').value = '';
-  document.getElementById('audit-custom-period').style.display = 'none';
-  
-  _auditTab = 'actions';
-  document.querySelectorAll('.audit-tab-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === 'actions');
-  });
-  document.getElementById('audit-tab-actions').style.display = '';
-  document.getElementById('audit-tab-errors').style.display = 'none';
-  await loadAuditData();
+  await UI.guard(
+    { permission: 'view_log', errorMsg: 'Нет прав на просмотр журнала' },
+    async () => {
+      UI.modal.open('audit-modal');
+      document.getElementById('audit-search').value = '';
+      document.getElementById('audit-category').value = '';
+      document.getElementById('audit-period').value = '';
+      document.getElementById('audit-custom-period').style.display = 'none';
+      
+      _auditTab = 'actions';
+      document.querySelectorAll('.audit-tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === 'actions');
+      });
+      document.getElementById('audit-tab-actions').style.display = '';
+      document.getElementById('audit-tab-errors').style.display = 'none';
+      await loadAuditData();
+    }
+  );
 }
 
 function closeAuditModal() {
