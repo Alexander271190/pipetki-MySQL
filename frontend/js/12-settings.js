@@ -40,7 +40,6 @@ function renderSettingsList() {
     if (id === 'users')    return canManageUsers();
     if (id === 'roles')    return isAdmin() || canManageUsers(); 
     if (id === 'printers') return canManagePrinters();
-    if (id === 'log')      return canViewLog();
     return true;
   };
 
@@ -70,7 +69,6 @@ async function openSettingsSection(id) {
     users:    canManageUsers,
     roles:    () => isAdmin() || canManageUsers(),
     printers: canManagePrinters,
-    log:      canViewLog,
   }[id];
   if (permCheck && !permCheck()) {
     showToast('Недостаточно прав для этого раздела', 'error');
@@ -1063,173 +1061,6 @@ async function renderBarcodesSettings() {
     `;
     await loadBarcodeSettings();
   } catch (e) { c.innerHTML = `<p style="color:#dc2626;">Ошибка: ${esc(e.message)}</p>`; }
-}
-
-// ============================================================
-// ВКЛАДКА: ЛОГ (с аудитом и фильтрами)
-// ============================================================
-let _logCache = [];
-let _logFiltered = [];
-
-async function renderLogSettings() {
-  const c = document.getElementById('settings-section-content');
-  try {
-    const logs = await apiRequest('/log?limit=1000');
-    _logCache = Array.isArray(logs) ? logs : [];
-
-    const cats = {};
-    for (const l of _logCache) cats[l.category || 'other'] = (cats[l.category || 'other'] || 0) + 1;
-    const catOptions = Object.entries(cats)
-      .sort((a, b) => b[1] - a[1])
-      .map(([k, v]) => `<option value="${esc(k)}">${esc(_catLabel(k))} (${v})</option>`).join('');
-
-    c.innerHTML = `
-      <h3>Журнал действий (${_logCache.length})</h3>
-      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <input type="text" id="log-search" placeholder="Поиск по пользователю, действию, деталям..."
-               style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;"
-               oninput="renderLogList()">
-        <select id="log-category" onchange="renderLogList()"
-                style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
-          <option value="">Все категории</option>
-          ${catOptions}
-        </select>
-        <select id="log-period" onchange="onLogPeriodChange()"
-                style="padding:8px;border:1px solid var(--border-hard);border-radius:8px;font-size:13px;">
-          <option value="">Всё время</option>
-          <option value="today">Сегодня</option>
-          <option value="week">7 дней</option>
-          <option value="month">30 дней</option>
-          <option value="custom">Произвольный</option>
-        </select>
-        <button class="btn btn-secondary" onclick="renderLogSettings()"><i class="fa-solid fa-rotate"></i></button>
-        <button class="btn btn-danger" onclick="clearLogSetting()"><i class="fa-solid fa-trash"></i></button>
-      </div>
-      <div id="log-custom-period" style="display:none;gap:8px;margin-bottom:10px;">
-        <input type="date" id="log-from" onchange="renderLogList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
-        <span style="align-self:center;">—</span>
-        <input type="date" id="log-to" onchange="renderLogList()" style="padding:6px;border:1px solid var(--border-hard);border-radius:8px;">
-      </div>
-      <div id="log-counters" style="font-size:.85rem;color:var(--text-muted);margin-bottom:10px;"></div>
-      <div class="log-container">
-        <table class="log-table">
-          <thead>
-            <tr>
-              <th style="width:140px;">Дата и время</th>
-              <th style="width:130px;">Пользователь</th>
-              <th style="width:120px;">Категория</th>
-              <th style="width:150px;">Действие</th>
-              <th>Детали</th>
-            </tr>
-          </thead>
-          <tbody id="log-body"></tbody>
-        </table>
-      </div>
-      <div class="form-actions" style="margin-top:16px;">
-        <span id="log-total" style="color:var(--text-muted);font-size:.85rem;margin-right:auto;"></span>
-        <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Закрыть</button>
-      </div>
-    `;
-    renderLogList();
-  } catch (e) {
-    c.innerHTML = '<p style="color:#dc2626;">Ошибка: ' + esc(e.message) + '</p>';
-  }
-}
-
-function onLogPeriodChange() {
-  const v = document.getElementById('log-period').value;
-  const box = document.getElementById('log-custom-period');
-  box.style.display = v === 'custom' ? 'flex' : 'none';
-  box.style.gap = '8px';
-  renderLogList();
-}
-
-function _logPeriodRange() {
-  const period = document.getElementById('log-period').value;
-  const today = todayStr();
-  if (period === 'today') return { from: today, to: today };
-  if (period === 'week') {
-    const d = new Date(); d.setDate(d.getDate() - 7);
-    return { from: d.toISOString().slice(0, 10), to: today };
-  }
-  if (period === 'month') {
-    const d = new Date(); d.setDate(d.getDate() - 30);
-    return { from: d.toISOString().slice(0, 10), to: today };
-  }
-  if (period === 'custom') {
-    return {
-      from: document.getElementById('log-from').value || '',
-      to: document.getElementById('log-to').value || ''
-    };
-  }
-  return { from: '', to: '' };
-}
-
-function renderLogList() {
-  const q = (document.getElementById('log-search')?.value || '').trim().toLowerCase();
-  const cat = document.getElementById('log-category')?.value || '';
-  const { from, to } = _logPeriodRange();
-
-  _logFiltered = _logCache.filter(l => {
-    if (cat && (l.category || 'other') !== cat) return false;
-    const d = (l.timestamp || '').slice(0, 10);
-    if (from && d < from) return false;
-    if (to && d > to) return false;
-    if (q) {
-      const hay = [l.user_full_name, l.action, l.details, l.pipette_id]
-        .map(x => String(x || '').toLowerCase()).join(' ');
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
-
-  const counters = document.getElementById('log-counters');
-  if (counters) {
-    const cats = {};
-    for (const l of _logFiltered) cats[l.category || 'other'] = (cats[l.category || 'other'] || 0) + 1;
-    const parts = Object.entries(cats).map(([k, v]) => `${_catLabel(k)}: ${v}`).join(' · ');
-    counters.textContent = parts || '';
-  }
-
-  const tbody = document.getElementById('log-body');
-  if (!tbody) return;
-  if (!_logFiltered.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8;">Нет записей</td></tr>';
-  } else {
-    tbody.innerHTML = _logFiltered.map(l => `
-      <tr>
-        <td class="timestamp">${new Date(l.timestamp).toLocaleString('ru-RU')}</td>
-        <td class="user">${esc(l.user_full_name || '—')}</td>
-        <td>${esc(_catLabel(l.category || 'other'))}</td>
-        <td class="action" style="color:${_actionColor(l.action)};font-weight:600;">${esc(l.action)}</td>
-        <td style="font-size:.82rem;">${esc(l.details || '')}</td>
-      </tr>`).join('');
-  }
-
-  const totalEl = document.getElementById('log-total');
-  if (totalEl) totalEl.textContent = `Показано: ${_logFiltered.length} из ${_logCache.length}`;
-}
-
-async function clearLogSetting() {
-  const ok = await showConfirm('Очистить журнал действий?', { icon: '<i class="fa-solid fa-note-sticky"></i>', title: 'Очистка', okText: 'Очистить', okClass: 'btn-danger' });
-  if (!ok) return;
-  await apiRequest('/log', 'DELETE');
-  showToast('Журнал очищен', 'success');
-  renderLogSettings();
-}
-
-async function resetAllDataSetting() {
-  if (!isAdmin()) { showToast('Доступно только администратору', 'error'); return; }
-  const ok1 = await showConfirm('ВНИМАНИЕ! Всё оборудование будет удалено безвозвратно.', { icon: '<i class="fa-solid fa-triangle-exclamation"></i>', title: 'Сброс', okText: 'Продолжить', okClass: 'btn-danger' });
-  if (!ok1) return;
-  const ok2 = await showConfirm('Вы точно уверены?', { icon: '<i class="fa-solid fa-bell"></i>', title: 'Последнее предупреждение', okText: 'Удалить всё', okClass: 'btn-danger' });
-  if (!ok2) return;
-  try {
-    await apiRequest('/settings/reset-data', 'POST', {});
-    showToast('Данные удалены', 'success');
-    await loadPipetteData();
-    closeSettingsModal();
-  } catch (e) { showToast(e.message || 'Ошибка сброса данных', 'error'); }
 }
 
 // ============================================================
