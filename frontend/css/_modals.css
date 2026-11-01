@@ -525,6 +525,10 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
 @media (max-width: 768px) {
   .modal-overlay {
     padding: 10px !important; 
+  }
+
+  /* ❗️ ВАЖНО: display: flex применяем ТОЛЬКО к активным модалкам */
+  .modal-overlay.active {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
