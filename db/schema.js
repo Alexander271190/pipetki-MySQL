@@ -128,6 +128,19 @@ async function initSchema() {
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS edit_drafts (
+        pipette_id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        user_full_name VARCHAR(255) NOT NULL,
+        data JSON NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (pipette_id) REFERENCES pipettes(id) ON DELETE CASCADE,
+        INDEX idx_edit_drafts_updated (updated_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS edit_locks (
         pipette_id VARCHAR(255) PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL,
