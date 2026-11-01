@@ -304,7 +304,7 @@ function renderTableBody(items, columns, hasAnyRowAction) {
         }
       }
       
-      const isEssential = (index === 0 || index === 1 || colId === 'status');
+       const isEssential = (index === 0 || index === 1 || colId === 'status' || colId === 'department' || colId === 'nextCalibration' || colId === 'responsible');
 
       return `<td class="col-${colId} ${isEssential ? 'mobile-essential' : ''}" data-label="${esc(dataLabel)}">${cellContent}</td>`;
     }).join('');
