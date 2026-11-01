@@ -1,6 +1,39 @@
 // ============================================================
 // API КЛИЕНТ
 // ============================================================
+
+// Технические сообщения — их не показываем пользователю, заменяем на generic
+function _isTechnicalMessage(msg) {
+  if (!msg) return true;
+  return /^(ER_|Error:|SQL|Duplicate entry|Unknown column|Cannot read|TypeError|ReferenceError|SyntaxError)/i.test(msg)
+      || /\bER_[A-Z_]+\b/.test(msg)
+      || /\bsqlMessage\b/.test(msg)
+      || /at\s+[\w.]+\s+\(/.test(msg); // stack trace
+}
+
+// Универсальный построитель человекочитаемого сообщения об ошибке
+// Приоритет: 1) code из ERROR_HINTS → 2) осмысленный текст сервера → 3) HTTP-фоллбэк
+function _buildErrorMessage(body, status) {
+  const code = body && body.code;
+  const fallbackKey = `http_${status}`;
+  const serverError = (body && body.error && String(body.error).trim())
+    ? String(body.error).trim()
+    : null;
+
+  if (code && ERROR_HINTS[code]) {
+    const i = ERROR_HINTS[code];
+    return i.hint ? `${i.title}\n${i.hint}` : i.title;
+  }
+  if (serverError && !_isTechnicalMessage(serverError)) {
+    return serverError;
+  }
+  if (ERROR_HINTS[fallbackKey]) {
+    const i = ERROR_HINTS[fallbackKey];
+    return i.hint ? `${i.title}\n${i.hint}` : i.title;
+  }
+  return serverError || `Ошибка ${status}`;
+}
+
 async function apiRequest(endpoint, method = 'GET', data = null) {
   const headers = { 'Content-Type': 'application/json' };
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
@@ -44,24 +77,20 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
   }
 
   if (!response.ok) {
-    // 🆕 Понятные сообщения: бизнес-код → HTTP-фоллбэк → сырой текст сервера
-    const code = result.code;
-    const fallbackKey = `http_${response.status}`;
-    const info = (code && ERROR_HINTS[code]) || ERROR_HINTS[fallbackKey];
-    const message = info
-      ? (info.hint ? `${info.title}\n${info.hint}` : info.title)
-      : (result.error || `Ошибка ${response.status}`);
-
+    // ❗ ВАЖНО: result уже прочитан выше. Не читаем response.json() повторно.
+    const message = _buildErrorMessage(result, response.status);
     const error = new Error(message);
     error.status = response.status;
-    error.code = code || fallbackKey;
+    error.code = result.code || `http_${response.status}`;
     error.response = result;
     throw error;
   }
   return result;
 }
 
-// 🆕 Универсальная функция скачивания файлов с обработкой 401
+// ============================================================
+// СКАЧИВАНИЕ ФАЙЛОВ (с обработкой 401)
+// ============================================================
 async function downloadFile(url, options = {}, defaultFilename) {
   const headers = { ...(options.headers || {}) };
   if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
@@ -69,7 +98,7 @@ async function downloadFile(url, options = {}, defaultFilename) {
   try {
     const response = await fetch(url, { ...options, headers });
 
-    // 🆕 Обработка истекшей сессии
+    // Истекшая сессия
     if (response.status === 401) {
       clearSession();
       renderAuthUI();
@@ -78,18 +107,16 @@ async function downloadFile(url, options = {}, defaultFilename) {
     }
 
     if (!response.ok) {
-      // 🆕 Понятные сообщения для ошибок скачивания
       const err = await response.json().catch(() => ({}));
-      const code = err.code;
-      const fallbackKey = `http_${response.status}`;
-      const info = (code && ERROR_HINTS[code]) || ERROR_HINTS[fallbackKey];
-      const message = info
-        ? (info.hint ? `${info.title}\n${info.hint}` : info.title)
-        : (err.error || `Ошибка ${response.status}`);
-      throw new Error(message);
+      const message = _buildErrorMessage(err, response.status);
+      const error = new Error(message);
+      error.status = response.status;
+      error.code = err.code || `http_${response.status}`;
+      error.response = err;
+      throw error;
     }
 
-    // Получаем имя файла из заголовка или используем дефолтное
+    // Имя файла из заголовка или дефолтное
     const disposition = response.headers.get('Content-Disposition');
     let filename = defaultFilename;
     if (disposition && !defaultFilename) {
@@ -104,7 +131,7 @@ async function downloadFile(url, options = {}, defaultFilename) {
     a.download = filename || 'download';
     a.click();
     URL.revokeObjectURL(blobUrl);
-    
+
     return true;
   } catch (e) {
     if (e.message !== 'Неавторизован') {
