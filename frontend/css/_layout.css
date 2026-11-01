@@ -387,3 +387,140 @@ html[data-theme="dark"] #search {
   .header.collapsed .header-mini-stats { font-size: .64rem; padding: 2px 6px; }
   .header.collapsed .header-collapse-btn { padding: 3px 7px; font-size: .66rem; }
 }
+
+/* ============================================================
+   МОБИЛЬНАЯ ВЕРСИЯ: ТАБЛИЦА-АККОРДЕОН (Вариант 3)
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Скрываем шапку таблицы */
+  #pipettes-table thead {
+    display: none;
+  }
+
+   /* Превращаем таблицу и строки в блоки (td сюда НЕ включаем) */
+  #pipettes-table, 
+  #pipettes-table tbody, 
+  #pipettes-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  /* Оформляем строку как карточку */
+  #pipettes-table tbody tr {
+    background: var(--card);
+    border: 1px solid var(--border-hard);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 12px;
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0,0,0,.04);
+  }
+
+  /* Скрываем ВСЕ ячейки по умолчанию */
+  #pipettes-table td {
+    display: none;
+    width: 100%;
+    border: none;
+    padding: 4px 0;
+    text-align: left;
+  }
+
+  /* Показываем только главные ячейки (ID, Модель, Статус, Действия) */
+  #pipettes-table td.col-id,
+  #pipettes-table td.col-model,
+  #pipettes-table td.col-status,
+  #pipettes-table td.col-actions {
+    display: block;
+  }
+
+  /* ID — крупным шрифтом сверху */
+  #pipettes-table td.col-id {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+  }
+  #pipettes-table td.col-id strong {
+    font-size: 1.1rem;
+  }
+
+  /* Модель — под ID */
+  #pipettes-table td.col-model {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+  /* Статус — выравниваем слева под моделью */
+  #pipettes-table td.col-status {
+    margin-bottom: 10px;
+  }
+
+  /* Чекбокс в правый верхний угол */
+  #pipettes-table td.col-checkbox {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: auto;
+    padding: 0;
+    display: block;
+  }
+
+  /* Кнопка действия (⋮) в правый нижний угол */
+  #pipettes-table td.col-actions {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: auto;
+    padding: 0;
+  }
+
+  /* Иконка "развернуть" (шеврон) по центру внизу */
+  #pipettes-table tr::after {
+    content: '\f078'; /* fa-chevron-down */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--text-faint);
+    transition: transform 0.2s ease;
+    font-size: 0.9rem;
+  }
+
+  #pipettes-table tr.mobile-expanded::after {
+    transform: translateX(-50%) rotate(180deg);
+  }
+
+  /* ============================================================
+     РАСКРЫТИЕ КАРТОЧКИ
+     ============================================================ */
+  #pipettes-table tr.mobile-expanded {
+    padding-bottom: 40px; /* Место для шеврона */
+  }
+
+  /* При раскрытии показываем ВСЕ td (кроме чекбокса) */
+  #pipettes-table tr.mobile-expanded td {
+    display: block;
+    padding: 8px 0;
+    border-top: 1px dashed var(--border);
+  }
+
+  #pipettes-table tr.mobile-expanded td.col-checkbox,
+  #pipettes-table tr.mobile-expanded td.col-actions,
+  #pipettes-table tr.mobile-expanded td.col-id,
+  #pipettes-table tr.mobile-expanded td.col-model,
+  #pipettes-table tr.mobile-expanded td.col-status {
+    border-top: none; /* У главных строк линию сверху не рисуем */
+  }
+
+  /* Добавляем подписи перед значениями (напр. "Отдел: ...") */
+  #pipettes-table tr.mobile-expanded td[data-label]:not([data-label=""])::before {
+    content: attr(data-label) ": ";
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: inline-block;
+    margin-right: 6px;
+  }
+}
