@@ -193,7 +193,7 @@ function toggleHeaderCollapse() {
     }
 
     const saved = localStorage.getItem('pipette_header_collapsed');
-    if (saved === '1') {
+    if (saved === '1' || saved === null) { 
       if (header) header.classList.add('collapsed');
       const btn = document.getElementById('header-collapse-btn');
       if (btn) {
