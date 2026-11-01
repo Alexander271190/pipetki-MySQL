@@ -459,6 +459,17 @@ html[data-theme="dark"] #search {
   #pipettes-table tbody tr td.col-lastCalibration {
     display: block !important;
   }
+   /* Линия-разделитель над стрелочкой */
+  #pipettes-table tbody tr::before {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 38px !important; /* Ровно на границе с белой полосой */
+    left: 0 !important;
+    right: 0 !important;
+    height: 1px !important;
+    background: var(--border-soft) !important;
+    z-index: 5 !important;
+  }
 
   /* --- Чекбокс (правый верхний угол) --- */
   #pipettes-table tbody tr td.col-checkbox {
