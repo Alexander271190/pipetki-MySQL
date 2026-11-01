@@ -852,7 +852,39 @@ async function savePipette(e, force = false, silent = false) {
       }
     });
     return { ok: true };
-  } catch (e) {
+    } catch (e) {
+    // Черновик от другого пользователя — спрашиваем разрешение на перезапись
+    if (e.status === 409 && e.response && e.response.code === 'draft_conflict') {
+      const author = e.response.draftAuthor || 'другого пользователя';
+      const ok = await showConfirm(
+        `Найден несохранённый черновик от ${author}.\n\n` +
+        `Если вы сохраните сейчас — черновик будет удалён, данные ${author} потеряются.\n\n` +
+        `Продолжить сохранение?`,
+        { icon: '⚠️', title: 'Черновик от другого пользователя', okText: 'Перезаписать', okClass: 'btn-danger' }
+      );
+      if (!ok) return { ok: false, reason: 'draft_conflict' };
+
+      try {
+        // Пользователь согласен — удаляем чужой черновик и сохраняем
+        await apiRequest(`/pipettes/${encodeURIComponent(editId)}/draft`, 'DELETE');
+        await UI.saveAction({
+          btn: '#pipette-form button[type="submit"]',
+          successMsg: isEdit ? 'Оборудование обновлено' : 'Оборудование создано',
+          closeFn: closeModal
+        }, async () => {
+          const res = await apiRequest('/pipettes/' + encodeURIComponent(editId), 'PUT', payload);
+          if (res.idChanged && res.newId) {
+            showToast(`Сохранено. Новый ID: ${res.newId}`, 'success');
+          }
+        });
+        return { ok: true, overriddenDraft: true };
+      } catch (err) {
+        showToast(err.message || 'Ошибка сохранения', 'error');
+        return { ok: false, reason: 'server', error: err.message };
+      }
+    }
+
+    // Обычный 409 (race) — как было
     if (e.status === 409 || (e.response && e.response.code === 'conflict')) {
       delete payload.updatedAt;
       try {
@@ -866,7 +898,7 @@ async function savePipette(e, force = false, silent = false) {
         return { ok: false, reason: 'server', error: err2.message };
       }
     }
-    showToast(e.message || 'Ошибка сохранения', 'error');
+  showToast(e.message || 'Ошибка сохранения', 'error');
     return { ok: false, reason: 'server', error: e.message };
   }
 }
