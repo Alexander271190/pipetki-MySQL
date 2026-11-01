@@ -1057,29 +1057,60 @@ router.delete('/:id', authenticate, requireAnyPermission(['delete_pipette', 'man
       const p = await findPipetteOrFail(conn, req.params.id, req.user, { forUpdate: true });
       const id = req.params.id;
 
-      if (p.replaced_by || p.replacing) {
-        const linkInfo = p.replaced_by
-          ? `она отправлена на поверку, замена: ${p.replaced_by}`
-          : `она заменяет ${p.replacing}`;
-        const err = new Error(`Нельзя удалить ${id}: ${linkInfo}. Сначала отмените отправку или оформите возврат с поверки.`);
+           // 1. Прибор физически на поверке (вне зависимости от замены)
+      if (p.sent_for_calibration) {
+        const sentDate = String(p.sent_for_calibration).slice(0, 10);
+        const repl = p.replaced_by ? ` Выдана замена: ${p.replaced_by}.` : '';
+        const err = new Error(
+          `Нельзя удалить ${id}: прибор отправлен на поверку ${sentDate}.${repl} ` +
+          `Сначала отмените отправку или оформите возврат с поверки.`
+        );
         err.status = 400;
         throw err;
       }
 
+      // 2. Прибор заменяет кого-то, кто на поверке
+      if (p.replacing) {
+        const err = new Error(
+          `Нельзя удалить ${id}: прибор заменяет ${p.replacing}, который находится на поверке. ` +
+          `Сначала оформите возврат оригинала с поверки.`
+        );
+        err.status = 400;
+        throw err;
+      }
+
+      // 3. Остаточная ссылка замены (теоретически после сбоя)
+      if (p.replaced_by) {
+        const err = new Error(
+          `Нельзя удалить ${id}: за прибором закреплена замена ${p.replaced_by}. ` +
+          `Сначала оформите возврат с поверки.`
+        );
+        err.status = 400;
+        throw err;
+      }
+
+      // 4. Кто-то ссылается на этот прибор как на замену
       const [usedAsReplacement] = await conn.query(
         'SELECT id FROM pipettes WHERE replaced_by = ? LIMIT 1', [id]
       );
       if (usedAsReplacement.length) {
-        const err = new Error(`Нельзя удалить ${id}: она используется как замена для ${usedAsReplacement[0].id}. Сначала оформите возврат с поверки.`);
+        const err = new Error(
+          `Нельзя удалить ${id}: прибор используется как замена для ${usedAsReplacement[0].id} ` +
+          `(оригинал на поверке). Сначала оформите возврат с поверки.`
+        );
         err.status = 400;
         throw err;
       }
 
+      // 5. Этот прибор был заменён, ссылка осталась
       const [usedAsOriginal] = await conn.query(
         'SELECT id FROM pipettes WHERE replacing = ? LIMIT 1', [id]
       );
       if (usedAsOriginal.length) {
-        const err = new Error(`Нельзя удалить ${id}: она заменена на ${usedAsOriginal[0].id}. Сначала оформите возврат с поверки.`);
+        const err = new Error(
+          `Нельзя удалить ${id}: прибор заменён на ${usedAsOriginal[0].id}. ` +
+          `Сначала оформите возврат с поверки.`
+        );
         err.status = 400;
         throw err;
       }
