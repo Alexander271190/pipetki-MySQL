@@ -161,9 +161,9 @@ function renderTableHeader(columns, hasAnyRowAction) {
     ${columns.map(col => {
       const def = findColumn(col);
       if (def.sortable) {
-        return `<th onclick="sortBy('${def.field}')">${esc(def.label)} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
+        return `<th class="col-${def.id}" onclick="sortBy('${def.field}')">${esc(def.label)} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
       }
-      return `<th>${esc(def.label)}</th>`;
+      return `<th class="col-${def.id}">${esc(def.label)}</th>`;
     }).join('')}
     <th id="actions-header" ${!hasAnyRowAction ? 'style="display:none"' : ''}>Действия</th>
   `;
@@ -219,6 +219,10 @@ function renderTableBody(items, columns, hasAnyRowAction) {
     }
 
     const cellsHtml = columns.map(colId => {
+      const def = findColumn(colId);
+      const dataLabel = def ? def.label : '';
+      let cellContent = '';
+
       switch (colId) {
         case 'id': {
           const statusDot = UI.renderStatusDot(status);
@@ -231,56 +235,74 @@ function renderTableBody(items, columns, hasAnyRowAction) {
           if (p.replacing && p.replacedFor) {
             replLine = `<br><small style="color:${COLORS.warning};">↔ заменяет: ${esc(p.replacing)}</small>`;
           }
-          return `<td><span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}</td>`;
+          cellContent = `<span class="id-cell"><strong>${esc(p.id)}</strong>${statusDot}</span>${replLine}`;
+          break;
         }
         case 'type': {
           const t = _equipmentTypes.find(x => x.value === p.equipment_type);
-          const label = t ? t.label : 'Прочее';
+          const typeLabel = t ? t.label : 'Прочее';
           const cls   = p.equipment_type === 'pipette' ? 'badge-pipette' : 'badge-other';
-          return `<td><span class="badge-type ${cls}">${esc(label)}</span></td>`;
+          cellContent = `<span class="badge-type ${cls}">${esc(typeLabel)}</span>`;
+          break;
         }
         case 'model':
-          return `<td>${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}</td>`;
+          cellContent = `${esc(p.model)}${p.manufacturer ? `<br><small style="color:#94a3b8">${esc(p.manufacturer)}</small>` : ''}`;
+          break;
         case 'volume':
-          return `<td>${p.volume ? esc(p.volume) + ' мкл' : '—'}</td>`;
+          cellContent = p.volume ? esc(p.volume) + ' мкл' : '—';
+          break;
         case 'department':
-          return `<td>${esc(p.department || '—')}</td>`;
+          cellContent = esc(p.department || '—');
+          break;
         case 'lastCalibration':
-          return `<td>${formatDate(p.last_calibration)}</td>`;
+          cellContent = formatDate(p.last_calibration);
+          break;
         case 'nextCalibration':
-          return `<td>${status === 'sent'
+          cellContent = status === 'sent'
             ? `<small style="color:${COLORS.info};font-weight:600;"><i class="fa-solid fa-box"></i> ${formatDate(p.sent_for_calibration)}</small>`
             : status === 'wip'
             ? `<small style="color:${COLORS.warning};font-weight:600;"><i class="fa-solid fa-hourglass-half"></i> В процессе поверки</small>`
             : status === 'unknown'
             ? `<small style="color:${COLORS.faint};">Дата не задана</small>`
-            : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? COLORS.danger : status === 'warn' ? COLORS.warning : COLORS.success}">${daysText}</small>` : ''}`}</td>`;
+            : `${formatDate(next)}${daysText ? `<br><small style="color:${status === 'danger' || status === 'fail' ? COLORS.danger : status === 'warn' ? COLORS.warning : COLORS.success}">${daysText}</small>` : ''}`;
+          break;
         case 'responsible':
-          return `<td>${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}</td>`;
+          cellContent = `${esc(p.responsible || '—')}${p.location ? `<br><small style="color:#94a3b8">${esc(p.location)}</small>` : ''}`;
+          break;
         case 'location':
-          return `<td>${esc(p.location || '—')}</td>`;
+          cellContent = esc(p.location || '—');
+          break;
         case 'manufacturer':
-          return `<td>${esc(p.manufacturer || '—')}</td>`;
+          cellContent = esc(p.manufacturer || '—');
+          break;
         case 'serial':
-          return `<td>${esc(p.serial || '—')}</td>`;
+          cellContent = esc(p.serial || '—');
+          break;
         case 'cert':
-          return `<td>${esc(p.cert || '—')}</td>`;
+          cellContent = esc(p.cert || '—');
+          break;
         case 'status':
-          return `<td>${UI.renderStatusBadge(status)}</td>`;
+          cellContent = UI.renderStatusBadge(status);
+          break;
         case 'interval':
-          return `<td>${p.interval != null ? esc(p.interval) + ' мес.' : '—'}</td>`;
+          cellContent = p.interval != null ? esc(p.interval) + ' мес.' : '—';
+          break;
         case 'notes':
-          return `<td>${esc(p.notes || '—')}</td>`;
+          cellContent = esc(p.notes || '—');
+          break;
         case 'result':
-          return `<td>${esc(RESULT_LABELS[p.last_result] || p.last_result || '—')}</td>`;
+          cellContent = esc(RESULT_LABELS[p.last_result] || p.last_result || '—');
+          break;
         case 'active':
-          return `<td>${p.active ? 'В работе' : 'Не используется'}</td>`;
+          cellContent = p.active ? 'В работе' : 'Не используется';
+          break;
         default: {
           const raw = p[colId];
-          const val = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
-          return `<td>${val}</td>`;
+          cellContent = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
         }
       }
+
+      return `<td class="col-${colId}" data-label="${esc(dataLabel)}">${cellContent}</td>`;
     }).join('');
 
     const rowClass =
@@ -289,13 +311,13 @@ function renderTableBody(items, columns, hasAnyRowAction) {
       status === 'warn' ? 'row-warn' :
       '';
 
-    return `<tr class="${rowClass}">
+    return `<tr class="${rowClass}" onclick="toggleMobileRow(event, this)">
       <td class="col-checkbox">
          <input type="checkbox" class="row-checkbox" data-id="${esc(p.id)}" ${isChecked}
          onchange="togglePipetteSelection('${esc(p.id)}', this.checked)">
       </td>
       ${cellsHtml}
-      <td ${!hasAnyAction ? 'style="display:none"' : ''}>${actionsHtml}</td>
+      <td class="col-actions" ${!hasAnyAction ? 'style="display:none"' : ''}>${actionsHtml}</td>
     </tr>`;
   }).join('');
 }
@@ -454,4 +476,22 @@ function updateBulkToolbar() {
 
   const hasAny = selectedPipettes.size > 0;
   row.style.display = hasAny ? 'flex' : 'none';
+}
+
+// ============================================================
+// МОБИЛЬНЫЙ АККОРДЕОН (Вариант 3)
+// ============================================================
+function toggleMobileRow(e, tr) {
+  // Срабатывает только на мобильных (ширина экрана <= 768px)
+  if (window.innerWidth > 768) return;
+
+  // Игнорируем клики по кнопкам, чекбоксам и меню действий
+  if (e.target.closest('.col-checkbox') ||
+      e.target.closest('.col-actions') ||
+      e.target.closest('button') ||
+      e.target.closest('input')) {
+    return;
+  }
+
+  tr.classList.toggle('mobile-expanded');
 }
