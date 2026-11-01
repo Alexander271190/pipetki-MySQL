@@ -55,7 +55,6 @@ const SETTINGS_SECTIONS = [
     items: [
       { id: 'help',        label: 'Справка' },
       { id: 'general',     label: 'Общие' },
-      { id: 'log',         label: 'Журнал действий' },
     ]
   }
 ];
