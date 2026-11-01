@@ -737,9 +737,8 @@ async function deletePipette(id) {
     selectedPipettes.delete(id);
     await loadPipetteData();
     await loadStats();
-  } catch (error) {
-    const isBlock = /Нельзя удалить/.test(error.message || '');
-    showToast(error.message || 'Ошибка удаления', isBlock ? 'warn' : 'error');
+    } catch (error) {
+    showToast(error.message || 'Ошибка удаления', 'error');
   }
 }
 
