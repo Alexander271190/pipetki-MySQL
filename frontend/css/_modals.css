@@ -518,3 +518,46 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
   border-left: none !important;
   border-right: none !important;
 }
+
+/* ============================================================
+   МОБИЛЬНАЯ ВЕРСИЯ: ЖЕСТКОЕ ЦЕНТРИРОВАНИЕ И ФИКС ШИРИНЫ МОДАЛОК
+   ============================================================ */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 10px !important; 
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Принудительно центрируем и жестко задаем ширину */
+  .modal,
+  .modal-compact,
+  .modal-lg,
+  .modal-xl,
+  .prompt-modal,
+  .confirm-modal {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    min-width: 0 !important;
+    margin: 0 auto !important; 
+    box-sizing: border-box !important;
+    overflow-x: hidden !important; 
+  }
+
+  /* Если внутри есть таблица (настройки, принтеры), разрешаем ей скроллиться ВНУТРИ модалки */
+  #settings-section-content {
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+  .modal .field-settings-table, 
+  .modal .bc-printers-table {
+    min-width: 500px !important; 
+    display: table !important;
+  }
+  
+  .modal-compact {
+    padding: 16px !important;
+  }
+}
