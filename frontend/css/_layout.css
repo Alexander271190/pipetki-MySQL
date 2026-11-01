@@ -397,117 +397,143 @@ html[data-theme="dark"] #search {
     display: none !important;
   }
 
-  /* Таблица и строки становятся блоками */
-  #pipettes-table, 
-  #pipettes-table tbody, 
-  #pipettes-table tr {
+  /* Сбрасываем мин-ширину 700px из _forms.css */
+  #pipettes-table {
+    min-width: 0 !important;
+    width: 100% !important;
     display: block !important;
-    width: 100%;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  #pipettes-table tbody {
+    display: block !important;
+    width: 100% !important;
   }
 
   /* Карточка прибора */
   #pipettes-table tbody tr {
+    display: block !important;
     background: var(--card);
     border: 1px solid var(--border-hard);
-    border-radius: 12px;
-    margin-bottom: 12px;
-    padding: 12px 12px 32px 12px; 
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 10px 12px 30px 12px; /* Отступ снизу для стрелочки */
     position: relative;
-    box-shadow: 0 2px 6px rgba(0,0,0,.04);
+    box-shadow: 0 2px 4px rgba(0,0,0,.04);
     height: auto !important;
+    min-height: 0 !important;
   }
 
- 
-  #pipettes-table td {
+  /* ❗️ ГЛАВНЫЙ ФИКС: Сбрасываем все ограничения высоты и скрываем ячейки */
+  #pipettes-table tbody td {
     display: none !important;
     border: none !important;
-    padding: 4px 0 !important;
+    padding: 2px 0 !important; /* Компактный отступ */
+    margin: 0 !important;
     text-align: left !important;
-    width: 100%;
+    width: 100% !important;
     height: auto !important;
-    min-height: 0 !important; 
-    line-height: 1.4 !important;
+    min-height: 0 !important;
+    line-height: 1.3 !important;
   }
 
   /* Показываем только важные ячейки */
-  #pipettes-table td.mobile-essential,
-  #pipettes-table td.col-actions,
-  #pipettes-table td.col-checkbox {
+  #pipettes-table tbody td.mobile-essential,
+  #pipettes-table tbody td.col-actions,
+  #pipettes-table tbody td.col-checkbox {
     display: block !important;
   }
 
-  /* --- Чекбокс и Действия по углам --- */
-  #pipettes-table td.col-checkbox {
-    position: absolute; top: 12px; right: 12px;
-    width: auto; padding: 0 !important;
+  /* --- Чекбокс в правый верхний угол --- */
+  #pipettes-table tbody td.col-checkbox {
+    position: absolute; 
+    top: 10px; 
+    right: 10px;
+    width: auto !important; 
+    padding: 0 !important;
   }
-  #pipettes-table td.col-actions {
-    position: absolute; bottom: 6px; right: 6px;
-    width: auto; padding: 0 !important; z-index: 2;
+  
+  /* --- Кнопка действия (⋮) в правый нижний угол --- */
+  #pipettes-table tbody td.col-actions {
+    position: absolute; 
+    bottom: 6px; 
+    right: 6px;
+    width: auto !important; 
+    padding: 0 !important; 
+    z-index: 2;
   }
 
   /* --- Стилизация главных полей в свернутом виде --- */
-  #pipettes-table td.mobile-essential {
-    padding-right: 40px !important;
-    margin-bottom: 6px;
+  #pipettes-table tbody td.mobile-essential {
+    padding-right: 30px !important; /* Чтобы текст не залезал под чекбокс */
+    margin-bottom: 2px !important;
   }
   
-  #pipettes-table td.mobile-essential:first-of-type {
-    font-size: 1.05rem;
+  /* Первое поле (ID) */
+  #pipettes-table tbody td.mobile-essential:first-of-type {
+    font-size: 1rem;
     font-weight: 700;
+    margin-bottom: 4px !important;
   }
   
-  #pipettes-table td.mobile-essential:nth-of-type(2) {
+  /* Второе поле (Модель/Серийник) */
+  #pipettes-table tbody td.mobile-essential:nth-of-type(2) {
     color: var(--text-muted);
     font-size: 0.85rem;
     font-weight: 500;
+    margin-bottom: 6px !important;
   }
 
   /* Статус-бейдж */
-  #pipettes-table td.col-status.mobile-essential {
-    margin-top: 4px;
-    margin-bottom: 0;
+  #pipettes-table tbody td.col-status.mobile-essential {
+    margin-top: 2px !important;
+    margin-bottom: 0 !important;
     padding-right: 0 !important;
   }
 
-  /* --- Стрелочка внизу карточки --- */
-  #pipettes-table tr::after {
-    content: '\25BC'; 
-    position: absolute; bottom: 8px; left: 50%;
+  /* --- Стрелочка по центру внизу --- */
+  #pipettes-table tbody tr::after {
+    content: '\25BC'; /* Юникод символа "треугольник вниз" */
+    position: absolute; 
+    bottom: 6px; 
+    left: 50%;
     transform: translateX(-50%);
-    color: var(--text-faint); font-size: 12px;
-    transition: transform 0.2s ease; opacity: 0.7;
+    color: var(--text-faint); 
+    font-size: 10px;
+    transition: transform 0.2s ease; 
+    opacity: 0.6;
   }
 
-  #pipettes-table tr.mobile-expanded::after {
+  #pipettes-table tbody tr.mobile-expanded::after {
     transform: translateX(-50%) rotate(180deg);
   }
 
   /* ============================================================
      РАСКРЫТИЕ КАРТОЧКИ (Показываем остальные поля)
      ============================================================ */
-  #pipettes-table tr.mobile-expanded td {
+  #pipettes-table tbody tr.mobile-expanded td {
     display: block !important;
-    padding: 8px 0 !important;
+    padding: 6px 0 !important; /* Отступы для раскрытых строк */
     border-top: 1px dashed var(--border-soft) !important;
   }
 
   /* У главных полей линию сверху не рисуем */
-  #pipettes-table tr.mobile-expanded td.mobile-essential,
-  #pipettes-table tr.mobile-expanded td.col-checkbox,
-  #pipettes-table tr.mobile-expanded td.col-actions {
+  #pipettes-table tbody tr.mobile-expanded td.mobile-essential,
+  #pipettes-table tbody tr.mobile-expanded td.col-checkbox,
+  #pipettes-table tbody tr.mobile-expanded td.col-actions {
     border-top: none !important;
   }
 
   /* Добавляем названия полей (напр. "ОТДЕЛ: ГИМИ") */
-  #pipettes-table tr.mobile-expanded td[data-label]:not([data-label=""]):not(.mobile-essential):not(.col-checkbox):not(.col-actions)::before {
+  #pipettes-table tbody tr.mobile-expanded td[data-label]:not([data-label=""]):not(.mobile-essential):not(.col-checkbox):not(.col-actions)::before {
     content: attr(data-label) ": ";
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: var(--text-faint);
     text-transform: uppercase;
     letter-spacing: 0.3px;
     display: inline-block;
-    margin-right: 6px;
+    margin-right: 4px;
     font-weight: 600;
   }
 }
