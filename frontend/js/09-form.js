@@ -714,7 +714,7 @@ async function deletePipette(id) {
   await refreshCurrentUser();
   if (!canManagePipettes()) { showToast('Доступ запрещён', 'error'); return; }
 
-  try {
+   try {
     const lockRes = await apiRequest(`/pipettes/${id}/lock`);
     if (lockRes.locked && !lockRes.mine) {
       const proceed = await showLockWarning(lockRes, 'Удаление оборудования');
@@ -725,12 +725,36 @@ async function deletePipette(id) {
     return;
   }
 
+  // 🆕 Превентивная проверка: нельзя удалить прибор на поверке / с заменой / заменяющий
+  const _p = pipettes.find(x => x.id === id);
+  if (_p) {
+    if (_p.sent_for_calibration) {
+      showToast(
+        `Нельзя удалить ${id}: прибор отправлен на поверку` +
+        (_p.replaced_by ? `, замена: ${_p.replaced_by}` : '') +
+        `. Сначала отмените отправку или оформите возврат.`,
+        'error'
+      );
+      // снять свой лок, чтобы не висел
+      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+      return;
+    }
+    if (_p.replacing) {
+      showToast(
+        `Нельзя удалить ${id}: прибор используется как замена для ${_p.replacing}. ` +
+        `Сначала оформите возврат оригинала с поверки.`,
+        'error'
+      );
+      apiRequest(`/pipettes/${id}/lock`, 'DELETE').catch(() => {});
+      return;
+    }
+  }
+
   const ok = await showConfirm(
     `Удалить оборудование «${id}» вместе со всей историей поверок? Действие необратимо.`,
     { icon: '🗑️', title: 'Удаление', okText: 'Удалить', okClass: 'btn-danger' }
   );
   if (!ok) return;
-
   try {
     await apiRequest(`/pipettes/${id}`, 'DELETE');
     showToast('Оборудование удалено', 'success');
