@@ -409,8 +409,7 @@ html[data-theme="dark"] #search {
     border-radius: 12px !important;
     margin-bottom: 12px !important;
     position: relative !important;
-    overflow: hidden !important;
-    padding-bottom: 28px !important; /* Место под стрелочку */
+    overflow: hidden !important; /* Скрываем всё, что вылезает за скругления */
   }
 
   /* Скрываем все ячейки по умолчанию */
@@ -427,7 +426,7 @@ html[data-theme="dark"] #search {
     line-height: 1.3 !important;
   }
 
-  /* Показываем нужные ячейки (как на скриншоте) */
+  /* Показываем нужные ячейки в свернутом виде */
   #pipettes-table tbody tr td.col-id,
   #pipettes-table tbody tr td.col-model,
   #pipettes-table tbody tr td.col-status,
@@ -437,43 +436,75 @@ html[data-theme="dark"] #search {
     display: block !important;
   }
 
-  /* --- Чекбокс и меню действий (поверх сетки) --- */
-  #pipettes-table tbody tr td.col-checkbox {
+  /* --- Возвращаем кнопку "⋮" и чекбокс (парят поверх сетки) --- */
+  #pipettes-table tbody tr td.col-checkbox,
+  #pipettes-table tbody tr td.col-actions {
+    display: block !important;
     position: absolute !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    z-index: 10 !important;
+  }
+  
+  #pipettes-table tbody tr td.col-checkbox {
     top: 8px !important;
     right: 8px !important;
-    width: auto !important;
-    padding: 0 !important;
-    background: transparent !important;
-    min-height: 0 !important;
-    z-index: 2 !important;
   }
+  
   #pipettes-table tbody tr td.col-actions {
-    position: absolute !important;
-    bottom: 6px !important;
-    right: 6px !important;
-    width: auto !important;
-    padding: 0 !important;
-    background: transparent !important;
-    min-height: 0 !important;
-    z-index: 2 !important;
+    bottom: 8px !important; /* Чуть выше полосы со стрелочкой */
+    right: 8px !important;
   }
 
-  /* --- Стрелочка внизу по центру --- */
+  /* --- Полоса внизу со стрелочкой --- */
+  /* Создаем пустую полосу внизу карточки, чтобы закрыть серый фон */
   #pipettes-table tbody tr::after {
-    content: '\25BC' !important;
+    content: '' !important;
+    display: block !important;
+    grid-column: 1 / -1 !important; /* Растягиваем на обе колонки */
+    height: 26px !important;
+    background: var(--card) !important; /* Фон полосы = фон карточки */
+    border-top: 1px solid var(--border-soft) !important;
+  }
+
+  /* Рисуем саму стрелочку по центру этой полосы */
+  #pipettes-table tbody tr::before {
+    content: '\25BC' !important; /* Треугольник вниз */
     position: absolute !important;
     bottom: 8px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     color: var(--text-faint) !important;
     font-size: 10px !important;
+    z-index: 5 !important;
+    transition: transform 0.2s ease !important;
+    pointer-events: none !important; /* Чтобы клик проходил сквозь стрелку на карточку */
   }
 
-  /* Стили для текста внутри ячеек */
-  #pipettes-table tbody tr td.col-id strong { font-size: 1rem !important; }
-  #pipettes-table tbody tr td.col-model { color: var(--text-muted) !important; font-size: .85rem !important; }
-  #pipettes-table tbody tr td.col-department, 
-  #pipettes-table tbody tr td.col-responsible, 
-  #pipettes-table tbody tr td.col-lastCalibration { font-size: .85rem !important; }
+  /* Переворачиваем стрелочку при раскрытии */
+  #pipettes-table tbody tr.mobile-expanded::before {
+    transform: translateX(-50%) rotate(180deg) !important;
+  }
+
+  /* ============================================================
+     РАСКРЫТЫЙ ВИД
+     ============================================================ */
+  #pipettes-table tbody tr.mobile-expanded td {
+    display: block !important;
+    /* Новые ячейки будут аккуратно встраиваться в сетку */
+  }
+
+  /* Добавляем подписи для остальных полей (которые скрыты) */
+  #pipettes-table tbody tr.mobile-expanded td[data-label]:not([data-label=""]):not(.col-id):not(.col-model):not(.col-status):not(.col-department):not(.col-responsible):not(.col-lastCalibration):not(.col-checkbox):not(.col-actions)::before {
+    content: attr(data-label) ": ";
+    font-size: 0.75rem;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: inline-block;
+    font-weight: 600;
+    margin-right: 4px;
+  }
 }
