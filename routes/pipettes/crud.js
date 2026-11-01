@@ -565,15 +565,37 @@ router.get('/:id', authenticate, async (req, res) => {
       );
       p.replacement = repl[0] || null;
     }
-    if (p.replacing) {
+        if (p.replacing) {
       const [orig] = await db.query(
         'SELECT id, model, manufacturer, location FROM pipettes WHERE id = ?',
         [p.replacing]
       );
       p.replacedFor = orig[0] || null;
     }
+
+    // Прикладываем черновик, если есть
+    try {
+      const [draftRows] = await db.query(
+        'SELECT user_id, user_full_name, data, updated_at FROM edit_drafts WHERE pipette_id = ?',
+        [req.params.id]
+      );
+      if (draftRows.length) {
+        const d = draftRows[0];
+        p.draft = {
+          userId: d.user_id,
+          userFullName: d.user_full_name,
+          data: typeof d.data === 'string' ? JSON.parse(d.data) : d.data,
+          updatedAt: d.updated_at,
+          isMine: d.user_id === req.user.id,
+        };
+      }
+    } catch (e) {
+      console.warn('Не удалось загрузить черновик:', e.message);
+    }
+
     res.json(p);
-  } catch (e) {
+    
+    } catch (e) {
     res.status(500).json({ error: 'Ошибка загрузки данных' });
   }
 });
@@ -937,15 +959,22 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
         regeneratedId = await maybeRegenerateId(req.params.id, oldType, newType, conn);
       }
 
-      await conn.query(`UPDATE pipettes SET ${fields.join(', ')} WHERE id = ?`, values);
+        await conn.query(`UPDATE pipettes SET ${fields.join(', ')} WHERE id = ?`, values);
 
-      if (regeneratedId) {
+       if (regeneratedId) {
         await applyIdChange(req.params.id, regeneratedId, conn);
       }
 
+      // Удаляем черновик — данные сохранены в основную таблицу
+      try {
+        await conn.query('DELETE FROM edit_drafts WHERE pipette_id = ?', [req.params.id]);
+        if (regeneratedId) {
+          await conn.query('DELETE FROM edit_drafts WHERE pipette_id = ?', [regeneratedId]);
+        }
+      } catch (e) {}
+
       return { oldType, newType, regeneratedId };
     });
-
     const fieldLabels = {
       model: 'Модель', serial: 'Серийный номер', manufacturer: 'Производитель',
       equipment_type: 'Тип', volume: 'Объём', department: 'Отдел',
@@ -1040,6 +1069,51 @@ router.put('/:id', authenticate, requireAnyPermission(['edit_pipette', 'manage_p
     res.status(500).json({ error: 'Ошибка обновления' });
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+// PUT /:id/draft — сохранить черновик (при потере лока)
+// ═══════════════════════════════════════════════════════════
+router.put('/:id/draft', authenticate, async (req, res) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Тело запроса должно быть JSON-объектом' });
+  }
+
+  try {
+    const [exists] = await db.query('SELECT id FROM pipettes WHERE id = ?', [req.params.id]);
+    if (!exists.length) return res.status(404).json({ error: 'Оборудование не найдено' });
+
+    const data = req.body;
+    await db.query(
+      `INSERT INTO edit_drafts (pipette_id, user_id, user_full_name, data)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         user_id = VALUES(user_id),
+         user_full_name = VALUES(user_full_name),
+         data = VALUES(data),
+         updated_at = CURRENT_TIMESTAMP`,
+      [req.params.id, req.user.id, req.user.full_name, JSON.stringify(data)]
+    );
+
+    res.json({ message: 'Черновик сохранён' });
+  } catch (e) {
+    console.error('PUT /pipettes/:id/draft error:', e);
+    res.status(500).json({ error: 'Ошибка сохранения черновика' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// DELETE /:id/draft — отменить черновик
+// ═══════════════════════════════════════════════════════════
+router.delete('/:id/draft', authenticate, async (req, res) => {
+  try {
+    await db.query('DELETE FROM edit_drafts WHERE pipette_id = ?', [req.params.id]);
+    res.json({ message: 'Черновик удалён' });
+  } catch (e) {
+    console.error('DELETE /pipettes/:id/draft error:', e);
+    res.status(500).json({ error: 'Ошибка удаления черновика' });
+  }
+});
+
 
 // ═══════════════════════════════════════════════════════════
 // DELETE /:id — удаление
