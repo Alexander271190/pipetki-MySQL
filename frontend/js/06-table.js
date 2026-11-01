@@ -218,10 +218,12 @@ function renderTableBody(items, columns, hasAnyRowAction) {
       actionsHtml = `<button class="row-actions-btn" onclick="openRowActions(event, '${esc(p.id)}')" title="Действия"><i class="fa-solid fa-ellipsis-vertical"></i></button>`;
     }
 
-    const cellsHtml = columns.map(colId => {
+        const cellsHtml = columns.map((colId, index) => {
+      let cellContent = '';
+      
+      // Находим определение колонки для заголовка
       const def = findColumn(colId);
       const dataLabel = def ? def.label : '';
-      let cellContent = '';
 
       switch (colId) {
         case 'id': {
@@ -301,8 +303,10 @@ function renderTableBody(items, columns, hasAnyRowAction) {
           cellContent = (raw === undefined || raw === null || raw === '') ? '—' : esc(raw);
         }
       }
+      
+      const isEssential = (index === 0 || index === 1 || colId === 'status');
 
-      return `<td class="col-${colId}" data-label="${esc(dataLabel)}">${cellContent}</td>`;
+      return `<td class="col-${colId} ${isEssential ? 'mobile-essential' : ''}" data-label="${esc(dataLabel)}">${cellContent}</td>`;
     }).join('');
 
     const rowClass =
