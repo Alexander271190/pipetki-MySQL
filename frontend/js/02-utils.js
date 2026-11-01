@@ -93,11 +93,14 @@ function isExternalCalibration(equipmentType) {
 
 function showToast(msg, type) {
   const t = document.getElementById('toast');
+  if (!t) { console.warn('[toast]', msg); return; }
   t.textContent = msg;
   t.style.whiteSpace = 'pre-line';
   t.className = 'toast show ' + (type || '');
   clearTimeout(t._timeout);
-  t._timeout = setTimeout(() => t.className = 'toast', 4000);
+  // 3 сек минимум + 40мс на каждый символ, но не больше 10 сек
+  const delay = Math.min(10000, Math.max(3000, 2000 + String(msg).length * 40));
+  t._timeout = setTimeout(() => t.className = 'toast', delay);
 }
 
 let _confirmResolver = null;
