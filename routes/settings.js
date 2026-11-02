@@ -264,6 +264,7 @@ router.get('/export', authenticate, async (req, res) => {
         actSendEnabled: true,   actSendFields: [],
         actReturnEnabled: true, actReturnFields: [],
         historyEnabled: true,   historyFields: [],
+        headerEnabled: false, headerText: '', headerAlign: 'center',
       });
     }
     const r = rows[0];
@@ -334,6 +335,7 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
         hasPermission: false,
         export: false, actSend: false, actReturn: false, history: false,
         exportFields: [], actSendFields: [], actReturnFields: [], historyFields: [],
+        headerEnabled: false, headerText: '', headerAlign: 'center',   
         source: 'no_permission',
       });
     }
@@ -382,11 +384,16 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
       effective = globalConf;
       fieldsSource = globalFields;
     }
-
+    const headerConf = {
+      headerEnabled: g.header_enabled === 1,
+      headerText:    g.header_text || '',
+      headerAlign:   g.header_align || 'center',
+    };
     res.json({
       hasPermission: true,
       ...effective,
       ...fieldsSource,
+      ...headerConf,
       source: hasIndividual ? 'individual' : 'global',
     });
   } catch (e) {
