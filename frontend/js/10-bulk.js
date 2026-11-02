@@ -316,6 +316,7 @@ async function printSendAct() {
       </style>
     </head>
     <body>
+      ${buildHeaderHtml(settings.printDocs)}
       <h1>АКТ ОТПРАВКИ НА ПОВЕРКУ</h1>
       <div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
       <div class="meta">
@@ -812,6 +813,7 @@ async function printReturnAct() {
       </style>
     </head>
     <body>
+     ${buildHeaderHtml(settings.printDocs)}
       <h1>АКТ ВОЗВРАТА С ПОВЕРКИ</h1>
       <div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
       <div class="meta">
