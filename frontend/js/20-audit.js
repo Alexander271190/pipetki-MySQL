@@ -173,34 +173,55 @@ function _printErrorsTable(items) {
 
   const html = `
     <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
-    <title>Журнал ошибок — ${today}</title>
+    <title>Журнал ошибок</title>
     <style>
       @page { size: A4 landscape; margin: 12mm 8mm; }
+      @media print { @page { margin: 12mm 8mm; } }
       * { box-sizing: border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; margin: 0; }
-      h1 { font-size: 14pt; margin: 0 0 4px; color: #1e293b; }
-      .meta { font-size: 9pt; color: #64748b; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
+      
+      h1 { font-size: 14pt; text-align: center; margin: 10px 0 14px; color: #1e293b; }
+      
       table { width: 100%; border-collapse: collapse; font-size: 8pt; border: 1.5px solid #1e293b; }
-      th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; }
-      td { padding: 5px; border-bottom: 0.5px solid #94a3b8; vertical-align: top; }
-      tbody tr:nth-child(even) td { background: #f8fafc; }
-      .footer { margin-top: 12px; font-size: 8pt; display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 6px; }
+      th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border: 1px solid #1e293b; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      td { padding: 5px; border: 0.5px solid #94a3b8; vertical-align: top; }
+      tbody tr:nth-child(even) td { background: #f8fafc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tbody td:first-child, thead th:first-child { border-left: 1.5px solid #1e293b; }
+      tbody td:last-child, thead th:last-child { border-right: 1.5px solid #1e293b; }
+      small { color: #94a3b8; font-size: 7pt; }
+      
+      .footer { margin-top: 20px; font-size: 8pt; color: #000; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #cbd5e1; padding-top: 8px; }
+      .footer-left { display: flex; flex-direction: column; gap: 4px; }
+      .footer-right { text-align: right; }
+      tr { page-break-inside: avoid; }
+      thead { display: table-header-group; }
     </style></head><body>
+      
+      ${buildHeaderHtml(settings.printDocs)}
+      
       <h1>Журнал ошибок</h1>
-      <div class="meta">Дата печати: <b>${today}</b> · Записей: <b>${items.length}</b></div>
+      
       <table>
-        <thead><tr>
-          <th style="width:14%;">Дата</th>
-          <th style="width:8%;">Уровень</th>
-          <th style="width:12%;">Источник</th>
-          <th style="width:15%;">Пользователь</th>
-          <th>Сообщение</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th style="width:14%;">Дата</th>
+            <th style="width:8%;">Уровень</th>
+            <th style="width:12%;">Источник</th>
+            <th style="width:15%;">Пользователь</th>
+            <th>Сообщение</th>
+          </tr>
+        </thead>
         <tbody>${rows}</tbody>
       </table>
+      
       <div class="footer">
-        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
-        <div>Подпись: _______________</div>
+        <div class="footer-left">
+          <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+          <div>Дата печати: <b>${today}</b> · Записей: <b>${items.length}</b></div>
+        </div>
+        <div class="footer-right">
+          Подпись: _______________
+        </div>
       </div>
     </body></html>`;
 
@@ -208,6 +229,9 @@ function _printErrorsTable(items) {
   if (!win) { showToast('Разрешите всплывающие окна для печати', 'error'); return; }
   win.document.write(html);
   win.document.close();
+  win.document.title = 'Журнал ошибок';
+  win.focus();
+  setTimeout(() => win.print(), 300);
 }
 
 async function clearErrorsLog() {
@@ -531,28 +555,34 @@ function _printAuditTable(items, title, dateLabel, equipmentInfo) {
 
   const html = `
     <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
-    <title>${esc(title)} — ${today}</title>
+    <title>${esc(title)}</title>
     <style>
       @page { size: A4 landscape; margin: 12mm 8mm; }
+      @media print { @page { margin: 12mm 8mm; } }
       * { box-sizing: border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; margin: 0; }
-      h1 { font-size: 14pt; margin: 0 0 4px; color: #1e293b; }
-      .meta { font-size: 9pt; color: #64748b; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
-      .meta b { color: #1e293b; }
+      
+      h1 { font-size: 14pt; text-align: center; margin: 10px 0 14px; color: #1e293b; }
+      
       table { width: 100%; border-collapse: collapse; font-size: 8pt; border: 1.5px solid #1e293b; }
-      th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      td { padding: 5px; border-bottom: 0.5px solid #94a3b8; vertical-align: top; }
-      tbody tr:nth-child(even) td { background: #f8fafc; }
+      th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border: 1px solid #1e293b; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      td { padding: 5px; border: 0.5px solid #94a3b8; vertical-align: top; }
+      tbody tr:nth-child(even) td { background: #f8fafc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tbody td:first-child, thead th:first-child { border-left: 1.5px solid #1e293b; }
+      tbody td:last-child, thead th:last-child { border-right: 1.5px solid #1e293b; }
       small { color: #94a3b8; font-size: 7pt; }
-      .footer { margin-top: 12px; font-size: 8pt; display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 6px; }
+      
+      .footer { margin-top: 20px; font-size: 8pt; color: #000; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #cbd5e1; padding-top: 8px; }
+      .footer-left { display: flex; flex-direction: column; gap: 4px; }
+      .footer-right { text-align: right; }
       tr { page-break-inside: avoid; }
       thead { display: table-header-group; }
     </style></head><body>
+      
+      ${buildHeaderHtml(settings.printDocs)}
+      
       <h1>${esc(title)}</h1>
-      <div class="meta">
-        <div>Дата печати: <b>${today}</b> · Записей: <b>${items.length}</b></div>
-        ${eqLine}
-      </div>
+      
       <table>
         <thead>
           <tr>
@@ -565,9 +595,16 @@ function _printAuditTable(items, title, dateLabel, equipmentInfo) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
+      
       <div class="footer">
-        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
-        <div>Подпись: _______________</div>
+        <div class="footer-left">
+          <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+          ${eqLine}
+          <div>Дата печати: <b>${today}</b> · Записей: <b>${items.length}</b></div>
+        </div>
+        <div class="footer-right">
+          Подпись: _______________
+        </div>
       </div>
     </body></html>`;
 
@@ -575,4 +612,7 @@ function _printAuditTable(items, title, dateLabel, equipmentInfo) {
   if (!win) { showToast('Разрешите всплывающие окна для печати', 'error'); return; }
   win.document.write(html);
   win.document.close();
+  win.document.title = title;
+  win.focus();
+  setTimeout(() => win.print(), 300);
 }
