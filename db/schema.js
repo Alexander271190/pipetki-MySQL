@@ -381,7 +381,7 @@ async function initSchema() {
       { name: 'history_fields',     ddl: 'JSON DEFAULT NULL' },
       { name: 'header_enabled',     ddl: 'TINYINT DEFAULT 0' },
       { name: 'header_text',        ddl: 'TEXT DEFAULT NULL' },
-      { name: 'header_align',       ddl: "VARCHAR(20) DEFAULT 'center'" },
+      { name: 'header_align', ddl: "VARCHAR(20) DEFAULT 'left'" },
     ]);
 
     try {
