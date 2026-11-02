@@ -191,9 +191,9 @@ function sqlComputedStatus(warnDays) {
       WHEN active = 0 THEN 'inactive'
       WHEN last_result = 'wip' THEN 'wip'
       WHEN last_calibration IS NULL OR \`interval\` IS NULL THEN 'unknown'
-      WHEN STR_TO_DATE(last_calibration, '%Y-%m-%d') IS NULL THEN 'unknown'
-      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < CURDATE() THEN 'danger'
-      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 'warn'
+      WHEN DATE(last_calibration) IS NULL THEN 'unknown'
+      WHEN DATE_ADD(DATE(last_calibration), INTERVAL \`interval\` MONTH) < CURDATE() THEN 'danger'
+      WHEN DATE_ADD(DATE(last_calibration), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 'warn'
       ELSE 'ok'
     END
   `;
@@ -210,9 +210,9 @@ function sqlStatusOrder(warnDays) {
       WHEN active = 0 THEN 7
       WHEN last_result = 'wip' THEN 3
       WHEN last_calibration IS NULL OR \`interval\` IS NULL THEN 8
-      WHEN STR_TO_DATE(last_calibration, '%Y-%m-%d') IS NULL THEN 8
-      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < CURDATE() THEN 1
-      WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 4
+     WHEN DATE(last_calibration) IS NULL THEN 8
+     WHEN DATE_ADD(DATE(last_calibration), INTERVAL \`interval\` MONTH) < CURDATE() THEN 1
+     WHEN DATE_ADD(DATE(last_calibration), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 4
       ELSE 6
     END
   `;
@@ -278,8 +278,8 @@ function buildFiltersWhere(filters, search) {
       if (value && typeof value === 'object' && value.period) {
         const isUpdated = value.type === 'updated_at';
         const colExpr = isUpdated
-          ? 'DATE(updated_at)'
-          : "STR_TO_DATE(last_calibration, '%Y-%m-%d')";
+         ? 'DATE(updated_at)'
+       : 'DATE(last_calibration)';
 
         if (value.period === 'today') {
           parts.push(`${colExpr} = CURDATE()`);
@@ -322,7 +322,7 @@ function sqlOrderBy(sort, dir, warnDays) {
     case 'volume':          return `CAST(NULLIF(volume, '') AS UNSIGNED) ${d}`;
     case 'department':      return `department ${d}`;
     case 'lastCalibration': return `last_calibration ${d}`;
-    case 'nextCalibration': return `DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) ${d}`;
+    case 'nextCalibration': return `DATE_ADD(DATE(last_calibration), INTERVAL \`interval\` MONTH) ${d}`;
     case 'responsible':     return `responsible ${d}`;
     case 'status':          return `(${sqlStatusOrder(warnDays)}) ${d}`;
     default:                return `id ${d}`;
