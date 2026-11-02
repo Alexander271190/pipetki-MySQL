@@ -276,6 +276,9 @@ router.get('/export', authenticate, async (req, res) => {
       actReturnFields:  db.safeParse(r.act_return_fields, []),
       historyEnabled:   r.history_enabled !== 0,
       historyFields:    db.safeParse(r.history_fields, []),
+      headerEnabled:    r.header_enabled === 1,
+      headerText:       r.header_text || '',
+      headerAlign:      r.header_align || 'center',
     });
   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -297,6 +300,9 @@ router.put('/export', authenticate, requireAdmin, async (req, res) => {
          act_return_fields   = COALESCE(?, act_return_fields),
          history_enabled     = COALESCE(?, history_enabled),
          history_fields      = COALESCE(?, history_fields),
+         header_enabled      = COALESCE(?, header_enabled),  
+         header_text         = COALESCE(?, header_text),     
+         header_align        = COALESCE(?, header_align),    
          updated_at          = CURRENT_TIMESTAMP
        WHERE id = 1`,
       [
@@ -308,6 +314,9 @@ router.put('/export', authenticate, requireAdmin, async (req, res) => {
         b.actReturnFields  ? JSON.stringify(b.actReturnFields)  : null,
         b.historyEnabled   != null ? (b.historyEnabled ? 1 : 0) : null,
         b.historyFields    ? JSON.stringify(b.historyFields)    : null,
+        b.headerEnabled    != null ? (b.headerEnabled ? 1 : 0)  : null, 
+        b.headerText       !== undefined ? String(b.headerText) : null, 
+        b.headerAlign      ? String(b.headerAlign)              : null, 
       ]
     );
     res.json({ message: 'Настройки печати обновлены' });
