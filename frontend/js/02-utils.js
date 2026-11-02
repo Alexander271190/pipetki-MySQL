@@ -263,7 +263,7 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// 🆕 Универсальное окно блокировки (снимает блокировку при "Да")
+// Универсальное окно блокировки (снимает блокировку при "Да")
 // ============================================================
 async function showLockWarning(lockRes, actionName = 'выполнить действие') {
   const name = lockRes.lockedBy || 'Другой пользователь';
@@ -295,7 +295,7 @@ async function showLockWarning(lockRes, actionName = 'выполнить дей�
 }
 
 // ============================================================
-// 🆕 ИДЕНТИФИКАЦИЯ ПРИБОРА (для массовых модалок)
+// ИДЕНТИФИКАЦИЯ ПРИБОРА (для массовых модалок)
 // ============================================================
 function getDeviceIdentityHtml(p) {
   const fields = settings.bulkIdentityFields || ['id', 'model', 'serial', 'inventorynumber', 'department'];
@@ -319,7 +319,7 @@ function getDeviceIdentityHtml(p) {
 }
 
 
-// 🆕 Транслитерация (для генерации системных ID из русского текста)
+// Транслитерация (для генерации системных ID из русского текста)
 function slugify(text) {
   if (!text) return '';
   const ru = {
@@ -332,10 +332,35 @@ function slugify(text) {
   return result || 'item_' + Math.floor(Math.random() * 1000);
 }
 
-// 🆕 Проверка, разрешена ли замена для данного типа оборудования
+// Проверка, разрешена ли замена для данного типа оборудования
 function allowReplacement(equipmentType) {
   const t = _equipmentTypes.find(x => x.value === equipmentType);
   // По умолчанию (если поле не задано) считаем, что замена разрешена
   if (!t) return true;
   return t.allowReplacement !== false;
+}
+
+// Генератор HTML для шапки документа
+function buildHeaderHtml(printDocs) {
+  if (!printDocs || !printDocs.headerEnabled || !printDocs.headerText) return '';
+  
+  const align = printDocs.headerAlign || 'center';
+  // Разбиваем текст на строки, убираем пустые
+  const lines = printDocs.headerText.split('\n').map(l => esc(l.trim())).filter(Boolean);
+  if (lines.length === 0) return '';
+
+  let html = `<div style="text-align: ${align}; margin-bottom: 25px; line-height: 1.4; color: #000;">`;
+  
+  lines.forEach((line, idx) => {
+    const isFirst = idx === 0;
+    const weight = isFirst ? 'bold' : 'normal';
+    const size = isFirst ? '12pt' : '10pt';
+    html += `<div style="font-weight: ${weight}; font-size: ${size};">${line}</div>`;
+  });
+  
+  // Линия-разделитель под шапкой
+  html += `<div style="border-bottom: 1.5px solid #000; margin-top: 10px;"></div>`;
+  html += `</div>`;
+  
+  return html;
 }
