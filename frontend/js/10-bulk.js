@@ -289,6 +289,7 @@ async function printSendAct() {
 
   const win = window.open('', '_blank');
   if (!win) { showToast('Разрешите всплывающие окна', 'error'); return; }
+  
   win.document.write(`
     <!DOCTYPE html>
     <html lang="ru">
@@ -296,52 +297,57 @@ async function printSendAct() {
       <meta charset="UTF-8">
       <title>Акт отправки — ${today}</title>
       <style>
-        @page { size: A4 landscape; margin: 15mm 12mm; }
+        @page { size: A4 landscape; margin: 12mm 8mm; }
+        @media print { @page { margin: 12mm 8mm; } }
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; }
-        h1 { font-size: 15pt; text-align: center; margin: 0 0 6px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; margin: 0; }
+        
         .subtitle { font-size: 10pt; text-align: center; color: #64748b; margin-bottom: 20px; }
-        .meta { padding: 10px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 15px; font-size: 9.5pt; }
-        .meta div { margin-bottom: 3px; }
-        table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; }
-        th { background: #1e293b; color: #fff; padding: 8px 6px; text-align: left; font-size: 8.5pt; text-transform: uppercase; -webkit-print-color-adjust: exact; }
-        td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        tr:nth-child(even) td { background: #f8fafc; }
-        small { color: #94a3b8; font-size: 8pt; }
-        .footer { margin-top: 30px; font-size: 9.5pt; }
-        .signatures { margin-top: 40px; display: flex; justify-content: space-between; }
-        .sig-block { width: 45%; }
-        .sig-line { border-bottom: 1px solid #000; height: 30px; margin-bottom: 5px; }
-        .sig-label { font-size: 8.5pt; color: #64748b; text-align: center; }
+        h1 { font-size: 15pt; text-align: center; margin: 10px 0 4px; color: #1e293b; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; border: 1.5px solid #1e293b; }
+        th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border: 1px solid #1e293b; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        td { padding: 5px; border: 0.5px solid #94a3b8; vertical-align: top; }
+        tbody tr:nth-child(even) td { background: #f8fafc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        tbody td:first-child, thead th:first-child { border-left: 1.5px solid #1e293b; }
+        tbody td:last-child, thead th:last-child { border-right: 1.5px solid #1e293b; }
+        
+        .footer { margin-top: 20px; font-size: 8pt; color: #000; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #cbd5e1; padding-top: 8px; }
+        .footer-left { display: flex; flex-direction: column; gap: 4px; }
+        .footer-right { text-align: right; }
+        tr { page-break-inside: avoid; }
+        thead { display: table-header-group; }
       </style>
     </head>
     <body>
       ${buildHeaderHtml(settings.printDocs)}
+      
       <h1>АКТ ОТПРАВКИ НА ПОВЕРКУ</h1>
       <div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
-      <div class="meta">
-        <div>Дата отправки: <b>${formatDate(sentDate)}</b></div>
-        <div>Количество приборов: <b>${sendItems.length}</b></div>
-        <div>Организация: <b>ФБУ «Красноярский ЦСМ»</b></div>
-        <div>Дата печати: <b>${today}</b></div>
-      </div>
+      
       <table>
         <thead><tr><th style="width:5%;text-align:center;">№</th>${headerCells}<th style="width:10%;">Прим.</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      ${note ? `<div class="meta" style="margin-top:15px;"><b>Примечание:</b> ${esc(note)}</div>` : ''}
+      
       <div class="footer">
-        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
-        <div style="margin-top:6px;">Подпись: _______________</div>
-      </div>
-      <div class="signatures">
-        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Сдал (ФИО, подпись)</div></div>
-        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Принял (ФИО, подпись)</div></div>
+        <div class="footer-left">
+          <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+          <div>Дата отправки: <b>${formatDate(sentDate)}</b> · Количество приборов: <b>${sendItems.length}</b></div>
+          <div>Организация: <b>ФБУ «Красноярский ЦСМ»</b> · Дата печати: <b>${today}</b></div>
+          ${note ? `<div>Примечание: <b>${esc(note)}</b></div>` : ''}
+        </div>
+        <div class="footer-right">
+          Подпись: _______________
+        </div>
       </div>
     </body>
     </html>
   `);
   win.document.close();
+  win.document.title = "Акт отправки";
+  win.focus();
+  setTimeout(() => win.print(), 300);
   showToast('Окно печати открыто', 'success');
 }
 
@@ -786,6 +792,7 @@ async function printReturnAct() {
 
   const win = window.open('', '_blank');
   if (!win) { showToast('Разрешите всплывающие окна', 'error'); return; }
+  
   win.document.write(`
     <!DOCTYPE html>
     <html lang="ru">
@@ -793,51 +800,56 @@ async function printReturnAct() {
       <meta charset="UTF-8">
       <title>Акт возврата — ${today}</title>
       <style>
-        @page { size: A4 landscape; margin: 15mm 12mm; }
+        @page { size: A4 landscape; margin: 12mm 8mm; }
+        @media print { @page { margin: 12mm 8mm; } }
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; }
-        h1 { font-size: 15pt; text-align: center; margin: 0 0 6px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; margin: 0; }
+        
         .subtitle { font-size: 10pt; text-align: center; color: #64748b; margin-bottom: 20px; }
-        .meta { padding: 10px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 15px; font-size: 9.5pt; }
-        .meta div { margin-bottom: 3px; }
-        table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; }
-        th { background: #1e293b; color: #fff; padding: 8px 6px; text-align: left; font-size: 8.5pt; text-transform: uppercase; -webkit-print-color-adjust: exact; }
-        td { padding: 8px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-        tr:nth-child(even) td { background: #f8fafc; }
-        small { color: #94a3b8; font-size: 8pt; }
-        .footer { margin-top: 30px; font-size: 9.5pt; }
-        .signatures { margin-top: 40px; display: flex; justify-content: space-between; }
-        .sig-block { width: 45%; }
-        .sig-line { border-bottom: 1px solid #000; height: 30px; margin-bottom: 5px; }
-        .sig-label { font-size: 8.5pt; color: #64748b; text-align: center; }
+        h1 { font-size: 15pt; text-align: center; margin: 10px 0 4px; color: #1e293b; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; border: 1.5px solid #1e293b; }
+        th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border: 1px solid #1e293b; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        td { padding: 5px; border: 0.5px solid #94a3b8; vertical-align: top; }
+        tbody tr:nth-child(even) td { background: #f8fafc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        tbody td:first-child, thead th:first-child { border-left: 1.5px solid #1e293b; }
+        tbody td:last-child, thead th:last-child { border-right: 1.5px solid #1e293b; }
+        
+        .footer { margin-top: 20px; font-size: 8pt; color: #000; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #cbd5e1; padding-top: 8px; }
+        .footer-left { display: flex; flex-direction: column; gap: 4px; }
+        .footer-right { text-align: right; }
+        tr { page-break-inside: avoid; }
+        thead { display: table-header-group; }
       </style>
     </head>
     <body>
-     ${buildHeaderHtml(settings.printDocs)}
+      ${buildHeaderHtml(settings.printDocs)}
+      
       <h1>АКТ ВОЗВРАТА С ПОВЕРКИ</h1>
       <div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
-      <div class="meta">
-        <div>Дата поверки: <b>${formatDate(returnDate)}</b></div>
-        <div>Количество приборов: <b>${_bulkReturnIds.length}</b></div>
-        <div>Поверяющая организация: <b>${esc(org)}</b></div>
-        <div>Дата печати: <b>${today}</b></div>
-      </div>
+      
       <table>
         <thead><tr><th style="width:5%;text-align:center;">№</th>${headerCells}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      ${note ? `<div class="meta" style="margin-top:15px;"><b>Примечание:</b> ${esc(note)}</div>` : ''}
+      
       <div class="footer">
-        <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
-        <div style="margin-top:6px;">Подпись: _______________</div>
-      </div>
-      <div class="signatures">
-        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Сдал (ФИО, подпись)</div></div>
-        <div class="sig-block"><div class="sig-line"></div><div class="sig-label">Принял (ФИО, подпись)</div></div>
+        <div class="footer-left">
+          <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+          <div>Дата поверки: <b>${formatDate(returnDate)}</b> · Количество приборов: <b>${_bulkReturnIds.length}</b></div>
+          <div>Поверяющая организация: <b>${esc(org)}</b> · Дата печати: <b>${today}</b></div>
+          ${note ? `<div>Примечание: <b>${esc(note)}</b></div>` : ''}
+        </div>
+        <div class="footer-right">
+          Подпись: _______________
+        </div>
       </div>
     </body>
     </html>
   `);
   win.document.close();
+  win.document.title = "Акт возврата";
+  win.focus();
+  setTimeout(() => win.print(), 300);
   showToast('Окно печати открыто', 'success');
 }
