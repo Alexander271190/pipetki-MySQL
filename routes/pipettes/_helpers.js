@@ -182,8 +182,6 @@ async function findPipetteOrFail(executor, id, user, { forUpdate = false } = {})
 // Меняешь порядок/условия — меняй ТОЛЬКО здесь.
 // ═══════════════════════════════════════════════════════════════════
 function sqlComputedStatus(warnDays) {
-  // ⚠️ ТОЛЬКО числа, никогда не строки. Принудительный каст защищает
-  // от SQL-инъекции, если warnDays придёт из query/body.
   const n = Number(warnDays);
   const wd = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
   return `
@@ -193,6 +191,7 @@ function sqlComputedStatus(warnDays) {
       WHEN active = 0 THEN 'inactive'
       WHEN last_result = 'wip' THEN 'wip'
       WHEN last_calibration IS NULL OR \`interval\` IS NULL THEN 'unknown'
+      WHEN STR_TO_DATE(last_calibration, '%Y-%m-%d') IS NULL THEN 'unknown'
       WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < CURDATE() THEN 'danger'
       WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 'warn'
       ELSE 'ok'
@@ -202,7 +201,6 @@ function sqlComputedStatus(warnDays) {
 
 // Числовой порядок статусов (для ORDER BY)
 function sqlStatusOrder(warnDays) {
-  // ⚠️ ТОЛЬКО числа, никогда не строки
   const n = Number(warnDays);
   const wd = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
   return `
@@ -212,6 +210,7 @@ function sqlStatusOrder(warnDays) {
       WHEN active = 0 THEN 7
       WHEN last_result = 'wip' THEN 3
       WHEN last_calibration IS NULL OR \`interval\` IS NULL THEN 8
+      WHEN STR_TO_DATE(last_calibration, '%Y-%m-%d') IS NULL THEN 8
       WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < CURDATE() THEN 1
       WHEN DATE_ADD(STR_TO_DATE(last_calibration, '%Y-%m-%d'), INTERVAL \`interval\` MONTH) < DATE_ADD(CURDATE(), INTERVAL ${wd} DAY) THEN 4
       ELSE 6
