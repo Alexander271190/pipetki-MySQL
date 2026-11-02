@@ -190,10 +190,15 @@ async function exportToPDF() {
         <!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
         <title>Реестр пипеток — ${today}</title>
         <style>
+        .footer-left { display: flex; flex-direction: column; gap: 4px; }
+        .footer-right { text-align: right; white-space: nowrap; }
           @page { size: A4 landscape; margin: 12mm 8mm; }
+          @media print {
+            @page { margin: 12mm 8mm; }
+          }
           * { box-sizing: border-box; }
           body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; margin: 0; }
-          h1 { font-size: 14pt; margin: 0 0 4px; color: #1e293b; }
+           h1 { font-size: 14pt; margin: 0 0 4px; color: #1e293b; text-align: center; }
           .meta { font-size: 9pt; color: #64748b; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
           .meta b { color: #1e293b; }
           table { width: 100%; border-collapse: collapse; font-size: 8pt; border: 1.5px solid #1e293b; }
@@ -216,17 +221,24 @@ async function exportToPDF() {
         </style></head><body>
         ${buildHeaderHtml(settings.printDocs)}
         <h1>Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
-        <div class="meta">Дата: <b>${today}</b> · Записей: <b>${data.length}</b></div>
         <table>
           <thead><tr>${headerCells}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div class="footer">
-          <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
-          <div>Подпись: _______________</div>
+          <div class="footer-left">
+            <div>Документ сформировал: <b>${esc(userPosition)}, ${esc(user)}</b></div>
+            <div>Дата: <b>${today}</b> · Записей: <b>${data.length}</b></div>
+          </div>
+          <div class="footer-right">
+            Подпись: _______________
+          </div>
         </div>
         </body></html>`);
       win.document.close();
+      win.document.title = "Реестр оборудования"; 
+      win.focus();
+      setTimeout(() => win.print(), 300);
       showToast(`PDF готов: ${fields.length} полей, ${data.length} записей`, 'success');
     }
   );
