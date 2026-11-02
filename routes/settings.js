@@ -264,7 +264,7 @@ router.get('/export', authenticate, async (req, res) => {
         actSendEnabled: true,   actSendFields: [],
         actReturnEnabled: true, actReturnFields: [],
         historyEnabled: true,   historyFields: [],
-        headerEnabled: false, headerText: '', headerAlign: 'center',
+        headerEnabled: false, headerText: '', headerAlign: 'left',
       });
     }
     const r = rows[0];
@@ -279,7 +279,7 @@ router.get('/export', authenticate, async (req, res) => {
       historyFields:    db.safeParse(r.history_fields, []),
       headerEnabled:    r.header_enabled === 1,
       headerText:       r.header_text || '',
-      headerAlign:      r.header_align || 'center',
+     headerAlign:      r.header_align || 'left', 
     });
   } catch (e) { res.status(500).json({ error: 'Ошибка' }); }
 });
@@ -335,7 +335,7 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
         hasPermission: false,
         export: false, actSend: false, actReturn: false, history: false,
         exportFields: [], actSendFields: [], actReturnFields: [], historyFields: [],
-        headerEnabled: false, headerText: '', headerAlign: 'center',   
+        headerEnabled: false, headerText: '', headerAlign: 'left',   
         source: 'no_permission',
       });
     }
@@ -387,7 +387,7 @@ router.get('/print-documents/effective', authenticate, async (req, res) => {
     const headerConf = {
       headerEnabled: g.header_enabled === 1,
       headerText:    g.header_text || '',
-      headerAlign:   g.header_align || 'center',
+      headerAlign:   g.header_align || 'left',
     };
     res.json({
       hasPermission: true,
