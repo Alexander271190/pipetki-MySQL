@@ -357,10 +357,7 @@ function buildHeaderHtml(printDocs) {
     const size = isFirst ? '12pt' : '10pt';
     html += `<div style="font-weight: ${weight}; font-size: ${size};">${line}</div>`;
   });
-  
-  // Линия-разделитель под шапкой
-  html += `<div style="border-bottom: 1.5px solid #000; margin-top: 10px;"></div>`;
+    
   html += `</div>`;
-  
   return html;
 }
