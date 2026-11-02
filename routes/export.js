@@ -40,47 +40,46 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
 
     const COLS = Math.max(headers.length, 1);
 
-    // ── Шапка ──
-    if (mode === 'history' && meta) {
-      const titleRow = sheet.addRow([meta.title || 'История поверок']);
-      sheet.mergeCells(1, 1, 1, COLS);
-      titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
-      titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-      titleRow.height = 22;
+    // ── Шапка документа (настройки из export_settings) ──
+    const [headerRows] = await db.query(
+      'SELECT header_enabled, header_text, header_align FROM export_settings WHERE id = 1'
+    );
+    const hConf = headerRows[0] || { header_enabled: 0, header_text: '', header_align: 'left' };
 
-      sheet.addRow([`ID: ${meta.equipmentId || ''}`]).getCell(1).font = { bold: true };
-      sheet.addRow([`Модель: ${meta.model || ''}`]);
-      if (meta.manufacturer) sheet.addRow([`Производитель: ${meta.manufacturer}`]);
-      if (meta.serial)       sheet.addRow([`Серийный номер: ${meta.serial}`]);
-      if (meta.department)   sheet.addRow([`Отдел: ${meta.department}`]);
-      if (meta.period)       sheet.addRow([`Период: ${meta.period}`]);
-      sheet.addRow([`Записей: ${meta.recordCount ?? rows.length}`]);
-      sheet.addRow([]); // пустая строка-разделитель
+    const isHeaderOn = hConf.header_enabled === 1 && hConf.header_text && hConf.header_text.trim();
+    const align = hConf.header_align || 'left';
+    
+    // В Excel горизонтальное выравнивание: 'left', 'center', 'right'
+    const excelAlign = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left';
 
-    } else if (mode === 'registry' && meta) {
-      const titleRow = sheet.addRow([meta.title || 'Реестр оборудования']);
-      sheet.mergeCells(1, 1, 1, COLS);
-      titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
-      titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-      titleRow.height = 22;
-
-      // В шапке — только дата и число записей (без «Сформировал»)
-      const metaParts = [];
-      if (meta.date)                metaParts.push(`Дата: ${meta.date}`);
-      if (meta.recordCount != null) metaParts.push(`Записей: ${meta.recordCount}`);
-      if (metaParts.length) {
-        sheet.addRow([metaParts.join('  ·  ')]);
-      }
-      sheet.addRow([]); // пустая строка-разделитель
-
-    } else {
-      const titleRow = sheet.addRow([title || 'Реестр оборудования']);
-      sheet.mergeCells(1, 1, 1, COLS);
-      titleRow.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
-      titleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-      titleRow.height = 22;
+    if (isHeaderOn) {
+      const lines = hConf.header_text.split('\n').map(l => l.trim()).filter(Boolean);
+      lines.forEach((line, idx) => {
+        const r = sheet.addRow([line]);
+        sheet.mergeCells(r.number, 1, r.number, COLS);
+        const cell = r.getCell(1);
+        cell.font = { bold: idx === 0, size: idx === 0 ? 12 : 10, color: { argb: 'FF000000' } };
+        cell.alignment = { horizontal: excelAlign, vertical: 'middle' };
+      });
+      // Отступ после шапки
       sheet.addRow([]);
     }
+
+    // ── Заголовок документа (по центру) ──
+    let docTitle = '';
+    if (mode === 'history' && meta) docTitle = meta.title || 'История поверок';
+    else if (mode === 'registry' && meta) docTitle = meta.title || 'Реестр оборудования';
+    else docTitle = title || 'Реестр оборудования';
+
+    const titleRow = sheet.addRow([docTitle]);
+    sheet.mergeCells(titleRow.number, 1, titleRow.number, COLS);
+    const titleCell = titleRow.getCell(1);
+    titleCell.font = { size: 14, bold: true, color: { argb: 'FF1E293B' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' }; // <-- По центру
+    titleRow.height = 22;
+
+    sheet.addRow([]); 
+    
     // ── Строка заголовков таблицы ──
     const headerRow = sheet.addRow(headers);
     headerRow.eachCell(cell => {
@@ -118,52 +117,77 @@ router.post('/xlsx', authenticate, requirePermission('export_data'), async (req,
       lastDataRow = r;
     });
 
-    // ── Подвал: кто сформировал + подпись ──
+        // ── Подвал: дата, количество, кто сформировал + подпись ──
     if (mode && meta) {
-      // Отступ ~2.1 см от последней записи (60pt)
+      // Отступ от последней записи (60pt)
       const spacer = sheet.addRow([]);
       spacer.height = 60;
 
-      // Подвал: слева «Документ сформировал», справа «Подпись»
-      const footerRow = sheet.addRow([]);
-      footerRow.height = 20;
+      // Левая часть футера (2 строки)
+      const footerRow1 = sheet.addRow([]);
+      footerRow1.height = 20;
+      
+      const footerRow2 = sheet.addRow([]);
+      footerRow2.height = 20;
 
       const userText = `Документ сформировал: ${(meta.userPosition || '').trim()}, ${(meta.user || '').trim()}`;
+      
+        // Для реестра: дата. Для истории: период.
+      let metaText = '';
+      
+        if (mode === 'history' && meta) {
+        if (meta.period) metaText += `Период: ${meta.period}`;
+        if (meta.recordCount != null) metaText += `${metaText ? ' · ' : ''}Записей: ${meta.recordCount}`;
+      } else if (meta) {
+        if (meta.date) metaText += `Дата: ${meta.date}`;
+        if (meta.recordCount != null) metaText += `${metaText ? ' · ' : ''}Записей: ${meta.recordCount}`;
+      }
+
       const signText = 'Подпись: _______________';
 
       if (COLS >= 2) {
-        // Левая часть — «Документ сформировал» (первая половина колонок)
         const midCol = Math.ceil(COLS / 2);
-        sheet.mergeCells(footerRow.number, 1, footerRow.number, midCol);
-        const leftCell = footerRow.getCell(1);
-        leftCell.value = userText;
-        leftCell.font = { size: 10, bold: true, color: { argb: 'FF1E293B' } };
-        leftCell.alignment = { horizontal: 'left', vertical: 'middle' };
+        
+        // Строка 1: Документ сформировал (слева) | Подпись (справа)
+        sheet.mergeCells(footerRow1.number, 1, footerRow1.number, midCol);
+        const leftCell1 = footerRow1.getCell(1);
+        leftCell1.value = userText;
+        leftCell1.font = { size: 10, bold: true, color: { argb: 'FF1E293B' } };
+        leftCell1.alignment = { horizontal: 'left', vertical: 'middle' };
 
-        // Правая часть — «Подпись» (вторая половина колонок)
         if (midCol + 1 <= COLS) {
-          sheet.mergeCells(footerRow.number, midCol + 1, footerRow.number, COLS);
-          const rightCell = footerRow.getCell(midCol + 1);
+          sheet.mergeCells(footerRow1.number, midCol + 1, footerRow1.number, COLS);
+          const rightCell = footerRow1.getCell(midCol + 1);
           rightCell.value = signText;
           rightCell.font = { size: 10 };
           rightCell.alignment = { horizontal: 'right', vertical: 'middle' };
         }
+
+        // Строка 2: Дата и записи (слева)
+        if (metaText) {
+          sheet.mergeCells(footerRow2.number, 1, footerRow2.number, COLS);
+          const leftCell2 = footerRow2.getCell(1);
+          leftCell2.value = metaText;
+          leftCell2.font = { size: 9, color: { argb: 'FF64748B' } }; // Серый цвет
+          leftCell2.alignment = { horizontal: 'left', vertical: 'middle' };
+        }
       } else {
-        // Fallback: одна колонка — печатаем в одной ячейке
-        const cell = footerRow.getCell(1);
-        cell.value = `${userText}\n\n${signText}`;
+        // Fallback: одна колонка
+        const cell = footerRow1.getCell(1);
+        cell.value = `${userText}\n${metaText || ''}\n\n${signText}`;
         cell.font = { size: 10, bold: true, color: { argb: 'FF1E293B' } };
         cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
       }
 
+      // Перенос страницы для больших таблиц (как было)
       const FORCE_BREAK_THRESHOLD = 40;
       if (lastDataRow && rows.length > FORCE_BREAK_THRESHOLD) {
         lastDataRow.addPageBreak();
       }
-
-      sheet.addRow([]);
+      
+      sheet.addRow([]); // Пустая строка в самом конце
     }
-
+    
     // ── Автоширина столбцов (узкие, чтобы все влезли по ширине) ──
     sheet.columns.forEach((col, i) => {
       let max = String(headers[i] || '').length;
