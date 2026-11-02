@@ -344,7 +344,7 @@ function allowReplacement(equipmentType) {
 function buildHeaderHtml(printDocs) {
   if (!printDocs || !printDocs.headerEnabled || !printDocs.headerText) return '';
   
-  const align = printDocs.headerAlign || 'center';
+  const align = printDocs.headerAlign || 'left';
   // Разбиваем текст на строки, убираем пустые
   const lines = printDocs.headerText.split('\n').map(l => esc(l.trim())).filter(Boolean);
   if (lines.length === 0) return '';
