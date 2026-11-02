@@ -88,13 +88,24 @@ function mapHeader(h, customFields = []) {
 // ============================================================
 // ПАРСЕРЫ ЗНАЧЕНИЙ (не менялись)
 // ============================================================
+function _validYMD(y, m, d) {
+  const yN = parseInt(y, 10), mN = parseInt(m, 10), dN = parseInt(d, 10);
+  if (!Number.isFinite(yN) || !Number.isFinite(mN) || !Number.isFinite(dN)) return '';
+  if (yN < 1900 || yN > 2200) return '';
+  if (mN < 1 || mN > 12 || dN < 1 || dN > 31) return '';
+  const test = new Date(yN, mN - 1, dN);
+  if (test.getFullYear() !== yN || test.getMonth() !== mN - 1 || test.getDate() !== dN) return '';
+  return `${yN}-${String(mN).padStart(2, '0')}-${String(dN).padStart(2, '0')}`;
+}
+
 function parseDate(val) {
   if (val === undefined || val === null || val === '') return '';
   if (val instanceof Date) {
     const d = val;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return _validYMD(d.getFullYear(), d.getMonth() + 1, d.getDate());
   }
   const s = String(val).trim();
+  
   let m = s.match(/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})$/);
   if (m) {
     let y = m[3];
@@ -102,14 +113,17 @@ function parseDate(val) {
     const g1 = parseInt(m[1], 10);
     const g2 = parseInt(m[2], 10);
     if (g2 > 12 && g1 <= 12) {
-      return `${y}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+      return _validYMD(y, m[1], m[2]);
     }
-    return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return _validYMD(y, m[2], m[1]);
   }
+  
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  if (m) return _validYMD(m[1], m[2], m[3]);
+  
   m = s.match(/^(\d{4})[.\/](\d{1,2})[.\/](\d{1,2})/);
-  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  if (m) return _validYMD(m[1], m[2], m[3]);
+  
   return '';
 }
 
@@ -290,7 +304,15 @@ function parseJson(buffer) {
 router.post('/', authenticate, requirePermission('import_data'), async (req, res) => {
   try {
     const { file, filename } = req.body;
-    if (!file) return res.status(400).json({ error: 'Файл не передан' });
+     if (!file) return res.status(400).json({ error: 'Файл не передан' });
+
+    
+    const extEarly = (filename || '').toLowerCase().split('.').pop();
+    if (extEarly === 'xls') {
+      return res.status(400).json({
+        error: 'Формат .xls не поддерживается. Пересохраните файл как .xlsx (Файл → Сохранить как → Книга Excel (*.xlsx))'
+      });
+    }
 
     const buffer = Buffer.from(file, 'base64');
     const ext = (filename || '').toLowerCase().split('.').pop();
@@ -440,9 +462,14 @@ router.post('/', authenticate, requirePermission('import_data'), async (req, res
           idGenQueue.set(prefix, (idGenQueue.get(prefix) || 0) + 1);
         }
 
-                const lastCal = parseDate(obj.lastCalibration);
-        const result = normalizeResult(obj.result);
+        const rawDate = obj.lastCalibration;
+        const lastCal = parseDate(rawDate);
 
+        if (rawDate && String(rawDate).trim() && !lastCal) {
+        skipped.push(`Строка ${originalIdx + 2}: некорректная дата «${String(rawDate).trim()}»`);
+        continue;
+        }
+        const result = normalizeResult(obj.result);
         //  Валидация длины строковых полей — до батча, чтобы одна
         // слишком длинная строка не роняла весь batch (ER_DATA_TOO_LONG)
         // и не уводила его в медленный fallback.
