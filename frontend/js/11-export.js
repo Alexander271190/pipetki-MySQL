@@ -214,6 +214,7 @@ async function exportToPDF() {
           tr { page-break-inside: avoid; }
           thead { display: table-header-group; }
         </style></head><body>
+        ${buildHeaderHtml(settings.printDocs)}
         <h1>Реестр оборудования — КГБУЗ «Краевая клиническая больница», КДЛ</h1>
         <div class="meta">Дата: <b>${today}</b> · Записей: <b>${data.length}</b></div>
         <table>
@@ -423,6 +424,7 @@ async function exportHistoryToPDF() {
       tr { page-break-inside: avoid; }
       thead { display: table-header-group; }
     </style></head><body>
+    ${buildHeaderHtml(settings.printDocs)}
     <h1>История поверок оборудования</h1>
     <div class="meta">Дата формирования: <b>${today}</b></div>
     <div class="info">
