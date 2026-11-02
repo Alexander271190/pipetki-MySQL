@@ -589,6 +589,34 @@ async function renderExportSettings() {
       <p style="color:#64748b;font-size:.88rem;margin:0 0 14px;">
         Настройте, какие документы доступны пользователям и какие поля в них попадут.
       </p>
+        <div style="margin-bottom: 20px; padding: 14px; background: var(--card-alt); border-radius: 8px; border: 1px solid var(--border);">
+        <h4 style="margin-top: 0; margin-bottom: 12px; font-size: .95rem; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-file-invoice"></i> Официальный бланк (Шапка документов)
+        </h4>
+        
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:12px; font-weight: 500;">
+          <input type="checkbox" id="print-header-enabled" ${settings.headerEnabled ? 'checked' : ''} onchange="document.getElementById('print-header-controls').style.display = this.checked ? 'block' : 'none';" style="width:16px;height:16px;">
+          Включить шапку в актах и реестрах
+        </label>
+
+        <div id="print-header-controls" style="display:${settings.headerEnabled ? 'block' : 'none'};">
+          <div class="form-row" style="display: flex; gap: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label>Текст шапки (первая строка будет жирной)</label>
+              <textarea id="print-header-text" rows="4" placeholder="МИНИСТЕРСТВО ЗДРАВООХРАНЕНИЯ&#10;КГБУЗ «Краевая клиническая больница»&#10;Клинико-диагностическая лаборатория" style="width:100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-hard); font-family: inherit; resize: vertical;">${esc(settings.headerText || '')}</textarea>
+            </div>
+            <div class="form-group" style="width: 180px;">
+              <label>Выравнивание</label>
+              <select id="print-header-align" style="width:100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-hard); background: var(--card); color: var(--text);">
+                <option value="center" ${settings.headerAlign === 'center' ? 'selected' : ''}>По центру</option>
+                <option value="left" ${settings.headerAlign === 'left' ? 'selected' : ''}>По левому краю</option>
+                <option value="right" ${settings.headerAlign === 'right' ? 'selected' : ''}>По правому краю</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+     
       <div class="prefs-tabs" style="margin-bottom:16px;">
         <button class="prefs-tab active" onclick="switchPrintTab('export', this)">📄 Печать реестра</button>
         <button class="prefs-tab" onclick="switchPrintTab('actSend', this)">📤 Печать акта отправки</button>
@@ -798,6 +826,9 @@ function onPrintFieldChange(tab, fieldId, checked) {
 
 async function savePrintSettings() {
   const s = window._printSettingsDraft;
+  s.headerEnabled = document.getElementById('print-header-enabled').checked;
+  s.headerText = document.getElementById('print-header-text').value;
+  s.headerAlign = document.getElementById('print-header-align').value;
   try {
     await UI.saveAction({
       successMsg: 'Настройки печати сохранены',
