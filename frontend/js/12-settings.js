@@ -931,7 +931,7 @@ function renderEquipmentTypesTable() {
   <tr>
     <td>${UI.moveBtns(i, _equipmentTypesDraft.length, 'moveEquipmentType')}</td>
     <td><input type="text" value="${esc(t.label)}" oninput="updateEquipmentType(${i}, 'label', this.value)"></td>
-    <td><input type="text" value="${esc(t.prefix || '')}" maxlength="4" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())"></td>
+    <td><input type="text" value="${esc(t.prefix || '')}" maxlength="10" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())"></td>
     <td><input type="number" value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}" min="1" max="120" style="text-align:center;" oninput="updateEquipmentType(${i}, 'interval', this.value)"></td>
      <td>
       <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
@@ -955,6 +955,8 @@ function updateEquipmentType(idx, field, value) {
     _equipmentTypesDraft[idx][field] = (Number.isFinite(n) && n >= 1 && n <= 120) ? n : 12;
   } else if (field === 'allowReplacement') {
     _equipmentTypesDraft[idx][field] = !!value;
+  } else if (field === 'prefix') {
+    _equipmentTypesDraft[idx][field] = String(value || '').trim().toUpperCase();
   } else {
     _equipmentTypesDraft[idx][field] = String(value).trim();
   }
@@ -985,7 +987,7 @@ async function addEquipmentType() {
   _equipmentTypesDraft.push({ 
     value: finalValue, 
     label: label.trim(), 
-    prefix: 'EQ', 
+    prefix: generateUniqueTypePrefix(), 
     calibrationPlace: 'internal', 
     interval: 12, 
     allowReplacement: true
@@ -1009,7 +1011,15 @@ function updateEquipmentTypesWarning() {
   if (!warn) return;
   const problems = [];
   const values = _equipmentTypesDraft.map(t => t.value);
+  
   if (values.filter((v, i) => values.indexOf(v) !== i).length > 0) problems.push('Дубли value');
+  const prefixes = _equipmentTypesDraft
+    .map(t => String(t.prefix || '').trim().toUpperCase())
+    .filter(Boolean);
+  if (prefixes.filter((v, i) => prefixes.indexOf(v) !== i).length > 0) {
+    problems.push('Дубли prefix');
+  }
+  
   if (_equipmentTypesDraft.some(t => !t.label || !t.label.trim())) problems.push('Пустой label');
   
   if (problems.length > 0) {
@@ -1020,10 +1030,36 @@ function updateEquipmentTypesWarning() {
   }
 }
 
+// Уникальный префикс для нового типа: EQ → EQ1 → EQ2 → …
+function generateUniqueTypePrefix() {
+  const taken = new Set(
+    _equipmentTypesDraft
+      .map(t => String(t.prefix || '').trim().toUpperCase())
+      .filter(Boolean)
+  );
+  if (!taken.has('EQ')) return 'EQ';
+  let i = 1;
+  while (taken.has(`EQ${i}`)) i++;
+  return `EQ${i}`;
+}
+
 async function saveEquipmentTypes() {
+
+   _equipmentTypesDraft.forEach(t => {
+    t.prefix = String(t.prefix || '').trim().toUpperCase();
+  });
+  
   const values = _equipmentTypesDraft.map(t => t.value);
   if (values.filter((v, i) => values.indexOf(v) !== i).length > 0) { showToast('Есть дубли value', 'error'); return; }
   if (_equipmentTypesDraft.some(t => !t.label || !t.label.trim())) { showToast('Заполните label', 'error'); return; }
+
+   const prefixes = _equipmentTypesDraft
+    .map(t => String(t.prefix || '').trim().toUpperCase())
+    .filter(Boolean);
+  if (prefixes.filter((v, i) => prefixes.indexOf(v) !== i).length > 0) {
+    showToast('Есть дубли prefix — префиксы должны быть уникальны', 'error');
+    return;
+  }
   
   _equipmentTypesDraft.forEach(t => {
     if (!t.calibrationPlace) t.calibrationPlace = 'internal';
