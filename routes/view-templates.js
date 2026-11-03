@@ -135,4 +135,20 @@ router.post('/:id/apply-to-user/:userId', authenticate, requireAdmin, async (req
   }
 });
 
+// DELETE /api/view-templates/apply-to-user/:userId — сбросить шаблон у пользователя
+router.delete('/apply-to-user/:userId', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const [user] = await db.query('SELECT id FROM users WHERE id = ?', [userId]);
+    if (!user.length) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    await db.query('UPDATE users SET view_template_id = NULL WHERE id = ?', [userId]);
+    await logAction(req, 'Сброс шаблона вида', `Пользователь ${userId}`);
+    res.json({ message: 'Шаблон сброшен' });
+  } catch (e) {
+    console.error('DELETE /view-templates/apply-to-user:', e);
+    res.status(500).json({ error: 'Ошибка сброса' });
+  }
+});
+
 module.exports = router;
