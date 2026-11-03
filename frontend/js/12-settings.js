@@ -1046,7 +1046,7 @@ function generateUniqueTypePrefix() {
 
 async function saveEquipmentTypes() {
 
-   _equipmentTypesDraft.forEach(t => {
+  _equipmentTypesDraft.forEach(t => {
     t.prefix = String(t.prefix || '').trim().toUpperCase();
   });
   
@@ -1054,9 +1054,8 @@ async function saveEquipmentTypes() {
   if (values.filter((v, i) => values.indexOf(v) !== i).length > 0) { showToast('Есть дубли value', 'error'); return; }
   if (_equipmentTypesDraft.some(t => !t.label || !t.label.trim())) { showToast('Заполните label', 'error'); return; }
 
-   const prefixes = _equipmentTypesDraft
-    .map(t => String(t.prefix || '').trim().toUpperCase())
-    .filter(Boolean);
+  // prefix уже нормализован выше — второй trim/toUpperCase не нужен
+  const prefixes = _equipmentTypesDraft.map(t => t.prefix).filter(Boolean);
   if (prefixes.filter((v, i) => prefixes.indexOf(v) !== i).length > 0) {
     showToast('Есть дубли prefix — префиксы должны быть уникальны', 'error');
     return;
