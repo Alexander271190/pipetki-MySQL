@@ -351,9 +351,7 @@ td {
   color: #1f2937;
   border: 1px solid var(--border-soft);
   background: var(--card);
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
+ }
 
 td.col-checkbox, th.col-checkbox { padding: 6px 8px; text-align: center; border-left: none; }
 tbody tr:nth-child(even) td { background: var(--card-alt); }
