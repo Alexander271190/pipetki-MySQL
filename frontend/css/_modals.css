@@ -578,15 +578,3 @@ html[data-theme="dark"] .modal::-webkit-scrollbar-thumb:hover { background: rgba
   }
 }
 
-/* ============================================================
-   ЗАЩИТА ОТ ПЕРЕПОЛНЕНИЯ ДЛИННЫМИ СТРОКАМИ
-   ============================================================ */
-.modal .info-grid span,
-.modal .field-settings-table td,
-.modal .log-table td,
-.modal .bc-printers-table td,
-.modal .help-admin-table td,
-.modal td[data-label] {
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
