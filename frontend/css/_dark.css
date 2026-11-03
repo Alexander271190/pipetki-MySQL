@@ -504,3 +504,18 @@ html[data-theme="dark"] .modal textarea:focus {
   border-color: #818cf8 !important;
   box-shadow: 0 0 0 3px rgba(129, 140, 248, .2) !important;
 }
+
+/* ============================================================
+   БЛОК «ШАБЛОН ВИДА» — ТЁМНАЯ ТЕМА
+   ============================================================ */
+html[data-theme="dark"] .user-view-template-block {
+  background: rgba(14, 165, 233, .12);
+  border-left-color: #0ea5e9;
+}
+html[data-theme="dark"] .user-view-template-title {
+  color: #93c5fd;
+}
+
+html[data-theme="dark"] .user-view-template-hint {
+  color: #94a3b8;
+}
