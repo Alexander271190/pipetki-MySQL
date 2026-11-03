@@ -772,3 +772,48 @@ html[data-theme="dark"] .help-link-missing:hover {
   background: #78350f !important;
   border-color: #d97706 !important;
 }
+
+/* ============================================================
+   БЛОК «ШАБЛОН ВИДА» В МОДАЛКЕ ПОЛЬЗОВАТЕЛЯ
+   ============================================================ */
+.user-view-template-block {
+  margin-top: 16px;
+  padding: 14px;
+  background: #f0f9ff;
+  border-left: 3px solid #0ea5e9;
+  border-radius: 8px;
+}
+.user-view-template-title {
+  font-weight: 600;
+  font-size: .85rem;
+  color: #0369a1;
+  margin-bottom: 8px;
+}
+.user-view-template-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.user-view-template-select {
+  flex: 1;
+  min-width: 200px;
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #1e293b;
+  font-family: inherit;
+  font-size: .9rem;
+  outline: none;
+}
+.user-view-template-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+.user-view-template-hint {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: .78rem;
+}
