@@ -956,9 +956,8 @@ function updateEquipmentType(idx, field, value) {
   } else if (field === 'allowReplacement') {
     _equipmentTypesDraft[idx][field] = !!value;
   } else if (field === 'prefix') {
-     _equipmentTypesDraft[idx][field] = String(value || '')
-    .trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  }
+    _equipmentTypesDraft[idx][field] = String(value || '')
+      .trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   } else {
     _equipmentTypesDraft[idx][field] = String(value).trim();
   }
