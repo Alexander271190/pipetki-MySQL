@@ -532,14 +532,17 @@ router.put('/equipment-types', authenticate, requireAdmin, async (req, res) => {
         return res.status(400).json({ error: `Пустой label у ${t.value}` });
       }
 
-      if (!t.prefix || !t.prefix.trim()) {
-        t.prefix = 'EQ';
-      } else {
+    if (!t.prefix || !t.prefix.trim()) {
+         t.prefix = 'EQ';
+       } else {
         t.prefix = t.prefix.trim().toUpperCase();
-      }
-      if (t.prefix.length > 10) {
-        return res.status(400).json({ error: `Слишком длинный prefix у ${t.value}` });
-      }
+       }
+
+    if (!/^[A-Z0-9]{1,10}$/.test(t.prefix)) {
+     return res.status(400).json({
+       error: `Некорректный префикс «${t.prefix}» у типа «${t.value}» — разрешены A-Z и 0-9, максимум 10 символов`
+        });
+        }
 
       // 🛡️ Место поверки: external | internal
       if (!t.calibrationPlace || !['external', 'internal'].includes(t.calibrationPlace)) {
@@ -564,6 +567,20 @@ router.put('/equipment-types', authenticate, requireAdmin, async (req, res) => {
         return res.status(400).json({ error: `Дубль value: ${t.value}` });
       }
       seen.add(t.value);
+    }
+
+        // ──────────────────────────────────────────────────────────
+       // ПРОВЕРКА ДУБЛЕЙ PREFIX
+       // ──────────────────────────────────────────────────────────
+    const prefixSeen = new Map();  // prefix → value типа, у которого он уже встречался
+    for (const t of types) {
+      const p = String(t.prefix || '').trim().toUpperCase();
+      if (prefixSeen.has(p)) {
+        return res.status(400).json({
+          error: `Дубли prefix: «${p}» у типов «${prefixSeen.get(p)}» и «${t.value}»`
+        });
+      }
+      prefixSeen.set(p, t.value);
     }
 
     // ──────────────────────────────────────────────────────────
