@@ -70,7 +70,7 @@ function computeBarcodeValue(p) {
 async function maybeRegenerateId(oldId, oldType, newType, conn) {
   if (!newType || newType === oldType) return null;
 
-  const m = String(oldId).match(/^([A-Za-z]+)-(\d+)$/);
+  const m = String(oldId).match(/^([A-Z0-9]+)-(\d+)$/);
   if (!m) return null;
 
   const oldPrefix = m[1].toUpperCase();
