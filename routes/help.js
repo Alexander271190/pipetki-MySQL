@@ -1,7 +1,6 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const multer = require('multer');
 const db = require('../db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
@@ -39,20 +38,9 @@ const upload = multer({
 
 // Обёртка над upload.single: конвертирует MulterError и fileFilter-Error
 // в аккуратные 400. Иначе неверный тип файла или превышение 20 МБ дают 500.
-function uploadSingleFile(req, res, next) {
-  upload.single('file')(req, res, (err) => {
-    if (!err) return next();
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Файл больше 20 МБ' });
-    }
-    if (err instanceof multer.MulterError) {
-      return res.status(400).json({ error: 'Ошибка загрузки файла: ' + err.message });
-    }
-    const status = Number(err.status) || 500;
-    return res.status(status).json({ error: err.message || 'Ошибка загрузки' });
-  });
-}
-
+const { wrapSingleUpload } = require('../middleware/upload-wrapper');
+const uploadSingleFile = wrapSingleUpload(upload, 'file');
+   
 let _helpCache = null;
 let _helpCacheTime = 0;
 const HELP_CACHE_TTL = 60_000;
