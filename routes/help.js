@@ -201,10 +201,24 @@ router.delete('/:slug', authenticate, requireAdmin, async (req, res) => {
   try {
     const [ex] = await db.query('SELECT title, file_path FROM help_docs WHERE slug = ?', [req.params.slug]);
     if (!ex.length) return res.status(404).json({ error: 'Не найден' });
+   // 1. Удаляем по file_path из БД (основной путь)
     if (ex[0].file_path) {
-      const absolutePath = path.join(__dirname, '..', 'frontend', ex[0].file_path);
-      if (fs.existsSync(absolutePath)) fs.unlinkSync(absolutePath);
+     const absolutePath = path.join(__dirname, '..', 'frontend', ex[0].file_path);
+    if (fs.existsSync(absolutePath)) {
+     try { fs.unlinkSync(absolutePath); } catch (e) { console.warn('unlink:', e.message); }
+   }
+ }
+
+// 2. 🆕 Дополнительно сканируем help-defaults/ на <slug>.pdf|.docx|.doc
+//    На случай, если file_path в БД «съехал» или файл сохранён с другим расширением
+try {
+  for (const ext of ['.pdf', '.docx', '.doc']) {
+    const candidate = path.join(UPLOAD_DIR, `${req.params.slug}${ext}`);
+    if (fs.existsSync(candidate)) {
+      try { fs.unlinkSync(candidate); } catch (e) {}
     }
+  }
+} catch (e) {}
     await db.query('DELETE FROM help_docs WHERE slug = ?', [req.params.slug]);
     invalidateHelpCache();
     res.json({ message: 'Удалён' });
