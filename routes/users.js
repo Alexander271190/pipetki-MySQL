@@ -146,7 +146,7 @@ router.get('/', authenticate, requireAnyPermission(['manage_users']), async (req
   const [users] = await db.query(`
     SELECT u.id, u.login, u.full_name, u.position, u.department, u.role,
            u.only_own_department, u.extra_permissions, u.is_acting, u.acting_for_id,
-           u.must_change_password, r.name AS role_name, r.is_admin AS role_is_admin
+           u.must_change_password, u.view_template_id, r.name AS role_name, r.is_admin AS role_is_admin
     FROM users u
     LEFT JOIN roles r ON r.value = u.role
   `);
@@ -179,7 +179,8 @@ router.get('/', authenticate, requireAnyPermission(['manage_users']), async (req
     actingForName:     u.acting_for_id && actingById[u.acting_for_id]
       ? actingById[u.acting_for_id].fullName : null,
     extraPermissions:  db.safeParse(u.extra_permissions, []),
-    mustChangePassword: !!u.must_change_password
+    mustChangePassword: !!u.must_change_password,
+    viewTemplateId:    u.view_template_id || null
   })));
 });
 
