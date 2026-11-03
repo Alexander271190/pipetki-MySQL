@@ -768,6 +768,7 @@ async function openUserViewModal(userId, userName) {
   document.getElementById('user-view-tab-documents').style.display = 'none';
   UI.modal.open('user-view-modal');
   loadCopyViewUserList(userId);
+  loadViewTemplatesForSelect(userId);
 }
 
 function closeUserViewModal() {
@@ -825,6 +826,24 @@ function renderUserViewContent() {
       </div>
     </div>
   `;
+
+  html += `
+  <div style="margin-top:16px;padding:14px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:8px;">
+    <div style="font-weight:600;font-size:.85rem;color:#0369a1;margin-bottom:8px;">
+      <i class="fa-solid fa-clone"></i> Шаблон вида
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select id="user-view-template-select" style="flex:1;min-width:200px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:6px;">
+        <option value="">— без шаблона —</option>
+      </select>
+      <button type="button" class="btn btn-primary btn-sm" onclick="applyViewTemplateToUser()">Применить</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="resetViewTemplateFromUser()">Сбросить</button>
+    </div>
+    <small style="display:block;margin-top:6px;color:#64748b;font-size:.78rem;">
+      Шаблон применяется, если у пользователя нет индивидуальных настроек полей.
+    </small>
+  </div>
+`;
 
   html += `
     <div class="prefs-hint">
@@ -1471,5 +1490,62 @@ async function saveQuickRole() {
     showToast(e.message, 'error');
     btn.disabled = false; 
     btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Создать';
+  }
+}
+
+// ============================================================
+// ШАБЛОНЫ ВИДА В МОДАЛКЕ «НАСТРОИТЬ ВИДИМЫЕ ПОЛЯ»
+// ============================================================
+async function loadViewTemplatesForSelect(userId) {
+  const sel = document.getElementById('user-view-template-select');
+  if (!sel) return;
+
+  try {
+    const templates = await apiRequest('/view-templates');
+    const users = await getCachedUsers(true);
+    const user = users.find(u => u.id === userId);
+    const currentTplId = user?.viewTemplateId || '';
+
+    sel.innerHTML = '<option value="">— без шаблона —</option>' +
+      templates.map(t =>
+        `<option value="${t.id}" ${String(t.id) === String(currentTplId) ? 'selected' : ''}>${esc(t.name)}${t.isDefault ? ' ⭐' : ''}</option>`
+      ).join('');
+  } catch (e) {
+    console.warn('loadViewTemplatesForSelect:', e.message);
+  }
+}
+
+async function applyViewTemplateToUser() {
+  const sel = document.getElementById('user-view-template-select');
+  if (!sel || !_userViewUserId) return;
+  const tplId = sel.value;
+  if (!tplId) {
+    showToast('Выберите шаблон', 'error');
+    return;
+  }
+  try {
+    await apiRequest(`/view-templates/${tplId}/apply-to-user/${_userViewUserId}`, 'POST', {});
+    showToast('Шаблон применён', 'success');
+    invalidateUsersCache();
+  } catch (e) {
+    showToast(e.message || 'Ошибка применения', 'error');
+  }
+}
+
+async function resetViewTemplateFromUser() {
+  if (!_userViewUserId) return;
+  const ok = await showConfirm('Сбросить шаблон у этого пользователя?', {
+    title: 'Сброс шаблона',
+    okText: 'Сбросить',
+    okClass: 'btn-warning',
+  });
+  if (!ok) return;
+  try {
+    await apiRequest(`/view-templates/apply-to-user/${_userViewUserId}`, 'DELETE');
+    showToast('Шаблон сброшен', 'success');
+    invalidateUsersCache();
+    await loadViewTemplatesForSelect(_userViewUserId);
+  } catch (e) {
+    showToast(e.message || 'Ошибка сброса', 'error');
   }
 }
