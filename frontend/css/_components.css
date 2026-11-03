@@ -798,22 +798,25 @@ html[data-theme="dark"] .help-link-missing:hover {
 .user-view-template-select {
   flex: 1;
   min-width: 200px;
-  padding: 7px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #1e293b;
+  padding: 9px 12px;
+  border: 1px solid var(--border-hard);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text-strong);
   font-family: inherit;
   font-size: .9rem;
   outline: none;
+  transition: border .2s;
+  box-sizing: border-box;
 }
 .user-view-template-select:focus {
   border-color: #6366f1;
   box-shadow: 0 0 0 3px rgba(99,102,241,.15);
 }
+
 .user-view-template-hint {
   display: block;
   margin-top: 6px;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: .78rem;
 }
