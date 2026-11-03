@@ -570,8 +570,8 @@ router.put('/equipment-types', authenticate, requireAdmin, async (req, res) => {
     }
 
         // ──────────────────────────────────────────────────────────
-       // ПРОВЕРКА ДУБЛЕЙ PREFIX
-       // ──────────────────────────────────────────────────────────
+        // ПРОВЕРКА ДУБЛЕЙ PREFIX
+        // ──────────────────────────────────────────────────────────
     const prefixSeen = new Map();  // prefix → value типа, у которого он уже встречался
     for (const t of types) {
       const p = String(t.prefix || '').trim().toUpperCase();
