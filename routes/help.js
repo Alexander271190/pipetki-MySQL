@@ -27,9 +27,31 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowed = ['.pdf', '.docx', '.doc'];
     const ext = path.extname(file.originalname).toLowerCase();
-    cb(allowed.includes(ext) ? null : new Error('Разрешены только PDF или Word'), allowed.includes(ext));
+    if (!allowed.includes(ext)) {
+      const err = new Error('Разрешены только PDF или Word (.pdf, .docx, .doc)');
+      err.status = 400;
+      err.code = 'invalid_file_type';
+      return cb(err, false);
+    }
+    cb(null, true);
   },
 });
+
+// Обёртка над upload.single: конвертирует MulterError и fileFilter-Error
+// в аккуратные 400. Иначе неверный тип файла или превышение 20 МБ дают 500.
+function uploadSingleFile(req, res, next) {
+  upload.single('file')(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Файл больше 20 МБ' });
+    }
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ error: 'Ошибка загрузки файла: ' + err.message });
+    }
+    const status = Number(err.status) || 500;
+    return res.status(status).json({ error: err.message || 'Ошибка загрузки' });
+  });
+}
 
 let _helpCache = null;
 let _helpCacheTime = 0;
@@ -106,7 +128,7 @@ function slugifyTitle(text) {
   return res || 'doc_' + Date.now().toString(36);
 }
 
-router.post('/upload', authenticate, requireAdmin, upload.single('file'), async (req, res) => {
+router.post('/upload', authenticate, requireAdmin, uploadSingleFile, async (req, res) => {
   try {
     let { slug, title, requiredPermissions, sortOrder, enabled } = req.body;
     if (!title) return res.status(400).json({ error: 'Заполните заголовок' });
