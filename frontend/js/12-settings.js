@@ -931,7 +931,7 @@ function renderEquipmentTypesTable() {
   <tr>
     <td>${UI.moveBtns(i, _equipmentTypesDraft.length, 'moveEquipmentType')}</td>
     <td><input type="text" value="${esc(t.label)}" oninput="updateEquipmentType(${i}, 'label', this.value)"></td>
-    <td><input type="text" value="${esc(t.prefix || '')}" maxlength="10" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase())"></td>
+    <td><input type="text" value="${esc(t.prefix || '')}" maxlength="10" style="text-align:center;text-transform:uppercase;" oninput="updateEquipmentType(${i}, 'prefix', this.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))"></td>
     <td><input type="number" value="${Number.isFinite(parseInt(t.interval, 10)) && parseInt(t.interval, 10) > 0 ? parseInt(t.interval, 10) : 12}" min="1" max="120" style="text-align:center;" oninput="updateEquipmentType(${i}, 'interval', this.value)"></td>
      <td>
       <select onchange="updateEquipmentType(${i}, 'calibrationPlace', this.value)">
