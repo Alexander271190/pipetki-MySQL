@@ -537,8 +537,7 @@ let _colLayoutSaveTimer = null;
 
 function attachColumnHandlers(th, colId) {
   th.draggable = true;
-  th.style.cursor = 'move';
-
+  
   // ── Drag ──
   th.addEventListener('dragstart', (e) => {
     if (_colResizeState) { e.preventDefault(); return; }
@@ -665,8 +664,7 @@ function saveColumnLayoutDebounced() {
       };
 
       await apiRequest('/settings/my-preferences', 'PUT', merged);
-      console.log('✅ Раскладка колонок сохранена');
-    } catch (err) {
+     } catch (err) {
       console.warn('Не удалось сохранить раскладку колонок:', err.message);
     }
   }, 800);
