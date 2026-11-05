@@ -849,6 +849,28 @@ router.get('/user-preferences/:userId/effective', authenticate, requireAdmin, as
 });
 
 // ============================================================
+// PUT /my-preferences — сохранить СВОИ настройки (для всех)
+// ============================================================
+router.put('/my-preferences', authenticate, async (req, res) => {
+  try {
+    const prefs = req.body;
+    if (typeof prefs !== 'object' || prefs === null) {
+      return res.status(400).json({ error: 'Ожидается объект' });
+    }
+    await db.query(
+      `INSERT INTO user_preferences (user_id, preferences) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE preferences = VALUES(preferences), updated_at = CURRENT_TIMESTAMP`,
+      [req.user.id, JSON.stringify(prefs)]
+    );
+    res.json({ message: 'Настройки сохранены' });
+  } catch (e) {
+    console.error('PUT /my-preferences:', e);
+    res.status(500).json({ error: 'Ошибка сохранения настроек' });
+  }
+});
+
+
+// ============================================================
 // GET /api/settings/my-preferences/effective
 // АКТУАЛЬНЫЙ вид текущего пользователя: индивидуальное → шаблон → дефолт
 // ============================================================
