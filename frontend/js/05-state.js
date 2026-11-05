@@ -529,10 +529,31 @@ function getActiveTableColumns() {
   const cols = [];
   const added = new Set();
 
+  // 1) Если drag&drop задал columnOrder — используем ЕГО порядок
+  if (Array.isArray(myPrefs.columnOrder) && myPrefs.columnOrder.length > 0) {
+    for (const colId of myPrefs.columnOrder) {
+      if (added.has(colId)) continue;
+      // Проверяем видимость (по fieldId ИЛИ по tableId)
+      let isVisible = visible.has(colId);
+      if (!isVisible) {
+        const f = (_cachedFields || []).find(x => x.id === colId || (TABLE_ID_MAP[x.id] || x.id) === colId);
+        if (f && visible.has(f.id)) isVisible = true;
+      }
+      if (!isVisible) continue;
+      const def = allOrdered.find(c => c.id === colId);
+      if (def) {
+        cols.push(colId);
+        added.add(colId);
+      }
+    }
+  }
+
+  // 2) Добавляем видимые поля из _cachedFields, которых нет в columnOrder
   for (const f of (_cachedFields || [])) {
     if (!f.enabled) continue;
     if (!visible.has(f.id)) continue;
     const tableId = TABLE_ID_MAP[f.id] || f.id;
+    if (added.has(tableId)) continue;
     const def = allOrdered.find(c => c.id === tableId);
     if (def) {
       cols.push(tableId);
@@ -540,6 +561,7 @@ function getActiveTableColumns() {
     }
   }
 
+  // 3) Виртуальные колонки (status, nextCalibration)
   const VIRTUAL_IDS = ['status', 'nextCalibration'];
   for (const vid of VIRTUAL_IDS) {
     if (!visible.has(vid)) continue;
