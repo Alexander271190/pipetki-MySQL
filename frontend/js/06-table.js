@@ -607,16 +607,39 @@ function moveColumn(srcColId, dstColId) {
 
 function startColumnResize(th, colId, e) {
   const table = th.closest('table');
-  const cols = table.querySelectorAll('colgroup col');
-  const thIdx = Array.from(th.parentElement.children).indexOf(th);
+  const colgroup = table.querySelector('colgroup');
+  if (!colgroup) return;
+  const cols = colgroup.querySelectorAll('col');
+  const allThs = Array.from(th.parentElement.children);
+  const thIdx = allThs.indexOf(th);
   const colEl = cols[thIdx];
   if (!colEl) return;
+
+  // ── ФИКСИРУЕМ ШИРИНЫ ВСЕХ КОЛОНОК, чтобы соседние не сжимались ──
+  if (!myPrefs.columnWidths) myPrefs.columnWidths = {};
+  allThs.forEach((t, i) => {
+    if (!cols[i]) return;
+    // Ключ ширины: data-col-id, либо __checkbox / __actions по позиции
+    let id = t.dataset ? t.dataset.colId : null;
+    if (!id) {
+      if (i === 0) id = '__checkbox';
+      else if (i === allThs.length - 1) id = '__actions';
+    }
+    if (!id) return;
+    // Если ширина ещё не зафиксирована — берём текущую (border-box)
+    if (!cols[i].style.width) {
+      cols[i].style.width = Math.round(t.getBoundingClientRect().width) + 'px';
+    }
+    // Сохраняем в prefs, чтобы после F5 таблица осталась стабильной
+    if (!myPrefs.columnWidths[id]) {
+      myPrefs.columnWidths[id] = parseInt(cols[i].style.width, 10);
+    }
+  });
 
   const startX = e.clientX;
   const startWidth = th.getBoundingClientRect().width;
 
-  // Включаем fixed на время ресайза
-  const origLayout = table.style.tableLayout;
+  // Включаем fixed на время ресайза (теперь все <col> имеют ширину)
   table.style.tableLayout = 'fixed';
 
   function onMove(ev) {
@@ -624,7 +647,6 @@ function startColumnResize(th, colId, e) {
     const newWidth = Math.max(50, startWidth + delta);
     colEl.style.width = newWidth + 'px';
 
-    if (!myPrefs.columnWidths) myPrefs.columnWidths = {};
     myPrefs.columnWidths[colId] = Math.round(newWidth);
   }
 
@@ -634,11 +656,6 @@ function startColumnResize(th, colId, e) {
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     _colResizeState = null;
-
-    // Если совсем не тянули — ничего не сохраняем
-    if (startWidth === Math.round(startWidth)) {
-      // всё равно сохраним — пользователь мог чуть сдвинуть
-    }
     saveColumnLayoutDebounced();
   }
 
