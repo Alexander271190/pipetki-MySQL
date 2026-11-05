@@ -465,3 +465,79 @@ td small { display: block; font-size: .7rem; color: #6b7280; line-height: 1.25; 
 #pipettes-table tbody td * {
   line-height: inherit !important;
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   Таблица: drag/resize колонок, ellipsis
+   ═══════════════════════════════════════════════════════ */
+
+#pipettes-table thead th[data-col-id] {
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: move;
+}
+
+/* Невидимая зона ресайза в правом краю (курсор меняется только здесь) */
+#pipettes-table thead th[data-col-id]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 2;
+}
+
+/* При перетаскивании: источник полупрозрачный, цель подсвечена */
+#pipettes-table thead th.dragging {
+  opacity: 0.4;
+}
+
+#pipettes-table thead th.drag-over {
+  background: var(--primary-light) !important;
+  border-bottom: 3px solid var(--primary) !important;
+}
+
+/* Текст в ячейках */
+#pipettes-table tbody td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+}
+
+#pipettes-table tbody td.col-id,
+#pipettes-table tbody td.col-serial,
+#pipettes-table tbody td.col-cert {
+  white-space: nowrap;
+}
+
+#pipettes-table tbody td.col-status,
+#pipettes-table tbody td.col-type,
+#pipettes-table tbody td.col-interval {
+  white-space: nowrap;
+}
+
+#pipettes-table tbody td.col-notes {
+  max-width: 150px;
+}
+
+/* Тёмная тема */
+html[data-theme="dark"] #pipettes-table thead th.drag-over {
+  background: rgba(129, 140, 248, 0.18) !important;
+}
+
+/* Мобильные: drag/resize не инициализируется в JS, тут просто страхуем CSS */
+@media (max-width: 768px) {
+  #pipettes-table thead th[data-col-id] {
+    cursor: default;
+  }
+  #pipettes-table thead th[data-col-id]::after {
+    display: none;
+  }
+  #pipettes-table {
+    table-layout: auto !important;
+  }
+}
