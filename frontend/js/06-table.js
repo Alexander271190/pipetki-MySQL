@@ -151,6 +151,25 @@ function renderCounters() {
 function renderTableHeader(columns, hasAnyRowAction) {
   const table = document.getElementById('pipettes-table');
   if (!table) return;
+
+  // ── colgroup (для ресайза) ──
+  let colgroup = table.querySelector('colgroup');
+  if (!colgroup) {
+    colgroup = document.createElement('colgroup');
+    table.insertBefore(colgroup, table.firstChild);
+  }
+
+  const widths = (myPrefs && myPrefs.columnWidths) || {};
+  const allCols = ['__checkbox', ...columns, '__actions'];
+  colgroup.innerHTML = allCols.map(colId => {
+    const w = widths[colId];
+    return w ? `<col style="width:${w}px">` : '<col>';
+  }).join('');
+
+  // table-layout: fixed — только если есть сохранённые ширины (иначе auto как было)
+  const hasWidths = Object.keys(widths).length > 0;
+  table.style.tableLayout = hasWidths ? 'fixed' : '';
+
   const thead = table.querySelector('thead tr');
   if (!thead) return;
 
@@ -161,12 +180,21 @@ function renderTableHeader(columns, hasAnyRowAction) {
     ${columns.map(col => {
       const def = findColumn(col);
       if (def.sortable) {
-        return `<th class="col-${def.id}" onclick="sortBy('${def.field}')">${esc(def.label)} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
+        return `<th class="col-${def.id}" data-col-id="${def.id}" onclick="sortBy('${def.field}')">${esc(def.label)} <span class="sort-arrow" data-field="${def.field}"></span></th>`;
       }
-      return `<th class="col-${def.id}">${esc(def.label)}</th>`;
+      return `<th class="col-${def.id}" data-col-id="${def.id}">${esc(def.label)}</th>`;
     }).join('')}
-    <th id="actions-header" ${!hasAnyRowAction ? 'style="display:none"' : ''}>Действия</th>
+    <th id="actions-header" data-col-id="__actions" ${!hasAnyRowAction ? 'style="display:none"' : ''}>Действия</th>
   `;
+
+  // ── drag/resize — только на десктопе и не на __actions ──
+  if (window.innerWidth > 768) {
+    thead.querySelectorAll('th[data-col-id]').forEach(th => {
+      const colId = th.dataset.colId;
+      if (colId === '__actions') return;
+      attachColumnHandlers(th, colId);
+    });
+  }
 }
 
 // ============================================================
@@ -483,7 +511,7 @@ function updateBulkToolbar() {
 }
 
 // ============================================================
-// МОБИЛЬНЫЙ АККОРДЕОН (Вариант 3)
+// МОБИЛЬНЫЙ АККОРДЕОН 
 // ============================================================
 function toggleMobileRow(e, tr) {
   // Срабатывает только на мобильных (ширина экрана <= 768px)
@@ -498,4 +526,148 @@ function toggleMobileRow(e, tr) {
   }
 
   tr.classList.toggle('mobile-expanded');
+}
+
+// ═══════════════════════════════════════════════════════
+// ПЕРЕТАСКИВАНИЕ И РЕСАЙЗ КОЛОНОК
+// ═══════════════════════════════════════════════════════
+let _colDragState = null;
+let _colResizeState = null;
+let _colLayoutSaveTimer = null;
+
+function attachColumnHandlers(th, colId) {
+  th.draggable = true;
+  th.style.cursor = 'move';
+
+  // ── Drag ──
+  th.addEventListener('dragstart', (e) => {
+    if (_colResizeState) { e.preventDefault(); return; }
+    _colDragState = { srcColId: colId };
+    th.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', colId); } catch (err) {}
+  });
+
+  th.addEventListener('dragend', () => {
+    th.classList.remove('dragging');
+    document.querySelectorAll('#pipettes-table th.drag-over')
+      .forEach(el => el.classList.remove('drag-over'));
+    _colDragState = null;
+  });
+
+  th.addEventListener('dragover', (e) => {
+    if (!_colDragState) return;
+    if (_colDragState.srcColId === colId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    th.classList.add('drag-over');
+  });
+
+  th.addEventListener('dragleave', () => {
+    th.classList.remove('drag-over');
+  });
+
+  th.addEventListener('drop', (e) => {
+    if (!_colDragState) return;
+    e.preventDefault();
+    th.classList.remove('drag-over');
+    if (_colDragState.srcColId === colId) return;
+    moveColumn(_colDragState.srcColId, colId);
+  });
+
+  // ── Resize (невидимая зона 6px у правого края) ──
+  th.addEventListener('mousedown', (e) => {
+    const rect = th.getBoundingClientRect();
+    if (e.clientX > rect.right - 6) {
+      e.preventDefault();
+      e.stopPropagation();
+      startColumnResize(th, colId, e);
+    }
+  });
+}
+
+function moveColumn(srcColId, dstColId) {
+  // Текущий порядок: из myPrefs.columnOrder или из DOM
+  let currentOrder = Array.isArray(myPrefs.columnOrder) && myPrefs.columnOrder.length > 0
+    ? [...myPrefs.columnOrder]
+    : [...document.querySelectorAll('#pipettes-table th[data-col-id]')]
+        .map(th => th.dataset.colId)
+        .filter(id => id && id !== '__actions' && id !== '__checkbox');
+
+  const srcIdx = currentOrder.indexOf(srcColId);
+  const dstIdx = currentOrder.indexOf(dstColId);
+  if (srcIdx === -1 || dstIdx === -1) return;
+
+  currentOrder.splice(srcIdx, 1);
+  currentOrder.splice(dstIdx, 0, srcColId);
+
+  myPrefs.columnOrder = currentOrder;
+  saveColumnLayoutDebounced();
+  render();
+}
+
+function startColumnResize(th, colId, e) {
+  const table = th.closest('table');
+  const cols = table.querySelectorAll('colgroup col');
+  const thIdx = Array.from(th.parentElement.children).indexOf(th);
+  const colEl = cols[thIdx];
+  if (!colEl) return;
+
+  const startX = e.clientX;
+  const startWidth = th.getBoundingClientRect().width;
+
+  // Включаем fixed на время ресайза
+  const origLayout = table.style.tableLayout;
+  table.style.tableLayout = 'fixed';
+
+  function onMove(ev) {
+    const delta = ev.clientX - startX;
+    const newWidth = Math.max(50, startWidth + delta);
+    colEl.style.width = newWidth + 'px';
+
+    if (!myPrefs.columnWidths) myPrefs.columnWidths = {};
+    myPrefs.columnWidths[colId] = Math.round(newWidth);
+  }
+
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    _colResizeState = null;
+
+    // Если совсем не тянули — ничего не сохраняем
+    if (startWidth === Math.round(startWidth)) {
+      // всё равно сохраним — пользователь мог чуть сдвинуть
+    }
+    saveColumnLayoutDebounced();
+  }
+
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  _colResizeState = { colId };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+function saveColumnLayoutDebounced() {
+  clearTimeout(_colLayoutSaveTimer);
+  _colLayoutSaveTimer = setTimeout(async () => {
+    try {
+      // Свежие prefs, чтобы не перезаписать чужие поля (visibleFields, printDocuments и т.д.)
+      let existing = {};
+      try { existing = await apiRequest('/settings/my-preferences'); } catch (err) {}
+
+      const merged = {
+        ...existing,
+        columnOrder: myPrefs.columnOrder || existing.columnOrder || [],
+        columnWidths: myPrefs.columnWidths || existing.columnWidths || {},
+      };
+
+      await apiRequest('/settings/my-preferences', 'PUT', merged);
+      console.log('✅ Раскладка колонок сохранена');
+    } catch (err) {
+      console.warn('Не удалось сохранить раскладку колонок:', err.message);
+    }
+  }, 800);
 }
