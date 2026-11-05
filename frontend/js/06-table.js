@@ -698,7 +698,7 @@ function updateResetMenuVisibility() {
   const hasCustomWidths = myPrefs.columnWidths && Object.keys(myPrefs.columnWidths).length > 0;
 
   // Показываем, если есть кастомизация
-  btn.style.display = (hasCustomOrder || hasCustomWidths) ? 'block' : 'none';
+  btn.style.display = (hasCustomOrder || hasCustomWidths) ? 'flex' : 'none';
 }
 
 // Функция самого сброса
