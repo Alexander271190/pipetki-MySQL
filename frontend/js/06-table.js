@@ -705,7 +705,7 @@ function updateResetMenuVisibility() {
 async function resetMyColumnLayout() {
   // Используем красивую модалку проекта вместо системного confirm()
   const ok = await showConfirm(
-    'Сбросить порядок и ширину колонок к стандартным?\n\nВидимость полей и настройки печати НЕ изменятся.',
+    'Сбросить порядок и ширину колонок к стандартным?',
     { 
       icon: '<i class="fa-solid fa-rotate-left" style="color: var(--warn);"></i>', 
       title: 'Сброс раскладки колонок', 
