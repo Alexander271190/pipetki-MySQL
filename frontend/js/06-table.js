@@ -21,6 +21,7 @@ function render() {
   updateSortArrows();
   updateSelectAllCheckbox();
   updateBulkCalButton();
+  updateResetMenuVisibility();
 }
 
 // ============================================================
@@ -685,4 +686,48 @@ function saveColumnLayoutDebounced() {
       console.warn('Не удалось сохранить раскладку колонок:', err.message);
     }
   }, 800);
+}
+
+
+// Показывает кнопку сброса, только если раскладка была изменена
+function updateResetMenuVisibility() {
+  const btn = document.getElementById('menu-reset-columns');
+  if (!btn) return;
+
+  const hasCustomOrder = Array.isArray(myPrefs.columnOrder) && myPrefs.columnOrder.length > 0;
+  const hasCustomWidths = myPrefs.columnWidths && Object.keys(myPrefs.columnWidths).length > 0;
+
+  // Показываем, если есть кастомизация
+  btn.style.display = (hasCustomOrder || hasCustomWidths) ? 'block' : 'none';
+}
+
+// Функция самого сброса
+async function resetMyColumnLayout() {
+  if (!confirm('Сбросить порядок и ширину колонок к стандартным?\n\nВидимость полей и настройки печати НЕ изменятся.')) {
+    return;
+  }
+
+  try {
+    // 1. Берем свежие prefs с сервера
+    const prefs = await apiRequest('/settings/my-preferences') || {};
+
+    // 2. Удаляем ТОЛЬКО раскладку
+    delete prefs.columnOrder;
+    delete prefs.columnWidths;
+
+    // 3. Отправляем обратно
+    await apiRequest('/settings/my-preferences', 'PUT', prefs);
+
+    // 4. Сбрасываем локально
+    myPrefs.columnOrder = null;
+    myPrefs.columnWidths = {};
+    
+    // 5. Перерисовываем таблицу (кнопка из меню исчезнет автоматически)
+    render();
+    showToast('Раскладка колонок сброшена', 'success');
+
+  } catch (e) {
+    console.error('resetMyColumnLayout error:', e);
+    showToast('Не удалось сбросить раскладку', 'error');
+  }
 }
