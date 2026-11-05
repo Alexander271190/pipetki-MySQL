@@ -420,7 +420,7 @@ async function exportHistoryToPDF() {
       @page { size: A4 portrait; margin: 12mm 10mm; }
       * { box-sizing: border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a2e; margin: 0; }
-      h1 { font-size: 14pt; margin: 0 0 4px; }
+      h1 { font-size: 14pt; margin: 0 0 4px; text-align: center; }
       .meta { font-size: 9pt; color: #64748b; margin-bottom: 12px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
       .meta b { color: #1e293b; }
       .info { padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 9pt; margin-bottom: 12px; }
