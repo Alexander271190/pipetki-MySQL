@@ -703,14 +703,23 @@ function updateResetMenuVisibility() {
 
 // Функция самого сброса
 async function resetMyColumnLayout() {
-  if (!confirm('Сбросить порядок и ширину колонок к стандартным?\n\nВидимость полей и настройки печати НЕ изменятся.')) {
-    return;
-  }
+  // Используем красивую модалку проекта вместо системного confirm()
+  const ok = await showConfirm(
+    'Сбросить порядок и ширину колонок к стандартным?\n\nВидимость полей и настройки печати НЕ изменятся.',
+    { 
+      icon: '<i class="fa-solid fa-rotate-left" style="color: var(--warn);"></i>', 
+      title: 'Сброс раскладки колонок', 
+      okText: 'Да, сбросить', 
+      cancelText: 'Отмена',
+      okClass: 'btn-warning' 
+    }
+  );
+
+  if (!ok) return; // Если нажали "Отмена" или закрыли
 
   try {
     // 1. Берем свежие prefs с сервера
     const prefs = await apiRequest('/settings/my-preferences') || {};
-
     // 2. Удаляем ТОЛЬКО раскладку
     delete prefs.columnOrder;
     delete prefs.columnWidths;
