@@ -475,7 +475,6 @@ td small { display: block; font-size: .7rem; color: #6b7280; line-height: 1.25; 
   position: relative;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: move;
 }
 
 /* Невидимая зона ресайза в правом краю (курсор меняется только здесь) */
@@ -531,9 +530,6 @@ html[data-theme="dark"] #pipettes-table thead th.drag-over {
 
 /* Мобильные: drag/resize не инициализируется в JS, тут просто страхуем CSS */
 @media (max-width: 768px) {
-  #pipettes-table thead th[data-col-id] {
-    cursor: default;
-  }
   #pipettes-table thead th[data-col-id]::after {
     display: none;
   }
