@@ -1,0 +1,96 @@
+Тест API (43 проверки)
+Что проверяет: health, auth, пагинация, лимиты, сортировка, поиск, фильтры, /ids, /stats, /all, /:id, XSS/SQLi, CRUD (создание/чтение/редактирование/удаление).
+
+Команда:
+
+powershell
+cd F:\pipetki-mysql-main
+powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-api.ps1" -Login admin -Password "Seno16/1978S" -RunCrud
+Без -RunCrud — только чтение (без создания/удаления):
+
+powershell
+powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-api.ps1" -Login admin -Password "Seno16/1978S"
+2. Тест поверок (25 проверок, полный цикл)
+Что проверяет: создание 2 приборов, доступность замены, отправка (bulk-send), статусы, фильтр sent, возврат (bulk-return), статусы после возврата, история, быстрая поверка, отмена отправки, удаление.
+
+Команда:
+
+powershell
+cd F:\pipetki-mysql-main
+powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-calibrations.ps1" -Login admin -Password "Seno16/1978S"
+3. Обе команды подряд (одной строкой)
+powershell
+cd F:\pipetki-mysql-main; powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-api.ps1" -Login admin -Password "Seno16/1978S" -RunCrud; powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-calibrations.ps1" -Login admin -Password "Seno16/1978S"
+4. Проверка в браузере (автоскрипт)
+Открой приложение, F12 → Console, вставь любой из скриптов:
+
+Базовый аудит (36 проверок: DOM, модалки, тултип, кэш, батч, счётчики, тёмная тема):
+
+javascript
+// см. скрипт "МЕГА-АУДИТ С ТЕСТОВЫМ ПРИБОРОМ" в истории чата
+Или вставь из файла, если сохранил — например, browser-audit.js.
+
+5. Через Docker (сервер)
+Логи приложения:
+
+bash
+docker compose logs --tail=100 app
+Логи БД:
+
+bash
+docker compose logs --tail=100 db
+Проверка контейнеров:
+
+bash
+docker compose ps
+Проверка /health:
+
+bash
+curl -s https://5.189.243.15/api/health
+SQL-проверка счётчиков:
+
+bash
+docker exec -it pipette_db mysql -u pipette -pSeno16/1978S pipette -e "
+SELECT
+  COUNT(*) AS total,
+  SUM(CASE WHEN sent_for_calibration IS NOT NULL THEN 1 ELSE 0 END) AS sent,
+  SUM(CASE WHEN last_result = 'fail' THEN 1 ELSE 0 END) AS fail,
+  SUM(CASE WHEN last_result = 'wip' THEN 1 ELSE 0 END) AS wip,
+  SUM(CASE WHEN active = 0 AND sent_for_calibration IS NULL THEN 1 ELSE 0 END) AS inactive
+FROM pipettes;
+"
+6. Если скрипты потерялись — пересоздать
+test-api.ps1 — я его давал в чате. test-calibrations.ps1 — тоже. Если потерялись:
+
+Найди в истории чата блок кода.
+
+Скопируй.
+
+Сохрани через PowerShell:
+
+powershell
+cd F:\pipetki-mysql-main
+notepad test-api.ps1
+# вставь код, сохрани (Ctrl+S), закрой
+notepad test-calibrations.ps1
+# вставь код, сохрани (Ctrl+S), закрой
+Или через Out-File (как делали с test-calibrations.ps1):
+
+powershell
+@'
+... код скрипта ...
+'@ | Out-File -FilePath "F:\pipetki-mysql-main\test-calibrations.ps1" -Encoding UTF8 -Force
+7. Напоминание про пароль
+Во всех командах пароль Seno16/1978S — это твой текущий пароль от admin. Если когда-нибудь сменишь пароль в системе — обнови во всех командах.
+
+Краткая шпаргалка (только команды)
+powershell
+# API
+cd F:\pipetki-mysql-main; powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-api.ps1" -Login admin -Password "Seno16/1978S" -RunCrud
+
+# Поверки
+cd F:\pipetki-mysql-main; powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-calibrations.ps1" -Login admin -Password "Seno16/1978S"
+
+# Обе
+cd F:\pipetki-mysql-main; powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-api.ps1" -Login admin -Password "Seno16/1978S" -RunCrud; powershell -ExecutionPolicy Bypass -File "F:\pipetki-mysql-main\test-calibrations.ps1" -Login admin -Password "Seno16/1978S"
+Сохрани эту шпаргалку в файл F:\pipetki-mysql-main\README-tests.md — и в будущем просто копируй оттуда.

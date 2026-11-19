@@ -1,0 +1,7 @@
+Правило на будущее
+Что правите	Команда
+Только бэкенд (routes/, middleware/, server.js, utils/)	docker-compose up -d --build app
+Конфиг Nginx (nginx/pipette.conf)	docker-compose exec nginx nginx -s reload (если контейнер живой) или docker-compose restart nginx
+Хотите «с нуля» перезапустить всё	docker-compose up -d --build (без указания сервиса)
+Остановили всё (down)	docker-compose up -d (без указания сервиса — поднимет весь стек)
+Главное: если делаете docker-compose down — потом обязательно docker-compose up -d без сервиса. Иначе Nginx/Certbot останутся остановленными.
