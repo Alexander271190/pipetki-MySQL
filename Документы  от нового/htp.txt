@@ -1,0 +1,926 @@
+══════════════════════════════════════════════════════════════
+VM587:132 🚀 MEGA-TEST v8.0 — PRODUCTION FULL SUITE
+VM587:133 ══════════════════════════════════════════════════════════════
+VM587:134 Старт: 22:59:59
+VM587:135 Всё созданное — удаляется в finally. Реальные данные не трогаются.
+VM587:142 
+🟢 0. VUE APP SMOKE
+VM587:64 ✅ [VUE] Pinia доступна
+VM587:64 ✅ [VUE] auth store
+VM587:64 ✅ [VUE] ui store
+VM587:64 ✅ [VUE] pipettes store
+VM587:64 ✅ [VUE] settings store
+VM587:64 ✅ [VUE] stats store
+VM587:64 ✅ [VUE] prefs store
+VM587:64 ✅ [VUE] toast store
+VM587:64 ✅ [VUE] #app существует
+VM587:64 ✅ [VUE] #app не пустой — 1008972 байт
+VM587:64 ✅ [VUE] __vue_app__ на #app
+VM587:64 ✅ [VUE] .main-content виден
+VM587:64 ✅ [VUE] .header существует
+VM587:64 ✅ [VUE] .toolbar существует
+VM587:64 ✅ [VUE] #pipettes-table существует
+VM587:64 ✅ [VUE] .pagination существует
+VM587:166 
+🔐 1. RBAC
+Promise {<pending>}
+VM587:64 ✅ [RBAC] verify admin
+VM587:64 ✅ [RBAC] isAdmin=true
+VM587:64 ✅ [RBAC] roleName=Администратор — Администратор
+VM587:64 ✅ [RBAC] permissions=["*"]
+VM587:64 ✅ [RBAC] authStore.user.id === api.user.id
+VM587:64 ✅ [RBAC] authStore.isAdmin === true
+VM587:64 ✅ [RBAC] authStore.isAuthenticated === true
+VM587:64 ✅ [RBAC] authStore.isImpersonating === false
+VM587:64 ✅ [RBAC] GET /roles
+VM587:64 ✅ [RBAC] ≥3 системных
+VM587:64 ✅ [RBAC] admin isAdmin/isSystem
+VM587:64 ✅ [RBAC] user: 3 perms — 3
+VM587:64 ✅ [RBAC] senior_lab: 12 perms — 12
+VM587:64 ✅ [RBAC] создание кастомной admin-роли
+VM587:64 ✅ [RBAC] кастомная: isAdmin=true, isSystem=false
+VM587:76  PUT https://5.189.243.15:8443/api/roles/3 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:202
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [RBAC] PUT admin → 400
+VM587:76  DELETE https://5.189.243.15:8443/api/roles/3 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:203
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [RBAC] DELETE admin → 400
+VM587:64 ✅ [RBAC] user: is_admin через PUT игнорируется
+VM587:214 
+🔑 2. Auth & Policy
+VM587:64 ✅ [AUTH] verify admin
+VM587:64 ✅ [AUTH] passwordChangedAt в ответе
+VM587:64 ✅ [AUTH] GET /auth/password-policy
+VM587:64 ✅ [AUTH] policy is boolean (parseBool)
+VM587:64 ✅ [AUTH] policy minLength is number
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 401 (Unauthorized)
+api @ VM587:76
+runMegaTestV80 @ VM587:223
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [AUTH] login неверный пароль → 401
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:224
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [AUTH] login без пароля → 400
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:225
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [AUTH] login без логина → 400
+VM587:76  GET https://5.189.243.15:8443/api/auth/verify 401 (Unauthorized)
+api @ VM587:76
+runMegaTestV80 @ VM587:226
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [AUTH] пустой токен → 401
+VM587:232 
+👤 3. Users CRUD
+VM587:64 ✅ [USERS] POST
+VM587:76  POST https://5.189.243.15:8443/api/users 409 (Conflict)
+api @ VM587:76
+runMegaTestV80 @ VM587:243
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [USERS] dup login → 409
+VM587:64 ✅ [USERS] GET /users
+VM587:64 ✅ [USERS] GET /users/responsibles
+VM587:64 ✅ [USERS] GET /users/acting-targets
+VM587:64 ✅ [USERS] reset-password
+VM587:64 ✅ [USERS] login по temp-паролю
+VM587:64 ✅ [USERS] change-password
+VM587:64 ✅ [USERS] login после смены
+VM587:64 ✅ [USERS] PUT
+VM587:76  DELETE https://5.189.243.15:8443/api/users/admin1 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:268
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [USERS] нельзя удалить себя → 400
+VM587:76  PUT https://5.189.243.15:8443/api/users/admin1 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:269
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [USERS] self-demote → 400
+VM587:76  POST https://5.189.243.15:8443/api/users 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:273
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [USERS] acting без actingForId → 400
+VM587:282 
+💾 4. Presets
+VM587:64 ✅ [PRESET] POST
+VM587:64 ✅ [PRESET] GET
+VM587:293 
+🛡 5. Permissions
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:310
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:303
+await in createUserWithPerms
+runMegaTestV80 @ VM587:311
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:311
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:312
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:313
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:303
+await in createUserWithPerms
+runMegaTestV80 @ VM587:314
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:303
+await in createUserWithPerms
+runMegaTestV80 @ VM587:315
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/change-password 400 (Bad Request)
+api @ VM587:76
+createUserWithPerms @ VM587:305
+await in createUserWithPerms
+runMegaTestV80 @ VM587:315
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:315
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 401 (Unauthorized)
+api @ VM587:76
+loginUser @ VM587:89
+await in loginUser
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:315
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/change-password 400 (Bad Request)
+api @ VM587:76
+createUserWithPerms @ VM587:305
+await in createUserWithPerms
+runMegaTestV80 @ VM587:316
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:316
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 401 (Unauthorized)
+api @ VM587:76
+loginUser @ VM587:89
+await in loginUser
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:316
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:303
+await in createUserWithPerms
+runMegaTestV80 @ VM587:317
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:317
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:318
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:319
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/change-password 400 (Bad Request)
+api @ VM587:76
+createUserWithPerms @ VM587:305
+await in createUserWithPerms
+runMegaTestV80 @ VM587:320
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:320
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 401 (Unauthorized)
+api @ VM587:76
+loginUser @ VM587:89
+await in loginUser
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:320
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:303
+await in createUserWithPerms
+runMegaTestV80 @ VM587:321
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/change-password 400 (Bad Request)
+api @ VM587:76
+createUserWithPerms @ VM587:305
+await in createUserWithPerms
+runMegaTestV80 @ VM587:321
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:321
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 401 (Unauthorized)
+api @ VM587:76
+loginUser @ VM587:89
+await in loginUser
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:321
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/change-password 400 (Bad Request)
+api @ VM587:76
+createUserWithPerms @ VM587:305
+await in createUserWithPerms
+runMegaTestV80 @ VM587:322
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 429 (Too Many Requests)
+api @ VM587:76
+loginUser @ VM587:89
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:322
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  POST https://5.189.243.15:8443/api/auth/login 401 (Unauthorized)
+api @ VM587:76
+loginUser @ VM587:89
+await in loginUser
+createUserWithPerms @ VM587:307
+await in createUserWithPerms
+runMegaTestV80 @ VM587:322
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:76  GET https://5.189.243.15:8443/api/log/errors?limit=1 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:325
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] noPerm: /log/errors → 403
+VM587:76  GET https://5.189.243.15:8443/api/pipettes/audit?limit=1 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:326
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] noPerm: /pipettes/audit → 403
+VM587:76  GET https://5.189.243.15:8443/api/barcode-printers 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:327
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] noPerm: /barcode-printers → 403
+VM587:64 ✅ [PERMS] noPerm: /barcodes/fonts → 200
+VM587:64 ✅ [PERMS] noPerm: /barcode-printers/available → 200
+VM587:64 ✅ [PERMS] noPerm: /help/visible → 200
+VM587:76  GET https://5.189.243.15:8443/api/help 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:331
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] noPerm: /help (admin) → 403
+VM587:76  GET https://5.189.243.15:8443/api/equipment-templates 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:332
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] noPerm: /equipment-templates → 403
+VM587:76  GET https://5.189.243.15:8443/api/view-templates 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:333
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] noPerm: /view-templates → 403
+VM587:64 ✅ [PERMS] noPerm: /roles → 200 (фича бэка)
+VM587:64 ✅ [PERMS] view_log: /log/errors → 200
+VM587:64 ✅ [PERMS] view_log: /pipettes/audit → 200
+VM587:76  GET https://5.189.243.15:8443/api/log/errors?limit=1 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:341
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] view_audit: /log/errors → 403
+VM587:76  GET https://5.189.243.15:8443/api/pipettes/__nope__/audit 404 (Not Found)
+api @ VM587:76
+runMegaTestV80 @ VM587:344
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] view_history: /:id/audit работает
+VM587:76  GET https://5.189.243.15:8443/api/barcodes/labels.pdf 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:347
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] print_labels: /labels.pdf доступен
+VM587:76  POST https://5.189.243.15:8443/api/barcodes/print 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:348
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] print_labels: /print доступен
+VM587:76  POST https://5.189.243.15:8443/api/barcodes/lookup 404 (Not Found)
+api @ VM587:76
+runMegaTestV80 @ VM587:351
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PERMS] scan_barcode: /lookup доступен
+VM587:64 ✅ [PERMS] import_data: /import доступен
+VM587:64 ✅ [PERMS] export_data: /effective hasPermission=true
+VM587:64 ✅ [PERMS] add_pipette: POST /pipettes
+VM587:385 
+🔬 6. Equipment CRUD
+VM587:64 ✅ [CRUD] POST
+VM587:76  POST https://5.189.243.15:8443/api/pipettes 409 (Conflict)
+api @ VM587:76
+runMegaTestV80 @ VM587:395
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [CRUD] duplicate ID → 409
+VM587:76  POST https://5.189.243.15:8443/api/pipettes 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:397
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [CRUD] future date → 400
+VM587:64 ✅ [CRUD] GET one
+VM587:64 ✅ [CRUD] computed_status есть — ok
+VM587:64 ✅ [CRUD] PUT
+VM587:64 ✅ [CRUD] audit trail
+VM587:64 ✅ [CRUD] audit: diff с «→»
+VM587:64 ✅ [CRUD] GET /paged
+VM587:64 ✅ [CRUD] GET /all
+VM587:64 ✅ [CRUD] GET /ids
+VM587:64 ✅ [CRUD] GET /stats
+VM587:64 ✅ [CRUD] GET /next-id
+VM587:419 
+🔍 7. Paged
+VM587:64 ✅ [PAGED] search=Mega
+VM587:64 ✅ [PAGED] filters
+VM587:64 ✅ [PAGED] sort=desc
+VM587:64 ✅ [PAGED] desc: первый > второй
+VM587:64 ✅ [PAGED] page=99999
+VM587:64 ✅ [PAGED] limit>500 → ≤500 — limit=500
+VM587:64 ✅ [PAGED] counters в ответе
+VM587:438 
+📦 8. Bulk
+VM587:64 ✅ [BULK] bulk-create ×2 — P-006, P-007
+VM587:64 ✅ [BULK] bulk-lock
+VM587:64 ✅ [BULK] bulk-unlock
+VM587:64 ✅ [BULK] bulk-change-responsible
+VM587:455 
+🔒 9. Locks
+VM587:64 ✅ [LOCK] single lock mine
+VM587:64 ✅ [LOCK] heartbeat сохраняет блокировку
+VM587:64 ✅ [LOCK] force unlock
+VM587:476 
+📊 10. Calibration
+VM587:64 ✅ [CAL] POST
+VM587:64 ✅ [CAL] GET history
+VM587:76  POST https://5.189.243.15:8443/api/pipettes/MEGA-P-1794931199049/calibration 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:484
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [CAL] future date → 400
+VM587:64 ✅ [CAL] result=fail
+VM587:495 
+🔄 11. Send → Return
+VM587:64 ✅ [CYCLE] bulk-send
+VM587:64 ✅ [CYCLE] после send: sent≠null
+VM587:64 ✅ [CYCLE] после send: active=false
+VM587:64 ✅ [CYCLE] bulk-return
+VM587:64 ✅ [CYCLE] после return: sent=null
+VM587:64 ✅ [CYCLE] после return: active=true
+VM587:64 ✅ [CYCLE] после return: last_calibration
+VM587:64 ✅ [CYCLE] cancel-send
+VM587:516 
+🚚 12. Transfer
+VM587:64 ✅ [TRANSFER] transfer
+VM587:76  POST https://5.189.243.15:8443/api/pipettes/P-006/transfer 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:522
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [TRANSFER] тот же отдел → 400
+VM587:76  POST https://5.189.243.15:8443/api/pipettes/P-006/transfer 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:523
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [TRANSFER] несуществующий отдел → 400
+VM587:532 
+↔️ 13. Replacement
+VM587:64 ✅ [REPL] available-for-replacement
+VM587:64 ✅ [REPL] available-for-replacement-batch
+VM587:541 
+📥 14. Import
+VM587:64 ✅ [IMPORT] import — added=1, skipped=1
+VM587:64 ✅ [IMPORT] bad row skipped
+VM587:559 
+🖨 15. Export & Print settings
+VM587:64 ✅ [PRINT] GET /settings/export
+VM587:64 ✅ [PRINT] все ключи
+VM587:64 ✅ [PRINT] PUT exportEnabled=false
+VM587:64 ✅ [PRINT] сброс проверки
+VM587:64 ✅ [PRINT] effective
+VM587:64 ✅ [PRINT] hasPermission=true
+VM587:576 
+🏷 16. Barcodes
+VM587:64 ✅ [BARCODE] /fonts → 200
+VM587:64 ✅ [BARCODE] /:id/png code128
+VM587:64 ✅ [BARCODE] /:id/png qr
+VM587:64 ✅ [BARCODE] /lookup по id
+VM587:76  POST https://5.189.243.15:8443/api/barcodes/lookup 404 (Not Found)
+api @ VM587:76
+runMegaTestV80 @ VM587:583
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [BARCODE] /lookup нет → 404
+VM587:64 ✅ [BARCODE] /manual admin
+VM587:64 ✅ [BARCODE] /reset
+VM587:64 ✅ [BARCODE] /labels.pdf
+VM587:64 ✅ [BARCODE] /labels.pdf layout=zebra
+VM587:64 ✅ [BARCODE] /print
+VM587:64 ✅ [BARCODE] /printer-status
+VM587:595 
+🖨 17. Barcode printers (+ is_default)
+VM587:64 ✅ [PRINTER] GET /
+VM587:64 ✅ [PRINTER] GET /available
+VM587:64 ✅ [PRINTER] POST
+VM587:64 ✅ [PRINTER] PUT
+VM587:64 ✅ [PRINTER] DELETE
+VM587:76  POST https://5.189.243.15:8443/api/barcode-printers 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:607
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PRINTER] POST без name → 400
+VM587:76  POST https://5.189.243.15:8443/api/barcode-printers 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:608
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PRINTER] POST bad mode → 400
+VM587:76  POST https://5.189.243.15:8443/api/barcode-printers 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:609
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PRINTER] POST zebra-ip без ip → 400
+VM587:64 ✅ [PRINTER] is_default: у первого сброшен — isDefault=false
+VM587:64 ✅ [PRINTER] is_default: у второго true — isDefault=true
+VM587:631 
+📋 18. Equipment templates
+VM587:64 ✅ [EQ-TPL] GET /
+VM587:64 ✅ [EQ-TPL] POST
+VM587:76  POST https://5.189.243.15:8443/api/equipment-templates 409 (Conflict)
+api @ VM587:76
+runMegaTestV80 @ VM587:638
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [EQ-TPL] duplicate name → 409
+VM587:64 ✅ [EQ-TPL] DELETE
+VM587:76  POST https://5.189.243.15:8443/api/equipment-templates 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:642
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [EQ-TPL] POST без name → 400
+VM587:648 
+👁 19. View templates
+VM587:64 ✅ [VW-TPL] GET /
+VM587:64 ✅ [VW-TPL] POST
+VM587:64 ✅ [VW-TPL] PUT
+VM587:64 ✅ [VW-TPL] apply-to-user
+VM587:64 ✅ [VW-TPL] reset-from-user
+VM587:64 ✅ [VW-TPL] DELETE
+VM587:76  POST https://5.189.243.15:8443/api/view-templates 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:663
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [VW-TPL] POST пустые → 400
+VM587:669 
+⚙️ 20. Equipment types
+VM587:64 ✅ [EQ-TYPE] GET — 7
+VM587:64 ✅ [EQ-TYPE] PUT add new
+VM587:76  PUT https://5.189.243.15:8443/api/settings/equipment-types 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:681
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [EQ-TYPE] нельзя удалить используемый → 400
+VM587:688 
+👤 21. User preferences
+VM587:64 ✅ [PREFS] GET
+VM587:64 ✅ [PREFS] PUT
+VM587:64 ✅ [PREFS] effective source=individual
+VM587:64 ✅ [PREFS] DELETE
+VM587:64 ✅ [PREFS] GET my-preferences
+VM587:64 ✅ [PREFS] GET my-preferences/effective
+VM587:64 ✅ [PREFS] POST apply-fields-to-all
+VM587:702 
+📋 22. Settings fields
+VM587:64 ✅ [FIELDS] GET
+VM587:64 ✅ [FIELDS] удаление поля с данными — status=200
+VM587:64 ✅ [FIELDS] PUT добавить
+VM587:64 ✅ [FIELDS] bulk_identity_fields сохраняется
+VM587:729 
+🔍 23. Filters
+VM587:64 ✅ [FILTERS] GET
+VM587:64 ✅ [FILTERS] PUT no-change
+VM587:740 
+📖 24. Help
+VM587:64 ✅ [HELP] GET /help/visible (user)
+VM587:64 ✅ [HELP] GET /help (admin)
+VM587:64 ✅ [HELP] POST /reset
+VM587:750 
+🏢 25. only_own_department
+VM587:64 ✅ [OWN-DEPT] создать в своём
+VM587:76  POST https://5.189.243.15:8443/api/pipettes 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:773
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [OWN-DEPT] создать в чужом → 403/400
+VM587:787 
+📄 26. Print acts через UI
+VM587:64 ✅ [PRINT] actSendFields сохраняются
+VM587:64 ✅ [PRINT] actReturnFields сохраняются
+VM587:64 ✅ [PRINT] printSendAct — HTML: 2922 байт
+VM587:64 ✅ [PRINT] printSendAct: содержит "АКТ ОТПРАВКИ"
+VM587:64 ✅ [PRINT] printReturnAct — HTML: 2863 байт
+VM587:64 ✅ [PRINT] printReturnAct: содержит "АКТ ВОЗВРАТА"
+VM587:862 
+🌓 27. UI theme
+VM587:64 ✅ [THEME] переключение — dark → light
+VM587:64 ✅ [THEME] localStorage pipette_theme — = light
+VM587:64 ✅ [THEME] возврат к исходной
+VM587:64 ✅ [THEME] data-theme установлен — dark
+VM587:888 
+🔴 28. UI-BULK-DEL — реальные 2 пипетки
+VM587:64 ✅ [UI-BULK-DEL] создано 2 прибора
+VM587:64 ✅ [UI-BULK-DEL] кнопка «Удалить» при выборе — "Удалить (2)"
+VM587:64 ✅ [UI-BULK-DEL] скрыта без выбора
+VM587:921 
+📥 29. bulkReturn open+close
+VM587:64 ✅ [UI] open+close: bulkReturn
+VM587:947 
+🪟 30. UI modals
+VM587:64 ✅ [UI] open+close: audit
+VM587:64 ✅ [UI] open+close: history
+VM587:64 ✅ [UI] open+close: quickCal
+VM587:64 ✅ [UI] open+close: barcodeScanner
+VM587:64 ✅ [UI] open+close: help
+VM587:64 ✅ [UI] open+close: form
+VM587:64 ✅ [UI] open+close: settings
+VM587:64 ✅ [UI] open+close: import
+VM587:64 ✅ [UI] open+close: barcodePrint
+VM587:64 ✅ [UI] open+close: bulkSend
+VM587:64 ✅ [UI] open+close: bulkResponsible
+VM587:64 ✅ [UI] open+close: transfer
+VM587:64 ✅ [UI] open+close: changePassword
+VM587:64 ✅ [UI] open+close: userView
+VM587:64 ✅ [UI] settings:users
+VM587:64 ✅ [UI] settings:roles
+VM587:64 ✅ [UI] settings:export
+VM587:64 ✅ [UI] settings:departments
+VM587:64 ✅ [UI] settings:fields
+VM587:64 ✅ [UI] settings:filters
+VM587:64 ✅ [UI] settings:help
+VM587:64 ✅ [UI] settings:equipment
+VM587:64 ✅ [UI] settings:printers
+VM587:64 ✅ [UI] settings:barcodes
+VM587:64 ✅ [UI] settings:view-templates
+VM587:64 ✅ [UI] settings:general
+VM587:64 ✅ [UI] filterPanel open
+VM587:64 ✅ [UI] filterPanel close
+VM587:64 ✅ [UI] rowActions open
+VM587:64 ✅ [UI] rowActions close
+VM587:1006 
+⌨️ 31. UI keyboard
+VM587:64 ✅ [KEYS] Ctrl+H
+VM587:64 ✅ [KEYS] Ctrl+Shift+A
+VM587:64 ✅ [KEYS] ?+Shift
+VM587:64 ✅ [KEYS] Escape закрывает модалку
+VM587:1038 
+📅 32. Format
+VM587:64 ✅ [FMT] ISO date format
+VM587:64 ✅ [FMT] empty → «—»
+VM587:64 ✅ [FMT] slugify(Инвентарный номер)
+VM587:1055 
+📋 33. app_logs
+VM587:64 ✅ [LOG] GET /log/errors — 16 записей
+VM587:64 ✅ [LOG] GET /log (audit)
+VM587:64 ✅ [LOG] DELETE /log/errors
+VM587:1067 
+🔁 34. FULL LIFECYCLE
+VM587:76  GET https://5.189.243.15:8443/api/pipettes/P-90956 404 (Not Found)
+api @ VM587:76
+runMegaTestV80 @ VM587:1072
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [LIFECYCLE] 1. create — P-90956
+VM587:64 ✅ [LIFECYCLE] 2. read — ok
+VM587:64 ✅ [LIFECYCLE] 3. update
+VM587:64 ✅ [LIFECYCLE] 4. audit trail — 2 records
+VM587:64 ✅ [LIFECYCLE] 5. quick calibration
+VM587:64 ✅ [LIFECYCLE] 6. history — 2 records
+VM587:64 ✅ [LIFECYCLE] 7. set barcode
+VM587:64 ✅ [LIFECYCLE] 8. barcode PNG
+VM587:64 ✅ [LIFECYCLE] 9. labels PDF
+VM587:64 ✅ [LIFECYCLE] 10. send to cal — successful=1
+VM587:64 ✅ [LIFECYCLE] 11. verify sent
+VM587:76  DELETE https://5.189.243.15:8443/api/pipettes/P-90956 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1107
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [LIFECYCLE] 12. delete while sent → 400
+VM587:64 ✅ [LIFECYCLE] 13. cancel send
+VM587:64 ✅ [LIFECYCLE] 14. return from cal
+VM587:64 ✅ [LIFECYCLE] 15. verify returned
+VM587:64 ✅ [LIFECYCLE] 16. transfer
+VM587:64 ✅ [LIFECYCLE] 17. change responsible
+VM587:64 ✅ [LIFECYCLE] 18. change type → new ID — P-90956 → A-90956
+VM587:64 ✅ [LIFECYCLE] 19. history moved — 3 records
+VM587:64 ✅ [LIFECYCLE] 20. export to Excel
+VM587:64 ✅ [LIFECYCLE] 21. delete
+VM587:76  GET https://5.189.243.15:8443/api/pipettes/A-90956 404 (Not Found)
+api @ VM587:76
+runMegaTestV80 @ VM587:1150
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [LIFECYCLE] 22. verify deleted → 404
+VM587:1160 
+📄 35. HEADER SETTINGS
+VM587:64 ✅ [HDR] GET /export → 3 поля шапки
+VM587:64 ✅ [HDR] GET /effective → 3 поля шапки
+VM587:64 ✅ [HDR] PUT header сохраняется
+VM587:64 ✅ [HDR] пустой headerText → ""
+VM587:1179 
+🧠 36. VUE STORES
+VM587:64 ✅ [STORE] auth.user !== null
+VM587:64 ✅ [STORE] auth.token !== null
+VM587:64 ✅ [STORE] auth.hasPermission(manage_settings)
+VM587:64 ✅ [STORE] auth.hasPermission(nonexistent) → true
+VM587:64 ✅ [STORE] pipettes.items — массив
+VM587:64 ✅ [STORE] pipettes.page ≥ 1
+VM587:64 ✅ [STORE] pipettes.limit > 0
+VM587:64 ✅ [STORE] pipettes.selected — Set
+VM587:64 ✅ [STORE] pipettes.hasSelection — boolean
+VM587:64 ✅ [STORE] settings.fields — массив
+VM587:64 ✅ [STORE] settings.equipmentTypes — массив
+VM587:64 ✅ [STORE] settings.departments — массив
+VM587:64 ✅ [STORE] settings.filters — массив
+VM587:64 ✅ [STORE] settings.warnDays — число
+VM587:64 ✅ [STORE] settings.printDocs — объект
+VM587:64 ✅ [STORE] getPasswordPolicy().requireLower — boolean
+VM587:64 ✅ [STORE] getPasswordPolicy().minLength — number
+VM587:64 ✅ [STORE] stats.counters — объект
+VM587:64 ✅ [STORE] stats.reminders — объект
+VM587:64 ✅ [STORE] stats.reminders.danger — массив
+VM587:64 ✅ [STORE] stats.reminders.warn — массив
+VM587:64 ✅ [STORE] prefs.visibleFields — массив
+VM587:64 ✅ [STORE] prefs.columnOrder — массив
+VM587:64 ✅ [STORE] prefs.columnWidths — объект
+VM587:64 ✅ [STORE] ui.activeModal — null — [null]
+VM587:64 ✅ [STORE] ui.filterPanelOpen — boolean
+VM587:64 ✅ [STORE] ui.rowActions — объект
+VM587:64 ✅ [STORE] toast.toasts — массив
+VM587:64 ✅ [STORE] reactivity: setSearch меняет pipStore.search
+VM587:64 ✅ [STORE] toggleSelected adds
+VM587:64 ✅ [STORE] hasSelection computed true
+VM587:64 ✅ [STORE] toggleSelected removes
+VM587:64 ✅ [STORE] hasSelection computed false
+VM587:64 ✅ [STORE] ui.open устанавливает modalData
+VM587:64 ✅ [STORE] ui.close очищает modalData
+VM587:1238 
+🗑️ 37. MASS DELETE
+VM587:76  POST https://5.189.243.15:8443/api/pipettes/bulk-delete 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1240
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [BULK-DEL] POST /bulk-delete существует
+VM587:64 ✅ [BULK-DEL] empty ids → 400
+VM587:64 ✅ [BULK-DEL] создано 3 тестовых
+VM587:64 ✅ [BULK-DEL] 3 ids → successful:3 — successful=3
+VM587:76  GET https://5.189.243.15:8443/api/pipettes/MEGA-DEL-1794931199049-0 404 (Not Found)
+api @ VM587:76
+runMegaTestV80 @ VM587:1261
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [BULK-DEL] после удаления → 404
+VM587:64 ✅ [BULK-DEL] несуществующий → notFound
+VM587:64 ✅ [BULK-DEL] на поверке → skipped
+VM587:1281 
+⚙️ 38. SETTINGS — новые ключи
+VM587:64 ✅ [SYS-SET] GET /settings/system
+VM587:64 ✅ [SYS-SET] все 17 ключей — 17/17
+VM587:1304 
+🛡 39. WHITELIST SETTINGS
+VM587:64 ✅ [WHITELIST] unknown key не записан
+VM587:64 ✅ [WHITELIST] jwt_secret_override не записан
+VM587:1319 
+🔐 40. PASSWORD POLICY
+VM587:76  POST https://5.189.243.15:8443/api/auth/change-password 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1337
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [PW-POLICY] min_length=12 → 8-char отклонён — Пароль не соответствует требованиям:
+• Минимум 12 символов
+• Хотя бы один спецси
+VM587:1353 
+📏 41. EQUIPMENT LIMITS
+VM587:76  POST https://5.189.243.15:8443/api/pipettes/bulk-create 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1361
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [EQ-LIMITS] max_batch_size=3 → 5 отклонён — Максимум 3 строк за раз
+VM587:1372 
+🎭 42. IMPERSONATION MODE
+VM587:76  POST https://5.189.243.15:8443/api/auth/impersonate/u_1b4158a9863bb8fb 403 (Forbidden)
+api @ VM587:76
+runMegaTestV80 @ VM587:1382
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [IMPERSON] mode=off → 403 — status=403
+VM587:64 ✅ [IMPERSON] mode=admin + login=admin → разрешено — по логике
+VM587:1400 
+🔔 43. REMINDERS SETTINGS
+VM587:64 ✅ [REMINDERS] reminders_enabled=0 сохраняется
+VM587:76  PUT https://5.189.243.15:8443/api/settings/system 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1408
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [REMINDERS] пустой массив ролей → 400
+VM587:1418 
+📊 44. TABLE VIEW SETTINGS
+VM587:76  PUT https://5.189.243.15:8443/api/settings/system 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1423
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [TABLE-SET] page_sizes невалидный → 400
+VM587:76  PUT https://5.189.243.15:8443/api/settings/system 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1425
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [TABLE-SET] page_sizes пустой → 400
+VM587:76  PUT https://5.189.243.15:8443/api/settings/system 400 (Bad Request)
+api @ VM587:76
+runMegaTestV80 @ VM587:1427
+await in runMegaTestV80
+(anonymous) @ VM587:1821
+VM587:64 ✅ [TABLE-SET] table_density невалидный → 400
+VM587:64 ✅ [TABLE-SET] page_sizes=[50,200]
+VM587:64 ✅ [TABLE-SET] default_page_size=50
+VM587:64 ✅ [TABLE-SET] table_density=compact
+VM587:1444 
+🌐 45. FRONTEND HELPERS
+VM587:64 ✅ [FE-HELPERS] getTableViewSettings()
+VM587:64 ✅ [FE-HELPERS] getPasswordPolicy()
+VM587:64 ✅ [FE-HELPERS] getEquipmentSettings()
+VM587:64 ✅ [FE-HELPERS] tv.pageSizes — array
+VM587:64 ✅ [FE-HELPERS] tv.defaultPageSize — number
+VM587:64 ✅ [FE-HELPERS] tv.density — один из 3 — normal
+VM587:64 ✅ [FE-HELPERS] pp.minLength — number — 8
+VM587:64 ✅ [FE-HELPERS] pp.requireLower — boolean
+VM587:64 ✅ [FE-HELPERS] eq.maxBatchSize — number — 1000
+VM587:1472 
+🪟 46. UI — 5 новых разделов
+VM587:64 ✅ [UI-SETTINGS] раздел "Общие настройки"
+VM587:64 ✅ [UI-SETTINGS] раздел "Таблица и отображение"
+VM587:64 ✅ [UI-SETTINGS] раздел "Политика паролей"
+VM587:64 ✅ [UI-SETTINGS] раздел "Уведомления"
+VM587:64 ✅ [UI-SETTINGS] раздел "Вход под пользователем"
+VM587:64 ✅ [UI-SETTINGS] equipment-general открывается
+VM587:64 ✅ [UI-SETTINGS] table-view открывается
+VM587:64 ✅ [UI-SETTINGS] password-policy открывается
+VM587:64 ✅ [UI-SETTINGS] notifications открывается
+VM587:64 ✅ [UI-SETTINGS] security открывается
+VM587:1507 
+🔑 47. UI — ChangePasswordModal
+VM587:64 ✅ [UI-PW-POLICY] показывает "Минимум 8"
+VM587:64 ✅ [UI-PW-ICONS] иконки валидации (fa-check/xmark)
+VM587:1539 
+📏 48. UI — UserEditModal размеры
+VM587:64 ✅ [UI-PAGE-SIZES] селект использует pageSizes — опции: [50,100,200,500,1000] ожидалось: [50,100,200,500,1000]
+VM587:1570 
+🪟 49. Modal settings resize
+VM587:64 ✅ [UI] modal-settings-resizable class
+VM587:64 ✅ [UI] resize=both — both
+VM587:64 ✅ [UI] overflow=auto/hidden — auto
+VM587:1593 
+🔤 50. Логин админом
+VM587:64 ✅ [LOGIN] создан тестовый
+VM587:64 ✅ [LOGIN] rename админом
+VM587:64 ✅ [LOGIN] логин фактически изменён — v8_rename_1794931199049_new
+VM587:76  PUT https://5.189.243.15:8443/api/users/u_4e118f900edeca9d 409 (Conflict)
+VM587:64 ✅ [LOGIN] занять admin → 409/403 — status=409
+VM587:76  PUT https://5.189.243.15:8443/api/users/u_13b9d3ec56136044 403 (Forbidden)
+VM587:64 ✅ [LOGIN] не-админ не может сменить логин → 403 — status=403
+VM587:1649 
+🏷 51. barcode_max_length в авто-ШК
+VM587:64 ✅ [BARCODE-LIMIT] barcode ≤ 20 символов — len=20
+VM587:1678 
+🧹 CLEANUP
+VM587:1700 ✅ Настройки системы восстановлены
+VM587:1763 
+════════════════════════════════════════════════════════════
+VM587:1764 📊 v8.0 ИТОГ: ✅ 353  ❌ 0  ⏭️ 0  (всего: 353) · 117.0s
+VM587:1766 ════════════════════════════════════════════════════════════
+VM587:1789 🎉 v8.0 — всё зелёное! Проект готов.

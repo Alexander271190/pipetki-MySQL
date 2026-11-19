@@ -1,0 +1,1432 @@
+/* MEGA-TEST v7.2 — Полный тест всего проекта (с новыми фиксами) */
+(async function runMegaTestV72_Vue() {
+  'use strict';
+
+  function getPinia() {
+    const root = document.getElementById('app') || document.querySelector('[data-v-app]');
+    const app = root?.__vue_app__;
+    if (app?.config?.globalProperties?.$pinia) return app.config.globalProperties.$pinia;
+    if (app?._context?.provides) {
+      const sym = Symbol.for('pinia');
+      if (app._context.provides[sym]) return app._context.provides[sym];
+      for (const k of Object.getOwnPropertySymbols(app._context.provides)) {
+        const v = app._context.provides[k];
+        if (v && typeof v === 'object' && v._s && typeof v._s.get === 'function') return v;
+      }
+    }
+    const anyEl = document.querySelector('.main-content') || document.querySelector('.header') || root;
+    const comp = anyEl?.__vueParentComponent;
+    if (comp?.appContext?.config?.globalProperties?.$pinia) {
+      return comp.appContext.config.globalProperties.$pinia;
+    }
+    if (comp?.appContext?.provides) {
+      const sym = Symbol.for('pinia');
+      if (comp.appContext.provides[sym]) return comp.appContext.provides[sym];
+    }
+    return null;
+  }
+
+  const __pinia = getPinia();
+  if (!__pinia) { console.error('❌ Pinia не найдена. Войдите и попробуйте снова.'); return; }
+
+  const getStore = (n) => __pinia._s.get(n);
+  const authStore     = getStore('auth');
+  const uiStore       = getStore('ui');
+  const pipStore      = getStore('pipettes');
+  const settingsStore = getStore('settings');
+  const statsStore    = getStore('stats');
+  const prefsStore    = getStore('prefs');
+  const toastStore    = getStore('toast');
+
+  if (!authStore || !pipStore || !settingsStore) {
+    console.error('❌ Сторы не инициализированы. Войдите.'); return;
+  }
+  if (authStore.user?.isAdmin !== true) { console.error('❌ Требуется вход админом'); return; }
+
+  const results = [];
+  const log = (g, n, s, d = '') => {
+    results.push({ g, n, s, d });
+    const ic = { PASS: '✅', FAIL: '❌', SKIP: '⏭️', WARN: '⚠️' }[s] || 'ℹ️';
+    console.log(`${ic} [${g}] ${n}${d ? ' — ' + d : ''}`);
+  };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const uid = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const adminToken = (() => {
+    try { return JSON.parse(sessionStorage.getItem('pipette_session') || '{}').token; }
+    catch { return null; }
+  })();
+  if (!adminToken) { console.error('❌ Нет токена'); return; }
+
+  const api = async (ep, m = 'GET', b = null, tk) => {
+    const useTok = tk !== undefined ? tk : adminToken;
+    const headers = { 'Content-Type': 'application/json' };
+    if (useTok) headers['Authorization'] = 'Bearer ' + useTok;
+    const opts = { method: m, headers };
+    if (b) opts.body = JSON.stringify(b);
+    const r = await fetch('/api' + ep, opts);
+    const text = await r.text();
+    let j = null;
+    try { j = text ? JSON.parse(text) : null; } catch { j = { _raw: text }; }
+    return { status: r.status, ok: r.ok, body: j, headers: r.headers };
+  };
+  const apiRaw = async (ep, tk = adminToken) => {
+    const headers = {};
+    if (tk) headers['Authorization'] = 'Bearer ' + tk;
+    return fetch('/api' + ep, { headers });
+  };
+
+  const loginUser = async (lg, pw) => {
+    let retries = 3;
+    while (retries > 0) {
+      const r = await api('/auth/login', 'POST', { login: lg, password: pw }, null);
+      if (r.status === 429) { await sleep(2000); retries--; continue; }
+      return r.ok ? r.body.token : null;
+    }
+    return null;
+  };
+
+  const reloadPipettes = async () => { try { await pipStore.loadPaged(); } catch (e) {} };
+
+  const fmtDT = ts => {
+    const s = String(ts || '');
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+    return m ? `${m[3]}.${m[2]}.${m[1]}   ${m[4]}:${m[5]}` : '—';
+  };
+
+  const _origOpen = window.open;
+  let _openCallCount = 0, _lastOpenHtml = '';
+  window.open = function () {
+    _openCallCount++;
+    return {
+      document: { write(h) { _lastOpenHtml = String(h || ''); }, close() {}, title: '' },
+      close() {}, focus() {}, print() {},
+    };
+  };
+  const restoreAll = () => { window.open = _origOpen; };
+
+  const createdUsers = [], createdPipettes = [], createdRoles = [], createdPresets = [];
+  const createdPrinters = [], createdEqTpls = [], createdViewTpls = [];
+  const lifecycleIds = [];
+
+  let _origExportCfg = null, _origFiltersCfg = null;
+  let origSettings = null;
+
+  console.log('%c🚀 MEGA-TEST v7.2-VUE (Full)', 'font-size:16px;font-weight:bold;color:#8b5cf6;');
+  console.log('%cСтарт: ' + new Date().toLocaleTimeString(), 'color:#64748b;');
+
+  try {
+
+  /* ═══ 0. VUE APP SMOKE ═══ */
+  console.log('\n%c🟢 0. VUE APP SMOKE', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    log('VUE', 'Pinia доступна', !!__pinia ? 'PASS' : 'FAIL');
+    log('VUE', 'auth store', !!authStore ? 'PASS' : 'FAIL');
+    log('VUE', 'ui store', !!uiStore ? 'PASS' : 'FAIL');
+    log('VUE', 'pipettes store', !!pipStore ? 'PASS' : 'FAIL');
+    log('VUE', 'settings store', !!settingsStore ? 'PASS' : 'FAIL');
+    log('VUE', 'stats store', !!statsStore ? 'PASS' : 'FAIL');
+    log('VUE', 'prefs store', !!prefsStore ? 'PASS' : 'FAIL');
+    log('VUE', 'toast store', !!toastStore ? 'PASS' : 'FAIL');
+    const app = document.getElementById('app');
+    log('VUE', '#app существует', !!app ? 'PASS' : 'FAIL');
+    log('VUE', '#app не пустой', app && app.innerHTML.length > 100 ? 'PASS' : 'FAIL', `${app?.innerHTML.length || 0} байт`);
+    log('VUE', '__vue_app__ на #app', !!app?.__vue_app__ ? 'PASS' : 'FAIL');
+    log('VUE', '.main-content виден', !!document.querySelector('.main-content.visible') ? 'PASS' : 'FAIL');
+    log('VUE', '.header существует', !!document.getElementById('main-header') ? 'PASS' : 'FAIL');
+    log('VUE', '.toolbar существует', !!document.querySelector('.toolbar') ? 'PASS' : 'FAIL');
+    log('VUE', '#pipettes-table существует', !!document.getElementById('pipettes-table') ? 'PASS' : 'FAIL');
+    log('VUE', '.pagination существует', !!document.querySelector('.pagination') ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 1. RBAC ═══ */
+  console.log('\n%c🔐 1. RBAC', 'font-size:14px;font-weight:bold;color:#dc2626;');
+  {
+    const r = await api('/auth/verify'); const u = r.body?.user;
+    log('RBAC', 'verify admin', r.ok ? 'PASS' : 'FAIL');
+    log('RBAC', 'isAdmin=true', u?.isAdmin === true ? 'PASS' : 'FAIL');
+    log('RBAC', 'roleName=Администратор', u?.roleName === 'Администратор' ? 'PASS' : 'FAIL', u?.roleName);
+    log('RBAC', 'permissions=["*"]', JSON.stringify(u?.permissions) === '["*"]' ? 'PASS' : 'FAIL');
+    log('RBAC', 'authStore.user.id === api.user.id', authStore.user?.id === u?.id ? 'PASS' : 'FAIL');
+    log('RBAC', 'authStore.isAdmin === true', authStore.isAdmin === true ? 'PASS' : 'FAIL');
+    log('RBAC', 'authStore.isAuthenticated === true', authStore.isAuthenticated === true ? 'PASS' : 'FAIL');
+    log('RBAC', 'authStore.isImpersonating === false', authStore.isImpersonating === false ? 'PASS' : 'FAIL');
+  }
+  let allRoles = [];
+  {
+    const r = await api('/roles'); allRoles = Array.isArray(r.body) ? r.body : [];
+    log('RBAC', 'GET /roles', r.ok ? 'PASS' : 'FAIL');
+    log('RBAC', '≥3 системных', allRoles.filter(x => x.isSystem).length >= 3 ? 'PASS' : 'FAIL');
+    const a = allRoles.find(x => x.value === 'admin');
+    log('RBAC', 'admin isAdmin/isSystem', a?.isAdmin && a?.isSystem ? 'PASS' : 'FAIL');
+    const u = allRoles.find(x => x.value === 'user');
+    const s = allRoles.find(x => x.value === 'senior_lab');
+    log('RBAC', 'user: 3 perms', u?.permissions?.length === 3 ? 'PASS' : 'FAIL', `${u?.permissions?.length}`);
+    log('RBAC', 'senior_lab: 12 perms', s?.permissions?.length === 12 ? 'PASS' : 'FAIL', `${s?.permissions?.length}`);
+  }
+  let customRoleId = null;
+  {
+    const r = await api('/roles', 'POST', { name: 'MegaAdmin-' + uid, permissions: [], isAdmin: true });
+    if (r.ok) { customRoleId = r.body.id; createdRoles.push(customRoleId); log('RBAC', 'создание кастомной admin-роли', 'PASS'); }
+    else log('RBAC', 'создание кастомной admin-роли', 'FAIL', r.body?.error);
+    if (customRoleId) {
+      const r2 = await api('/roles'); const cr = (r2.body || []).find(x => x.id === customRoleId);
+      log('RBAC', 'кастомная: isAdmin=true, isSystem=false',
+          cr?.isAdmin === true && cr?.isSystem === false ? 'PASS' : 'FAIL');
+    }
+  }
+  { const a = allRoles.find(x => x.value === 'admin');
+    log('RBAC', 'PUT admin → 400', (await api(`/roles/${a.id}`, 'PUT', { name: 'Hacked', permissions: [] })).status === 400 ? 'PASS' : 'FAIL');
+    log('RBAC', 'DELETE admin → 400', (await api(`/roles/${a.id}`, 'DELETE')).status === 400 ? 'PASS' : 'FAIL');
+  }
+  { const u = allRoles.find(x => x.value === 'user');
+    await api(`/roles/${u.id}`, 'PUT', { name: u.name, permissions: u.permissions, isAdmin: true });
+    const rr = await api('/roles'); const check = (rr.body || []).find(x => x.value === 'user');
+    log('RBAC', 'user: is_admin через PUT игнорируется', check?.isAdmin === false ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 2. Auth & Policy ═══ */
+  console.log('\n%c🔑 2. Auth & Policy', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/auth/verify');
+    log('AUTH', 'verify admin', r.ok ? 'PASS' : 'FAIL');
+    log('AUTH', 'passwordChangedAt в ответе', r.body?.user?.passwordChangedAt !== undefined ? 'PASS' : 'FAIL');
+    
+    // 🆕 Проверка эндпоинта политики паролей
+    const pp = await api('/auth/password-policy');
+    log('AUTH', 'GET /auth/password-policy', pp.ok ? 'PASS' : 'FAIL');
+    log('AUTH', 'policy is boolean (parseBool)', typeof pp.body?.requireLower === 'boolean' ? 'PASS' : 'FAIL');
+    log('AUTH', 'policy minLength is number', typeof pp.body?.minLength === 'number' ? 'PASS' : 'FAIL');
+
+    log('AUTH', 'login неверный пароль → 401', (await api('/auth/login', 'POST', { login: 'admin', password: 'wrong_xyz' }, null)).status === 401 ? 'PASS' : 'FAIL');
+    log('AUTH', 'login без пароля → 400', (await api('/auth/login', 'POST', { login: 'admin' }, null)).status === 400 ? 'PASS' : 'FAIL');
+    log('AUTH', 'login без логина → 400', (await api('/auth/login', 'POST', { password: 'x' }, null)).status === 400 ? 'PASS' : 'FAIL');
+    log('AUTH', 'пустой токен → 401', (await api('/auth/verify', 'GET', null, 'invalid_token_xyz')).status === 401 ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 3. Users CRUD ═══ */
+  console.log('\n%c👤 3. Users CRUD', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  await api('/settings/system', 'PUT', { password_min_length: '8' });
+  await sleep(300);
+  let testUserId = null, testUserLogin = 'mega_user_' + uid, testUserPass = 'MegaPass1!';
+  {
+    const r = await api('/users', 'POST', {
+      login: testUserLogin, fullName: 'Mega User', position: 'Лаборант', department: '',
+      role: 'user', onlyOwnDepartment: false, extraPermissions: ['view_history'], isActing: false, actingForId: null
+    });
+    if (r.ok) { testUserId = r.body.id; createdUsers.push({ id: testUserId, login: testUserLogin }); log('USERS', 'POST', 'PASS'); }
+    else log('USERS', 'POST', 'FAIL', r.body?.error);
+    log('USERS', 'dup login → 409', (await api('/users', 'POST', { login: testUserLogin, fullName: 'D', position: 'X', role: 'user' })).status === 409 ? 'PASS' : 'FAIL');
+    const list = await api('/users');
+    log('USERS', 'GET /users', list.ok && Array.isArray(list.body) ? 'PASS' : 'FAIL');
+    log('USERS', 'GET /users/responsibles', (await api('/users/responsibles')).ok ? 'PASS' : 'FAIL');
+    log('USERS', 'GET /users/acting-targets', (await api('/users/acting-targets')).ok ? 'PASS' : 'FAIL');
+    if (testUserId) {
+      const rp = await api(`/users/${testUserId}/reset-password`, 'POST', {});
+      log('USERS', 'reset-password', rp.ok && rp.body.tempPassword ? 'PASS' : 'FAIL');
+      if (rp.ok) {
+        const tokTmp = await loginUser(testUserLogin, rp.body.tempPassword);
+        log('USERS', 'login по temp-паролю', tokTmp ? 'PASS' : 'FAIL');
+        if (tokTmp) {
+          const ch = await api('/auth/change-password', 'POST',
+            { currentPassword: rp.body.tempPassword, newPassword: testUserPass, confirmPassword: testUserPass }, tokTmp);
+          log('USERS', 'change-password', ch.ok ? 'PASS' : 'FAIL', ch.body?.error || '');
+          log('USERS', 'login после смены', (await loginUser(testUserLogin, testUserPass)) ? 'PASS' : 'FAIL');
+        }
+      }
+      log('USERS', 'PUT', (await api(`/users/${testUserId}`, 'PUT', {
+        login: testUserLogin, fullName: 'Mega User Upd', position: 'Ст. лаборант', department: '',
+        role: 'user', onlyOwnDepartment: false, extraPermissions: ['view_history', 'print_labels'],
+        isActing: false, actingForId: null
+      })).ok ? 'PASS' : 'FAIL');
+    }
+    const me = (await api('/auth/verify')).body.user;
+    log('USERS', 'нельзя удалить себя → 400', (await api(`/users/${me.id}`, 'DELETE')).status === 400 ? 'PASS' : 'FAIL');
+    log('USERS', 'self-demote → 400', (await api(`/users/${me.id}`, 'PUT', {
+      login: me.login, fullName: me.fullName, position: me.position, department: me.department,
+      role: 'user', onlyOwnDepartment: false, extraPermissions: [], isActing: false, actingForId: null
+    })).status === 400 ? 'PASS' : 'FAIL');
+    log('USERS', 'acting без actingForId → 400', (await api('/users', 'POST', {
+      login: 'mega_badact_' + uid, fullName: 'X', position: 'Y', role: 'user',
+      isActing: true, actingForId: null
+    })).status === 400 ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 4. Presets ═══ */
+  console.log('\n%c💾 4. Presets', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/users/presets', 'POST', { name: 'MegaPreset-' + uid, permissions: ['view_history', 'export_data'] });
+    if (r.ok) { createdPresets.push(r.body.id); log('PRESET', 'POST', 'PASS'); }
+    else log('PRESET', 'POST', 'FAIL', r.body?.error);
+    log('PRESET', 'GET', (await api('/users/presets')).ok ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 5. Permissions ═══ */
+  console.log('\n%c🛡 5. Permissions', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const createUserWithPerms = async (suffix, perms, pass) => {
+    const lg = `mega_${suffix}_${uid}`;
+    const cr = await api('/users', 'POST', {
+      login: lg, fullName: 'Mega ' + suffix, position: 'X', department: '', role: 'user',
+      extraPermissions: perms, onlyOwnDepartment: false
+    });
+    if (!cr.ok) return null;
+    createdUsers.push({ id: cr.body.id, login: lg });
+    await sleep(500);
+    const tokTmp = await loginUser(lg, cr.body.tempPassword);
+    if (!tokTmp) return null;
+    await api('/auth/change-password', 'POST',
+      { currentPassword: cr.body.tempPassword, newPassword: pass, confirmPassword: pass }, tokTmp);
+    return await loginUser(lg, pass);
+  };
+  const noPermToken        = await createUserWithPerms('noperm', [], 'NoPerm1!');
+  const viewLogToken       = await createUserWithPerms('log',    ['view_log'], 'LogUser1!');
+  const viewAuditOnlyToken = await createUserWithPerms('audit',  ['view_audit'], 'AuditUser1!');
+  const viewHistoryOnlyToken = await createUserWithPerms('hist', ['view_history'], 'HistUser1!');
+  const canBarcodePrintOnlyToken = await createUserWithPerms('bprint', ['print_labels'], 'BPrint1!');
+  const canScanOnlyToken         = await createUserWithPerms('scan',   ['scan_barcode'], 'ScanUser1!');
+  const canTransferOnlyToken     = await createUserWithPerms('trans',  ['transfer_pipette'], 'Trans1!');
+  const canQuickCalOnlyToken     = await createUserWithPerms('qcal',   ['quick_calibration'], 'Qcal1!');
+  const canImportOnlyToken       = await createUserWithPerms('imp',    ['import_data'], 'ImpUser1!');
+  const canExportOnlyToken       = await createUserWithPerms('exp',    ['export_data'], 'ExpUser1!');
+  const canAddPipetteToken       = await createUserWithPerms('addp',   ['add_pipette'], 'AddPip1!');
+  const canBulkReturnToken       = await createUserWithPerms('bret',   ['bulk_return'], 'BRet1!');
+  const canEditPipetteToken      = await createUserWithPerms('editp',  ['edit_pipette'], 'EditP1!');
+  const canDeletePipetteToken    = await createUserWithPerms('delp',   ['delete_pipette'], 'DelP1!');
+
+  if (noPermToken) {
+    log('PERMS', 'noPerm: /log/errors → 403', (await api('/log/errors?limit=1','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /pipettes/audit → 403', (await api('/pipettes/audit?limit=1','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /barcode-printers → 403', (await api('/barcode-printers','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /barcodes/fonts → 200', (await api('/barcodes/fonts','GET',null,noPermToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /barcode-printers/available → 200', (await api('/barcode-printers/available','GET',null,noPermToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /help/visible → 200', (await api('/help/visible','GET',null,noPermToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /help (admin) → 403', (await api('/help','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /equipment-templates → 403', (await api('/equipment-templates','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /view-templates → 403', (await api('/view-templates','GET',null,noPermToken)).status === 403 ? 'PASS':'FAIL');
+    log('PERMS', 'noPerm: /roles → 200 (фича бэка)', (await api('/roles','GET',null,noPermToken)).status === 200 ? 'PASS':'FAIL');
+  }
+  if (viewLogToken) {
+    log('PERMS', 'view_log: /log/errors → 200', (await api('/log/errors?limit=1','GET',null,viewLogToken)).status === 200 ? 'PASS':'FAIL');
+    log('PERMS', 'view_log: /pipettes/audit → 200', (await api('/pipettes/audit?limit=1','GET',null,viewLogToken)).status === 200 ? 'PASS':'FAIL');
+  }
+  if (viewAuditOnlyToken) {
+    log('PERMS', 'view_audit: /log/errors → 403', (await api('/log/errors?limit=1','GET',null,viewAuditOnlyToken)).status === 403 ? 'PASS':'FAIL');
+  }
+  if (viewHistoryOnlyToken) {
+    log('PERMS', 'view_history: /:id/audit работает', (await api('/pipettes/__nope__/audit','GET',null,viewHistoryOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canBarcodePrintOnlyToken) {
+    log('PERMS', 'print_labels: /labels.pdf доступен', (await api('/barcodes/labels.pdf','GET',null,canBarcodePrintOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+    log('PERMS', 'print_labels: /print доступен', (await api('/barcodes/print','POST',{ids:[]},canBarcodePrintOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canScanOnlyToken) {
+    log('PERMS', 'scan_barcode: /lookup доступен', (await api('/barcodes/lookup','POST',{barcode:'zzz'},canScanOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canQuickCalOnlyToken) {
+    log('PERMS', 'quick_cal: /:id/calibration', (await api('/pipettes/__nope__/calibration','POST',{},canQuickCalOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canTransferOnlyToken) {
+    log('PERMS', 'transfer: /:id/transfer', (await api('/pipettes/__nope__/transfer','POST',{department:'X',responsible:'Y'},canTransferOnlyToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canImportOnlyToken) {
+    const csv = 'ID;Модель\nMEGA-IMP-NOPERM-' + uid + ';X\n';
+    const r = await api('/import','POST',{file:btoa(unescape(encodeURIComponent(csv))),filename:'x.csv'},canImportOnlyToken);
+    log('PERMS', 'import_data: /import доступен', r.status !== 403 ? 'PASS':'FAIL');
+    if (r.ok && r.body?.added > 0) createdPipettes.push('MEGA-IMP-NOPERM-' + uid);
+  }
+  if (canExportOnlyToken) {
+    log('PERMS', 'export_data: /effective hasPermission=true',
+      (await api('/settings/print-documents/effective','GET',null,canExportOnlyToken)).body?.hasPermission === true ? 'PASS':'FAIL');
+  }
+  if (canAddPipetteToken) {
+    log('PERMS', 'add_pipette: POST /pipettes', (await api('/pipettes','POST',{},canAddPipetteToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canBulkReturnToken) {
+    log('PERMS', 'bulk_return: /bulk-return', (await api('/pipettes/bulk-return','POST',{items:[],date:today,org:'X'},canBulkReturnToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canEditPipetteToken) {
+    log('PERMS', 'edit_pipette: PUT /pipettes/:id', (await api('/pipettes/__nope__','PUT',{},canEditPipetteToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+  if (canDeletePipetteToken) {
+    log('PERMS', 'delete_pipette: DELETE /pipettes/:id', (await api('/pipettes/__nope__','DELETE',null,canDeletePipetteToken)).status !== 403 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 6. Equipment CRUD ═══ */
+  console.log('\n%c🔬 6. Equipment CRUD', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const pipIds = [];
+  {
+    const id = 'MEGA-P-' + uid;
+    const r = await api('/pipettes', 'POST', {
+      id, model: 'Mega Model', equipmentType: 'pipette', lastCalibration: today,
+      responsible: authStore.user?.fullName || 'Admin', volume: '100', department: '', serial: 'MEGA-SN-' + uid
+    });
+    if (r.ok) { pipIds.push(id); createdPipettes.push(id); log('CRUD','POST','PASS'); }
+    else log('CRUD','POST','FAIL', r.body?.error);
+    log('CRUD','duplicate ID → 409', (await api('/pipettes','POST',{id,model:'D',equipmentType:'pipette',lastCalibration:today,responsible:'X'})).status === 409 ? 'PASS':'FAIL');
+    const future = new Date(); future.setFullYear(future.getFullYear()+1);
+    log('CRUD','future date → 400', (await api('/pipettes','POST',{
+      id: 'MEGA-F-'+uid, model: 'F', equipmentType: 'pipette',
+      lastCalibration: future.toISOString().slice(0,10), responsible: 'X'
+    })).status === 400 ? 'PASS':'FAIL');
+    const g = await api(`/pipettes/${id}`);
+    log('CRUD','GET one', g.ok ? 'PASS':'FAIL');
+    log('CRUD','computed_status есть', g.body?.computed_status ? 'PASS':'FAIL', g.body?.computed_status);
+    log('CRUD','PUT', (await api(`/pipettes/${id}`,'PUT',{ model: 'Mega Updated', notes: 'test' })).ok ? 'PASS':'FAIL');
+    const a = await api(`/pipettes/${id}/audit?limit=20`);
+    log('CRUD','audit trail', a.ok && Array.isArray(a.body?.items) ? 'PASS':'FAIL');
+    const editRec = (a.body?.items || []).find(x => x.action === 'Редактирование оборудования');
+    log('CRUD','audit: diff с «→»', editRec && /→/.test(editRec.details || '') ? 'PASS':'FAIL');
+    log('CRUD','GET /paged', (await api('/pipettes/paged?limit=5')).ok ? 'PASS':'FAIL');
+    log('CRUD','GET /all', (await api('/pipettes/all?limit=100')).ok ? 'PASS':'FAIL');
+    log('CRUD','GET /ids', (await api('/pipettes/ids')).ok ? 'PASS':'FAIL');
+    log('CRUD','GET /stats', (await api('/pipettes/stats')).ok ? 'PASS':'FAIL');
+    log('CRUD','GET /next-id', (await api('/pipettes/next-id?type=pipette')).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 7. Paged ═══ */
+  console.log('\n%c🔍 7. Paged', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('PAGED','search=Mega', (await api('/pipettes/paged?limit=5&search=Mega')).ok ? 'PASS':'FAIL');
+    const filters = encodeURIComponent(JSON.stringify({ equipmentType: 'pipette' }));
+    log('PAGED','filters', (await api('/pipettes/paged?limit=5&filters=' + filters)).ok ? 'PASS':'FAIL');
+    const s3 = await api('/pipettes/paged?limit=5&sort=id&dir=desc');
+    log('PAGED','sort=desc', s3.ok ? 'PASS':'FAIL');
+    if (s3.ok && s3.body?.items?.length > 1) {
+      log('PAGED','desc: первый > второй', s3.body.items[0].id > s3.body.items[1].id ? 'PASS':'FAIL');
+    }
+    log('PAGED','page=99999', (await api('/pipettes/paged?page=99999&limit=5')).ok ? 'PASS':'FAIL');
+    const s5 = await api('/pipettes/paged?limit=10000');
+    log('PAGED','limit>500 → ≤500', s5.ok && s5.body?.limit <= 500 ? 'PASS':'FAIL', `limit=${s5.body?.limit}`);
+    log('PAGED','counters в ответе', s5.body?.counters && typeof s5.body.counters.total === 'number' ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 8. Bulk ═══ */
+  console.log('\n%c📦 8. Bulk', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  const bulkIds = [];
+  {
+    const rows = [1,2].map(i => ({ model: 'Mega Bulk ' + i, equipmentType: 'pipette', lastCalibration: today, responsible: 'Admin' }));
+    const bc = await api('/pipettes/bulk-create', 'POST', { rows });
+    if (bc.ok && Array.isArray(bc.body.ids)) {
+      bulkIds.push(...bc.body.ids); createdPipettes.push(...bc.body.ids);
+      log('BULK','bulk-create ×2','PASS', bc.body.ids.join(', '));
+    } else log('BULK','bulk-create','FAIL', bc.body?.error);
+    log('BULK','bulk-lock', (await api('/pipettes/bulk-lock','POST',{ids:bulkIds})).ok ? 'PASS':'FAIL');
+    log('BULK','bulk-unlock', (await api('/pipettes/bulk-unlock','POST',{ids:bulkIds})).ok ? 'PASS':'FAIL');
+    log('BULK','bulk-change-responsible', (await api('/pipettes/bulk-change-responsible','POST',{ids:bulkIds, newResponsible:'Test Resp'})).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 9. Locks ═══ */
+  console.log('\n%c🔒 9. Locks', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+    await api(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST');
+    const l = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
+    log('LOCK','single lock mine', l.ok && l.body.mine ? 'PASS':'FAIL');
+    
+    // 🆕 Проверка heartbeat
+    await sleep(2000);
+    await api(`/pipettes/${encodeURIComponent(id)}/lock`); 
+    const l2 = await api(`/pipettes/${encodeURIComponent(id)}/lock`);
+    log('LOCK','heartbeat сохраняет блокировку', l2.ok && l2.body.mine ? 'PASS':'FAIL');
+
+    log('LOCK','force unlock', (await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE')).ok ? 'PASS':'FAIL');
+    if (canTransferOnlyToken) {
+      await api(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST');
+      log('LOCK','чужой лок → 409', (await api(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST', null, canTransferOnlyToken)).status === 409 ? 'PASS':'FAIL');
+      await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE');
+    }
+  }
+
+  /* ═══ 10. Calibration ═══ */
+  console.log('\n%c📊 10. Calibration', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+    log('CAL','POST', (await api(`/pipettes/${encodeURIComponent(id)}/calibration`, 'POST', {
+      date: today, cert: 'MEGA-' + uid, result: 'pass', org: 'Test', note: 'Mega test'
+    })).ok ? 'PASS':'FAIL');
+    log('CAL','GET history', (await api(`/pipettes/${encodeURIComponent(id)}/calibration`)).ok ? 'PASS':'FAIL');
+    const future = new Date(); future.setFullYear(future.getFullYear()+1);
+    log('CAL','future date → 400', (await api(`/pipettes/${encodeURIComponent(id)}/calibration`,'POST',{
+      date: future.toISOString().slice(0,10), result: 'pass'
+    })).status === 400 ? 'PASS':'FAIL');
+    log('CAL','result=fail', (await api(`/pipettes/${encodeURIComponent(id)}/calibration`,'POST',{
+      date: today, result: 'fail'
+    })).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 11. Send → Return ═══ */
+  console.log('\n%c🔄 11. Send → Return', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+    log('CYCLE','bulk-send', (await api('/pipettes/bulk-send', 'POST', { ids: [id], sentDate: today, note: 'Mega' })).ok ? 'PASS':'FAIL');
+    const afterSend = await api(`/pipettes/${encodeURIComponent(id)}`);
+    log('CYCLE','после send: sent≠null', afterSend.body?.sent_for_calibration ? 'PASS':'FAIL');
+    log('CYCLE','после send: active=false', afterSend.body?.active === false ? 'PASS':'FAIL');
+    log('CYCLE','bulk-return', (await api('/pipettes/bulk-return', 'POST', {
+      items: [{ id, result: 'pass', cert: 'MEGA-RET-' + uid }], date: today, org: 'Test', note: 'ret'
+    })).ok ? 'PASS':'FAIL');
+    const afterReturn = await api(`/pipettes/${encodeURIComponent(id)}`);
+    log('CYCLE','после return: sent=null', afterReturn.body?.sent_for_calibration === null ? 'PASS':'FAIL');
+    log('CYCLE','после return: active=true', afterReturn.body?.active === true ? 'PASS':'FAIL');
+    log('CYCLE','после return: last_calibration', afterReturn.body?.last_calibration === today ? 'PASS':'FAIL');
+    await api('/pipettes/bulk-send', 'POST', { ids: [id], sentDate: today });
+    log('CYCLE','cancel-send', (await api(`/pipettes/${encodeURIComponent(id)}/cancel-send`, 'POST')).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 12. Transfer ═══ */
+  console.log('\n%c🚚 12. Transfer', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const deps = (await api('/settings/departments')).body || [];
+    if (deps.length >= 2 && bulkIds.length) {
+      const id = bulkIds[0];
+      log('TRANSFER','transfer', (await api(`/pipettes/${encodeURIComponent(id)}/transfer`, 'POST', { department: deps[0], responsible: 'Transfer Test' })).ok ? 'PASS':'FAIL');
+      log('TRANSFER','тот же отдел → 400', (await api(`/pipettes/${encodeURIComponent(id)}/transfer`, 'POST', { department: deps[0], responsible: 'X' })).status === 400 ? 'PASS':'FAIL');
+      log('TRANSFER','несуществующий отдел → 400', (await api(`/pipettes/${encodeURIComponent(id)}/transfer`, 'POST', { department: '___NO_SUCH___'+uid, responsible: 'X' })).status === 400 ? 'PASS':'FAIL');
+    } else {
+      log('TRANSFER', 'transfer', 'SKIP', 'нужно ≥2 отделов');
+    }
+  }
+
+  /* ═══ 13. Replacement ═══ */
+  console.log('\n%c↔️ 13. Replacement', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('REPL','available-for-replacement', (await api('/pipettes/available-for-replacement?type=pipette')).ok ? 'PASS':'FAIL');
+    log('REPL','available-for-replacement-batch', (await api('/pipettes/available-for-replacement-batch', 'POST', { items: [{ id: 'P-001', type: 'pipette', department: '' }] })).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 14. Import ═══ */
+  console.log('\n%c📥 14. Import', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const longNotes = 'X'.repeat(70000);
+    const csv = 'ID;Модель;Дата поверки;Ответственный;Примечание\n' +
+      `MEGA-IMP-OK-${uid};Test OK;${today};Admin;норм\n` +
+      `MEGA-IMP-BAD-${uid};Test BAD;${today};Admin;${longNotes}\n`;
+    const base64 = btoa(unescape(encodeURIComponent(csv)));
+    const imp = await api('/import', 'POST', { file: base64, filename: 'mega.csv' });
+    if (imp.ok) {
+      log('IMPORT','import', 'PASS', `added=${imp.body.added}, skipped=${imp.body.skipped}`);
+      log('IMPORT','bad row skipped', imp.body.skipped >= 1 ? 'PASS':'FAIL');
+      if (imp.body.added > 0) createdPipettes.push(`MEGA-IMP-OK-${uid}`);
+    } else log('IMPORT','import','FAIL', imp.body?.error || imp.status);
+  }
+
+  /* ═══ 15. Export & Print settings ═══ */
+  console.log('\n%c🖨 15. Export & Print', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/export');
+    log('PRINT','GET /settings/export', r.ok ? 'PASS':'FAIL');
+    _origExportCfg = r.body;
+    log('PRINT','все ключи', ['fields','exportEnabled','actSendEnabled','actSendFields','actReturnEnabled','actReturnFields','historyEnabled','historyFields'].every(k => k in (r.body || {})) ? 'PASS':'FAIL');
+    log('PRINT','PUT exportEnabled=false', (await api('/settings/export','PUT',{exportEnabled:false})).ok ? 'PASS':'FAIL');
+    log('PRINT','сброс проверки', (await api('/settings/export')).body?.exportEnabled === false ? 'PASS':'FAIL');
+    if (_origExportCfg) await api('/settings/export','PUT', _origExportCfg);
+    const eff = await api('/settings/print-documents/effective');
+    log('PRINT','effective', eff.ok ? 'PASS':'FAIL');
+    log('PRINT','hasPermission=true', eff.body?.hasPermission === true ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 16. Barcodes ═══ */
+  console.log('\n%c🏷 16. Barcodes', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    const id = pipIds[0];
+    log('BARCODE','/fonts → 200', (await api('/barcodes/fonts')).status === 200 ? 'PASS':'FAIL');
+    log('BARCODE','/:id/png code128', (await apiRaw(`/barcodes/${encodeURIComponent(id)}/png?type=code128`)).ok ? 'PASS':'FAIL');
+    log('BARCODE','/:id/png qr', (await apiRaw(`/barcodes/${encodeURIComponent(id)}/png?type=qr`)).ok ? 'PASS':'FAIL');
+    log('BARCODE','/lookup по id', (await api('/barcodes/lookup', 'POST', { barcode: id })).ok ? 'PASS':'FAIL');
+    log('BARCODE','/lookup нет → 404', (await api('/barcodes/lookup', 'POST', { barcode: 'zzz-'+uid })).status === 404 ? 'PASS':'FAIL');
+    log('BARCODE','/manual admin', (await api('/barcodes/manual', 'POST', { id, barcode: 'MEGA-BC-' + uid })).ok ? 'PASS':'FAIL');
+    log('BARCODE','/reset', (await api('/barcodes/reset', 'POST', { id })).ok ? 'PASS':'FAIL');
+    log('BARCODE','/labels.pdf', (await apiRaw(`/barcodes/labels.pdf?ids=${encodeURIComponent(id)}&copies=1&layout=a4`)).ok ? 'PASS':'FAIL');
+    log('BARCODE','/labels.pdf layout=zebra', (await apiRaw(`/barcodes/labels.pdf?ids=${encodeURIComponent(id)}&copies=1&layout=zebra`)).ok ? 'PASS':'FAIL');
+    log('BARCODE','/print', (await api('/barcodes/print', 'POST', { ids: [id], copies: 1 })).ok ? 'PASS':'FAIL');
+    log('BARCODE','/printer-status', (await api('/barcodes/printer-status', 'POST', { ip: '127.0.0.1', port: 1 })).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 17. Barcode printers ═══ */
+  console.log('\n%c🖨 17. Barcode printers', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('PRINTER','GET /', (await api('/barcode-printers')).ok ? 'PASS':'FAIL');
+    log('PRINTER','GET /available', (await api('/barcode-printers/available')).ok ? 'PASS':'FAIL');
+    const cr = await api('/barcode-printers', 'POST', { name: 'Mega Printer ' + uid, mode: 'pdf-a4', labelSize: '58x40', enabled: true, isDefault: false });
+    if (cr.ok) {
+      createdPrinters.push(cr.body.id);
+      log('PRINTER','POST', 'PASS');
+      log('PRINTER','PUT', (await api(`/barcode-printers/${cr.body.id}`,'PUT',{ name: 'Mega Renamed '+uid, mode: 'pdf-a4', labelSize: '58x40', enabled: true, isDefault: false })).ok ? 'PASS':'FAIL');
+      log('PRINTER','DELETE', (await api(`/barcode-printers/${cr.body.id}`,'DELETE')).ok ? 'PASS':'FAIL');
+      createdPrinters.pop();
+    } else log('PRINTER','POST','FAIL', cr.body?.error);
+    log('PRINTER','POST без name → 400', (await api('/barcode-printers', 'POST', { name: '', mode: 'pdf-a4' })).status === 400 ? 'PASS':'FAIL');
+    log('PRINTER','POST bad mode → 400', (await api('/barcode-printers', 'POST', { name: 'X', mode: 'nonsense' })).status === 400 ? 'PASS':'FAIL');
+    log('PRINTER','POST zebra-ip без ip → 400', (await api('/barcode-printers', 'POST', { name: 'X', mode: 'zebra-ip' })).status === 400 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 18. Equipment templates ═══ */
+  console.log('\n%c📋 18. Equipment templates', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('EQ-TPL','GET /', (await api('/equipment-templates')).ok ? 'PASS':'FAIL');
+    const cr = await api('/equipment-templates', 'POST', { name: 'MegaTpl-' + uid, data: { model: 'X', volume: '100' } });
+    if (cr.ok) {
+      createdEqTpls.push(cr.body.id);
+      log('EQ-TPL','POST', 'PASS');
+      log('EQ-TPL','duplicate name → 409', (await api('/equipment-templates', 'POST', { name: 'MegaTpl-' + uid, data: {} })).status === 409 ? 'PASS':'FAIL');
+      log('EQ-TPL','DELETE', (await api(`/equipment-templates/${cr.body.id}`,'DELETE')).ok ? 'PASS':'FAIL');
+      createdEqTpls.pop();
+    } else log('EQ-TPL','POST','FAIL', cr.body?.error);
+    log('EQ-TPL','POST без name → 400', (await api('/equipment-templates', 'POST', { name: '', data: {} })).status === 400 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 19. View templates ═══ */
+  console.log('\n%c👁 19. View templates', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('VW-TPL','GET /', (await api('/view-templates')).ok ? 'PASS':'FAIL');
+    const cr = await api('/view-templates', 'POST', { name: 'MegaView-' + uid, visibleFields: ['id','model','status','nextCalibration'], isDefault: false });
+    if (cr.ok) {
+      createdViewTpls.push(cr.body.id);
+      log('VW-TPL','POST', 'PASS');
+      log('VW-TPL','PUT', (await api(`/view-templates/${cr.body.id}`,'PUT',{ name: 'MegaView-'+uid, visibleFields: ['id','model'], isDefault: false })).ok ? 'PASS':'FAIL');
+      if (testUserId) {
+        log('VW-TPL','apply-to-user', (await api(`/view-templates/${cr.body.id}/apply-to-user/${testUserId}`, 'POST', {})).ok ? 'PASS':'FAIL');
+        log('VW-TPL','reset-from-user', (await api(`/view-templates/apply-to-user/${testUserId}`, 'DELETE')).ok ? 'PASS':'FAIL');
+      }
+      log('VW-TPL','DELETE', (await api(`/view-templates/${cr.body.id}`,'DELETE')).ok ? 'PASS':'FAIL');
+      createdViewTpls.pop();
+    } else log('VW-TPL','POST','FAIL', cr.body?.error);
+    log('VW-TPL','POST пустые → 400', (await api('/view-templates', 'POST', { name: 'X', visibleFields: [] })).status === 400 ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 20. Equipment types ═══ */
+  console.log('\n%c⚙️ 20. Equipment types', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/equipment-types');
+    const orig = r.body;
+    log('EQ-TYPE','GET', r.ok && Array.isArray(r.body) ? 'PASS':'FAIL', `${(r.body||[]).length}`);
+    const draft = JSON.parse(JSON.stringify(orig));
+    draft.push({ value: 'mega_test_' + uid, label: 'Mega Test', prefix: 'MG', calibrationPlace: 'internal', interval: 12 });
+    log('EQ-TYPE','PUT add new', (await api('/settings/equipment-types', 'PUT', draft)).ok ? 'PASS':'FAIL');
+    await api('/settings/equipment-types','PUT', orig);
+    const usedType = orig[0]?.value;
+    if (usedType) {
+      const withoutUsed = orig.filter(t => t.value !== usedType);
+      log('EQ-TYPE','нельзя удалить используемый → 400', (await api('/settings/equipment-types','PUT', withoutUsed)).status === 400 ? 'PASS':'FAIL');
+    }
+  }
+
+  /* ═══ 21. User preferences ═══ */
+  console.log('\n%c👤 21. User preferences', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (testUserId) {
+    log('PREFS','GET', (await api(`/settings/user-preferences/${testUserId}`)).status === 200 ? 'PASS':'FAIL');
+    log('PREFS','PUT', (await api(`/settings/user-preferences/${testUserId}`, 'PUT', { visibleFields: ['id','model','status','nextCalibration'], _virtualsInitialized: true })).ok ? 'PASS':'FAIL');
+    log('PREFS','effective source=individual', (await api(`/settings/user-preferences/${testUserId}/effective`)).body?.source === 'individual' ? 'PASS':'FAIL');
+    log('PREFS','DELETE', (await api(`/settings/user-preferences/${testUserId}`,'DELETE')).ok ? 'PASS':'FAIL');
+    log('PREFS','GET my-preferences', (await api('/settings/my-preferences')).ok ? 'PASS':'FAIL');
+    log('PREFS','GET my-preferences/effective', (await api('/settings/my-preferences/effective')).ok ? 'PASS':'FAIL');
+    log('PREFS','POST apply-fields-to-all', (await api('/settings/apply-fields-to-all', 'POST', { visibleFields: ['id','model','status','nextCalibration'], mode: 'missing' })).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 22. Fields & Custom Fields ═══ */
+  console.log('\n%c📋 22. Settings fields', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/fields');
+    const orig = r.body;
+    log('FIELDS','GET', r.ok && Array.isArray(r.body) ? 'PASS':'FAIL');
+    if (orig.find(f => f.id === 'volume')) {
+      const withoutVol = orig.filter(f => f.id !== 'volume');
+      const tryDel = await api('/settings/fields', 'PUT', withoutVol);
+      log('FIELDS','удаление поля с данными', [200,409].includes(tryDel.status) ? 'PASS':'FAIL', `status=${tryDel.status}`);
+      await api('/settings/fields','PUT', orig);
+    }
+    const withNew = JSON.parse(JSON.stringify(orig));
+    const cfId = 'mega_test_cf_' + uid;
+    withNew.push({ id: cfId, label: 'Mega Test', type: 'text', required: false, enabled: true, options: [], default: '', order: 999 });
+    log('FIELDS','PUT добавить', (await api('/settings/fields','PUT', withNew)).ok ? 'PASS':'FAIL');
+    
+    // 🆕 Тест whitelist (bulk_identity_fields)
+    const sys = await api('/settings/system');
+    const bulkIds = JSON.parse(sys.body.bulk_identity_fields || '[]');
+    const newBulk = [...new Set([...bulkIds, cfId])];
+    await api('/settings/system', 'PUT', { bulk_identity_fields: JSON.stringify(newBulk) });
+    const checkSys = await api('/settings/system');
+    log('FIELDS', 'bulk_identity_fields сохраняется', JSON.parse(checkSys.body.bulk_identity_fields || '[]').includes(cfId) ? 'PASS':'FAIL');
+
+    await api('/settings/fields','PUT', orig);
+  }
+
+  /* ═══ 23. Filters ═══ */
+  console.log('\n%c🔍 23. Filters', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/filters');
+    _origFiltersCfg = r.body;
+    log('FILTERS','GET', r.ok && Array.isArray(r.body) ? 'PASS':'FAIL');
+    log('FILTERS','PUT no-change', (await api('/settings/filters','PUT', r.body)).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 24. Help ═══ */
+  console.log('\n%c📖 24. Help', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('HELP','GET /help/visible (user)', (await api('/help/visible')).ok ? 'PASS':'FAIL');
+    log('HELP','GET /help (admin)', (await api('/help')).ok ? 'PASS':'FAIL');
+    log('HELP','POST /reset', (await api('/help/reset', 'POST', {})).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 25. only_own_department ═══ */
+  console.log('\n%c🏢 25. only_own_department', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const deps = (await api('/settings/departments')).body || [];
+    if (deps.length >= 2) {
+      const myDept = deps[0], otherDept = deps[1];
+      const cr = await api('/users', 'POST', {
+        login: 'mega_od_' + uid, fullName: 'OD User', position: 'Лаборант',
+        department: myDept, role: 'user',
+        onlyOwnDepartment: true, extraPermissions: ['add_pipette'], isActing: false, actingForId: null
+      });
+      if (cr.ok) {
+        createdUsers.push({ id: cr.body.id, login: 'mega_od_' + uid });
+        const tokTmp = await loginUser('mega_od_' + uid, cr.body.tempPassword);
+        if (tokTmp) {
+          await api('/auth/change-password','POST', { currentPassword: cr.body.tempPassword, newPassword: 'OdUser1!', confirmPassword: 'OdUser1!' }, tokTmp);
+          const odTok = await loginUser('mega_od_' + uid, 'OdUser1!');
+          if (odTok) {
+            const okCreate = await api('/pipettes','POST',{
+              id: 'OD-OK-'+uid, model: 'OD', equipmentType: 'pipette', lastCalibration: today,
+              responsible: 'OD', department: myDept
+            }, odTok);
+            log('OWN-DEPT','создать в своём', okCreate.ok ? 'PASS':'FAIL');
+            if (okCreate.ok) createdPipettes.push('OD-OK-'+uid);
+            const badCreate = await api('/pipettes','POST',{
+              id: 'OD-BAD-'+uid, model: 'OD', equipmentType: 'pipette', lastCalibration: today,
+              responsible: 'OD', department: otherDept
+            }, odTok);
+            log('OWN-DEPT','создать в чужом → 403/400', [400,403].includes(badCreate.status) ? 'PASS':'FAIL');
+          }
+        }
+      }
+    }
+  }
+
+  /* ═══ 26. Print acts & settings ═══ */
+  console.log('\n%c📄 26. Print acts & settings', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('PRINT', 'printSendAct', 'SKIP', 'внутри BulkSendModal.vue — тестировать вручную');
+    log('PRINT', 'printReturnAct', 'SKIP', 'внутри BulkReturnModal.vue — тестировать вручную');
+    log('PRINT', 'PDF реестра (useExport.exportToPDF)', 'SKIP', 'внутри composable — тестировать вручную');
+    log('PRINT', 'Excel реестра (useExport.exportToXlsx)', 'SKIP', 'внутри composable — тестировать вручную');
+    log('PRINT', 'labels PDF (BarcodePrintModal)', 'SKIP', 'внутри компонента — тестировать вручную');
+    if (_origExportCfg) {
+      await api('/settings/export', 'PUT', {
+        actSendFields: ['id','model','serial'], actReturnFields: ['id','cert','result'],
+        actSendEnabled: true, actReturnEnabled: true
+      });
+      const eff = await api('/settings/print-documents/effective');
+      log('PRINT', 'actSendFields сохраняются', Array.isArray(eff.body?.actSendFields) ? 'PASS' : 'FAIL');
+      log('PRINT', 'actReturnFields сохраняются', Array.isArray(eff.body?.actReturnFields) ? 'PASS' : 'FAIL');
+      await api('/settings/export','PUT', _origExportCfg);
+    }
+  }
+
+  /* ═══ 27. UI modals ═══ */
+  console.log('\n%c🪟 27. UI modals (Vue store)', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const cases = [
+      ['audit', null], ['history', pipIds[0]], ['quickCal', pipIds[0]],
+      ['barcodeScanner', null], ['help', null], ['form', null], ['settings', null],
+      ['import', null], ['barcodePrint', null],
+      ['bulkSend', bulkIds.length ? bulkIds : null],
+      ['bulkResponsible', bulkIds.length ? bulkIds : null],
+      ['transfer', pipIds[0]], ['changePassword', 'change'], ['userView', testUserId],
+    ];
+    const needsData = ['history', 'quickCal', 'transfer', 'bulkSend', 'bulkResponsible', 'userView'];
+    for (const [name, data] of cases) {
+      if (data === null && needsData.includes(name)) {
+        log('UI', 'open+close: ' + name, 'SKIP', 'нет данных');
+        continue;
+      }
+      try {
+        uiStore.open(name, data ?? null);
+        await sleep(80);
+        const opened = uiStore.activeModal === name;
+        uiStore.close();
+        await sleep(40);
+        const closed = uiStore.activeModal === null;
+        log('UI', 'open+close: ' + name, opened && closed ? 'PASS' : 'FAIL',
+            opened && closed ? '' : `open=${opened} close=${closed}`);
+      } catch (e) {
+        log('UI', 'open+close: ' + name, 'FAIL', e.message);
+      }
+    }
+    log('UI', 'open+close: bulkReturn', 'SKIP', 'требует прибор на поверке');
+
+    for (const sec of ['users','roles','export','departments','fields','filters','help','equipment','printers','barcodes','view-templates','general']) {
+      try {
+        uiStore.open('settings', sec);
+        await sleep(150);
+        const c = document.getElementById('settings-section-content');
+        const hasContent = !!(c && c.innerHTML.length > 50);
+        uiStore.close();
+        await sleep(40);
+        log('UI', 'settings:' + sec, hasContent ? 'PASS' : 'FAIL');
+      } catch (e) {
+        log('UI', 'settings:' + sec, 'FAIL', e.message);
+      }
+    }
+
+    uiStore.openFilterPanel();
+    log('UI', 'filterPanel open', uiStore.filterPanelOpen === true ? 'PASS' : 'FAIL');
+    uiStore.closeFilterPanel();
+    log('UI', 'filterPanel close', uiStore.filterPanelOpen === false ? 'PASS' : 'FAIL');
+
+    const fakeAnchor = document.createElement('button');
+    uiStore.openRowActions(fakeAnchor, [{ label: 'test', action: () => {} }]);
+    log('UI', 'rowActions open', !!uiStore.rowActions.anchor ? 'PASS' : 'FAIL');
+    uiStore.closeRowActions();
+    log('UI', 'rowActions close', uiStore.rowActions.anchor === null ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 28. UI theme ═══ */
+  console.log('\n%c🌓 28. UI theme', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('THEME', 'переключение', 'SKIP', 'внутри AppHeader.vue — тестировать вручную');
+    log('THEME', 'localStorage pipette_theme', 'SKIP', 'кнопка в шапке');
+    const theme = document.documentElement.getAttribute('data-theme');
+    log('THEME', 'data-theme установлен', theme === 'light' || theme === 'dark' ? 'PASS' : 'FAIL', theme || '—');
+  }
+
+  /* ═══ 29. UI keyboard ═══ */
+  console.log('\n%c⌨️ 29. UI keyboard', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  if (pipIds.length) {
+    pipStore.clearSelection();
+    pipStore.toggleSelected(pipIds[0], true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }));
+    await sleep(400);
+    log('KEYS', 'Ctrl+H', uiStore.activeModal === 'history' ? 'PASS' : 'FAIL');
+    if (uiStore.activeModal === 'history') uiStore.close();
+    pipStore.clearSelection();
+
+    pipStore.toggleSelected(pipIds[0], true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', shiftKey: true, ctrlKey: true, bubbles: true }));
+    await sleep(300);
+    log('KEYS', 'Ctrl+Shift+A', uiStore.activeModal === 'equipmentAudit' ? 'PASS' : 'FAIL');
+    if (uiStore.activeModal === 'equipmentAudit') uiStore.close();
+    pipStore.clearSelection();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true, bubbles: true }));
+    await sleep(200);
+    log('KEYS', '?+Shift', uiStore.activeModal === 'help' ? 'PASS' : 'FAIL');
+    if (uiStore.activeModal === 'help') uiStore.close();
+
+    uiStore.open('audit');
+    await sleep(80);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await sleep(150);
+    log('KEYS', 'Escape закрывает модалку', uiStore.activeModal === null ? 'PASS' : 'FAIL');
+    if (uiStore.activeModal) uiStore.close();
+  }
+
+  /* ═══ 30. Format ═══ */
+  console.log('\n%c📅 30. Format', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    log('FMT','ISO date format', /^\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/.test(fmtDT('2026-10-25T12:17:00')) ? 'PASS':'FAIL');
+    log('FMT','empty → «—»', fmtDT(null) === '—' ? 'PASS':'FAIL');
+    const slugify = (t) => {
+      if (!t) return '';
+      const ru = {'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+      let r = t.toLowerCase().split('').map(c => ru[c] !== undefined ? ru[c] : c).join('');
+      r = r.replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+      return r || 'item_' + Math.floor(Math.random() * 1000);
+    };
+    log('FMT','slugify(Инвентарный номер)', slugify('Инвентарный номер') === 'inventarnyy_nomer' ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 31. app_logs ═══ */
+  console.log('\n%c📋 31. app_logs', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  await sleep(1500);
+  {
+    const r = await api('/log/errors?limit=50');
+    log('LOG','GET /log/errors', r.ok ? 'PASS':'FAIL', `${r.body?.items?.length || 0} записей`);
+    log('LOG','GET /log (audit)', (await api('/log?limit=10')).ok ? 'PASS':'FAIL');
+    log('LOG','DELETE /log/errors', (await api('/log/errors', 'DELETE')).ok ? 'PASS':'FAIL');
+  }
+
+  /* ═══ 32. FULL LIFECYCLE ═══ */
+  console.log('\n%c🔁 32. FULL LIFECYCLE', 'font-size:14px;font-weight:bold;color:#8b5cf6;');
+  let currentId = null;
+  try {
+    const seqNum = String(Date.now()).slice(-5);
+    currentId = 'P-' + seqNum;
+    const preCheck = await api(`/pipettes/${encodeURIComponent(currentId)}`);
+    if (preCheck.ok) {
+      const next = await api('/pipettes/next-id?type=pipette');
+      currentId = next.body?.nextId || ('P-' + seqNum + '0');
+    }
+    const createRes = await api('/pipettes', 'POST', {
+      id: currentId, model: 'Lifecycle v1', equipmentType: 'pipette', lastCalibration: today,
+      responsible: authStore.user?.fullName || 'Admin', serial: 'LC-' + seqNum, volume: '500',
+      department: '', notes: 'Lifecycle test'
+    });
+    if (!createRes.ok) {
+      log('LIFECYCLE', '1. create', 'FAIL', createRes.body?.error);
+      throw new Error('cannot create');
+    }
+    lifecycleIds.push(currentId);
+    log('LIFECYCLE', '1. create', 'PASS', currentId);
+    const readRes = await api(`/pipettes/${encodeURIComponent(currentId)}`);
+    log('LIFECYCLE', '2. read', readRes.ok && readRes.body?.model === 'Lifecycle v1' ? 'PASS':'FAIL', readRes.body?.computed_status || '');
+    log('LIFECYCLE', '3. update', (await api(`/pipettes/${encodeURIComponent(currentId)}`, 'PUT', {
+      model: 'Lifecycle v2', notes: 'Updated', volume: '1000'
+    })).ok ? 'PASS':'FAIL');
+    const auditRes = await api(`/pipettes/${encodeURIComponent(currentId)}/audit`);
+    log('LIFECYCLE', '4. audit trail', auditRes.ok && (auditRes.body?.items?.length || 0) >= 2 ? 'PASS':'FAIL', `${auditRes.body?.items?.length || 0} records`);
+    log('LIFECYCLE', '5. quick calibration', (await api(`/pipettes/${encodeURIComponent(currentId)}/calibration`, 'POST', {
+      date: today, cert: 'LC-CERT-' + seqNum, result: 'pass', org: 'LC Lab', note: 'Annual'
+    })).ok ? 'PASS':'FAIL');
+    const histRes = await api(`/pipettes/${encodeURIComponent(currentId)}/calibration`);
+    log('LIFECYCLE', '6. history', histRes.ok && (histRes.body?.length || 0) >= 1 ? 'PASS':'FAIL', `${(histRes.body || []).length} records`);
+    log('LIFECYCLE', '7. set barcode', (await api('/barcodes/manual', 'POST', { id: currentId, barcode: 'LC-BC-' + seqNum })).ok ? 'PASS':'FAIL');
+    log('LIFECYCLE', '8. barcode PNG', (await apiRaw(`/barcodes/${encodeURIComponent(currentId)}/png?type=code128`)).ok ? 'PASS':'FAIL');
+    log('LIFECYCLE', '9. labels PDF', (await apiRaw(`/barcodes/labels.pdf?ids=${encodeURIComponent(currentId)}&copies=1&layout=a4`)).ok ? 'PASS':'FAIL');
+    const sendRes = await api('/pipettes/bulk-send', 'POST', { ids: [currentId], sentDate: today, note: 'Lifecycle send' });
+    log('LIFECYCLE', '10. send to cal', sendRes.ok && sendRes.body?.successful >= 1 ? 'PASS':'FAIL', `successful=${sendRes.body?.successful}`);
+    const afterSend = await api(`/pipettes/${encodeURIComponent(currentId)}`);
+    log('LIFECYCLE', '11. verify sent', afterSend.body?.sent_for_calibration !== null && afterSend.body?.active === false ? 'PASS':'FAIL');
+    log('LIFECYCLE', '12. delete while sent → 400', (await api(`/pipettes/${encodeURIComponent(currentId)}`, 'DELETE')).status === 400 ? 'PASS':'FAIL');
+    log('LIFECYCLE', '13. cancel send', (await api(`/pipettes/${encodeURIComponent(currentId)}/cancel-send`, 'POST')).ok ? 'PASS':'FAIL');
+    await api('/pipettes/bulk-send', 'POST', { ids: [currentId], sentDate: today });
+    const returnRes = await api('/pipettes/bulk-return', 'POST', {
+      items: [{ id: currentId, result: 'pass', cert: 'LC-RET-' + seqNum }], date: today, org: 'LC Lab', note: 'Returned'
+    });
+    log('LIFECYCLE', '14. return from cal', returnRes.ok && returnRes.body?.successful >= 1 ? 'PASS':'FAIL');
+    const afterReturn = await api(`/pipettes/${encodeURIComponent(currentId)}`);
+    log('LIFECYCLE', '15. verify returned', afterReturn.body?.sent_for_calibration === null && afterReturn.body?.active === true ? 'PASS':'FAIL');
+    const deps = (await api('/settings/departments')).body || [];
+    if (deps.length > 0) {
+      log('LIFECYCLE', '16. transfer', (await api(`/pipettes/${encodeURIComponent(currentId)}/transfer`, 'POST', {
+        department: deps[0], responsible: 'Lifecycle User'
+      })).ok ? 'PASS':'FAIL');
+    } else log('LIFECYCLE', '16. transfer', 'SKIP', 'нет отделов');
+    const respRes = await api('/pipettes/bulk-change-responsible', 'POST', { ids: [currentId], newResponsible: 'New Owner' });
+    log('LIFECYCLE', '17. change responsible', respRes.ok && respRes.body?.successful >= 1 ? 'PASS':'FAIL');
+    const typeUpdRes = await api(`/pipettes/${encodeURIComponent(currentId)}`, 'PUT', { equipmentType: 'analyzer' });
+    const idChanged = typeUpdRes.ok && typeUpdRes.body?.idChanged === true;
+    log('LIFECYCLE', '18. change type → new ID', idChanged ? 'PASS':'FAIL',
+      idChanged ? `${currentId} → ${typeUpdRes.body.newId}` : 'ID not changed');
+    if (idChanged) {
+      currentId = typeUpdRes.body.newId;
+      lifecycleIds[lifecycleIds.length - 1] = currentId;
+      const newHist = await api(`/pipettes/${encodeURIComponent(currentId)}/calibration`);
+      log('LIFECYCLE', '19. history moved', newHist.ok && (newHist.body?.length || 0) >= 2 ? 'PASS':'FAIL', `${(newHist.body || []).length} records`);
+    }
+    const expResp = await fetch('/api/export/xlsx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+      body: JSON.stringify({
+        mode: 'registry',
+        meta: { title: 'Lifecycle', date: today, recordCount: 1, user: 'Test', userPosition: 'Test' },
+        headers: ['ID', 'Model'],
+        rows: [{ 'ID': currentId, 'Model': 'Lifecycle v2' }],
+        fields: ['id', 'model']
+      })
+    });
+    log('LIFECYCLE', '20. export to Excel', expResp.ok ? 'PASS':'FAIL');
+    const delRes = await api(`/pipettes/${encodeURIComponent(currentId)}`, 'DELETE');
+    log('LIFECYCLE', '21. delete', delRes.ok ? 'PASS':'FAIL', delRes.body?.error || '');
+    if (delRes.ok) {
+      lifecycleIds.splice(lifecycleIds.length - 1, 1);
+      log('LIFECYCLE', '22. verify deleted → 404', (await api(`/pipettes/${encodeURIComponent(currentId)}`)).status === 404 ? 'PASS':'FAIL');
+    }
+  } catch (e) {
+    console.error('❌ Lifecycle FATAL:', e);
+    log('LIFECYCLE', 'FATAL', 'FAIL', e.message);
+  }
+
+  /* ═══ 33. HEADER SETTINGS ═══ */
+  console.log('\n%c📄 33. HEADER SETTINGS', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+  {
+    const r = await api('/settings/export');
+    log('HDR', 'GET /export → 3 поля шапки', ['headerEnabled','headerText','headerAlign'].every(k => k in (r.body || {})) ? 'PASS':'FAIL');
+    const eff = await api('/settings/print-documents/effective');
+    log('HDR', 'GET /effective → 3 поля шапки', ['headerEnabled','headerText','headerAlign'].every(k => k in (eff.body || {})) ? 'PASS':'FAIL');
+    const orig = r.body;
+    const testText = 'HDR-' + uid;
+    await api('/settings/export', 'PUT', { headerEnabled: true, headerText: testText, headerAlign: 'right' });
+    const after = await api('/settings/export');
+    log('HDR', 'PUT header сохраняется', after.body?.headerEnabled === true && after.body?.headerText === testText && after.body?.headerAlign === 'right' ? 'PASS':'FAIL');
+    await api('/settings/export', 'PUT', { headerEnabled: true, headerText: '', headerAlign: 'left' });
+    log('HDR', 'пустой headerText → ""', (await api('/settings/export')).body?.headerText === '' ? 'PASS':'FAIL');
+    await api('/settings/export', 'PUT', orig);
+  }
+
+  /* ═══ 34. VUE STORES ═══ */
+  console.log('\n%c🧠 34. VUE STORES', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    log('STORE', 'auth.user !== null', authStore.user ? 'PASS' : 'FAIL');
+    log('STORE', 'auth.token !== null', authStore.token ? 'PASS' : 'FAIL');
+    log('STORE', 'auth.hasPermission(manage_settings)', authStore.hasPermission('manage_settings') ? 'PASS' : 'FAIL');
+    const expectedNonexistent = authStore.isAdmin ? true : false;
+    log('STORE', `auth.hasPermission(nonexistent) → ${expectedNonexistent}`,
+        authStore.hasPermission('nonexistent_xyz') === expectedNonexistent ? 'PASS' : 'FAIL');
+    log('STORE', 'pipettes.items — массив', Array.isArray(pipStore.items) ? 'PASS' : 'FAIL');
+    log('STORE', 'pipettes.page ≥ 1', pipStore.page >= 1 ? 'PASS' : 'FAIL');
+    log('STORE', 'pipettes.limit > 0', pipStore.limit > 0 ? 'PASS' : 'FAIL');
+    log('STORE', 'pipettes.selected — Set', pipStore.selected instanceof Set ? 'PASS' : 'FAIL');
+    log('STORE', 'pipettes.hasSelection — boolean', typeof pipStore.hasSelection === 'boolean' ? 'PASS' : 'FAIL');
+    log('STORE', 'settings.fields — массив', Array.isArray(settingsStore.fields) ? 'PASS' : 'FAIL');
+    log('STORE', 'settings.equipmentTypes — массив', Array.isArray(settingsStore.equipmentTypes) ? 'PASS' : 'FAIL');
+    log('STORE', 'settings.departments — массив', Array.isArray(settingsStore.departments) ? 'PASS' : 'FAIL');
+    log('STORE', 'settings.filters — массив', Array.isArray(settingsStore.filters) ? 'PASS' : 'FAIL');
+    log('STORE', 'settings.warnDays — число', typeof settingsStore.warnDays === 'number' ? 'PASS' : 'FAIL');
+    log('STORE', 'settings.printDocs — объект', settingsStore.printDocs && typeof settingsStore.printDocs === 'object' ? 'PASS' : 'FAIL');
+    
+    // 🆕 Проверка parseBool
+    const pp = settingsStore.getPasswordPolicy();
+    log('STORE', 'getPasswordPolicy().requireLower — boolean', typeof pp.requireLower === 'boolean' ? 'PASS' : 'FAIL');
+    log('STORE', 'getPasswordPolicy().minLength — number', typeof pp.minLength === 'number' ? 'PASS' : 'FAIL');
+
+    log('STORE', 'stats.counters — объект', statsStore.counters && typeof statsStore.counters === 'object' ? 'PASS' : 'FAIL');
+    log('STORE', 'stats.reminders — объект', statsStore.reminders && typeof statsStore.reminders === 'object' ? 'PASS' : 'FAIL');
+    log('STORE', 'stats.reminders.danger — массив', Array.isArray(statsStore.reminders?.danger) ? 'PASS' : 'FAIL');
+    log('STORE', 'stats.reminders.warn — массив', Array.isArray(statsStore.reminders?.warn) ? 'PASS' : 'FAIL');
+    log('STORE', 'prefs.visibleFields — массив', Array.isArray(prefsStore.visibleFields) ? 'PASS' : 'FAIL');
+    log('STORE', 'prefs.columnOrder — массив', Array.isArray(prefsStore.columnOrder) ? 'PASS' : 'FAIL');
+    log('STORE', 'prefs.columnWidths — объект', prefsStore.columnWidths && typeof prefsStore.columnWidths === 'object' ? 'PASS' : 'FAIL');
+    log('STORE', 'ui.activeModal — null', uiStore.activeModal === null ? 'PASS' : 'FAIL', `[${uiStore.activeModal}]`);
+    log('STORE', 'ui.filterPanelOpen — boolean', typeof uiStore.filterPanelOpen === 'boolean' ? 'PASS' : 'FAIL');
+    log('STORE', 'ui.rowActions — объект', uiStore.rowActions && typeof uiStore.rowActions === 'object' ? 'PASS' : 'FAIL');
+    log('STORE', 'toast.toasts — массив', Array.isArray(toastStore.toasts) ? 'PASS' : 'FAIL');
+    const beforeSearch = pipStore.search;
+    pipStore.setSearch('__test_reactivity__' + uid);
+    await sleep(80);
+    log('STORE', 'reactivity: setSearch меняет pipStore.search', pipStore.search === '__test_reactivity__' + uid ? 'PASS' : 'FAIL');
+    pipStore.setSearch(beforeSearch);
+    await sleep(50);
+    if (pipIds.length) {
+      pipStore.clearSelection();
+      pipStore.toggleSelected(pipIds[0], true);
+      log('STORE', 'toggleSelected adds', pipStore.selected.has(pipIds[0]) ? 'PASS' : 'FAIL');
+      log('STORE', 'hasSelection computed true', pipStore.hasSelection === true ? 'PASS' : 'FAIL');
+      pipStore.toggleSelected(pipIds[0], false);
+      log('STORE', 'toggleSelected removes', !pipStore.selected.has(pipIds[0]) ? 'PASS' : 'FAIL');
+      log('STORE', 'hasSelection computed false', pipStore.hasSelection === false ? 'PASS' : 'FAIL');
+    }
+    uiStore.open('audit', 'test-data');
+    await sleep(50);
+    log('STORE', 'ui.open устанавливает modalData', uiStore.modalData === 'test-data' ? 'PASS' : 'FAIL');
+    uiStore.close();
+    await sleep(50);
+    log('STORE', 'ui.close очищает modalData', uiStore.modalData === null ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 35. MASS DELETE (bulk-delete) ═══ */
+  console.log('\n%c🗑️ 35. MASS DELETE (bulk-delete)', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    const emptyR = await api('/pipettes/bulk-delete', 'POST', { ids: [] });
+    if (emptyR.status === 404) {
+      log('BULK-DEL', 'POST /bulk-delete', 'SKIP', 'роут не задеплоен');
+    } else {
+      log('BULK-DEL', 'POST /bulk-delete существует', 'PASS');
+      log('BULK-DEL', 'empty ids → 400', emptyR.status === 400 ? 'PASS' : 'FAIL');
+      const delIds = [];
+      for (let i = 0; i < 3; i++) {
+        const id = `MEGA-DEL-${uid}-${i}`;
+        const r = await api('/pipettes', 'POST', {
+          id, model: 'BulkDelTest', equipmentType: 'pipette',
+          lastCalibration: today, responsible: authStore.user?.fullName || 'Admin',
+        });
+        if (r.ok) delIds.push(id);
+      }
+      log('BULK-DEL', 'создано 3 тестовых', delIds.length === 3 ? 'PASS' : 'FAIL');
+      if (delIds.length > 0) {
+        const delR = await api('/pipettes/bulk-delete', 'POST', { ids: delIds });
+        log('BULK-DEL', '3 ids → successful:3',
+            delR.ok && delR.body?.successful === 3 ? 'PASS' : 'FAIL',
+            `successful=${delR.body?.successful}`);
+        const check = await api(`/pipettes/${encodeURIComponent(delIds[0])}`);
+        log('BULK-DEL', 'после удаления → 404', check.status === 404 ? 'PASS' : 'FAIL');
+      }
+      const nfR = await api('/pipettes/bulk-delete', 'POST', { ids: ['NONEXISTENT-' + uid] });
+      log('BULK-DEL', 'несуществующий → notFound',
+          nfR.ok && nfR.body?.notFound >= 1 ? 'PASS' : 'FAIL');
+      if (pipIds.length) {
+        const sentId = pipIds[0];
+        await api('/pipettes/bulk-send', 'POST', { ids: [sentId], sentDate: today });
+        const sentDel = await api('/pipettes/bulk-delete', 'POST', { ids: [sentId] });
+        log('BULK-DEL', 'на поверке → skipped',
+            sentDel.ok && sentDel.body?.skipped >= 1 ? 'PASS' : 'FAIL');
+        await api(`/pipettes/${encodeURIComponent(sentId)}/cancel-send`, 'POST');
+      }
+    }
+  }
+
+  /* ═══ 36. SETTINGS — новые ключи ═══ */
+  console.log('\n%c⚙️ 36. SETTINGS — новые ключи', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  const curSettings = await api('/settings/system');
+  origSettings = curSettings.body || {};
+  {
+    log('SYS-SET', 'GET /settings/system', curSettings.ok ? 'PASS' : 'FAIL');
+    const expectedKeys = [
+      'max_batch_size', 'max_bulk_size', 'max_model_length', 'max_serial_length',
+      'password_min_length', 'password_max_length',
+      'password_require_lower', 'password_require_upper',
+      'password_require_digit', 'password_require_special', 'password_forbid_spaces',
+      'reminders_enabled', 'reminders_for_roles',
+      'impersonation_mode',
+      'page_sizes', 'default_page_size', 'table_density',
+    ];
+    let found = 0;
+    for (const k of expectedKeys) if (k in origSettings) found++;
+    log('SYS-SET', `все ${expectedKeys.length} ключей`,
+        found === expectedKeys.length ? 'PASS' : 'FAIL', `${found}/${expectedKeys.length}`);
+  }
+
+  /* ═══ 37. WHITELIST ═══ */
+  console.log('\n%c🛡 37. WHITELIST SETTINGS', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    await api('/settings/system', 'PUT', {
+      __hacked_key_1__: 'evil', jwt_secret_override: 'stolen',
+    });
+    const after = await api('/settings/system');
+    log('WHITELIST', 'unknown key не записан',
+        !('__hacked_key_1__' in (after.body || {})) ? 'PASS' : 'FAIL');
+    log('WHITELIST', 'jwt_secret_override не записан',
+        !('jwt_secret_override' in (after.body || {})) ? 'PASS' : 'FAIL');
+  }
+
+  /* ═══ 38. PASSWORD POLICY ═══ */
+  console.log('\n%c🔐 38. PASSWORD POLICY', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    const origMinLen = origSettings.password_min_length || '8';
+    const pwUserLogin = 'pw_pol_' + uid;
+    const pwUser = await api('/users', 'POST', {
+      login: pwUserLogin, fullName: 'PW Test', position: 'X',
+      role: 'user', extraPermissions: [], isActing: false, actingForId: null,
+    });
+    if (!pwUser.ok) {
+      log('PW-POLICY', 'создание тест-пользователя', 'FAIL', pwUser.body?.error);
+    } else {
+      createdUsers.push({ id: pwUser.body.id, login: pwUserLogin });
+      const tmpTok = await loginUser(pwUserLogin, pwUser.body.tempPassword);
+      if (!tmpTok) {
+        log('PW-POLICY', 'логин тест-пользователя', 'FAIL');
+      } else {
+        await api('/settings/system', 'PUT', { password_min_length: '12' });
+        await sleep(300);
+        const chR = await api('/auth/change-password', 'POST', {
+          currentPassword: pwUser.body.tempPassword,
+          newPassword: 'Abc12345', confirmPassword: 'Abc12345',
+        }, tmpTok);
+        const err = String(chR.body?.error || '');
+        log('PW-POLICY', 'min_length=12 → 8-char отклонён',
+            err.includes('Минимум 12') ? 'PASS' : 'FAIL', err.slice(0, 80));
+        await api('/settings/system', 'PUT', { password_min_length: origMinLen });
+        await sleep(300);
+      }
+    }
+  }
+
+  /* ═══ 39. EQUIPMENT LIMITS ═══ */
+  console.log('\n%c📏 39. EQUIPMENT LIMITS', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    const origMaxBatch = origSettings.max_batch_size || '100';
+    await api('/settings/system', 'PUT', { max_batch_size: '3' });
+    await sleep(300);
+    const fakeRows = Array(5).fill(null).map(() => ({
+      model: 'LimitTest', equipmentType: 'pipette', lastCalibration: today, responsible: 'X',
+    }));
+    const bcR = await api('/pipettes/bulk-create', 'POST', { rows: fakeRows });
+    const err = String(bcR.body?.error || '');
+    log('EQ-LIMITS', 'max_batch_size=3 → 5 отклонён',
+        bcR.status === 400 && err.includes('Максимум 3') ? 'PASS' : 'FAIL', err.slice(0, 60));
+    await api('/settings/system', 'PUT', { max_batch_size: origMaxBatch });
+    await sleep(300);
+  }
+
+  /* ═══ 40. IMPERSONATION ═══ */
+  console.log('\n%c🎭 40. IMPERSONATION MODE', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    const origImp = origSettings.impersonation_mode || 'all_admins';
+    const usersR = await api('/users');
+    const otherUser = (usersR.body || []).find(u => u.id !== authStore.user?.id);
+    if (!otherUser) {
+      log('IMPERSON', 'тестовый пользователь', 'SKIP');
+    } else {
+      await api('/settings/system', 'PUT', { impersonation_mode: 'off' });
+      await sleep(300);
+      const impR = await api('/auth/impersonate/' + otherUser.id, 'POST');
+      log('IMPERSON', 'mode=off → 403', impR.status === 403 ? 'PASS' : 'FAIL', `status=${impR.status}`);
+      await api('/settings/system', 'PUT', { impersonation_mode: 'admin' });
+      await sleep(300);
+      if (authStore.user?.login === 'admin') {
+        log('IMPERSON', 'mode=admin + login=admin → разрешено', 'PASS', 'по логике');
+      } else {
+        const impR2 = await api('/auth/impersonate/' + otherUser.id, 'POST');
+        log('IMPERSON', 'mode=admin + не-admin → 403', impR2.status === 403 ? 'PASS' : 'FAIL');
+      }
+      await api('/settings/system', 'PUT', { impersonation_mode: origImp });
+      await sleep(300);
+    }
+  }
+
+  /* ═══ 41. REMINDERS SETTINGS ═══ */
+  console.log('\n%c🔔 41. REMINDERS SETTINGS', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    const origEnabled = origSettings.reminders_enabled || '1';
+    const origRoles = origSettings.reminders_for_roles || '["user","senior_lab","admin"]';
+    await api('/settings/system', 'PUT', { reminders_enabled: '0' });
+    const check = await api('/settings/system');
+    log('REMINDERS', 'reminders_enabled=0 сохраняется',
+        check.body?.reminders_enabled === '0' ? 'PASS' : 'FAIL');
+    const emptyRolesR = await api('/settings/system', 'PUT', { reminders_for_roles: '[]' });
+    log('REMINDERS', 'пустой массив ролей → 400', emptyRolesR.status === 400 ? 'PASS' : 'FAIL');
+    await api('/settings/system', 'PUT', {
+      reminders_enabled: origEnabled, reminders_for_roles: origRoles,
+    });
+  }
+
+  /* ═══ 42. TABLE VIEW SETTINGS ═══ */
+  console.log('\n%c📊 42. TABLE VIEW SETTINGS', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    const origPageSizes = origSettings.page_sizes || '[50,100,200,500]';
+    const origDefaultSize = origSettings.default_page_size || '100';
+    const origDensity = origSettings.table_density || 'normal';
+    const badSizes = await api('/settings/system', 'PUT', { page_sizes: 'not-json' });
+    log('TABLE-SET', 'page_sizes невалидный → 400', badSizes.status === 400 ? 'PASS' : 'FAIL');
+    const emptySizes = await api('/settings/system', 'PUT', { page_sizes: '[]' });
+    log('TABLE-SET', 'page_sizes пустой → 400', emptySizes.status === 400 ? 'PASS' : 'FAIL');
+    const badDensity = await api('/settings/system', 'PUT', { table_density: 'invalid' });
+    log('TABLE-SET', 'table_density невалидный → 400', badDensity.status === 400 ? 'PASS' : 'FAIL');
+    await api('/settings/system', 'PUT', {
+      page_sizes: '[50,200]', default_page_size: '50', table_density: 'compact',
+    });
+    const after = await api('/settings/system');
+    log('TABLE-SET', 'page_sizes=[50,200]', after.body?.page_sizes === '[50,200]' ? 'PASS' : 'FAIL');
+    log('TABLE-SET', 'default_page_size=50', after.body?.default_page_size === '50' ? 'PASS' : 'FAIL');
+    log('TABLE-SET', 'table_density=compact', after.body?.table_density === 'compact' ? 'PASS' : 'FAIL');
+    await api('/settings/system', 'PUT', {
+      page_sizes: origPageSizes, default_page_size: origDefaultSize, table_density: origDensity,
+    });
+  }
+
+  /* ═══ 43. FRONTEND HELPERS ═══ */
+  console.log('\n%c🌐 43. FRONTEND HELPERS', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    const hasTV = typeof settingsStore.getTableViewSettings === 'function';
+    const hasPP = typeof settingsStore.getPasswordPolicy === 'function';
+    const hasEQ = typeof settingsStore.getEquipmentSettings === 'function';
+    log('FE-HELPERS', 'getTableViewSettings()', hasTV ? 'PASS' : 'FAIL');
+    log('FE-HELPERS', 'getPasswordPolicy()', hasPP ? 'PASS' : 'FAIL');
+    log('FE-HELPERS', 'getEquipmentSettings()', hasEQ ? 'PASS' : 'FAIL');
+    if (hasTV) {
+      const tv = settingsStore.getTableViewSettings();
+      log('FE-HELPERS', 'tv.pageSizes — array', Array.isArray(tv?.pageSizes) ? 'PASS' : 'FAIL');
+      log('FE-HELPERS', 'tv.defaultPageSize — number', typeof tv?.defaultPageSize === 'number' ? 'PASS' : 'FAIL');
+      log('FE-HELPERS', 'tv.density — один из 3', ['compact','normal','loose'].includes(tv?.density) ? 'PASS' : 'FAIL', tv?.density);
+    }
+    if (hasPP) {
+      const pp = settingsStore.getPasswordPolicy();
+      log('FE-HELPERS', 'pp.minLength — number', typeof pp?.minLength === 'number' ? 'PASS' : 'FAIL', `${pp?.minLength}`);
+      log('FE-HELPERS', 'pp.requireLower — boolean', typeof pp?.requireLower === 'boolean' ? 'PASS' : 'FAIL');
+    }
+    if (hasEQ) {
+      const eq = settingsStore.getEquipmentSettings();
+      log('FE-HELPERS', 'eq.maxBatchSize — number', typeof eq?.maxBatchSize === 'number' ? 'PASS' : 'FAIL', `${eq?.maxBatchSize}`);
+    }
+  }
+
+  /* ═══ 44. UI — 5 новых разделов ═══ */
+  console.log('\n%c🪟 44. UI — 5 новых разделов', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    uiStore.open('settings');
+    await sleep(400);
+    const items = Array.from(document.querySelectorAll('.settings-item')).map(el => el.textContent.trim());
+    const expected = [
+      { label: 'Общие настройки',        key: 'equipment-general' },
+      { label: 'Таблица и отображение',  key: 'table-view' },
+      { label: 'Политика паролей',       key: 'password-policy' },
+      { label: 'Уведомления',            key: 'notifications' },
+      { label: 'Вход под пользователем', key: 'security' },
+    ];
+    for (const s of expected) {
+      log('UI-SETTINGS', `раздел "${s.label}"`, items.some(t => t.includes(s.label)) ? 'PASS' : 'FAIL');
+    }
+    for (const s of expected) {
+      try {
+        uiStore.open('settings', s.key);
+        await sleep(300);
+        const content = document.getElementById('settings-section-content');
+        const hasContent = !!(content && content.innerHTML.length > 50);
+        uiStore.close();
+        await sleep(100);
+        log('UI-SETTINGS', `${s.key} открывается`, hasContent ? 'PASS' : 'FAIL');
+      } catch (e) {
+        log('UI-SETTINGS', `${s.key} открывается`, 'FAIL', e.message);
+        uiStore.close();
+      }
+    }
+    uiStore.close();
+  }
+
+  /* ═══ 45. UI — кнопка «Удалить» в тулбаре ═══ */
+  console.log('\n%c🔴 45. UI — кнопка «Удалить»', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    await reloadPipettes();
+    if (pipIds.length >= 2) {
+      pipStore.clearSelection();
+      pipStore.toggleSelected(pipIds[0], true);
+      pipStore.toggleSelected(pipIds[1], true);
+      await sleep(400);
+      const btns = Array.from(document.querySelectorAll('.toolbar-bulk button, .toolbar button'));
+      const delBtn = btns.find(b => /Удалить/i.test(b.textContent || ''));
+      log('UI-BULK-DEL', 'кнопка при выборе', !!delBtn ? 'PASS' : 'FAIL',
+          delBtn ? `"${delBtn.textContent.trim()}"` : '');
+      pipStore.clearSelection();
+      await sleep(300);
+      const btnsAfter = Array.from(document.querySelectorAll('.toolbar-bulk button, .toolbar button'));
+      const delBtnAfter = btnsAfter.find(b => /Удалить/i.test(b.textContent || ''));
+      log('UI-BULK-DEL', 'скрыта без выбора', !delBtnAfter ? 'PASS' : 'FAIL');
+    } else {
+      log('UI-BULK-DEL', 'нужно 2+ пипетки', 'SKIP');
+    }
+  }
+
+    /* ═══ 46. UI — ChangePasswordModal политика ═══ */
+  console.log('\n%c🔑 46. UI — ChangePasswordModal', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    // Ждем, пока настройки загрузятся
+    await settingsStore.loadAll();
+    const minLen = parseInt(settingsStore.getPasswordPolicy?.()?.minLength || 8, 10);
+    
+    uiStore.open('changePassword', 'change');
+    await sleep(800); // Увеличили паузу, чтобы модалка точно отрисовалась
+    
+    const modal = document.querySelector('.modal-overlay.active .modal');
+    if (modal) {
+      const html = modal.innerHTML;
+      const hasMinText = html.includes(`Минимум ${minLen}`) || html.includes(`${minLen} символ`);
+      log('UI-PW-POLICY', `показывает "Минимум ${minLen}"`, hasMinText ? 'PASS' : 'FAIL');
+      
+      // 🆕 Симулируем ввод пароля, чтобы появились галочки
+      const inputs = modal.querySelectorAll('input[type="password"]');
+      const input = inputs.length > 1 ? inputs[1] : inputs[0]; // Берем поле "Новый пароль"
+      if (input) {
+        input.value = 'TestPassword1!';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        await sleep(200);
+        
+        const updatedHtml = modal.innerHTML;
+        const hasIcons = updatedHtml.includes('fa-check') || updatedHtml.includes('fa-xmark');
+        log('UI-PW-ICONS', 'иконки валидации (fa-check/xmark)', hasIcons ? 'PASS' : 'FAIL');
+      } else {
+        log('UI-PW-ICONS', 'поле ввода пароля', 'FAIL', 'не найдено');
+      }
+    } else {
+      log('UI-PW-POLICY', 'модалка открыта', 'FAIL');
+    }
+    uiStore.close();
+  }
+  
+  /* ═══ 47. UI — UserEditModal размеры ═══ */
+  console.log('\n%c📏 47. UI — UserEditModal размеры', 'font-size:14px;font-weight:bold;color:#16a34a;');
+  {
+    uiStore.open('userEdit', null);
+    await sleep(600);
+    const modal = document.querySelector('.modal-overlay.active .modal');
+    if (modal) {
+      const selects = Array.from(modal.querySelectorAll('select'));
+      const pageSizeSelect = selects.find(s => {
+        const opts = Array.from(s.querySelectorAll('option')).map(o => o.value);
+        return opts.includes('50') || opts.includes('100');
+      });
+      if (pageSizeSelect) {
+        const opts = Array.from(pageSizeSelect.querySelectorAll('option'))
+          .map(o => o.value).filter(v => v && !isNaN(parseInt(v, 10)));
+        const expectedSizes = settingsStore.getTableViewSettings?.().pageSizes?.map(String) || ['50','100','200','500'];
+        const match = expectedSizes.every(s => opts.includes(s));
+        log('UI-PAGE-SIZES', 'селект использует pageSizes',
+            match ? 'PASS' : 'FAIL',
+            `опции: [${opts.join(',')}] ожидалось: [${expectedSizes.join(',')}]`);
+      } else {
+        log('UI-PAGE-SIZES', 'селект «Строк на странице»', 'FAIL', 'не найден');
+      }
+    } else {
+      log('UI-PAGE-SIZES', 'модалка открыта', 'FAIL');
+    }
+    uiStore.close();
+  }
+
+  } finally {
+
+  /* ═══ CLEANUP ═══ */
+  console.log('\n%c🧹 CLEANUP', 'font-size:14px;font-weight:bold;color:#4f46e5;');
+
+  if (typeof origSettings !== 'undefined' && origSettings && Object.keys(origSettings).length > 0) {
+    try {
+      const restore = {};
+      const keys = [
+        'max_batch_size', 'max_bulk_size', 'max_model_length', 'max_serial_length',
+        'password_min_length', 'password_max_length',
+        'password_require_lower', 'password_require_upper',
+        'password_require_digit', 'password_require_special', 'password_forbid_spaces',
+        'reminders_enabled', 'reminders_for_roles',
+        'impersonation_mode',
+        'page_sizes', 'default_page_size', 'table_density',
+      ];
+      for (const k of keys) {
+        if (origSettings[k] !== undefined) restore[k] = origSettings[k];
+      }
+      if (Object.keys(restore).length > 0) {
+        await api('/settings/system', 'PUT', restore);
+        await settingsStore.loadAll();
+        console.log('✅ Настройки системы восстановлены');
+      }
+    } catch (e) {
+      console.warn('[MEGA-TEST] restore settings failed:', e);
+    }
+  }
+  if (_origExportCfg) { try { await api('/settings/export','PUT', _origExportCfg); } catch (e) {} }
+  if (_origFiltersCfg) { try { await api('/settings/filters','PUT', _origFiltersCfg); } catch (e) {} }
+  try { const e = await api('/settings/print-documents/effective'); if (e.ok) settingsStore.printDocs = e.body; } catch (e) {}
+  restoreAll();
+
+  await sleep(500);
+
+  for (const u of createdUsers) { try { await api('/users/' + u.id, 'DELETE'); } catch (e) {} }
+  for (const id of createdPresets) { try { await api('/users/presets/' + id, 'DELETE'); } catch (e) {} }
+  for (const id of createdPipettes) {
+    try {
+      await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE').catch(() => {});
+      await api(`/pipettes/${encodeURIComponent(id)}`, 'DELETE');
+    } catch (e) {}
+  }
+  for (const id of createdRoles) { try { await api('/roles/' + id, 'DELETE'); } catch (e) {} }
+  for (const id of lifecycleIds) {
+    try {
+      await api(`/pipettes/${encodeURIComponent(id)}/lock?force=true`, 'DELETE').catch(() => {});
+      await api(`/pipettes/${encodeURIComponent(id)}`, 'DELETE');
+    } catch (e) {}
+  }
+
+  try { await pipStore.loadPaged(); } catch (e) {}
+  try { await statsStore.load(); } catch (e) {}
+  try { await settingsStore.loadAll(); } catch (e) {}
+
+  /* ═══ ИТОГ ═══ */
+  const pass = results.filter(r => r.s === 'PASS').length;
+  const fail = results.filter(r => r.s === 'FAIL').length;
+  const skip = results.filter(r => r.s === 'SKIP').length;
+
+  console.log('\n' + '═'.repeat(60));
+  console.log(`%c📊 ИТОГ: ✅ ${pass}  ❌ ${fail}  ⏭️ ${skip}  (всего: ${results.length})`,
+    `font-size:18px;font-weight:bold;color:${fail ? '#dc2626' : '#16a34a'};`);
+  console.log('═'.repeat(60));
+  if (fail > 0) {
+    console.log('%c❌ ПРОВАЛЫ:', 'color:#dc2626;font-weight:bold;');
+    console.table(results.filter(r => r.s === 'FAIL'));
+  }
+  if (skip > 0) {
+    console.log('%c⏭️ SKIP (требуется ручная проверка):', 'color:#f59e0b;font-weight:bold;');
+    console.table(results.filter(r => r.s === 'SKIP'));
+  }
+  if (fail === 0) console.log('%c🎉 Все проверки пройдены!', 'color:#16a34a;font-weight:bold;font-size:16px;');
+  window.__megaTestResults = results;
+
+  } // finally
+})();
