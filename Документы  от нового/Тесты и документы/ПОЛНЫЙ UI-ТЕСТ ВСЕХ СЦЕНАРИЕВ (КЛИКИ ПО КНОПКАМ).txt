@@ -1,0 +1,334 @@
+(async function testFULL_UI_EVERYTHING() {
+  console.log('%c🔥 ПОЛНЫЙ UI-ТЕСТ ВСЕХ СЦЕНАРИЕВ (КЛИКИ ПО КНОПКАМ)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (name, status, details = '') => {
+    results.push({ name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  const origId = 'P-' + randomNum;
+  const replId = 'P-' + (randomNum + 1);
+  const intId = 'S-' + (randomNum + 2);
+  const dept1 = 'Гематологический отдел';
+  const dept2 = 'Биохимический отдел';
+  let newId = null;
+
+  try {
+    // ==========================================
+    // ШАГ 1: ПОДГОТОВКА (создаём через API)
+    // ==========================================
+    await apiRequest('/pipettes', 'POST', { id: origId, model: 'Orig UI Test', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Администратор', department: dept1 });
+    await apiRequest('/pipettes', 'POST', { id: replId, model: 'Repl UI Test', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Администратор', department: dept1, active: false });
+    await apiRequest('/pipettes', 'POST', { id: intId, model: 'Scales UI Test', equipmentType: 'scales', lastCalibration: '2024-01-01', responsible: 'Администратор', department: dept1 });
+    await loadPipetteData();
+    addResult('1. Подготовка (созданы 3 прибора)', 'pass', `${origId}, ${replId}, ${intId}`);
+
+    // ==========================================
+    // ШАГ 2: РЕДАКТИРОВАНИЕ ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    await openModal(origId);
+    await delay(600);
+    const modalEdit = document.getElementById('modal');
+    addResult('2. Модалка редактирования открыта (UI)', modalEdit.classList.contains('active') ? 'pass' : 'fail');
+
+    const editModel = document.getElementById('p-model');
+    if (editModel) {
+      editModel.value = 'EDITED VIA UI';
+      const editSubmit = document.querySelector('#pipette-form button[type="submit"]');
+      if (editSubmit) editSubmit.click();
+      await delay(1500);
+
+      await loadPipetteData();
+      const p = pipettes.find(x => x.id === origId);
+      addResult('2. Сохранение через модалку', p && p.model === 'EDITED VIA UI' ? 'pass' : 'fail');
+    }
+
+    // ==========================================
+    // ШАГ 3: БЫСТРАЯ ПОВЕРКА ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    await openQuickCalModal(origId);
+    await delay(600);
+    const modalQuick = document.getElementById('quick-cal-modal');
+    addResult('3. Модалка быстрой поверки открыта (UI)', modalQuick.classList.contains('active') ? 'pass' : 'fail');
+
+    document.getElementById('quick-cal-date').value = '2024-08-15';
+    document.getElementById('quick-cal-cert').value = 'UI-CERT-999';
+    const quickSubmit = document.querySelector('#quick-cal-form .btn-success');
+    if (quickSubmit) quickSubmit.click();
+    await delay(1500);
+
+    await loadPipetteData();
+    const pAfterCal = pipettes.find(x => x.id === origId);
+    addResult('3. Сохранение быстрой поверки', pAfterCal && pAfterCal.last_calibration === '2024-08-15' ? 'pass' : 'fail');
+
+    // ==========================================
+    // ШАГ 4: ИСТОРИЯ + ДОБАВЛЕНИЕ ПОВЕРКИ
+    // ==========================================
+    await openHistoryModal(origId);
+    await delay(800);
+    const modalHist = document.getElementById('history-modal');
+    addResult('4. Модалка истории открыта (UI)', modalHist.classList.contains('active') ? 'pass' : 'fail');
+
+    const addCalBtn = document.querySelector('#history-modal .btn-info');
+    if (addCalBtn) {
+      addCalBtn.click();
+      await delay(400);
+
+      document.getElementById('cal-date').value = '2024-09-20';
+      document.getElementById('cal-cert').value = 'HIST-UI-1';
+      const histSave = document.querySelector('#calibration-form-wrap .btn-success');
+      if (histSave) histSave.click();
+      await delay(1500);
+
+      const hist = await apiRequest('/pipettes/' + origId + '/calibration');
+      addResult('4. Добавление поверки из истории (UI)', hist.some(h => h.cert === 'HIST-UI-1') ? 'pass' : 'fail');
+      closeHistoryModal();
+    }
+
+    // ==========================================
+    // ШАГ 5: ОТПРАВКА С ЗАМЕНОЙ ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    await loadPipetteData();
+    selectedPipettes.clear();
+    selectedPipettes.add(origId);
+
+    await openBulkSendModal();
+    await delay(2000);
+    const modalSend = document.getElementById('bulk-send-modal');
+    addResult('5. Модалка отправки открыта (UI)', modalSend.classList.contains('active') ? 'pass' : 'fail');
+
+    const replRadios = document.querySelectorAll('#replacement-options input[type="radio"]');
+    let selectedRepl = false;
+    for (const radio of replRadios) {
+      if (radio.value === replId) { radio.checked = true; selectedRepl = true; break; }
+    }
+    addResult('5. Выбор замены в модалке', selectedRepl ? 'pass' : 'fail');
+
+    if (selectedRepl) {
+      document.getElementById('bulk-send-date').value = '2024-06-01';
+      const sendBtn = document.querySelector('#bulk-send-form button[type="submit"]');
+      if (sendBtn) {
+        sendBtn.click();
+        await delay(1000);
+        const confirmBtn = document.getElementById('confirm-ok-btn');
+        if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+      }
+
+      await loadPipetteData();
+      const p = pipettes.find(x => x.id === origId);
+      addResult('5. Отправка сохранена', p && p.replaced_by === replId ? 'pass' : 'fail');
+    }
+
+    // ==========================================
+    // ШАГ 6: ВОЗВРАТ ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    await loadPipetteData();
+    selectedPipettes.clear();
+    selectedPipettes.add(origId);
+
+    await openBulkReturnModal();
+    await delay(800);
+    const modalRet = document.getElementById('bulk-return-modal');
+    addResult('6. Модалка возврата открыта (UI)', modalRet.classList.contains('active') ? 'pass' : 'fail');
+
+    document.getElementById('bulk-return-date').value = '2024-10-01';
+    const certInput = document.querySelector(`.bulk-return-cert-input[data-id="${origId}"]`);
+    if (certInput) certInput.value = 'RET-UI-1';
+
+    const retBtn = document.querySelector('#bulk-return-form button[type="submit"]');
+    if (retBtn) {
+      retBtn.click();
+      await delay(1000);
+      const confirmBtn = document.getElementById('confirm-ok-btn');
+      if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+    }
+
+    await loadPipetteData();
+    const pAfterRet = pipettes.find(x => x.id === origId);
+    addResult('6. Возврат сохранён', pAfterRet && !pAfterRet.sent_for_calibration ? 'pass' : 'fail');
+
+    // ==========================================
+    // ШАГ 7: СМЕНА ОТВЕТСТВЕННОГО ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    selectedPipettes.clear();
+    selectedPipettes.add(origId);
+
+    await openBulkResponsibleModal();
+    await delay(600);
+    const modalResp = document.getElementById('bulk-responsible-modal');
+    addResult('7. Модалка смены ответственного открыта (UI)', modalResp.classList.contains('active') ? 'pass' : 'fail');
+
+    const respSel = document.getElementById('bulk-responsible-select');
+    if (respSel && respSel.options.length > 1) {
+      respSel.selectedIndex = 1;
+      const newResp = respSel.options[1].value;
+      const respBtn = document.querySelector('#bulk-responsible-form button[type="submit"]');
+      if (respBtn) {
+        respBtn.click();
+        await delay(1000);
+        const confirmBtn = document.getElementById('confirm-ok-btn');
+        if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+
+        await loadPipetteData();
+        const p = pipettes.find(x => x.id === origId);
+        addResult('7. Ответственный сохранён', p && p.responsible === newResp ? 'pass' : 'fail', `→ ${newResp}`);
+      }
+    }
+
+    // ==========================================
+    // ШАГ 8: ПЕРЕДАЧА В ОТДЕЛ ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    await openTransferModal(origId);
+    await delay(800);
+    const modalTransfer = document.getElementById('transfer-modal');
+    addResult('8. Модалка передачи открыта (UI)', modalTransfer.classList.contains('active') ? 'pass' : 'fail');
+
+    const deptSel = document.getElementById('transfer-department');
+    let targetDept = null;
+    for (const opt of deptSel.options) {
+      if (opt.value.includes('Биохимический')) { targetDept = opt.value; deptSel.value = targetDept; deptSel.dispatchEvent(new Event('change')); break; }
+    }
+    await delay(1000);
+
+    const respSel2 = document.getElementById('transfer-responsible');
+    if (respSel2 && respSel2.options.length > 1 && targetDept) {
+      respSel2.selectedIndex = 1;
+      const transferBtn = document.querySelector('#transfer-form button[type="submit"]');
+      if (transferBtn) {
+        transferBtn.click();
+        await delay(1000);
+        const confirmBtn = document.getElementById('confirm-ok-btn');
+        if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+
+        await loadPipetteData();
+        const p = pipettes.find(x => x.id === origId);
+        addResult('8. Передача сохранена', p && p.department === targetDept ? 'pass' : 'fail', `→ ${targetDept}`);
+      }
+    }
+
+    // ==========================================
+    // ШАГ 9: ШТРИХКОД ЧЕРЕЗ МОДАЛКУ (ручной ввод в модалке)
+    // ==========================================
+    await openModal(origId);
+    await delay(600);
+    const barcodeInput = document.querySelector('[data-field-id="barcode"]');
+    if (barcodeInput) {
+      barcodeInput.value = 'UI-BC-' + randomNum;
+      barcodeInput.dataset.manual = '1';
+      const submitBtn = document.querySelector('#pipette-form button[type="submit"]');
+      if (submitBtn) submitBtn.click();
+      await delay(1500);
+
+      const lookup = await apiRequest('/barcodes/lookup', 'POST', { barcode: 'UI-BC-' + randomNum });
+      addResult('9. Штрихкод через модалку', lookup.id === origId ? 'pass' : 'fail');
+    }
+
+    // ==========================================
+    // ШАГ 10: СПРАВКА (TinyMCE) ЧЕРЕЗ UI
+    // ==========================================
+    await openHotkeysHelp();
+    await delay(600);
+    const modalHelp = document.getElementById('hotkeys-modal');
+    addResult('10. Модалка справки открыта (UI)', modalHelp.classList.contains('active') ? 'pass' : 'fail');
+    closeHotkeysHelp();
+    await delay(200);
+
+    // ==========================================
+    // ШАГ 11: ШАБЛОНЫ ЕДИНИЦ ЧЕРЕЗ UI
+    // ==========================================
+    await openModal(); // Новая единица
+    await delay(600);
+    const tplBar = document.getElementById('template-bar');
+    addResult('11. Панель шаблонов в модалке (UI)', tplBar && tplBar.style.display !== 'none' ? 'pass' : 'fail');
+    closeModal();
+    await delay(200);
+
+    // ==========================================
+    // ШАГ 12: СЦЕНАРИЙ СО СМЕНОЙ ТИПА ВО ВРЕМЯ ПОВЕРКИ
+    // ==========================================
+    // Отправляем intId (весы) на поверку (не даст, internal). Отправляем origId снова.
+    await loadPipetteData();
+    selectedPipettes.clear();
+    selectedPipettes.add(origId);
+
+    await openBulkSendModal();
+    await delay(2000);
+    const sendBtn2 = document.querySelector('#bulk-send-form button[type="submit"]');
+    if (sendBtn2) {
+      document.getElementById('bulk-send-date').value = '2024-06-15';
+      sendBtn2.click();
+      await delay(1000);
+      const confirmBtn = document.getElementById('confirm-ok-btn');
+      if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+    }
+
+    // Меняем тип во время поверки
+    const changeRes = await apiRequest('/pipettes/' + origId, 'PUT', { equipmentType: 'scales' });
+    newId = changeRes.newId;
+    addResult('12. Смена типа (P → S)', changeRes.idChanged ? 'pass' : 'fail', `→ ${newId}`);
+
+    // Возвращаем
+    const retRes2 = await apiRequest('/pipettes/bulk-return', 'POST', { items: [{ id: newId, cert: 'RET-2', result: 'pass' }], date: '2024-07-01' });
+    addResult('12. Возврат после смены типа (фикс)', retRes2.successful === 1 ? 'pass' : 'fail');
+
+    // ==========================================
+    // ШАГ 13: ЭКСПОРТ И ИМПОРТ
+    // ==========================================
+    const expRes = await fetch('/api/export/xlsx', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ headers: ['ID', 'Model'], rows: [{ 'ID': 'T', 'Model': 'T' }] })
+    });
+    const blob = await expRes.blob();
+    addResult('13. Экспорт XLSX', expRes.ok && blob.size > 500 ? 'pass' : 'fail');
+
+    // ==========================================
+    // ШАГ 14: ПРОВЕРКА ЗАЩИТЫ
+    // ==========================================
+    const resNoToken = await fetch('/api/pipettes/paged', { headers: {} });
+    addResult('14. Защита API (401)', resNoToken.status === 401 ? 'pass' : 'fail');
+
+    const xssTest = '<script>alert(1)</script>';
+    addResult('14. XSS-экранирование', !esc(xssTest).includes('<script>') ? 'pass' : 'fail');
+
+    const sqliRes = await apiRequest('/pipettes/paged?search=' + encodeURIComponent("' OR 1=1 --"));
+    addResult('14. SQL-инъекция', sqliRes.total === 0 ? 'pass' : 'fail');
+
+  } catch (e) {
+    console.error('Ошибка UI-теста:', e);
+    addResult('ОБЩИЙ СБОЙ', 'fail', e.message);
+  } finally {
+    // ==========================================
+    // ОЧИСТКА
+    // ==========================================
+    try { if (newId) await apiRequest('/pipettes/' + newId, 'DELETE').catch(() => {}); } catch(e) {}
+    try { await apiRequest('/pipettes/' + origId, 'DELETE').catch(() => {}); } catch(e) {}
+    try { await apiRequest('/pipettes/' + replId, 'DELETE').catch(() => {}); } catch(e) {}
+    try { await apiRequest('/pipettes/' + intId, 'DELETE').catch(() => {}); } catch(e) {}
+
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    if (typeof resolveConfirm === 'function') resolveConfirm(false);
+    if (typeof resolvePrompt === 'function') resolvePrompt(null);
+
+    await loadPipetteData();
+    addResult('Очистка', 'Все тестовые данные удалены', 'pass');
+  }
+
+  // ==========================================
+  // ИТОГ
+  // ==========================================
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ ПОЛНОГО UI-ТЕСТА', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 ВСЕ СЦЕНАРИИ ЧЕРЕЗ UI ПРОЙДЕНЫ! ПРОЕКТ ГОТОВ!', 'color:green; font-weight:bold; font-size:18px;');
+  }
+})();

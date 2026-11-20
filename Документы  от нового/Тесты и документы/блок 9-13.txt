@@ -1,0 +1,122 @@
+(async function testStage2_Blocks9to13() {
+  console.log('%c🚀 ЭТАП 2: БЛОКИ 9–13 (ПЕРСОНАЛ И ДАННЫЕ)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (block, name, status, details = '') => {
+    results.push({ block, name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c[${block}] ${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  const suffix = Date.now().toString().slice(-4);
+  const id1 = 'P-' + suffix;
+  const id2 = 'P-' + (parseInt(suffix) + 1);
+  const impId = 'P-' + (parseInt(suffix) + 2);
+
+  const originalPipettes = [...pipettes];
+
+  try {
+    // Создаем тестовые данные
+    await apiRequest('/pipettes', 'POST', { id: id1, model: 'Stage2 Test 1', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Админ', department: 'Гематологический отдел' });
+    await apiRequest('/pipettes', 'POST', { id: id2, model: 'Stage2 Test 2', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Админ', department: 'Гематологический отдел' });
+
+    pipettes.push(await apiRequest('/pipettes/' + id1), await apiRequest('/pipettes/' + id2));
+
+    // ================= БЛОК 9 (Смена ответственного) =================
+    selectedPipettes.clear();
+    selectedPipettes.add(id1);
+    selectedPipettes.add(id2);
+
+    await openBulkResponsibleModal();
+    await delay(500);
+    const modalResp = document.getElementById('bulk-responsible-modal');
+    addResult('Блок 9', 'Открытие модалки смены ответственного (UI)', modalResp.classList.contains('active') ? 'pass' : 'fail');
+
+    if (modalResp.classList.contains('active')) {
+      closeBulkResponsibleModal();
+      const respRes = await apiRequest('/pipettes/bulk-change-responsible', 'POST', { ids: [id1, id2], newResponsible: 'Тестовый Сотрудник' });
+      addResult('Блок 9', 'API смены ответственного', respRes.successful === 2 ? 'pass' : 'fail');
+
+      const p = await apiRequest('/pipettes/' + id1);
+      addResult('Блок 9', 'Проверка в БД', p.responsible === 'Тестовый Сотрудник' ? 'pass' : 'fail');
+    }
+    await delay(200);
+
+    // ================= БЛОК 10 (Передача в отдел) =================
+    await openTransferModal(id1);
+    await delay(500);
+    const modalTransfer = document.getElementById('transfer-modal');
+    addResult('Блок 10', 'Открытие модалки передачи (UI)', modalTransfer.classList.contains('active') ? 'pass' : 'fail');
+
+    if (modalTransfer.classList.contains('active')) {
+      closeTransferModal();
+      const transferRes = await apiRequest(`/pipettes/${id1}/transfer`, 'POST', { department: 'Биохимический отдел', responsible: 'Петров П.П.' });
+      addResult('Блок 10', 'API передачи в отдел', transferRes.newDepartment === 'Биохимический отдел' ? 'pass' : 'fail');
+
+      const p = await apiRequest('/pipettes/' + id1);
+      addResult('Блок 10', 'Проверка в БД', p.department === 'Биохимический отдел' ? 'pass' : 'fail');
+    }
+    await delay(200);
+
+    // ================= БЛОК 11 (Поиск, фильтры, сортировка) =================
+    try {
+      const searchRes = await apiRequest('/pipettes/paged?search=Stage2 Test 2');
+      addResult('Блок 11', 'Поиск по модели', searchRes.items.some(x => x.id === id2) ? 'pass' : 'fail');
+
+      const filterRes = await apiRequest('/pipettes/paged?filters=' + encodeURIComponent(JSON.stringify({ department: 'Биохимический отдел' })));
+      addResult('Блок 11', 'Фильтр по отделу', filterRes.items.some(x => x.id === id1) ? 'pass' : 'fail');
+
+      const sortRes = await apiRequest('/pipettes/paged?sort=model&dir=desc&limit=5');
+      addResult('Блок 11', 'Сортировка по модели', sortRes.items.length > 0 ? 'pass' : 'fail');
+    } catch (e) { addResult('Блок 11', 'Поиск/Фильтры', 'fail', e.message); }
+
+    // ================= БЛОК 12 (Экспорт) =================
+    try {
+      const expRes = await fetch('/api/export/xlsx', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'registry', headers: ['ID', 'Модель'], rows: [{ 'ID': 'test', 'Модель': 'test' }] })
+      });
+      const blob = await expRes.blob();
+      addResult('Блок 12', 'Экспорт в XLSX', expRes.ok && blob.size > 1000 ? 'pass' : 'fail', `Размер: ${blob.size} байт`);
+    } catch (e) { addResult('Блок 12', 'Экспорт', 'fail', e.message); }
+
+    // ================= БЛОК 13 (Импорт) =================
+    try {
+      const jsonData = JSON.stringify([{ "ID": impId, "Модель": "Import Stage2", "Тип": "Пипетка", "Отдел": "Гематологический отдел", "Дата поверки": "01.01.2024", "Ответственный": "Админ" }]);
+      const b64 = btoa(unescape(encodeURIComponent(jsonData)));
+      const impRes = await apiRequest('/import', 'POST', { file: b64, filename: 'stage2_import.json' });
+      addResult('Блок 13', 'Импорт JSON', impRes.added === 1 ? 'pass' : 'fail');
+
+      const p = await apiRequest('/pipettes/' + impId);
+      addResult('Блок 13', 'Проверка импортированных данных', p.model === 'Import Stage2' ? 'pass' : 'fail');
+    } catch (e) { addResult('Блок 13', 'Импорт', 'fail', e.message); }
+
+  } catch (e) {
+    console.error('Ошибка сценария:', e);
+  } finally {
+    // Восстановление и очистка
+    pipettes = originalPipettes;
+    selectedPipettes.clear();
+    try { await apiRequest('/pipettes/' + id1, 'DELETE'); } catch (e) {}
+    try { await apiRequest('/pipettes/' + id2, 'DELETE'); } catch (e) {}
+    try { await apiRequest('/pipettes/' + impId, 'DELETE'); } catch (e) {}
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+  }
+
+  const passes = results.filter(r => r.status === 'pass').length;
+  const warns = results.filter(r => r.status === 'warn').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ ЭТАПА 2', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ⚠️ Внимание: ${warns} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 ЭТАП 2 ПРОЙДЕН! ОТМЕЧАЙ БЛОКИ: 9, 10, 11, 12, 13', 'color:green; font-weight:bold; font-size:16px;');
+  } else {
+    console.log('%c⚠️ Есть ошибки. Проверь логи.', 'color:orange; font-weight:bold; font-size:16px;');
+  }
+})();

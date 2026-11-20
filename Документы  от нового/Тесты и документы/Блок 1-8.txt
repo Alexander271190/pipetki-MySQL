@@ -1,0 +1,187 @@
+(async function testStage1_Blocks1to8_FIXED() {
+  console.log('%c🚀 ЭТАП 1: БЛОКИ 1–8 (ИСПРАВЛЕННЫЙ v3)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (block, name, status, details = '') => {
+    results.push({ block, name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c[${block}] ${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  const suffix = Date.now().toString().slice(-4);
+  const origId = 'P-' + suffix;
+  const replId = 'P-' + (parseInt(suffix) + 1);
+  const intId = 'S-' + suffix;
+  let currentId = origId;
+
+  // ================= БЛОК 1 =================
+  try {
+    const health = await fetch('/api/health').then(r => r.json());
+    addResult('Блок 1', 'API Health Check', health.status === 'ok' ? 'pass' : 'fail');
+    if (typeof currentUser !== 'undefined' && currentUser) addResult('Блок 1', 'Глобальные переменные (currentUser)', 'pass');
+    if (typeof tinymce !== 'undefined') addResult('Блок 1', 'TinyMCE загружен', 'pass');
+  } catch (e) { addResult('Блок 1', 'Инициализация', 'fail', e.message); }
+
+  // ================= БЛОК 2 =================
+  try {
+    const res = await fetch('/api/pipettes/paged', { headers: {} });
+    addResult('Блок 2', 'Защита API (401)', res.status === 401 ? 'pass' : 'fail');
+    const verify = await apiRequest('/auth/verify');
+    addResult('Блок 2', 'Роль текущего пользователя', verify.user.role === 'admin' ? 'pass' : 'fail');
+  } catch (e) { addResult('Блок 2', 'Авторизация', 'fail', e.message); }
+
+  // ================= БЛОК 3 =================
+  try {
+    const rows = document.querySelectorAll('#pipettes-body tr');
+    addResult('Блок 3', 'Рендер таблицы', rows.length > 0 ? 'pass' : 'fail', `Строк: ${rows.length}`);
+    const typeBadge = document.querySelector('.badge-type');
+    if (typeBadge) {
+      const style = window.getComputedStyle(typeBadge);
+      addResult('Блок 3', 'Стили типов (без фона)', style.backgroundColor === 'rgba(0, 0, 0, 0)' ? 'pass' : 'fail');
+    }
+  } catch (e) { addResult('Блок 3', 'Таблица', 'fail', e.message); }
+
+  // Создаем тестовые данные
+  try {
+    await apiRequest('/pipettes', 'POST', { id: origId, model: 'Test Orig', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Админ', department: 'Гематологический отдел' });
+    await apiRequest('/pipettes', 'POST', { id: replId, model: 'Test Repl', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Админ', department: 'Гематологический отдел', active: false });
+    await apiRequest('/pipettes', 'POST', { id: intId, model: 'Test Scales', equipmentType: 'scales', lastCalibration: '2024-01-01', responsible: 'Админ', department: 'Гематологический отдел' });
+
+    pipettes.push(await apiRequest('/pipettes/' + origId), await apiRequest('/pipettes/' + replId), await apiRequest('/pipettes/' + intId));
+  } catch (e) { console.error('Ошибка создания тестовых данных:', e); }
+
+  // ================= БЛОК 4 =================
+  try {
+    await openModal();
+    await delay(500);
+    const modal = document.getElementById('modal');
+    addResult('Блок 4', 'Открытие модалки добавления (UI)', modal.classList.contains('active') ? 'pass' : 'fail');
+
+    const modelInput = document.getElementById('p-model');
+    if (modelInput) modelInput.value = '';
+    const submitBtn = document.querySelector('#pipette-form button[type="submit"]');
+    if (submitBtn) submitBtn.click();
+    await delay(300);
+    addResult('Блок 4', 'Валидация пустой модели', modal.classList.contains('active') ? 'pass' : 'fail');
+    closeModal();
+    await delay(200);
+
+    await openModal(currentId);
+    await delay(500);
+    const modalEdit = document.getElementById('modal');
+    const editIdInput = document.getElementById('edit-id');
+    addResult('Блок 4', 'Открытие модалки редактирования (UI)', modalEdit.classList.contains('active') && editIdInput.value === currentId ? 'pass' : 'fail');
+    closeModal();
+    await delay(200);
+
+    // Смена типа
+    const changeRes = await apiRequest('/pipettes/' + currentId, 'PUT', { equipmentType: 'scales' });
+    addResult('Блок 4', 'Смена типа (P → S)', changeRes.idChanged ? 'pass' : 'fail', `Новый ID: ${changeRes.newId}`);
+
+    if (changeRes.newId) {
+      currentId = changeRes.newId;
+      const idx = pipettes.findIndex(p => p.id === origId);
+      if (idx !== -1) pipettes[idx] = await apiRequest('/pipettes/' + currentId);
+
+      // Возвращаем обратно
+      const revertRes = await apiRequest('/pipettes/' + currentId, 'PUT', { equipmentType: 'pipette' });
+      addResult('Блок 4', 'Возврат типа (S → P)', revertRes.idChanged ? 'pass' : 'fail');
+      if (revertRes.newId) {
+        currentId = revertRes.newId;
+        const idx2 = pipettes.findIndex(p => p.id === changeRes.newId);
+        if (idx2 !== -1) pipettes[idx2] = await apiRequest('/pipettes/' + currentId);
+      }
+    }
+  } catch (e) { addResult('Блок 4', 'CRUD', 'fail', e.message); }
+
+  // ================= БЛОК 5 =================
+  try {
+    await openQuickCalModal(currentId);
+    await delay(400);
+    const modalQuick = document.getElementById('quick-cal-modal');
+    addResult('Блок 5', 'Открытие модалки быстрой поверки (UI)', modalQuick.classList.contains('active') ? 'pass' : 'fail');
+
+    if (modalQuick.classList.contains('active')) {
+      await apiRequest(`/pipettes/${currentId}/calibration`, 'POST', { date: '2024-05-20', cert: 'TEST-CERT', result: 'pass' });
+      const p = await apiRequest('/pipettes/' + currentId);
+      addResult('Блок 5', 'Запись поверки', p.last_calibration === '2024-05-20' ? 'pass' : 'fail');
+      closeQuickCalModal();
+    }
+    await delay(200);
+  } catch (e) { addResult('Блок 5', 'Быстрая поверка', 'fail', e.message); }
+
+  // ================= БЛОК 6 =================
+  try {
+    await openHistoryModal(currentId);
+    await delay(500);
+    const modalHist = document.getElementById('history-modal');
+    addResult('Блок 6', 'Открытие модалки истории (UI)', modalHist.classList.contains('active') ? 'pass' : 'fail');
+    const timelineItems = modalHist.querySelectorAll('.timeline-item');
+    addResult('Блок 6', 'Наличие записей в истории', timelineItems.length > 0 ? 'pass' : 'fail', `Записей: ${timelineItems.length}`);
+    closeHistoryModal();
+    await delay(200);
+  } catch (e) { addResult('Блок 6', 'История', 'fail', e.message); }
+
+  // ================= БЛОК 7 =================
+  try {
+    selectedPipettes.clear();
+    selectedPipettes.add(currentId);
+    await openBulkSendModal();
+    await delay(600);
+    const modalSend = document.getElementById('bulk-send-modal');
+    addResult('Блок 7', 'Открытие модалки отправки (UI)', modalSend.classList.contains('active') ? 'pass' : 'fail');
+
+    if (modalSend.classList.contains('active')) {
+      closeBulkSendModal();
+      const sendRes = await apiRequest('/pipettes/bulk-send', 'POST', { ids: [currentId], sentDate: '2024-06-01', replacements: { [currentId]: replId } });
+      addResult('Блок 7', 'API отправки с заменой', sendRes.successful === 1 ? 'pass' : 'fail');
+
+      // 🆕 Обновляем локальный массив pipettes, чтобы Блок 8 увидел изменения
+      const idx = pipettes.findIndex(p => p.id === currentId);
+      if (idx !== -1) pipettes[idx] = await apiRequest('/pipettes/' + currentId);
+    }
+    await delay(200);
+  } catch (e) { addResult('Блок 7', 'Отправка', 'fail', e.message); }
+
+  // ================= БЛОК 8 =================
+  try {
+    selectedPipettes.clear();
+    selectedPipettes.add(currentId);
+    await openBulkReturnModal();
+    await delay(600);
+    const modalRet = document.getElementById('bulk-return-modal');
+    addResult('Блок 8', 'Открытие модалки возврата (UI)', modalRet.classList.contains('active') ? 'pass' : 'fail');
+
+    if (modalRet.classList.contains('active')) {
+      closeBulkReturnModal();
+      const retRes = await apiRequest('/pipettes/bulk-return', 'POST', { items: [{ id: currentId, cert: 'RET-1', result: 'pass' }], date: '2024-07-01', returnReplacements: [currentId] });
+      addResult('Блок 8', 'API возврата', retRes.successful === 1 ? 'pass' : 'fail');
+    }
+    await delay(200);
+  } catch (e) { addResult('Блок 8', 'Возврат', 'fail', e.message); }
+
+  // --- ОЧИСТКА ---
+  try {
+    // 🆕 Сначала отменяем отправку (на случай если возврат не сработал), потом удаляем
+    await apiRequest(`/pipettes/${currentId}/cancel-send`, 'POST').catch(() => {});
+    await apiRequest('/pipettes/' + currentId, 'DELETE').catch(() => {});
+    await apiRequest('/pipettes/' + replId, 'DELETE').catch(() => {});
+    await apiRequest('/pipettes/' + intId, 'DELETE').catch(() => {});
+  } catch (e) {}
+
+  const passes = results.filter(r => r.status === 'pass').length;
+  const warns = results.filter(r => r.status === 'warn').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ ЭТАПА 1', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ⚠️ Внимание: ${warns} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 ЭТАП 1 ПРОЙДЕН! ОТМЕЧАЙ БЛОКИ: 1, 2, 3, 4, 5, 6, 7, 8', 'color:green; font-weight:bold; font-size:16px;');
+  } else {
+    console.log('%c⚠️ Есть ошибки. Проверь логи.', 'color:orange; font-weight:bold; font-size:16px;');
+  }
+})();

@@ -1,0 +1,138 @@
+(async function testBlocks44to49_FULL() {
+  console.log('%c🚀 ТЕСТ БЛОКОВ 44–49 (МОДАЛКИ, ИКОНКИ, TINYMCE)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (block, name, status, details = '') => {
+    results.push({ block, name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c[${block}] ${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // ================= БЛОК 44: МОДАЛКА PROMPT =================
+  try {
+    const promptPromise = showPrompt('Введите тестовое значение', { title: 'Тест Prompt', okText: 'ОК' });
+    await delay(300);
+    const promptModal = document.getElementById('prompt-modal');
+    addResult('Блок 44', 'Модалка Prompt открывается (UI)', promptModal.classList.contains('active') ? 'pass' : 'fail');
+
+    // Эмулируем ввод
+    document.getElementById('prompt-input').value = 'Test Value';
+    submitPrompt();
+    await delay(200);
+    const val = await promptPromise;
+    addResult('Блок 44', 'Модалка Prompt возвращает значение', val === 'Test Value' ? 'pass' : 'fail');
+  } catch (e) { addResult('Блок 44', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 45: FA-ИКОНКИ =================
+  try {
+    const icons = document.querySelectorAll('.fa-solid, .fas');
+    addResult('Блок 45', 'FA-иконки на странице', icons.length > 50 ? 'pass' : 'fail', `Найдено: ${icons.length}`);
+
+    // Проверяем, что в меню ⋮ (row-actions-menu) иконки рендерятся как HTML (а не текст)
+    const menuBtn = document.querySelector('.row-actions-btn');
+    if (menuBtn) {
+      // Создаём тестовое меню
+      renderRowActionsMenu(menuBtn, [{ label: '<i class="fa-solid fa-test"></i> Тест', action: () => {} }]);
+      await delay(200);
+      const menu = document.querySelector('.row-actions-menu');
+      const hasIcon = menu && menu.innerHTML.includes('<i class="fa-solid');
+      addResult('Блок 45', 'Иконки в меню ⋮ (HTML)', hasIcon ? 'pass' : 'fail');
+      if (menu) menu.remove();
+    }
+  } catch (e) { addResult('Блок 45', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 46: ФИКСЫ МОДАЛОК =================
+  try {
+    UI.modal.open('modal');
+    await delay(300);
+    const modal = document.querySelector('#modal .modal');
+    const cs = window.getComputedStyle(modal);
+
+    addResult('Блок 46', 'Скролл внутри (clip-path)', cs.clipPath !== 'none' ? 'pass' : 'fail');
+    addResult('Блок 46', 'Overscroll-behavior', cs.overscrollBehavior === 'contain' ? 'pass' : 'fail');
+
+    // Проверка ресайза (невидимая зона)
+    const afterStyle = window.getComputedStyle(modal, '::after');
+    addResult('Блок 46', 'Зона ресайза (::after)', afterStyle.cursor === 'nwse-resize' ? 'pass' : 'fail');
+
+    UI.modal.close('modal');
+    await delay(300);
+  } catch (e) { addResult('Блок 46', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 47: ТАБЛИЦА СПРАВКИ =================
+  try {
+    // Открываем настройки справки, чтобы отрендерить таблицу
+    await openSettingsModal();
+    await delay(500);
+    await openSettingsSection('help');
+    await delay(600);
+
+    const table = document.querySelector('.help-admin-table');
+    if (table) {
+      const th = table.querySelector('th:nth-child(2)');
+      const td = table.querySelector('td:nth-child(2)');
+      const thStyle = window.getComputedStyle(th);
+      const tdStyle = window.getComputedStyle(td);
+
+      addResult('Блок 47', 'Заголовки по центру', thStyle.textAlign === 'center' ? 'pass' : 'fail');
+      addResult('Блок 47', 'Названия слева', tdStyle.textAlign === 'left' ? 'pass' : 'fail');
+    } else {
+      addResult('Блок 47', 'Таблица справки не найдена', 'warn');
+    }
+    await closeSettingsModal();
+    await delay(300);
+  } catch (e) { addResult('Блок 47', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 48: TINYMCE =================
+  try {
+    if (typeof tinymce !== 'undefined') {
+      addResult('Блок 48', 'Библиотека TinyMCE загружена', 'pass', `Версия: ${tinymce.majorVersion}.${tinymce.minorVersion}`);
+
+      // Проверяем, что tinyMCE инициализируется (открываем модалку справки)
+      await openSettingsModal();
+      await delay(500);
+      await openSettingsSection('help');
+      await delay(500);
+
+      // Нажимаем "Добавить раздел" (откроется модалка с TinyMCE)
+      const addBtn = document.querySelector('.help-actions-bar .btn-primary');
+      if (addBtn) {
+        addBtn.click();
+        await delay(1500); // Ждём инициализации
+
+        const toxEl = document.querySelector('.tox-tinymce');
+        addResult('Блок 48', 'TinyMCE инициализируется в модалке', toxEl ? 'pass' : 'fail');
+
+        closeHelpEditor();
+        await delay(300);
+      }
+      await closeSettingsModal();
+      await delay(300);
+    }
+  } catch (e) { addResult('Блок 48', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 49: PULL-TO-REFRESH =================
+  try {
+    const hasTouch = 'ontouchstart' in window;
+    addResult('Блок 49', 'Pull-to-refresh (наличие touch)', hasTouch ? 'pass' : 'warn', `Touch: ${hasTouch} (тест на мобильном)`);
+
+    // Проверяем, что функция инициализации не падает
+    if (typeof initPullToRefresh === 'function') {
+      addResult('Блок 49', 'Функция initPullToRefresh существует', 'pass');
+    }
+  } catch (e) { addResult('Блок 49', 'Ошибка', 'fail', e.message); }
+
+  // --- ИТОГ ---
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ БЛОКОВ 44-49', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 БЛОКИ 44-49 ПРОЙДЕНЫ! ОТМЕЧАЙ!', 'color:green; font-weight:bold; font-size:16px;');
+  }
+})();

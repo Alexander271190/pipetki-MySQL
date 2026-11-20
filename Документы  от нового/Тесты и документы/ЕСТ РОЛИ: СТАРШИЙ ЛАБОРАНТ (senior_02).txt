@@ -1,0 +1,104 @@
+(async function testRole_Senior_FIXED() {
+  console.log('%c🛡 ТЕСТ РОЛИ: СТАРШИЙ ЛАБОРАНТ (senior_02) — ИСПРАВЛЕННЫЙ', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (name, status, details = '') => {
+    results.push({ name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const adminToken = authToken;
+  const adminUser = JSON.parse(JSON.stringify(currentUser));
+  const adminSession = sessionStorage.getItem('pipette_session');
+  const testLogin = 'senior_02';
+
+  try {
+    const resp = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: testLogin, password: 'Seno16/1978S' })
+    });
+    const loginRes = await resp.json();
+    if (!resp.ok) throw new Error(loginRes.error);
+
+    authToken = loginRes.token;
+    currentUser = loginRes.user;
+    sessionStorage.setItem('pipette_session', JSON.stringify({ user: loginRes.user, token: loginRes.token }));
+    await renderAuthUI();
+    await loadPipetteData();
+    await delay(1500);
+
+    addResult('Кнопка "Добавить" видна (есть add_pipette)', document.querySelector('.btn-add-pipette').style.display !== 'none' ? 'pass' : 'fail');
+    addResult('Кнопка "Настройки" скрыта (нет manage_settings)', document.querySelector('.btn-settings').style.display === 'none' ? 'pass' : 'fail');
+
+    const paged = await apiRequest('/pipettes/paged?limit=100');
+    const wrongDepts = paged.items.filter(p => p.department !== currentUser.department);
+    addResult('Видит только свой отдел', wrongDepts.length === 0 ? 'pass' : 'fail');
+
+    // 🆕 Ищем external прибор для отправки
+    const externalItems = paged.items.filter(p =>
+      !p.sent_for_calibration && isExternalCalibration(p.equipment_type)
+    );
+
+    if (externalItems.length > 0) {
+      const testId = externalItems[0].id;
+      selectedPipettes.clear();
+      selectedPipettes.add(testId);
+      await openBulkSendModal();
+      await delay(1500);
+      addResult('Модалка отправки открыта (UI)', document.getElementById('bulk-send-modal').classList.contains('active') ? 'pass' : 'fail', `ID: ${testId}`);
+      closeBulkSendModal();
+      await delay(300);
+    } else {
+      addResult('Модалка отправки открыта (UI)', 'warn', 'Нет external приборов в отделе для отправки');
+    }
+
+    // Передача (любой прибор)
+    if (paged.items.length > 0) {
+      await openTransferModal(paged.items[0].id);
+      await delay(600);
+      addResult('Модалка передачи открыта (UI)', document.getElementById('transfer-modal').classList.contains('active') ? 'pass' : 'fail');
+      closeTransferModal();
+      await delay(300);
+    }
+
+    // 🆕 Запрет записи в настройки (PUT, а не GET)
+    try {
+      await apiRequest('/settings/departments', 'PUT', [{ name: 'Test', enabled: true, oldName: null }]);
+      addResult('API: Запись в настройки запрещена (403)', 'fail', 'Сервер разрешил PUT');
+    } catch (e) {
+      addResult('API: Запись в настройки запрещена (403)', e.status === 403 ? 'pass' : 'fail', `Статус: ${e.status}`);
+    }
+
+    // Проверка /users
+    try {
+      await apiRequest('/users');
+      addResult('API: Доступ к /users запрещен (403)', 'fail', 'Сервер разрешил');
+    } catch (e) {
+      addResult('API: Доступ к /users запрещен (403)', e.status === 403 ? 'pass' : 'fail', `Статус: ${e.status}`);
+    }
+
+    // Удаление
+    try {
+      await apiRequest('/pipettes/P-001', 'DELETE');
+      addResult('API: Удаление запрещено (403)', 'fail');
+    } catch (e) {
+      addResult('API: Удаление запрещено (403)', e.status === 403 ? 'pass' : 'fail');
+    }
+
+  } catch (e) {
+    console.error('Ошибка теста:', e);
+    addResult('Критическая ошибка', 'fail', e.message);
+  } finally {
+    authToken = adminToken; currentUser = adminUser; sessionStorage.setItem('pipette_session', adminSession);
+    await renderAuthUI(); await loadPipetteData(); await delay(1000);
+  }
+
+  const passes = results.filter(r => r.status === 'pass').length;
+  const warns = results.filter(r => r.status === 'warn').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+  console.log(`\n%c📊 ИТОГ: ✅ ${passes} | ⚠️ ${warns} | ❌ ${fails}`, 'font-size:16px; font-weight:bold; background:#e0e7ff; padding:4px 8px; border-radius:4px;');
+  if (fails === 0) console.log('%c🎉 РОЛЬ СТАРШЕГО ЛАБОРАНТА РАБОТАЕТ ИДЕАЛЬНО!', 'color:green; font-weight:bold;');
+})();

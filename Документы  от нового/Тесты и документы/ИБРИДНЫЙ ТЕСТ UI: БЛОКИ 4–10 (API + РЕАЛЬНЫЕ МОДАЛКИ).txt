@@ -1,0 +1,249 @@
+(async function testDeepUI_Blocks4to10_HYBRID() {
+  console.log('%c🖱 ГИБРИДНЫЙ ТЕСТ UI: БЛОКИ 4–10 (API + РЕАЛЬНЫЕ МОДАЛКИ)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (name, status, details = '') => {
+    results.push({ name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const suffix = Date.now().toString().slice(-4);
+  const testId = 'P-' + suffix;
+  const replId = 'P-' + (parseInt(suffix) + 1);
+
+  try {
+    // 1. Создаем прибор через API (чтобы избежать проблем с валидацией скрытых полей)
+    await apiRequest('/pipettes', 'POST', { id: testId, model: 'UI Hybrid Model', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Администратор', department: 'Гематологический отдел' });
+    await loadPipetteData(); // Загружаем в локальный массив
+    addResult('Подготовка: прибор создан через API', 'pass', `ID: ${testId}`);
+
+    // ==========================================
+    // БЛОК 4.4: РЕДАКТИРОВАНИЕ ЧЕРЕЗ ФОРМУ
+    // ==========================================
+    await openModal(testId);
+    await delay(600);
+    const modal = document.getElementById('modal');
+    if (modal.classList.contains('active')) {
+      const modelInput = document.getElementById('p-model');
+      addResult('4.4 Модалка редактирования открылась', 'pass');
+      addResult('4.4 Данные подставились в форму', modelInput && modelInput.value === 'UI Hybrid Model' ? 'pass' : 'fail');
+
+      if (modelInput) modelInput.value = 'UI Hybrid EDITED';
+      const submitBtn = document.querySelector('#pipette-form button[type="submit"]');
+      if (submitBtn) submitBtn.click();
+      await delay(1500);
+
+      const p = await apiRequest('/pipettes/' + testId);
+      addResult('4.4 Сохранение из формы', p.model === 'UI Hybrid EDITED' ? 'pass' : 'fail');
+    } else {
+      addResult('4.4 Модалка редактирования', 'fail', 'Не открылась');
+    }
+
+    // ==========================================
+    // БЛОК 5: БЫСТРАЯ ПОВЕРКА ЧЕРЕЗ ФОРМУ
+    // ==========================================
+    await openQuickCalModal(testId);
+    await delay(600);
+    const modalCal = document.getElementById('quick-cal-modal');
+    if (modalCal.classList.contains('active')) {
+      addResult('5. Модалка быстрой поверки открылась', 'pass');
+      document.getElementById('quick-cal-date').value = '2024-08-15';
+      document.getElementById('quick-cal-cert').value = 'UI-CERT-123';
+
+      const calSubmitBtn = document.querySelector('#quick-cal-form .btn-success');
+      if (calSubmitBtn) calSubmitBtn.click();
+      await delay(1500);
+
+      const p = await apiRequest('/pipettes/' + testId);
+      addResult('5. Сохранение поверки из формы', p.last_calibration === '2024-08-15' ? 'pass' : 'fail');
+    } else {
+      addResult('5. Модалка быстрой поверки', 'fail', 'Не открылась');
+    }
+
+    // ==========================================
+    // БЛОК 6: ИСТОРИЯ + ДОБАВЛЕНИЕ ПОВЕРКИ
+    // ==========================================
+    await openHistoryModal(testId);
+    await delay(800);
+    const modalHist = document.getElementById('history-modal');
+    if (modalHist.classList.contains('active')) {
+      addResult('6. Модалка истории открылась', 'pass');
+
+      const addCalBtn = document.querySelector('#history-modal .btn-info');
+      if (addCalBtn) {
+        addCalBtn.click();
+        await delay(400);
+        document.getElementById('cal-date').value = '2024-09-20';
+        document.getElementById('cal-cert').value = 'HIST-CERT-999';
+
+        const histSaveBtn = document.querySelector('#calibration-form-wrap .btn-success');
+        if (histSaveBtn) histSaveBtn.click();
+        await delay(1500);
+
+        const hist = await apiRequest('/pipettes/' + testId + '/calibration');
+        addResult('6. Добавление из истории', hist.some(h => h.cert === 'HIST-CERT-999') ? 'pass' : 'fail');
+      }
+      closeHistoryModal();
+    } else {
+      addResult('6. Модалка истории', 'fail', 'Не открылась');
+    }
+
+    // ==========================================
+    // БЛОК 7: ОТПРАВКА С ЗАМЕНОЙ ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    // Создаем замену
+    await apiRequest('/pipettes', 'POST', { id: replId, model: 'UI Replacement', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Администратор', department: 'Гематологический отдел', active: false });
+    await loadPipetteData();
+
+    selectedPipettes.clear();
+    selectedPipettes.add(testId);
+
+    await openBulkSendModal();
+    await delay(2000);
+    const modalSend = document.getElementById('bulk-send-modal');
+    if (modalSend.classList.contains('active')) {
+      addResult('7. Модалка отправки открылась', 'pass');
+
+      const replRadios = document.querySelectorAll('#replacement-options input[type="radio"]');
+      let selected = false;
+      for (const radio of replRadios) {
+        if (radio.value === replId) { radio.checked = true; selected = true; break; }
+      }
+      addResult('7. Замена выбрана в UI', selected ? 'pass' : 'fail');
+
+      if (selected) {
+        document.getElementById('bulk-send-date').value = '2024-06-01';
+        const sendBtn = document.querySelector('#bulk-send-form button[type="submit"]');
+        if (sendBtn) sendBtn.click();
+        await delay(1000);
+        const confirmBtn = document.getElementById('confirm-ok-btn');
+        if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+
+        const p = await apiRequest('/pipettes/' + testId);
+        addResult('7. Отправка сохранена', p.replaced_by === replId ? 'pass' : 'fail');
+      }
+    } else {
+      addResult('7. Модалка отправки', 'fail', 'Не открылась');
+    }
+
+    // ==========================================
+    // БЛОК 8: ВОЗВРАТ ЧЕРЕЗ МОДАЛКУ
+    // ==========================================
+    await loadPipetteData();
+    selectedPipettes.clear();
+    selectedPipettes.add(testId);
+
+    await openBulkReturnModal();
+    await delay(800);
+    const modalRet = document.getElementById('bulk-return-modal');
+    if (modalRet.classList.contains('active')) {
+      addResult('8. Модалка возврата открылась', 'pass');
+      document.getElementById('bulk-return-date').value = '2024-10-01';
+      const certInp = document.querySelector(`.bulk-return-cert-input[data-id="${testId}"]`);
+      if (certInp) certInp.value = 'RET-UI-1';
+
+      const retBtn = document.querySelector('#bulk-return-form button[type="submit"]');
+      if (retBtn) retBtn.click();
+      await delay(1000);
+      const confirmBtn = document.getElementById('confirm-ok-btn');
+      if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+
+      const p = await apiRequest('/pipettes/' + testId);
+      addResult('8. Возврат сохранен', !p.sent_for_calibration ? 'pass' : 'fail');
+    } else {
+      addResult('8. Модалка возврата', 'fail', 'Не открылась');
+    }
+
+    // ==========================================
+    // БЛОК 9: СМЕНА ОТВЕТСТВЕННОГО
+    // ==========================================
+    await loadPipetteData();
+    selectedPipettes.clear();
+    selectedPipettes.add(testId);
+
+    await openBulkResponsibleModal();
+    await delay(600);
+    const modalResp = document.getElementById('bulk-responsible-modal');
+    if (modalResp.classList.contains('active')) {
+      addResult('9. Модалка смены ответственного открылась', 'pass');
+      const sel = document.getElementById('bulk-responsible-select');
+      if (sel && sel.options.length > 1) {
+        sel.selectedIndex = 1;
+        const newResp = sel.options[1].value;
+
+        const respBtn = document.querySelector('#bulk-responsible-form button[type="submit"]');
+        if (respBtn) {
+          respBtn.click();
+          await delay(1000);
+          const confirmBtn = document.getElementById('confirm-ok-btn');
+          if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+
+          const p = await apiRequest('/pipettes/' + testId);
+          addResult('9. Ответственный сохранен', p.responsible === newResp ? 'pass' : 'fail');
+        }
+      }
+    } else {
+      addResult('9. Модалка ответственного', 'fail', 'Не открылась');
+    }
+
+    // ==========================================
+    // БЛОК 10: ПЕРЕДАЧА В ОТДЕЛ
+    // ==========================================
+    await openTransferModal(testId);
+    await delay(800);
+    const modalTransfer = document.getElementById('transfer-modal');
+    if (modalTransfer.classList.contains('active')) {
+      addResult('10. Модалка передачи открылась', 'pass');
+      const deptSel = document.getElementById('transfer-department');
+      let targetDept = null;
+      for (const opt of deptSel.options) {
+        if (opt.value.includes('Биохимический')) { targetDept = opt.value; deptSel.value = targetDept; deptSel.dispatchEvent(new Event('change')); break; }
+      }
+
+      await delay(1000);
+      const respSel = document.getElementById('transfer-responsible');
+      if (respSel && respSel.options.length > 1 && targetDept) {
+        respSel.selectedIndex = 1;
+
+        const transferBtn = document.querySelector('#transfer-form button[type="submit"]');
+        if (transferBtn) {
+          transferBtn.click();
+          await delay(1000);
+          const confirmBtn = document.getElementById('confirm-ok-btn');
+          if (confirmBtn && confirmBtn.offsetParent !== null) { confirmBtn.click(); await delay(1500); }
+
+          const p = await apiRequest('/pipettes/' + testId);
+          addResult('10. Передача сохранена', p.department === targetDept ? 'pass' : 'fail', `Отдел: ${p.department}`);
+        }
+      }
+    } else {
+      addResult('10. Модалка передачи', 'fail', 'Не открылась');
+    }
+
+  } catch (e) {
+    console.error('Ошибка UI-теста:', e);
+    addResult('Общая ошибка', 'fail', e.message);
+  } finally {
+    try { await apiRequest('/pipettes/' + testId, 'DELETE').catch(() => {}); } catch(e) {}
+    try { await apiRequest('/pipettes/' + replId, 'DELETE').catch(() => {}); } catch(e) {}
+
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    if (typeof resolveConfirm === 'function') resolveConfirm(false);
+    if (typeof resolvePrompt === 'function') resolvePrompt(null);
+
+    await loadPipetteData();
+  }
+
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ ГИБРИДНОГО UI-ТЕСТА', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 ВСЕ МОДАЛКИ И ФОРМЫ РАБОТАЮТ!', 'color:green; font-weight:bold; font-size:16px;');
+  }
+})();

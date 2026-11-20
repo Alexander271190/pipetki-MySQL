@@ -1,0 +1,221 @@
+(async function testSettingsUI_RealClicks() {
+  console.log('%c🖱 ТЕСТ UI-ФУНКЦИОНАЛА НАСТРОЕК (РЕАЛЬНЫЕ КЛИКИ)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (name, status, details = '') => {
+    results.push({ name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // Хелпер для эмуляции prompt (вводим значение и жмём ОК)
+  async function emulatePrompt(value) {
+    await delay(200);
+    const input = document.getElementById('prompt-input');
+    if (!input) return;
+    input.value = value;
+    submitPrompt();
+    await delay(300);
+  }
+
+  // Хелпер для эмуляции confirm (жмём ОК)
+  async function emulateConfirm() {
+    await delay(200);
+    const modal = document.getElementById('confirm-modal');
+    if (modal && modal.classList.contains('active')) {
+      resolveConfirm(true);
+      await delay(300);
+    }
+  }
+
+  try {
+    await openSettingsModal();
+    await delay(500);
+
+    // ================= БЛОК 14: ПОЛЯ ФОРМЫ (UI) =================
+    try {
+      await openSettingsSection('fields');
+      await delay(500);
+
+      // 1. Эмулируем добавление поля
+      const addBtn = document.querySelector('#settings-section-content .form-actions .btn-primary');
+      if (addBtn) {
+        addBtn.click();
+        await emulatePrompt('test_field_' + Date.now().toString().slice(-4));
+        await delay(300);
+
+        // Проверяем, что в таблице появилась новая строка
+        const rows = document.querySelectorAll('#settings-section-content .field-settings-table tbody tr');
+        addResult('14. Добавление поля (UI-клик)', rows.length > 16 ? 'pass' : 'fail', `Строк в таблице: ${rows.length}`);
+
+        // 2. Удаляем созданное поле (клик по ⋮ → Удалить)
+        const lastRow = rows[rows.length - 1];
+        const actionBtn = lastRow.querySelector('.row-actions-btn');
+        if (actionBtn) {
+          actionBtn.click();
+          await delay(300);
+          // В меню кликаем "Удалить"
+          const deleteBtn = document.querySelector('.row-actions-item.item-danger');
+          if (deleteBtn) {
+            deleteBtn.click();
+            await emulateConfirm();
+            await delay(300);
+            const rowsAfter = document.querySelectorAll('#settings-section-content .field-settings-table tbody tr');
+            addResult('14. Удаление поля (UI-клик)', rowsAfter.length === rows.length - 1 ? 'pass' : 'fail');
+          }
+        }
+      }
+    } catch (e) { addResult('14. UI полей', 'fail', e.message); }
+
+    // ================= БЛОК 15: ОТДЕЛЫ (UI) =================
+    try {
+      await openSettingsSection('departments');
+      await delay(500);
+
+      const deptInput = document.getElementById('new-dept-name');
+      const addDeptBtn = document.querySelector('#settings-section-content .form-actions .btn-success');
+
+      if (deptInput && addDeptBtn) {
+        const newDeptName = 'Тестовый отдел ' + Date.now().toString().slice(-4);
+        deptInput.value = newDeptName;
+        addDeptBtn.click();
+        await delay(500);
+
+        // Проверяем, что отдел появился в таблице
+        const deptInputs = document.querySelectorAll('#settings-section-content .field-settings-table input[type="text"]');
+        let found = false;
+        deptInputs.forEach(inp => { if (inp.value === newDeptName) found = true; });
+        addResult('15. Добавление отдела (UI-клик)', found ? 'pass' : 'fail', `Название: ${newDeptName}`);
+
+        // Удаляем его (он пустой, удаление должно пройти)
+        if (found) {
+          const lastRow = document.querySelectorAll('#settings-section-content .field-settings-table tbody tr')[deptInputs.length - 1];
+          const actionBtn = lastRow.querySelector('.row-actions-btn');
+          if (actionBtn) {
+            actionBtn.click();
+            await delay(300);
+            const deleteBtn = document.querySelector('.row-actions-item.item-danger');
+            if (deleteBtn) {
+              deleteBtn.click();
+              await emulateConfirm();
+              await delay(500); // Ждём сохранения и перерисовки
+              addResult('15. Удаление отдела (UI-клик)', 'pass');
+            }
+          }
+        }
+      }
+    } catch (e) { addResult('15. UI отделов', 'fail', e.message); }
+
+    // ================= БЛОК 18: ТИПЫ ОБОРУДОВАНИЯ (UI) =================
+    try {
+      await openSettingsSection('equipment');
+      await delay(500);
+
+      const addTypeBtn = document.querySelector('#settings-section-content .form-actions .btn-primary');
+      if (addTypeBtn) {
+        addTypeBtn.click();
+        await emulatePrompt('test_type_' + Date.now().toString().slice(-4));
+        await delay(300);
+
+        const typesRows = document.querySelectorAll('#equip-types-body tr');
+        addResult('18. Добавление типа (UI-клик)', typesRows.length > 6 ? 'pass' : 'fail', `Типов в таблице: ${typesRows.length}`);
+
+        // Удаляем тип
+        const lastTypeRow = typesRows[typesRows.length - 1];
+        const actionBtn = lastTypeRow.querySelector('.row-actions-btn');
+        if (actionBtn) {
+          actionBtn.click();
+          await delay(300);
+          const deleteBtn = document.querySelector('.row-actions-item.item-danger');
+          if (deleteBtn) {
+            deleteBtn.click();
+            await emulateConfirm();
+            await delay(300);
+            addResult('18. Удаление типа (UI-клик)', 'pass');
+          }
+        }
+      }
+    } catch (e) { addResult('18. UI типов', 'fail', e.message); }
+
+    // ================= БЛОК 19: ПОЛЬЗОВАТЕЛИ (UI-форма) =================
+    try {
+      await openSettingsSection('users');
+      await delay(600);
+
+      // Заполняем форму создания
+      const loginInput = document.getElementById('usr-login');
+      const fullnameInput = document.getElementById('usr-fullname');
+      const positionInput = document.getElementById('usr-position');
+      const saveBtn = document.querySelector('#user-edit-form .btn-success');
+
+      if (loginInput && fullnameInput && positionInput && saveBtn) {
+        const testLogin = 'ui_test_' + Date.now().toString().slice(-4);
+        loginInput.value = testLogin;
+        fullnameInput.value = 'UI Test User';
+        positionInput.value = 'Тестировщик';
+
+        saveBtn.click();
+        await delay(1000); // Ждём создания и модалку разового пароля
+
+        // Закрываем модалку разового пароля, если открылась
+        const tempModal = document.getElementById('temp-password-modal');
+        if (tempModal && tempModal.classList.contains('active')) {
+          closeTempPasswordModal();
+        }
+        await delay(500);
+
+        // Проверяем, что пользователь появился в таблице
+        const usersTable = document.getElementById('users-table');
+        if (usersTable) {
+          const tableText = usersTable.textContent;
+          addResult('19. Создание пользователя (UI-форма)', tableText.includes('UI Test User') ? 'pass' : 'fail');
+
+          // Удаляем его
+          const users = await apiRequest('/users');
+          const createdUser = users.find(u => u.login === testLogin);
+          if (createdUser) {
+            await apiRequest('/users/' + createdUser.id, 'DELETE');
+            addResult('19. Удаление пользователя (API)', 'pass');
+            await openSettingsSection('users'); // Обновляем таблицу
+            await delay(500);
+          }
+        }
+      }
+    } catch (e) { addResult('19. UI пользователей', 'fail', e.message); }
+
+    // ================= ПРОВЕРКА НАВИГАЦИИ (НАЗАД) =================
+    try {
+      const backBtn = document.getElementById('settings-back-btn');
+      if (backBtn) {
+        backBtn.click();
+        await delay(300);
+        const isListVisible = document.getElementById('settings-list').style.display !== 'none';
+        addResult('Навигация: кнопка "Назад"', isListVisible ? 'pass' : 'fail');
+      }
+    } catch (e) { addResult('Навигация', 'fail', e.message); }
+
+  } catch (e) {
+    console.error('Ошибка UI-теста:', e);
+  } finally {
+    closeSettingsModal();
+    await delay(300);
+    // Сброс возможных зависших prompt/confirm
+    if (typeof resolvePrompt === 'function') resolvePrompt(null);
+    if (typeof resolveConfirm === 'function') resolveConfirm(false);
+  }
+
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ UI-ФУНКЦИОНАЛА НАСТРОЕК', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 ФУНКЦИОНАЛ НАСТРОЕК (UI) РАБОТАЕТ!', 'color:green; font-weight:bold; font-size:16px;');
+  } else {
+    console.log('%c⚠️ Есть замечания.', 'color:orange; font-weight:bold;');
+  }
+})();

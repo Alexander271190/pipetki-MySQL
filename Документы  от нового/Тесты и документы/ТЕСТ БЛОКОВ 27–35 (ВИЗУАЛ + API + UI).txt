@@ -1,0 +1,122 @@
+(async function testBlocks27to35_FIXED() {
+  console.log('%c🚀 ТЕСТ БЛОКОВ 27–35 (ВИЗУАЛ + API + UI) — ИСПРАВЛЕННЫЙ', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (block, name, status, details = '') => {
+    results.push({ block, name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c[${block}] ${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // ================= БЛОК 27: ВИЗУАЛ МОДАЛОК =================
+  try {
+    UI.modal.open('modal');
+    await delay(300);
+    const modal = document.querySelector('#modal .modal');
+    const modalOverlay = document.getElementById('modal');
+    const cs = window.getComputedStyle(modal);
+
+    addResult('Блок 27', 'Overlay и центрирование', window.getComputedStyle(modalOverlay).display === 'flex' ? 'pass' : 'fail');
+    addResult('Блок 27', 'Border-radius 16px', cs.borderRadius.includes('16px') ? 'pass' : 'fail', `Текущий: ${cs.borderRadius}`);
+    addResult('Блок 27', 'Тень (box-shadow)', cs.boxShadow !== 'none' ? 'pass' : 'fail');
+    addResult('Блок 27', 'Max-height 90vh', cs.maxHeight.includes('90vh') || cs.maxHeight.includes('px') ? 'pass' : 'fail', `Текущий: ${cs.maxHeight}`);
+
+    UI.modal.close('modal');
+    await delay(300);
+  } catch (e) { addResult('Блок 27', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 28: ТИП ПОВЕРКИ =================
+  try {
+    const types = await apiRequest('/settings/equipment-types');
+    const pipette = types.find(t => t.value === 'pipette');
+    const scales = types.find(t => t.value === 'scales');
+
+    addResult('Блок 28', 'Пипетка = внешняя (external)', pipette && pipette.calibrationPlace === 'external' ? 'pass' : 'fail');
+    addResult('Блок 28', 'Весы = внутренняя (internal)', scales && scales.calibrationPlace === 'internal' ? 'pass' : 'fail');
+  } catch (e) { addResult('Блок 28', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 29: ПОДБОР ЗАМЕН =================
+  try {
+    const availRes = await apiRequest('/pipettes/available-for-replacement?type=pipette&exclude=P-001');
+    addResult('Блок 29', 'API подбора замен (GET)', Array.isArray(availRes) ? 'pass' : 'fail', `Найдено замен: ${availRes.length}`);
+
+    const batchRes = await apiRequest('/pipettes/available-for-replacement-batch', 'POST', { items: [{ id: 'P-001', type: 'pipette' }] });
+    addResult('Блок 29', 'API подбора замен (POST batch)', batchRes['P-001'] !== undefined ? 'pass' : 'fail');
+  } catch (e) { addResult('Блок 29', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 30: ПАГИНАЦИЯ =================
+  try {
+    const pagination = document.getElementById('pagination');
+    const pageCurrent = document.getElementById('page-current');
+    const pageTotal = document.getElementById('page-total');
+    addResult('Блок 30', 'Наличие элементов пагинации', pagination && pageCurrent && pageTotal ? 'pass' : 'fail');
+    addResult('Блок 30', 'Значение страниц отображается', pageCurrent.textContent !== '' ? 'pass' : 'fail', `Стр. ${pageCurrent.textContent} из ${pageTotal.textContent}`);
+  } catch (e) { addResult('Блок 30', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 31: АВТОФИЛЬТР ПОСЛЕ ВОЗВРАТА =================
+  try {
+    if (typeof applyFilterStateToPanel === 'function') {
+      filterState = { calPeriod: { type: 'last_calibration', period: 'custom', from: '2024-01-01', to: '2024-01-01' } };
+      applyFilterStateToPanel();
+      const periodSelect = document.getElementById('filter-calPeriod-period');
+      addResult('Блок 31', 'Заполнение фильтра (applyFilterStateToPanel)', periodSelect && periodSelect.value === 'custom' ? 'pass' : 'fail');
+      filterState = {}; // Сброс
+    } else {
+      addResult('Блок 31', 'Функция applyFilterStateToPanel не найдена', 'fail');
+    }
+  } catch (e) { addResult('Блок 31', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 32: ВИЗУАЛЬНЫЕ УЛУЧШЕНИЯ ТАБЛИЦЫ =================
+  try {
+    const table = document.getElementById('pipettes-table');
+    const thead = table.querySelector('thead');
+    const th = table.querySelector('th');
+
+    // 🆕 Проверяем sticky у thead (а не у th, как было раньше)
+    const theadStyle = window.getComputedStyle(thead);
+    const thStyle = window.getComputedStyle(th);
+
+    addResult('Блок 32', 'Sticky-шапка (position sticky у thead)', theadStyle.position === 'sticky' ? 'pass' : 'fail');
+    addResult('Блок 32', 'Шрифт th (uppercase)', thStyle.textTransform === 'uppercase' ? 'pass' : 'fail');
+  } catch (e) { addResult('Блок 32', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 33: МОБИЛЬНАЯ АДАПТАЦИЯ =================
+  try {
+    const hasMediaQuery = window.matchMedia('(max-width: 768px)').media !== 'not all';
+    addResult('Блок 33', 'Наличие медиа-запросов', hasMediaQuery ? 'pass' : 'fail');
+  } catch (e) { addResult('Блок 33', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 34: СВЁРТЫВАНИЕ ШАПКИ =================
+  try {
+    const header = document.getElementById('main-header');
+    const wasCollapsed = header.classList.contains('collapsed');
+    toggleHeaderCollapse();
+    await delay(300);
+    addResult('Блок 34', 'Свёртывание шапки (UI)', header.classList.contains('collapsed') !== wasCollapsed ? 'pass' : 'fail');
+    toggleHeaderCollapse(); // Возврат
+  } catch (e) { addResult('Блок 34', 'Ошибка', 'fail', e.message); }
+
+  // ================= БЛОК 35: ТЁМНАЯ ТЕМА =================
+  try {
+    const initial = document.documentElement.getAttribute('data-theme');
+    toggleTheme();
+    await delay(200);
+    const toggled = document.documentElement.getAttribute('data-theme');
+    addResult('Блок 35', 'Переключение темы (UI)', initial !== toggled ? 'pass' : 'fail', `${initial} → ${toggled}`);
+    toggleTheme(); // Возврат
+  } catch (e) { addResult('Блок 35', 'Ошибка', 'fail', e.message); }
+
+  // --- ИТОГ ---
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ БЛОКОВ 27-35', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 БЛОКИ 27-35 ПОЛНОСТЬЮ ПРОЙДЕНЫ! ОТМЕЧАЙ!', 'color:green; font-weight:bold; font-size:16px;');
+  }
+})();

@@ -1,0 +1,80 @@
+(async function testRole_Acting() {
+  console.log('%c🛡 ТЕСТ РОЛИ: И.О. (acting_01)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (name, status, details = '') => {
+    results.push({ name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const adminToken = authToken;
+  const adminUser = JSON.parse(JSON.stringify(currentUser));
+  const adminSession = sessionStorage.getItem('pipette_session');
+  const testLogin = 'acting_01'; // Фёдорова Н.А.
+
+  try {
+    // 1. Логин
+    const resp = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: testLogin, password: 'Seno16/1978S' })
+    });
+    const loginRes = await resp.json();
+    if (!resp.ok) throw new Error(loginRes.error);
+
+    authToken = loginRes.token;
+    currentUser = loginRes.user;
+    sessionStorage.setItem('pipette_session', JSON.stringify({ user: loginRes.user, token: loginRes.token }));
+    await renderAuthUI();
+    await loadPipetteData();
+    await delay(1500);
+
+    // 2. Проверка И.о. статуса
+    addResult('Пользователь в режиме И.о.', currentUser.isActing === true ? 'pass' : 'fail');
+    addResult('ФИО основного подставилось', currentUser.actingForName ? 'pass' : 'fail', `За кого: ${currentUser.actingForName || '—'}`);
+    addResult('Отдел основного подставился', currentUser.actingDepartment ? 'pass' : 'fail', `Отдел: ${currentUser.actingDepartment || '—'}`);
+
+    // 3. Проверка данных (должен видеть отдел основного)
+    const paged = await apiRequest('/pipettes/paged?limit=100');
+    const wrongDepts = paged.items.filter(p => p.department !== currentUser.actingDepartment);
+    addResult('Видит оборудование отдела основного', wrongDepts.length === 0 ? 'pass' : 'fail', `Отдел: ${currentUser.actingDepartment || '—'}`);
+
+    // 4. Действия (UI)
+    if (paged.items.length > 0) {
+      const testId = paged.items[0].id;
+
+      // 4.1 Быстрая поверка (есть quick_calibration)
+      await openQuickCalModal(testId);
+      await delay(600);
+      addResult('Модалка быстрой поверки открыта (UI)', document.getElementById('quick-cal-modal').classList.contains('active') ? 'pass' : 'fail');
+      closeQuickCalModal();
+      await delay(300);
+
+      // 4.2 Печать этикеток (есть print_labels)
+      await openBarcodePrintModal();
+      await delay(600);
+      addResult('Модалка печати открыта (UI)', document.getElementById('barcode-print-modal').classList.contains('active') ? 'pass' : 'fail');
+      closeBarcodePrintModal();
+      await delay(300);
+    }
+
+    // 5. Запрещенные действия
+    try { await apiRequest('/pipettes/P-001', 'DELETE'); addResult('API: Удаление запрещено (403)', 'fail'); } catch (e) { addResult('API: Удаление запрещено (403)', e.status === 403 ? 'pass' : 'fail'); }
+    try { await apiRequest('/users'); addResult('API: Доступ к /users запрещен (403)', 'fail'); } catch (e) { addResult('API: Доступ к /users запрещен (403)', e.status === 403 ? 'pass' : 'fail'); }
+    try { await apiRequest('/settings/departments', 'PUT', [{ name: 'Test', enabled: true, oldName: null }]); addResult('API: Запись в настройки запрещена (403)', 'fail'); } catch (e) { addResult('API: Запись в настройки запрещена (403)', e.status === 403 ? 'pass' : 'fail'); }
+
+  } catch (e) {
+    console.error('Ошибка теста:', e);
+    addResult('Критическая ошибка', 'fail', e.message);
+  } finally {
+    authToken = adminToken; currentUser = adminUser; sessionStorage.setItem('pipette_session', adminSession);
+    await renderAuthUI(); await loadPipetteData(); await delay(1000);
+  }
+
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+  console.log(`\n%c📊 ИТОГ: ✅ ${passes} | ❌ ${fails}`, 'font-size:16px; font-weight:bold; background:#e0e7ff; padding:4px 8px; border-radius:4px;');
+  if (fails === 0) console.log('%c🎉 РОЛЬ И.О. РАБОТАЕТ ИДЕАЛЬНО!', 'color:green; font-weight:bold;');
+})();

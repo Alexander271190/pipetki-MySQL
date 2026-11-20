@@ -1,0 +1,136 @@
+(async function testBlocks23to26_FULL() {
+  console.log('%c🚀 ПОЛНЫЙ ТЕСТ БЛОКОВ 23–26 (UI + API + НАГРУЗКА)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (block, name, status, details = '') => {
+    results.push({ block, name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c[${block}] ${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  const testId = 'P-' + randomNum;
+  let newId = null;
+
+  // ================= БЛОК 23: UI и адаптивность =================
+  try {
+    // 1. Проверка overflow-x (нет горизонтального скролла)
+    const overflowX = window.getComputedStyle(document.body).overflowX;
+    addResult('Блок 23', 'Отсутствие горизонтального скролла', (overflowX === 'hidden' || overflowX === 'clip') ? 'pass' : 'fail', `overflow-x: ${overflowX}`);
+
+    // 2. FA-иконки
+    const faIcons = document.querySelectorAll('.fa-solid');
+    addResult('Блок 23', 'Наличие FA-иконок', faIcons.length > 50 ? 'pass' : 'fail', `Найдено: ${faIcons.length}`);
+
+    // 3. Клик мимо модалки (UI)
+    UI.modal.open('modal');
+    await delay(300);
+    const modal = document.getElementById('modal');
+    // Эмулируем клик по оверлею
+    modal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await delay(300);
+    addResult('Блок 23', 'Закрытие модалки кликом по фону', !modal.classList.contains('active') ? 'pass' : 'fail');
+
+    // 4. Тёмная тема
+    const initialTheme = document.documentElement.getAttribute('data-theme');
+    toggleTheme();
+    const newTheme = document.documentElement.getAttribute('data-theme');
+    addResult('Блок 23', 'Переключение тёмной темы', initialTheme !== newTheme ? 'pass' : 'fail', `${initialTheme} → ${newTheme}`);
+    toggleTheme(); // Возврат
+
+    // 5. Esc закрывает confirm
+    showConfirm('Тест');
+    await delay(300);
+    const confirmModal = document.getElementById('confirm-modal');
+    if (confirmModal.classList.contains('active')) {
+       // Эмулируем нажатие Esc
+       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+       await delay(300);
+       addResult('Блок 23', 'Закрытие confirm по Esc', !confirmModal.classList.contains('active') ? 'pass' : 'fail');
+    }
+  } catch (e) { addResult('Блок 23', 'Ошибка UI', 'fail', e.message); }
+
+  // ================= БЛОК 24: Безопасность =================
+  try {
+    // 1. XSS-экранирование
+    const xssTest = '<script>alert(1)</script>';
+    addResult('Блок 24', 'XSS-экранирование (esc)', !esc(xssTest).includes('<script>') ? 'pass' : 'fail');
+
+    // 2. SQL-инъекция
+    const sqliRes = await apiRequest('/pipettes/paged?search=' + encodeURIComponent("' OR 1=1 --"));
+    addResult('Блок 24', 'SQL-инъекция в поиске', sqliRes.total === 0 ? 'pass' : 'fail', `Найдено: ${sqliRes.total}`);
+
+    // 3. Защита API (401)
+    const resNoToken = await fetch('/api/pipettes/paged', { headers: {} });
+    const resBadToken = await fetch('/api/pipettes/paged', { headers: { Authorization: 'Bearer invalid' } });
+    addResult('Блок 24', 'Защита API (401 без токена)', resNoToken.status === 401 ? 'pass' : 'fail');
+    addResult('Блок 24', 'Защита API (401 поддельный токен)', resBadToken.status === 401 ? 'pass' : 'fail');
+  } catch (e) { addResult('Блок 24', 'Ошибка безопасности', 'fail', e.message); }
+
+  // ================= БЛОК 25: Нагрузка =================
+  try {
+    // 1. Создание партии (50 записей)
+    const bulkRows = [];
+    for (let i = 0; i < 50; i++) {
+      bulkRows.push({ model: 'Load ' + i, equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Админ', department: 'Гематологический отдел' });
+    }
+
+    const t0 = performance.now();
+    const bulkRes = await apiRequest('/pipettes/bulk-create', 'POST', { rows: bulkRows });
+    const t1 = performance.now();
+    addResult('Блок 25', 'Создание партии (50 шт)', bulkRes.count === 50 ? 'pass' : 'fail', `Время: ${Math.round(t1 - t0)} мс`);
+
+    // 2. Загрузка (GET /all)
+    const t2 = performance.now();
+    const allData = await apiRequest('/pipettes/all?limit=5000');
+    const t3 = performance.now();
+    addResult('Блок 25', 'Скорость загрузки таблицы', (t3 - t2) < 2000 ? 'pass' : 'fail', `Время: ${Math.round(t3 - t2)} мс, Записей: ${allData.items.length}`);
+
+    // Очистка партии
+    for (const id of bulkRes.ids) { await apiRequest('/pipettes/' + id, 'DELETE').catch(() => {}); }
+  } catch (e) { addResult('Блок 25', 'Ошибка нагрузки', 'fail', e.message); }
+
+  // ================= БЛОК 26: Регрессия =================
+  try {
+    // 1. history_count — число
+    const paged = await apiRequest('/pipettes/paged?limit=1');
+    if (paged.items.length > 0) {
+      addResult('Блок 26', 'history_count — число', typeof paged.items[0].history_count === 'number' ? 'pass' : 'fail');
+    }
+
+    // 2. Защита от понижения себя
+    try {
+      await apiRequest('/users/' + currentUser.id, 'PUT', { ...currentUser, role: 'user' });
+      addResult('Блок 26', 'Защита: понижение себя', 'fail', 'Сервер разрешил понизить себя!');
+    } catch (e) {
+      addResult('Блок 26', 'Защита: понижение себя', e.status === 400 ? 'pass' : 'fail', e.message);
+    }
+
+    // 3. Фикс: Смена типа во время поверки (возврат)
+    await apiRequest('/pipettes', 'POST', { id: testId, model: 'Regress', equipmentType: 'pipette', lastCalibration: '2024-01-01', responsible: 'Админ', department: 'Гематологический отдел' });
+    await apiRequest('/pipettes/bulk-send', 'POST', { ids: [testId], sentDate: '2024-06-01' });
+    const changeRes = await apiRequest('/pipettes/' + testId, 'PUT', { equipmentType: 'scales' });
+    newId = changeRes.newId;
+    const retRes = await apiRequest('/pipettes/bulk-return', 'POST', { items: [{ id: newId, cert: 'R-1', result: 'pass' }], date: '2024-07-01' });
+    addResult('Блок 26', 'Фикс: Возврат после смены типа', retRes.successful === 1 ? 'pass' : 'fail');
+
+    // Очистка
+    await apiRequest('/pipettes/' + newId, 'DELETE').catch(() => {});
+
+  } catch (e) { addResult('Блок 26', 'Ошибка регрессии', 'fail', e.message); }
+
+  // --- ИТОГ ---
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ БЛОКОВ 23-26', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 БЛОКИ 23, 24, 25, 26 ПРОЙДЕНЫ! ОТМЕЧАЙ ИХ!', 'color:green; font-weight:bold; font-size:16px;');
+  } else {
+    console.log('%c⚠️ Есть ошибки. Смотри консоль.', 'color:orange; font-weight:bold; font-size:16px;');
+  }
+})();

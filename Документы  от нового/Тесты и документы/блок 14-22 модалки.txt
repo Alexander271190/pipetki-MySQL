@@ -1,0 +1,185 @@
+(async function testStage3_Blocks14to22() {
+  console.log('%c🚀 ЭТАП 3: БЛОКИ 14–22 (НАСТРОЙКИ И СПРАВКА)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (block, name, status, details = '') => {
+    results.push({ block, name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c[${block}] ${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const suffix = Date.now().toString().slice(-4);
+  const testSlug = 'test_doc_' + suffix;
+  const testTplName = 'Test View Tpl ' + suffix;
+  const testEqTplName = 'Test Eq Tpl ' + suffix;
+  let viewTplId = null;
+  let eqTplId = null;
+
+  // ================= БЛОК 14 (Поля формы) =================
+  try {
+    await openSettingsModal();
+    await delay(500);
+    const modalSet = document.getElementById('settings-modal');
+    addResult('Блок 14', 'Открытие модалки настроек (UI)', modalSet.classList.contains('active') ? 'pass' : 'fail');
+
+    // Переходим в раздел "Поля формы"
+    await openSettingsSection('fields');
+    await delay(500);
+    const tableFields = document.querySelector('#settings-section-content .field-settings-table');
+    addResult('Блок 14', 'Раздел "Поля формы" (UI)', tableFields ? 'pass' : 'fail');
+
+    // Проверка сохранения
+    const fields = await apiRequest('/settings/fields');
+    const originalLabel = fields[0].label;
+    fields[0].label = originalLabel + ' (test)';
+    await apiRequest('/settings/fields', 'PUT', fields);
+    addResult('Блок 14', 'API сохранения полей', 'pass');
+
+    // Возврат
+    fields[0].label = originalLabel;
+    await apiRequest('/settings/fields', 'PUT', fields);
+    await closeSettingsSection();
+    await delay(200);
+  } catch (e) { addResult('Блок 14', 'Поля формы', 'fail', e.message); }
+
+  // ================= БЛОК 15 (Отделы) =================
+  try {
+    await openSettingsSection('departments');
+    await delay(500);
+    const tableDepts = document.querySelector('#settings-section-content .field-settings-table');
+    addResult('Блок 15', 'Раздел "Отделы" (UI)', tableDepts ? 'pass' : 'fail');
+
+    const depts = await apiRequest('/settings/departments-full');
+    if (depts.length > 0) {
+      addResult('Блок 15', 'API чтения отделов', 'pass');
+    }
+    await closeSettingsSection();
+    await delay(200);
+  } catch (e) { addResult('Блок 15', 'Отделы', 'fail', e.message); }
+
+  // ================= БЛОК 16 (Фильтры) =================
+  try {
+    await openSettingsSection('filters');
+    await delay(500);
+    const tableFilters = document.querySelector('#settings-section-content .field-settings-table');
+    addResult('Блок 16', 'Раздел "Фильтры" (UI)', tableFilters ? 'pass' : 'fail');
+
+    const filters = await apiRequest('/settings/filters');
+    addResult('Блок 16', 'API чтения фильтров', Array.isArray(filters) ? 'pass' : 'fail');
+    await closeSettingsSection();
+    await delay(200);
+  } catch (e) { addResult('Блок 16', 'Фильтры', 'fail', e.message); }
+
+  // ================= БЛОК 17 (Экспорт настроек) =================
+  try {
+    await openSettingsSection('export');
+    await delay(500);
+    const expGrid = document.querySelector('#settings-section-content .export-fields-grid');
+    addResult('Блок 17', 'Раздел "Экспорт" (UI)', expGrid ? 'pass' : 'fail');
+    await closeSettingsSection();
+    await delay(200);
+  } catch (e) { addResult('Блок 17', 'Экспорт настроек', 'fail', e.message); }
+
+  // ================= БЛОК 18 (Типы оборудования) =================
+  try {
+    await openSettingsSection('equipment');
+    await delay(500);
+    const tableTypes = document.querySelector('#settings-section-content #equip-types-table');
+    addResult('Блок 18', 'Раздел "Типы оборудования" (UI)', tableTypes ? 'pass' : 'fail');
+
+    const types = await apiRequest('/settings/equipment-types');
+    addResult('Блок 18', 'API чтения типов', Array.isArray(types) && types.length >= 6 ? 'pass' : 'fail');
+    await closeSettingsSection();
+    await delay(200);
+  } catch (e) { addResult('Блок 18', 'Типы оборудования', 'fail', e.message); }
+
+  // ================= БЛОК 19 (Пользователи) =================
+  try {
+    await openSettingsSection('users');
+    await delay(600);
+    const tableUsers = document.querySelector('#settings-section-content #users-table');
+    addResult('Блок 19', 'Раздел "Пользователи" (UI)', tableUsers ? 'pass' : 'fail');
+
+    const testLogin = 'test_user_' + suffix;
+    const createRes = await apiRequest('/users', 'POST', { login: testLogin, fullName: 'Test Stage 3', position: 'Тестировщик', department: 'Гематологический отдел', role: 'user', extraPermissions: [] });
+    addResult('Блок 19', 'API создания пользователя', createRes.id ? 'pass' : 'fail');
+
+    await apiRequest('/users/' + createRes.id, 'DELETE');
+    addResult('Блок 19', 'API удаления пользователя', 'pass');
+
+    await closeSettingsModal(); // Закрываем модалку настроек полностью
+    await delay(300);
+  } catch (e) { addResult('Блок 19', 'Пользователи', 'fail', e.message); }
+
+  // ================= БЛОК 20 (Справка) =================
+  try {
+    // UI: Открытие справки
+    await openHotkeysHelp();
+    await delay(600);
+    const modalHelp = document.getElementById('hotkeys-modal');
+    addResult('Блок 20', 'Открытие справки (UI)', modalHelp.classList.contains('active') ? 'pass' : 'fail');
+    closeHotkeysHelp();
+    await delay(200);
+
+    // API: Создание раздела справки
+    const htmlContent = '<h2>Test</h2><p>Test content</p><table><tr><td>Cell</td></tr></table>';
+    await apiRequest('/help', 'POST', { slug: testSlug, title: 'Test Doc', content: htmlContent, requiredPermissions: [], sortOrder: 999, enabled: true });
+    addResult('Блок 20', 'API создания справки', 'pass');
+
+    // API: Чтение и проверка HTML
+    const doc = await apiRequest('/help/' + testSlug);
+    addResult('Блок 20', 'API чтения справки (HTML цел)', doc.content.includes('<table>') ? 'pass' : 'fail');
+
+    // API: Удаление
+    await apiRequest('/help/' + testSlug, 'DELETE');
+    addResult('Блок 20', 'API удаления справки', 'pass');
+  } catch (e) { addResult('Блок 20', 'Справка', 'fail', e.message); }
+
+  // ================= БЛОК 21 (Шаблоны вида) =================
+  try {
+    // API: Создание шаблона
+    const createRes = await apiRequest('/view-templates', 'POST', { name: testTplName, visibleFields: ['id', 'model'], isDefault: false });
+    viewTplId = createRes.id;
+    addResult('Блок 21', 'API создания шаблона вида', createRes.id ? 'pass' : 'fail');
+
+    // API: Чтение
+    const templates = await apiRequest('/view-templates');
+    addResult('Блок 21', 'API чтения шаблонов вида', templates.some(t => t.id === viewTplId) ? 'pass' : 'fail');
+
+    // API: Удаление
+    await apiRequest('/view-templates/' + viewTplId, 'DELETE');
+    addResult('Блок 21', 'API удаления шаблона вида', 'pass');
+  } catch (e) { addResult('Блок 21', 'Шаблоны вида', 'fail', e.message); }
+
+  // ================= БЛОК 22 (Шаблоны единиц) =================
+  try {
+    // API: Создание шаблона
+    const createRes = await apiRequest('/equipment-templates', 'POST', { name: testEqTplName, data: { model: 'Test Eq', equipmentType: 'pipette', interval: 12 } });
+    eqTplId = createRes.id;
+    addResult('Блок 22', 'API создания шаблона единицы', createRes.id ? 'pass' : 'fail');
+
+    // API: Чтение
+    const templates = await apiRequest('/equipment-templates');
+    addResult('Блок 22', 'API чтения шаблонов единиц', templates.some(t => t.id === eqTplId) ? 'pass' : 'fail');
+
+    // API: Удаление
+    await apiRequest('/equipment-templates/' + eqTplId, 'DELETE');
+    addResult('Блок 22', 'API удаления шаблона единицы', 'pass');
+  } catch (e) { addResult('Блок 22', 'Шаблоны единиц', 'fail', e.message); }
+
+  // --- ИТОГ ---
+  const passes = results.filter(r => r.status === 'pass').length;
+  const warns = results.filter(r => r.status === 'warn').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ ЭТАПА 3', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ⚠️ Внимание: ${warns} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 ЭТАП 3 ПРОЙДЕН! ОТМЕЧАЙ БЛОКИ: 14, 15, 16, 17, 18, 19, 20, 21, 22', 'color:green; font-weight:bold; font-size:16px;');
+  } else {
+    console.log('%c⚠️ Есть ошибки. Проверь логи.', 'color:orange; font-weight:bold; font-size:16px;');
+  }
+})();

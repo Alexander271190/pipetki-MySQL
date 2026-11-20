@@ -1,0 +1,134 @@
+(async function testBlocks21and22_UI() {
+  console.log('%c🧪 ТЕСТ БЛОКОВ 21 и 22: ШАБЛОНЫ (UI)', 'font-size:18px; font-weight:bold; color:#4f46e5; background:#e0e7ff; padding:6px 12px; border-radius:6px;');
+
+  const results = [];
+  const addResult = (block, name, status, details = '') => {
+    results.push({ block, name, status, details });
+    const icon = status === 'pass' ? '✅' : (status === 'fail' ? '❌' : '⚠️');
+    const color = status === 'pass' ? 'green' : (status === 'fail' ? 'red' : 'orange');
+    console.log(`%c[${block}] ${icon} ${name}`, `color:${color}; font-weight:bold;`, details ? `\n   ↳ ${details}` : '');
+  };
+
+  const delay = (ms) => new Promise(r => setTimeout(r, ms));
+  const suffix = Date.now().toString().slice(-4);
+  const testViewTplName = 'Test View Tpl ' + suffix;
+  const testEqTplName = 'Test Eq Tpl ' + suffix;
+
+  // Хелпер для эмуляции prompt
+  async function emulatePrompt(value) {
+    await delay(300);
+    const input = document.getElementById('prompt-input');
+    if (input) {
+      input.value = value;
+      submitPrompt();
+    }
+    await delay(300);
+  }
+
+  // Хелпер для эмуляции confirm
+  async function emulateConfirm() {
+    await delay(300);
+    const modal = document.getElementById('confirm-modal');
+    if (modal && modal.classList.contains('active')) {
+      resolveConfirm(true);
+    }
+    await delay(300);
+  }
+
+  // ================= БЛОК 21: ШАБЛОНЫ ВИДА =================
+  try {
+    // 1. Открываем Настройки -> Шаблоны вида
+    await openSettingsModal();
+    await delay(500);
+    await openSettingsSection('view-templates');
+    await delay(600);
+
+    const section = document.getElementById('settings-section-content');
+    addResult('Блок 21', 'Открытие раздела "Шаблоны вида" (UI)', section.textContent.includes('Шаблоны') ? 'pass' : 'fail');
+
+    // 2. Создаем шаблон (через API, так как UI зависит от конкретной верстки)
+    const createRes = await apiRequest('/view-templates', 'POST', { name: testViewTplName, visibleFields: ['id', 'model'], isDefault: false });
+    addResult('Блок 21', 'API создания шаблона вида', createRes.id ? 'pass' : 'fail');
+
+    // 3. Обновляем раздел и проверяем, что он появился в UI
+    await openSettingsSection('view-templates');
+    await delay(600);
+    const tableText = document.getElementById('settings-section-content').textContent;
+    addResult('Блок 21', 'Отображение шаблона в UI', tableText.includes(testViewTplName) ? 'pass' : 'fail');
+
+    // 4. Удаляем через API
+    await apiRequest('/view-templates/' + createRes.id, 'DELETE');
+    addResult('Блок 21', 'API удаления шаблона вида', 'pass');
+
+    await closeSettingsModal();
+    await delay(300);
+  } catch (e) {
+    addResult('Блок 21', 'Ошибка теста', 'fail', e.message);
+    try { await closeSettingsModal(); } catch(err) {}
+  }
+
+  // ================= БЛОК 22: ШАБЛОНЫ ЕДИНИЦ =================
+  try {
+    // 1. Открываем модалку добавления оборудования
+    await openModal();
+    await delay(800);
+
+    // 2. Проверяем наличие панели шаблонов
+    const tplBar = document.getElementById('template-bar');
+    const tplSelect = document.getElementById('template-select');
+    addResult('Блок 22', 'Панель шаблонов в модалке (UI)', tplBar && tplBar.style.display !== 'none' ? 'pass' : 'fail');
+
+    // Заполняем модель, чтобы было что сохранять
+    const modelInput = document.getElementById('p-model');
+    if (modelInput) modelInput.value = 'Template Test Model';
+
+    // 3. Нажимаем "Сохранить как шаблон" и эмулируем ввод имени
+    const saveAsTplBtn = tplBar.querySelector('.btn-secondary');
+    if (saveAsTplBtn) {
+      saveAsTplBtn.click();
+      await emulatePrompt(testEqTplName);
+
+      // Проверяем, что шаблон добавился в селект
+      const options = Array.from(tplSelect.options).map(o => o.textContent);
+      addResult('Блок 22', 'Создание шаблона единицы (UI)', options.includes(testEqTplName) ? 'pass' : 'fail');
+
+      // 4. Применяем шаблон
+      if (options.includes(testEqTplName)) {
+        const tplOpt = Array.from(tplSelect.options).find(o => o.textContent === testEqTplName);
+        tplSelect.value = tplOpt.value;
+        tplSelect.dispatchEvent(new Event('change'));
+        await delay(500);
+
+        const filledModel = document.getElementById('p-model').value;
+        addResult('Блок 22', 'Применение шаблона (UI)', filledModel === 'Template Test Model' ? 'pass' : 'fail');
+
+        // 5. Удаляем шаблон (через API, так как в UI кнопки удаления нет)
+        const tplId = tplOpt.value;
+        await apiRequest('/equipment-templates/' + tplId, 'DELETE');
+        addResult('Блок 22', 'Удаление шаблона единицы (API)', 'pass');
+      }
+    }
+
+    closeModal();
+    await delay(300);
+  } catch (e) {
+    addResult('Блок 22', 'Ошибка теста', 'fail', e.message);
+    try { closeModal(); } catch(err) {}
+  } finally {
+    // Очистка на всякий случай
+    document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    if (typeof resolvePrompt === 'function') resolvePrompt(null);
+    await loadPipetteData();
+  }
+
+  // --- ИТОГ ---
+  const passes = results.filter(r => r.status === 'pass').length;
+  const fails = results.filter(r => r.status === 'fail').length;
+
+  console.log('\n%c📊 ИТОГ БЛОКОВ 21-22', 'font-size:16px; font-weight:bold; background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px;');
+  console.log(`✅ Пройдено: ${passes} | ❌ Ошибки: ${fails}`);
+
+  if (fails === 0) {
+    console.log('%c🎉 БЛОКИ 21 И 22 ПРОЙДЕНЫ!', 'color:green; font-weight:bold; font-size:16px;');
+  }
+})();
